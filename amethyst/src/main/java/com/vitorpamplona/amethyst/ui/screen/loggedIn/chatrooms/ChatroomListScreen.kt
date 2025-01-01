@@ -217,21 +217,23 @@ fun ChatroomListTwoPane(
                 }
             },
             second = {
-                twoPaneNav.innerNav.value?.let {
-                    if (it.route == "Room") {
-                        Chatroom(
-                            roomId = it.id,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+                Box(Modifier.fillMaxSize().systemBarsPadding()) {
+                    twoPaneNav.innerNav.value?.let {
+                        if (it.route == "Room") {
+                            Chatroom(
+                                roomId = it.id,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
 
-                    if (it.route == "Channel") {
-                        Channel(
-                            channelId = it.id,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
+                        if (it.route == "Channel") {
+                            Channel(
+                                channelId = it.id,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
                     }
                 }
             },

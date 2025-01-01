@@ -25,12 +25,14 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -54,13 +56,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
@@ -75,10 +76,9 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.service.BlurHashRequester
+import com.vitorpamplona.amethyst.service.Blurhash
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils
 import com.vitorpamplona.amethyst.ui.navigation.getActivity
 import com.vitorpamplona.amethyst.ui.note.BlankNote
@@ -87,23 +87,20 @@ import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.toHexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -112,7 +109,7 @@ fun ZoomableContentView(
     content: BaseMediaContent,
     images: ImmutableList<BaseMediaContent> = remember(content) { persistentListOf(content) },
     roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
@@ -124,18 +121,14 @@ fun ZoomableContentView(
     val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
     val isOrientationLocked = DeviceUtils.screenOrientationIsLocked(LocalContext.current)
 
-    val contentScale =
-        if (isFiniteHeight) {
-            ContentScale.Fit
-        } else {
-            ContentScale.FillWidth
-        }
-
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
                 TwoSecondController(content) { controllerVisible ->
-                    val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                    val mainImageModifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { dialogOpen = true }
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
                     UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
@@ -153,7 +146,7 @@ fun ZoomableContentView(
                         dimensions = content.dim,
                         blurhash = content.blurhash,
                         roundedCorner = roundedCorner,
-                        isFiniteHeight = isFiniteHeight,
+                        contentScale = contentScale,
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
@@ -167,7 +160,10 @@ fun ZoomableContentView(
             }
         is MediaLocalImage ->
             TwoSecondController(content) { controllerVisible ->
-                val mainImageModifier = Modifier.fillMaxWidth().clickable { dialogOpen = true }
+                val mainImageModifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { dialogOpen = true }
                 val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
 
                 LocalImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
@@ -182,7 +178,7 @@ fun ZoomableContentView(
                         artworkUri = content.artworkUri,
                         authorName = content.authorName,
                         roundedCorner = roundedCorner,
-                        isFiniteHeight = isFiniteHeight,
+                        contentScale = contentScale,
                         nostrUriCallback = content.uri,
                         onDialog = { dialogOpen = true },
                         accountViewModel = accountViewModel,
@@ -201,67 +197,6 @@ fun ZoomableContentView(
             },
             accountViewModel,
         )
-    }
-}
-
-@Composable
-fun GalleryContentView(
-    content: BaseMediaContent,
-    roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
-    accountViewModel: AccountViewModel,
-) {
-    when (content) {
-        is MediaUrlImage ->
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                TwoSecondController(content) { controllerVisible ->
-                    val mainImageModifier = Modifier.fillMaxWidth()
-                    val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-
-                    UrlImageView(content, ContentScale.Crop, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
-                }
-            }
-        is MediaUrlVideo ->
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    VideoView(
-                        videoUri = content.url,
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
-                        authorName = content.authorName,
-                        dimensions = content.dim,
-                        blurhash = content.blurhash,
-                        isFiniteHeight = isFiniteHeight,
-                        nostrUriCallback = content.uri,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
-        is MediaLocalImage ->
-            TwoSecondController(content) { controllerVisible ->
-                val mainImageModifier = Modifier.fillMaxWidth()
-                val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-
-                LocalImageView(content, ContentScale.Crop, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
-            }
-        is MediaLocalVideo ->
-            content.localFile?.let {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    VideoView(
-                        videoUri = it.toUri().toString(),
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        authorName = content.authorName,
-                        borderModifier = MaterialTheme.colorScheme.videoGalleryModifier,
-                        isFiniteHeight = isFiniteHeight,
-                        nostrUriCallback = content.uri,
-                        accountViewModel = accountViewModel,
-                    )
-                }
-            }
     }
 }
 
@@ -389,7 +324,7 @@ fun UrlImageView(
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
-    val ratio = remember(content) { aspectRatio(content.dim) }
+    val ratio = content.dim?.aspectRatio()
 
     val showImage =
         remember {
@@ -412,11 +347,18 @@ fun UrlImageView(
                     -> {
                         if (content.blurhash != null) {
                             if (ratio != null) {
+                                val modifier =
+                                    if (contentScale == ContentScale.Crop) {
+                                        loadedImageModifier.clickable { showImage.value = true }
+                                    } else {
+                                        loadedImageModifier.aspectRatio(ratio).clickable { showImage.value = true }
+                                    }
+
                                 DisplayBlurHash(
                                     content.blurhash,
                                     content.description,
                                     ContentScale.Crop,
-                                    loadedImageModifier.aspectRatio(ratio),
+                                    modifier,
                                 )
                             } else {
                                 DisplayBlurHash(
@@ -436,29 +378,25 @@ fun UrlImageView(
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(loadedImageModifier)
 
-                        AnimatedVisibility(
-                            visible = controllerVisible.value,
-                            modifier = Modifier.align(Alignment.TopEnd),
-                            enter = remember { fadeIn() },
-                            exit = remember { fadeOut() },
-                        ) {
-                            Box(Modifier.align(Alignment.TopEnd), contentAlignment = Alignment.TopEnd) {
-                                ShowHash(content)
-                            }
-                        }
+                        ShowHashAnimated(content, controllerVisible, Modifier.align(Alignment.TopEnd))
                     }
                     else -> {}
                 }
             }
         } else {
             if (content.blurhash != null && ratio != null) {
+                val modifier =
+                    if (contentScale == ContentScale.Crop) {
+                        loadedImageModifier.clickable { showImage.value = true }
+                    } else {
+                        loadedImageModifier.aspectRatio(ratio).clickable { showImage.value = true }
+                    }
+
                 DisplayBlurHash(
                     content.blurhash,
                     content.description,
-                    ContentScale.Crop,
-                    loadedImageModifier
-                        .aspectRatio(ratio)
-                        .clickable { showImage.value = true },
+                    contentScale,
+                    modifier,
                 )
                 IconButton(
                     modifier = Modifier.size(Size75dp),
@@ -497,7 +435,6 @@ fun ImageUrlWithDownloadButton(
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
-                    appendInlineContent("inlineContent", "[icon]")
                     pop()
                 }
 
@@ -505,33 +442,57 @@ fun ImageUrlWithDownloadButton(
             }
         }
 
-    val inlineContent = mapOf("inlineContent" to InlineDownloadIcon(showImage))
+    val pressIndicator =
+        remember {
+            Modifier
+                .fillMaxWidth()
+                .clickable { runCatching { uri.openUri(url) } }
+        }
 
-    val pressIndicator = remember { Modifier.fillMaxWidth().clickable { runCatching { uri.openUri(url) } } }
-
-    Text(
-        text = annotatedTermsString,
-        modifier = pressIndicator,
-        inlineContent = inlineContent,
-    )
+    Row(
+        modifier =
+            Modifier
+                .width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier =
+                pressIndicator
+                    .weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineDownloadIcon(showImage)
+    }
 }
 
 @Composable
 private fun InlineDownloadIcon(showImage: MutableState<Boolean>) =
-    InlineTextContent(
-        Placeholder(
-            width = Font17SP,
-            height = Font17SP,
-            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-        ),
+    IconButton(
+        modifier = Modifier.size(Size20dp),
+        onClick = { showImage.value = true },
     ) {
-        IconButton(
-            modifier = Modifier.size(Size20dp),
-            onClick = { showImage.value = true },
-        ) {
-            DownloadForOfflineIcon(Size24dp)
+        DownloadForOfflineIcon(Size24dp)
+    }
+
+@Composable
+fun ShowHashAnimated(
+    content: MediaUrlImage,
+    controllerVisible: MutableState<Boolean>,
+    modifier: Modifier,
+) {
+    AnimatedVisibility(
+        visible = controllerVisible.value,
+        modifier = modifier,
+        enter = remember { fadeIn() },
+        exit = remember { fadeOut() },
+    ) {
+        Box(modifier, contentAlignment = Alignment.TopEnd) {
+            ShowHash(content)
         }
     }
+}
 
 @Composable
 fun ShowHash(content: MediaUrlContent) {
@@ -552,44 +513,14 @@ fun ShowHash(content: MediaUrlContent) {
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
 
-fun aspectRatio(dim: String?): Float? {
+fun aspectRatio(dim: Dimension?): Float? {
     if (dim == null) return null
-    if (dim == "0x0") return null
 
-    val parts = dim.split("x")
-    if (parts.size != 2) return null
-
-    return try {
-        val width = parts[0].toFloat()
-        val height = parts[1].toFloat()
-
-        if (width < 0.1 || height < 0.1) {
-            null
-        } else {
-            width / height
-        }
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        null
-    }
+    return dim.width.toFloat() / dim.height.toFloat()
 }
 
 @Composable
-private fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
-    var cnt by remember { mutableStateOf<BaseMediaContent?>(null) }
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            delay(200)
-            cnt = content
-        }
-    }
-
-    cnt?.let { DisplayUrlWithLoadingSymbolWait(it) }
-}
-
-@Composable
-private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
+fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
     val uri = LocalUriHandler.current
 
     val primary = MaterialTheme.colorScheme.primary
@@ -613,15 +544,12 @@ private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
 
                 withStyle(clickableTextStyle) {
                     pushStringAnnotation("routeToImage", "")
-                    appendInlineContent("inlineContent", "[icon]")
                     pop()
                 }
 
                 withStyle(regularText) { append(" ") }
             }
         }
-
-    val inlineContent = mapOf("inlineContent" to InlineLoadingIcon())
 
     val pressIndicator =
         remember {
@@ -632,24 +560,26 @@ private fun DisplayUrlWithLoadingSymbolWait(content: BaseMediaContent) {
             }
         }
 
-    Text(
-        text = annotatedTermsString,
-        modifier = pressIndicator,
-        inlineContent = inlineContent,
-    )
+    Row(
+        modifier =
+            Modifier
+                .width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier =
+                pressIndicator
+                    .weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineLoadingIcon()
+    }
 }
 
 @Composable
-private fun InlineLoadingIcon() =
-    InlineTextContent(
-        Placeholder(
-            width = Font17SP,
-            height = Font17SP,
-            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-        ),
-    ) {
-        LoadingAnimation()
-    }
+private fun InlineLoadingIcon() = LoadingAnimation()
 
 @Composable
 fun DisplayBlurHash(
@@ -660,17 +590,8 @@ fun DisplayBlurHash(
 ) {
     if (blurhash == null) return
 
-    val context = LocalContext.current
-    val model =
-        remember {
-            BlurHashRequester.imageRequest(
-                context,
-                blurhash,
-            )
-        }
-
     AsyncImage(
-        model = model,
+        model = Blurhash(blurhash),
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,
@@ -719,7 +640,7 @@ fun ShareImageAction(
     videoUri: String?,
     postNostrUri: String?,
     blurhash: String?,
-    dim: String?,
+    dim: Dimension?,
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,
@@ -755,10 +676,10 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.add_media_to_gallery)) },
                 onClick = {
                     if (videoUri != null) {
-                        var n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
+                        val n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
                         if (n19 != null) {
                             accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0], blurhash, dim, hash, mimeType) // TODO Whole list or first?
-                            accountViewModel.toast(R.string.image_saved_to_the_gallery, R.string.image_saved_to_the_gallery)
+                            accountViewModel.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                         }
                     }
 
@@ -769,7 +690,6 @@ fun ShareImageAction(
     }
 }
 
-@OptIn(ExperimentalCoilApi::class)
 private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 

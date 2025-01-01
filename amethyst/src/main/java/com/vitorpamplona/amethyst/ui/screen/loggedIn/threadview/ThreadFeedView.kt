@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -123,6 +124,7 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
+import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -131,6 +133,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
+import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
@@ -154,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
@@ -169,6 +173,7 @@ import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.DraftEvent
@@ -182,9 +187,11 @@ import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -198,7 +205,6 @@ import com.vitorpamplona.quartz.events.VideoEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -218,7 +224,7 @@ fun ThreadFeedView(
             nav = nav,
             routeForLastRead = null,
             onLoaded = {
-                RenderThreadFeed(noteId, it, viewModel.llState, viewModel::levelFlowForItem, accountViewModel, nav)
+                RenderThreadFeed(noteId, it, viewModel.llState, viewModel, accountViewModel, nav)
             },
         )
     }
@@ -229,36 +235,38 @@ fun RenderThreadFeed(
     noteId: String,
     loaded: FeedState.Loaded,
     listState: LazyListState,
-    createLevelFlow: (Note) -> Flow<Int>,
+    viewModel: LevelFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    LaunchedEffect(noteId, items.list) {
+    val position = items.list.indexOfFirst { it.idHex == noteId }
+
+    LaunchedEffect(noteId, position) {
         // hack to allow multiple scrolls to Item while posts on the screen load.
         // This is important when clicking on a reply of an older thread in Notifications
         // In that case, this screen will open with 0-1 items, and the scrollToItem below
         // will not change the state of the screen (too few items, scroll is not available)
         // as the app loads the reaming of the thread the position of the reply changes
-        // and becuase there wasn't a possibility to scroll before and now there is one,
+        // and because there wasn't a possibility to scroll before and now there is one,
         // the screen stays at the top. Once the thread has enough replies, the lazy column
-        // updates with new items correctly. It just needs a few items to start the scrool.
+        // updates with new items correctly. It just needs a few items to start the scroll.
         //
         // This hack allows the list 1 second to fill up with more
         // records before setting up the position on the feed.
         //
         // It jumps around, but it is the best we can do.
-        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 && items.list.size > 3) {
-            val position = items.list.indexOfFirst { it.idHex == noteId }
 
-            if (position >= 0) {
+        if (position >= 0 && !viewModel.hasDragged.value) {
+            val offset =
                 if (position > items.list.size - 3) {
-                    listState.scrollToItem(position, 0)
+                    0
                 } else {
-                    listState.scrollToItem(position, -200)
+                    -200
                 }
-            }
+
+            listState.scrollToItem(position, offset)
         }
     }
 
@@ -268,12 +276,11 @@ fun RenderThreadFeed(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
-            val level = createLevelFlow(item).collectAsStateWithLifecycle(0)
+            val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
 
             val modifier =
                 Modifier
                     .drawReplyLevel(
-                        note = item,
                         level = level,
                         color = MaterialTheme.colorScheme.placeholderText,
                         selected =
@@ -321,7 +328,6 @@ fun RenderThreadFeed(
 
 // Creates a Zebra pattern where each bar is a reply level.
 fun Modifier.drawReplyLevel(
-    note: Note,
     level: State<Int>,
     color: Color,
     selected: Color,
@@ -483,14 +489,11 @@ private fun FullBleedNoteCompose(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (noteEvent is BadgeDefinitionEvent) {
-            BadgeDisplay(baseNote = baseNote)
-        } else if (noteEvent is LongTextNoteEvent) {
-            RenderLongFormHeaderForThread(noteEvent)
-        } else if (noteEvent is WikiNoteEvent) {
-            RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
-        } else if (noteEvent is ClassifiedsEvent) {
-            RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
+        when (noteEvent) {
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent)
+            is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
+            is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
         }
 
         Row(
@@ -511,17 +514,19 @@ private fun FullBleedNoteCompose(
                         nav = nav,
                     )
                 } else if (noteEvent is VideoEvent) {
-                    VideoDisplay(baseNote, false, true, backgroundColor, false, accountViewModel, nav)
+                    VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
+                } else if (noteEvent is PictureEvent) {
+                    PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
-                    FileHeaderDisplay(baseNote, true, false, accountViewModel)
+                    FileHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {
-                    FileStorageHeaderDisplay(baseNote, true, false, accountViewModel)
+                    FileStorageHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is PeopleListEvent) {
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
-                    AudioTrackHeader(noteEvent, baseNote, false, accountViewModel, nav)
+                    AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
-                    AudioHeader(noteEvent, baseNote, false, accountViewModel, nav)
+                    AudioHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is CommunityPostApprovalEvent) {
                     RenderPostApproval(
                         baseNote,
@@ -561,16 +566,38 @@ private fun FullBleedNoteCompose(
                     RenderFhirResource(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GitRepositoryEvent) {
                     RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+                } else if (noteEvent is InteractiveStoryBaseEvent) {
+                    RenderInteractiveStory(
+                        baseNote,
+                        false,
+                        true,
+                        3,
+                        backgroundColor,
+                        accountViewModel,
+                        nav,
+                    )
                 } else if (noteEvent is GitPatchEvent) {
-                    RenderGitPatchEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                    RenderGitPatchEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is GitIssueEvent) {
-                    RenderGitIssueEvent(baseNote, false, true, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                    RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
                 } else if (noteEvent is DraftEvent) {
                     RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is CommentEvent) {
+                    RenderTextEvent(
+                        baseNote,
+                        false,
+                        canPreview,
+                        quotesLeft = 3,
+                        unPackReply = false,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                    )
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is TextNoteModificationEvent) {
@@ -661,9 +688,8 @@ private fun FullBleedNoteCompose(
             }
         }
 
-        val noteEvent = baseNote.event
-        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
-        if (zapSplits && noteEvent != null) {
+        val zapSplits = remember(noteEvent) { noteEvent.hasZapSplitSetup() }
+        if (zapSplits) {
             Spacer(modifier = DoubleVertSpacer)
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp),
@@ -672,7 +698,7 @@ private fun FullBleedNoteCompose(
             }
         }
 
-        ReactionsRow(baseNote, true, true, editState, accountViewModel, nav)
+        ReactionsRow(baseNote, showReactionDetail = true, addPadding = true, editState = editState, accountViewModel = accountViewModel, nav = nav)
     }
 }
 
@@ -924,14 +950,14 @@ private fun RenderWikiHeaderForThreadPreview() {
                 RenderWikiHeaderForThread(noteEvent = event, accountViewModel = accountViewModel, nav)
                 RenderTextEvent(
                     baseNote!!,
-                    false,
-                    true,
+                    makeItShort = false,
+                    canPreview = true,
                     quotesLeft = 3,
                     unPackReply = false,
-                    backgroundColor,
-                    editState,
-                    accountViewModel,
-                    nav,
+                    backgroundColor = backgroundColor,
+                    editState = editState,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
         }

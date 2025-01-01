@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
@@ -75,6 +76,7 @@ class HomeConversationsFeedFilter(
             it.event is TextNoteEvent ||
                 it.event is PollNoteEvent ||
                 it.event is ChannelMessageEvent ||
+                it.event is CommentEvent ||
                 it.event is LiveActivitiesChatMessageEvent
         ) &&
             filterParams.match(it.event) &&

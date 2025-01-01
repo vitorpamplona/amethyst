@@ -25,6 +25,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
@@ -86,12 +88,14 @@ import com.vitorpamplona.amethyst.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -100,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
+import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
@@ -154,9 +159,11 @@ import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.events.DraftEvent
@@ -169,12 +176,14 @@ import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -314,9 +323,9 @@ fun AcceptableNote(
                     )
                 }
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-            is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, false, accountViewModel)
-            is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, false, accountViewModel)
-            is VideoEvent -> JustVideoDisplay(baseNote, false, false, accountViewModel)
+            is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, ContentScale.FillWidth, accountViewModel)
+            is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, ContentScale.FillWidth, accountViewModel)
+            is VideoEvent -> JustVideoDisplay(baseNote, false, ContentScale.FillWidth, accountViewModel)
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
@@ -599,8 +608,8 @@ private fun RenderNoteRow(
 ) {
     when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> RenderAppDefinition(baseNote, accountViewModel, nav)
-        is AudioTrackEvent -> RenderAudioTrack(baseNote, false, accountViewModel, nav)
-        is AudioHeaderEvent -> RenderAudioHeader(baseNote, false, accountViewModel, nav)
+        is AudioTrackEvent -> RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        is AudioHeaderEvent -> RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         is DraftEvent -> RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
         is ReactionEvent -> RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         is RepostEvent -> RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -664,6 +673,18 @@ private fun RenderNoteRow(
                 nav,
             )
         }
+        is ChatMessageEncryptedFileHeaderEvent -> {
+            RenderChatMessageEncryptedFile(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                editState,
+                accountViewModel,
+                nav,
+            )
+        }
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,
@@ -679,6 +700,19 @@ private fun RenderNoteRow(
                 canPreview,
                 quotesLeft,
                 backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+        is CommentEvent -> {
+            RenderTextEvent(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                unPackReply,
+                backgroundColor,
+                editState,
                 accountViewModel,
                 nav,
             )
@@ -713,10 +747,12 @@ private fun RenderNoteRow(
                 nav,
             )
         }
-        is FileHeaderEvent -> FileHeaderDisplay(baseNote, true, false, accountViewModel)
-        is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, false, accountViewModel, nav)
-        is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, false, accountViewModel, nav)
-        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, false, accountViewModel)
+        is FileHeaderEvent -> FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+        is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+        is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+
+        is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(
                 baseNote,
@@ -776,6 +812,17 @@ private fun RenderNoteRow(
                 unPackReply,
                 backgroundColor,
                 editState,
+                accountViewModel,
+                nav,
+            )
+
+        is InteractiveStoryBaseEvent ->
+            RenderInteractiveStory(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
                 accountViewModel,
                 nav,
             )

@@ -198,7 +198,6 @@ fun DiscoverScreen(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun DiscoverPages(
     pagerState: PagerState,
     tabs: ImmutableList<TabItem>,

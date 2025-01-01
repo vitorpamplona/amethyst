@@ -27,19 +27,28 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.toImmutableSet
 
 @Immutable
 class ThreadFeedFilter(
     val account: Account,
-    val noteId: String,
+    private val noteId: String,
 ) : FeedFilter<Note>() {
     override fun feedKey(): String = noteId
 
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
         val followingKeySet = account.liveKind3Follows.value.authors
-        val eventsToWatch = ThreadAssembler().findThreadFor(noteId)
-        val eventsInHex = eventsToWatch.map { it.idHex }.toSet()
+        val eventsToWatch = ThreadAssembler().findThreadFor(noteId) ?: return emptyList()
+
+        // Filter out drafts made by other accounts on device
+        val filteredEvents =
+            eventsToWatch.allNotes
+                .filter { !it.isDraft() || (it.author?.pubkeyHex == account.userProfile().pubkeyHex) }
+                .toImmutableSet()
+        val filteredThreadInfo = ThreadAssembler.ThreadInfo(eventsToWatch.root, filteredEvents)
+
+        val eventsInHex = filteredThreadInfo.allNotes.map { it.idHex }.toSet()
         val now = TimeUtils.now()
 
         // Currently orders by date of each event, descending, at each level of the reply stack
@@ -56,6 +65,6 @@ class ThreadFeedFilter(
                     ).signature
             }
 
-        return eventsToWatch.sortedWith(order)
+        return filteredThreadInfo.allNotes.sortedWith(order)
     }
 }

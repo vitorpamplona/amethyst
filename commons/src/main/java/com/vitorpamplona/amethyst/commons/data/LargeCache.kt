@@ -307,7 +307,7 @@ class BiMaxOfCollector<K, V>(
         v: V,
     ) {
         if (filter.filter(k, v)) {
-            if (maxK == null || comparator.compare(v, maxV) > 1) {
+            if (maxK == null || comparator.compare(v, maxV) > 0) {
                 maxK = k
                 maxV = v
             }

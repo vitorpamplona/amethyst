@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import android.content.ContentResolver
 import android.content.Context
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Looper
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
@@ -31,12 +33,13 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.ImageLoader
 import coil3.disk.DiskCache
-import coil3.disk.directory
 import coil3.memory.MemoryCache
-import coil3.request.crossfade
 import com.vitorpamplona.amethyst.service.LocationState
+import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.playback.VideoCache
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.ammolite.relays.NostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -52,12 +55,17 @@ import kotlin.time.measureTimedValue
 class Amethyst : Application() {
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    val client: NostrClient = NostrClient(OkHttpWebSocket.Builder())
+
     // Service Manager is only active when the activity is active.
-    val serviceManager = ServiceManager(applicationIOScope)
+    val serviceManager = ServiceManager(client, applicationIOScope)
     val locationManager = LocationState(this, applicationIOScope)
+
+    val pokeyReceiver = PokeyReceiver()
 
     override fun onTerminate() {
         super.onTerminate()
+        unregisterReceiver(pokeyReceiver)
         applicationIOScope.cancel()
     }
 
@@ -126,6 +134,19 @@ class Amethyst : Application() {
                 }
             Log.d("Rendering Metrics", "VideoCache initialized in $elapsed")
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                pokeyReceiver,
+                IntentFilter(PokeyReceiver.POKEY_ACTION),
+                RECEIVER_EXPORTED,
+            )
+        } else {
+            registerReceiver(
+                pokeyReceiver,
+                IntentFilter(PokeyReceiver.POKEY_ACTION),
+            )
+        }
     }
 
     fun imageLoaderBuilder(): ImageLoader.Builder =
@@ -133,7 +154,6 @@ class Amethyst : Application() {
             .Builder(this)
             .diskCache { coilCache }
             .memoryCache { memoryCache }
-            .crossfade(true)
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 

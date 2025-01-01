@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 fun SwipeToDeleteContainer(
     modifier: Modifier = Modifier,
     onStartToEnd: () -> Unit,
-    onEndToStart: () -> Unit,
     content: @Composable (RowScope.() -> Unit),
 ) {
     val dismissState =
@@ -66,9 +65,7 @@ fun SwipeToDeleteContainer(
                     StartToEnd -> {
                         onStartToEnd()
                     }
-                    EndToStart -> {
-                        onEndToStart()
-                    }
+                    EndToStart -> return@rememberSwipeToDismissBoxState false
                     Settled -> return@rememberSwipeToDismissBoxState false
                 }
                 return@rememberSwipeToDismissBoxState true
@@ -80,11 +77,11 @@ fun SwipeToDeleteContainer(
         state = dismissState,
         modifier = modifier,
         backgroundContent = { DismissBackground(dismissState) },
+        enableDismissFromEndToStart = false,
         content = content,
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DismissBackground(dismissState: SwipeToDismissBoxState) {
     val color by animateColorAsState(

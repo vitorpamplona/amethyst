@@ -97,23 +97,7 @@ fun AccountScreen(
                 ) {
                     LoggedInPage(
                         state.accountSettings,
-                        accountStateViewModel,
-                        sharedPreferencesViewModel,
-                    )
-                }
-
-                DisposableEffect(key1 = accountState) {
-                    onDispose {
-                        state.currentViewModelStore.viewModelStore.clear()
-                    }
-                }
-            }
-            is AccountState.LoggedInViewOnly -> {
-                CompositionLocalProvider(
-                    LocalViewModelStoreOwner provides state.currentViewModelStore,
-                ) {
-                    LoggedInPage(
-                        state.accountSettings,
+                        state.route,
                         accountStateViewModel,
                         sharedPreferencesViewModel,
                     )
@@ -132,6 +116,7 @@ fun AccountScreen(
 @Composable
 fun LoggedInPage(
     accountSettings: AccountSettings,
+    route: String?,
     accountStateViewModel: AccountStateViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
@@ -144,6 +129,8 @@ fun LoggedInPage(
                     sharedPreferencesViewModel.sharedPrefs,
                 ),
         )
+
+    accountViewModel.firstRoute = route
 
     LaunchedEffect(key1 = accountViewModel) {
         accountViewModel.restartServices()

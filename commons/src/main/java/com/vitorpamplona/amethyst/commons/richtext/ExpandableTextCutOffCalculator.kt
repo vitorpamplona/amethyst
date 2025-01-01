@@ -27,26 +27,38 @@ class ExpandableTextCutOffCalculator {
         private const val TOO_FAR_SEARCH_THE_OTHER_WAY = 450
 
         fun indexToCutOff(content: String): Int {
-            // Cuts the text in the first space or new line after SHORT_TEXT_LENGTH characters
+            // Cuts the text in the first space or first new line after SHORT_TEXT_LENGTH characters
             val firstSpaceAfterCut =
                 content.indexOf(' ', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
             val firstNewLineAfterCut =
                 content.indexOf('\n', SHORT_TEXT_LENGTH).let { if (it < 0) content.length else it }
+
+            // Cuts the text if too many new lines have passed.
             val firstLineAfterLineLimits =
                 content.nthIndexOf('\n', SHORTEN_AFTER_LINES).let { if (it < 0) content.length else it }
 
+            // gets the minimum of them all.
             val min = minOf(firstSpaceAfterCut, firstNewLineAfterCut, firstLineAfterLineLimits)
 
-            if (min > TOO_FAR_SEARCH_THE_OTHER_WAY) {
-                val newString = content.take(SHORT_TEXT_LENGTH)
-                val firstSpaceBeforeCut =
-                    newString.lastIndexOf(' ').let { if (it < 0) content.length else it }
-                val firstNewLineBeforeCut =
-                    newString.lastIndexOf('\n').let { if (it < 0) content.length else it }
+            val result =
+                if (min > TOO_FAR_SEARCH_THE_OTHER_WAY) {
+                    // if it is still too big, finds the first space or new line BEFORE the cut off.
+                    val newString = content.take(SHORT_TEXT_LENGTH)
+                    val firstSpaceBeforeCut =
+                        newString.lastIndexOf(' ').let { if (it < 0) content.length else it }
+                    val firstNewLineBeforeCut =
+                        newString.lastIndexOf('\n').let { if (it < 0) content.length else it }
 
-                return maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
+                    maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
+                } else {
+                    min
+                }
+
+            // Only returns if the difference between short and long posts is more than 100 chars or too many new lines.
+            return if (result == firstLineAfterLineLimits || result + 100 < content.length) {
+                result
             } else {
-                return min
+                content.length
             }
         }
     }

@@ -25,18 +25,15 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.signers.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -63,38 +60,26 @@ class RegisterAccounts(
             return
         }
 
-        coroutineScope {
-            val jobs =
-                remainingTos.map { accountRelayPair ->
-                    async {
-                        val result =
-                            withTimeoutOrNull(10000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    val signer = accountRelayPair.first.createSigner()
-                                    // TODO: Modify the external launcher to launch as different users.
-                                    // Right now it only registers if Amber has already approved this signature
-                                    if (signer is NostrSignerExternal) {
-                                        signer.launcher.registerLauncher(
-                                            launcher = { },
-                                            contentResolver = Amethyst.instance::contentResolverFn,
-                                        )
-                                    }
+        launchAndWaitAll(remainingTos) { accountRelayPair ->
+            val result =
+                tryAndWait { continuation ->
+                    val signer = accountRelayPair.first.createSigner()
+                    // TODO: Modify the external launcher to launch as different users.
+                    // Right now it only registers if Amber has already approved this signature
+                    if (signer is NostrSignerExternal) {
+                        signer.launcher.registerLauncher(
+                            launcher = { },
+                            contentResolver = Amethyst.instance::contentResolverFn,
+                        )
+                    }
 
-                                    RelayAuthEvent.create(accountRelayPair.second, notificationToken, signer) { result ->
-                                        continuation.resume(result)
-                                    }
-                                }
-                            }
-
-                        if (result != null) {
-                            output.add(result)
-                        }
+                    RelayAuthEvent.create(accountRelayPair.second, notificationToken, signer) { result ->
+                        continuation.resume(result)
                     }
                 }
 
-            // runs in parallel to avoid overcrowding Amber.
-            withTimeoutOrNull(15000) {
-                jobs.joinAll()
+            if (result != null) {
+                output.add(result)
             }
         }
 
@@ -181,8 +166,6 @@ class RegisterAccounts(
         if (notificationToken.isNotEmpty()) {
             withContext(Dispatchers.IO) {
                 signEventsToProveControlOfAccounts(accounts, notificationToken) { postRegistrationEvent(it) }
-
-                PushNotificationUtils.hasInit = true
             }
         }
     }

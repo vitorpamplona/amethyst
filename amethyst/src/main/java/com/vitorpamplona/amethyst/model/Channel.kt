@@ -31,7 +31,7 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toNote
+import com.vitorpamplona.quartz.encoders.toNEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +107,7 @@ abstract class Channel(
 
     open fun id() = Hex.decode(idHex)
 
-    open fun idNote() = id().toNote()
+    open fun idNote() = id().toNEvent()
 
     open fun idDisplayNote() = idNote().toShortenHex()
 

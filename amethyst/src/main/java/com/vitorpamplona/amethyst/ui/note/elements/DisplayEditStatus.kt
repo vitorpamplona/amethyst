@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +35,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun DisplayEditStatus(editState: EditState) {
-    ClickableText(
+    Text(
         text =
             buildAnnotatedString {
                 if (editState.showingVersion.value == editState.originalVersionId()) {
@@ -45,15 +46,12 @@ fun DisplayEditStatus(editState: EditState) {
                     append(stringRes(id = R.string.edited_number, editState.versionId()))
                 }
             },
-        onClick = {
-            editState.nextModification()
-        },
         style =
             LocalTextStyle.current.copy(
                 color = MaterialTheme.colorScheme.placeholderText,
                 fontWeight = FontWeight.Bold,
             ),
         maxLines = 1,
-        modifier = HalfStartPadding,
+        modifier = HalfStartPadding.clickable { editState.nextModification() },
     )
 }

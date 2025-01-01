@@ -58,10 +58,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableText
@@ -69,11 +71,11 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
-import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.MultiUserErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
+import com.vitorpamplona.amethyst.ui.note.UserBasedErrorMessageViewModel
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
@@ -291,7 +293,7 @@ fun ZapDonationButton(
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    val errorViewModel: UserBasedErrorMessageViewModel = viewModel()
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -315,10 +317,10 @@ fun ZapDonationButton(
                     scope.launch { zappingProgress = progress }
                 },
                 onMultipleChoices = { options -> wantsToZap = options.toImmutableList() },
-                onError = { _, message ->
+                onError = { _, message, toUser ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = message
+                        errorViewModel.add(message, toUser)
                     }
                 },
                 onPayViaIntent = { wantsToPay = it },
@@ -339,10 +341,10 @@ fun ZapDonationButton(
                 onChangeAmount = {
                     wantsToZap = null
                 },
-                onError = { _, message ->
+                onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = message
+                        errorViewModel.add(message, user)
                     }
                 },
                 onProgress = {
@@ -352,21 +354,12 @@ fun ZapDonationButton(
             )
         }
 
-        if (showErrorMessageDialog != null) {
-            ErrorMessageDialog(
-                title = stringRes(id = R.string.error_dialog_zap_error),
-                textContent = showErrorMessageDialog ?: "",
-                onClickStartMessage = {
-                    baseNote.author?.let {
-                        scope.launch(Dispatchers.IO) {
-                            val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
-                            nav.nav(route)
-                        }
-                    }
-                },
-                onDismiss = { showErrorMessageDialog = null },
-            )
-        }
+        MultiUserErrorMessageDialog(
+            title = stringRes(id = R.string.error_dialog_zap_error),
+            model = errorViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
 
         if (wantsToPay.isNotEmpty()) {
             PayViaIntentDialog(
@@ -377,12 +370,12 @@ fun ZapDonationButton(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = it
+                        errorViewModel.add(it)
                     }
                 },
                 justShowError = {
                     scope.launch {
-                        showErrorMessageDialog = it
+                        errorViewModel.add(it)
                     }
                 },
             )
@@ -444,7 +437,7 @@ fun customZapClick(
     context: Context,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: (List<Long>) -> Unit,
-    onError: (String, String) -> Unit,
+    onError: (String, String, User?) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     if (baseNote.isDraft()) {

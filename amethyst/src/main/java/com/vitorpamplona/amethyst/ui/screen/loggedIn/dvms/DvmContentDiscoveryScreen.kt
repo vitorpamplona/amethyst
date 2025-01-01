@@ -69,12 +69,12 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.DVMCard
-import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.note.MultiUserErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
+import com.vitorpamplona.amethyst.ui.note.UserBasedErrorMessageViewModel
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.events.AppDefinitionEvent
+import com.vitorpamplona.quartz.events.AppMetadata
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NIP90StatusEvent
 import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
@@ -203,11 +204,13 @@ fun ObserverContentDiscoveryResponse(
         }
 
     val latestResponse by resultFlow.collectAsStateWithLifecycle()
+    val myResponse = latestResponse
 
-    if (latestResponse != null) {
+    if (myResponse != null) {
         PrepareViewContentDiscoveryModels(
             noteAuthor,
             dvmRequestId.idHex,
+            myResponse,
             onRefresh,
             accountViewModel,
             nav,
@@ -235,6 +238,7 @@ fun ObserverDvmStatusResponse(
         }
 
     val latestStatus by statusFlow.collectAsStateWithLifecycle()
+
     // TODO: Make a good splash screen with loading animation for this DVM.
     if (latestStatus != null) {
         // TODO: Make a good splash screen with loading animation for this DVM.
@@ -251,6 +255,7 @@ fun ObserverDvmStatusResponse(
 fun PrepareViewContentDiscoveryModels(
     dvm: User,
     dvmRequestId: String,
+    latestResponse: NIP90ContentDiscoveryResponseEvent,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -261,7 +266,7 @@ fun PrepareViewContentDiscoveryModels(
             factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvm.pubkeyHex, requestid = dvmRequestId),
         )
 
-    LaunchedEffect(key1 = dvmRequestId) {
+    LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
         resultFeedViewModel.invalidateData()
     }
 
@@ -434,7 +439,7 @@ fun ZapDVMButton(
     val noteAuthor = baseNote.author ?: return
 
     var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    val errorViewModel: UserBasedErrorMessageViewModel = viewModel()
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -461,10 +466,10 @@ fun ZapDVMButton(
                     scope.launch { zappingProgress = progress }
                 },
                 onMultipleChoices = { options -> wantsToZap = options },
-                onError = { _, message ->
+                onError = { _, message, toUser ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = message
+                        errorViewModel.add(message, toUser)
                     }
                 },
                 onPayViaIntent = { wantsToPay = it },
@@ -485,10 +490,10 @@ fun ZapDVMButton(
                 onChangeAmount = {
                     wantsToZap = null
                 },
-                onError = { _, message ->
+                onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = message
+                        errorViewModel.add(message, user)
                     }
                 },
                 onProgress = {
@@ -498,21 +503,12 @@ fun ZapDVMButton(
             )
         }
 
-        if (showErrorMessageDialog != null) {
-            ErrorMessageDialog(
-                title = stringRes(id = R.string.error_dialog_zap_error),
-                textContent = showErrorMessageDialog ?: "",
-                onClickStartMessage = {
-                    baseNote.author?.let {
-                        scope.launch(Dispatchers.IO) {
-                            val route = routeToMessage(it, showErrorMessageDialog, accountViewModel)
-                            nav.nav(route)
-                        }
-                    }
-                },
-                onDismiss = { showErrorMessageDialog = null },
-            )
-        }
+        MultiUserErrorMessageDialog(
+            title = stringRes(id = R.string.error_dialog_zap_error),
+            model = errorViewModel,
+            accountViewModel,
+            nav,
+        )
 
         if (wantsToPay.isNotEmpty()) {
             PayViaIntentDialog(
@@ -523,12 +519,12 @@ fun ZapDVMButton(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = it
+                        errorViewModel.add(it)
                     }
                 },
                 justShowError = {
                     scope.launch {
-                        showErrorMessageDialog = it
+                        errorViewModel.add(it)
                     }
                 },
             )
@@ -627,6 +623,28 @@ fun FeedEmptyWithStatus(
     }
 }
 
+fun convertAppMetadataToCard(metadata: AppMetadata?): DVMCard {
+    if (metadata == null) {
+        return DVMCard(
+            name = "",
+            description = "",
+            cover = null,
+            amount = "",
+            personalized = false,
+        )
+    }
+
+    return with(metadata) {
+        DVMCard(
+            name = this.name ?: "",
+            description = this.about ?: "",
+            cover = this.profilePicture()?.ifBlank { null },
+            amount = this.amount ?: "",
+            personalized = this.personalized ?: false,
+        )
+    }
+}
+
 @Composable
 fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
     val noteEvent =
@@ -634,6 +652,8 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
             name = "",
             description = "",
             cover = null,
+            amount = "",
+            personalized = false,
         )
 
     val card by
@@ -641,20 +661,10 @@ fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
             .live()
             .metadata
             .map {
-                val noteEvent = it.note.event as? AppDefinitionEvent
-
-                DVMCard(
-                    name = noteEvent?.appMetaData()?.name ?: "",
-                    description = noteEvent?.appMetaData()?.about ?: "",
-                    cover = noteEvent?.appMetaData()?.image?.ifBlank { null },
-                )
+                convertAppMetadataToCard((it.note.event as? AppDefinitionEvent)?.appMetaData())
             }.distinctUntilChanged()
             .observeAsState(
-                DVMCard(
-                    name = noteEvent.appMetaData()?.name ?: "",
-                    description = noteEvent.appMetaData()?.about ?: "",
-                    cover = noteEvent.appMetaData()?.image?.ifBlank { null },
-                ),
+                convertAppMetadataToCard(noteEvent.appMetaData()),
             )
 
     return card

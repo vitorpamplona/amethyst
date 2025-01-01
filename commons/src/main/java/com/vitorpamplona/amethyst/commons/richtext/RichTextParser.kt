@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
@@ -42,58 +43,54 @@ import java.util.regex.Pattern
 import kotlin.coroutines.cancellation.CancellationException
 
 class RichTextParser {
-    fun createImageContent(
-        fullUrl: String,
-        eventTags: ImmutableListOfLists<String>,
-        description: String?,
-        callbackUri: String? = null,
-    ): MediaUrlImage {
-        val frags = Nip54InlineMetadata().parse(fullUrl)
-        val tags = Nip92MediaAttachments().parse(fullUrl, eventTags.lists)
-
-        return MediaUrlImage(
-            url = fullUrl,
-            description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
-            hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
-            blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
-            dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
-            contentWarning = frags["content-warning"] ?: tags["content-warning"],
-            uri = callbackUri,
-            mimeType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE],
-        )
-    }
-
-    fun createVideoContent(
-        fullUrl: String,
-        eventTags: ImmutableListOfLists<String>,
-        description: String?,
-        callbackUri: String? = null,
-    ): MediaUrlVideo {
-        val frags = Nip54InlineMetadata().parse(fullUrl)
-        val tags = Nip92MediaAttachments().parse(fullUrl, eventTags.lists)
-        return MediaUrlVideo(
-            url = fullUrl,
-            description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
-            hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
-            blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
-            dim = frags[FileHeaderEvent.DIMENSION] ?: tags[FileHeaderEvent.DIMENSION],
-            contentWarning = frags["content-warning"] ?: tags["content-warning"],
-            uri = callbackUri,
-            mimeType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE],
-        )
-    }
-
-    fun parseMediaUrl(
+    fun createMediaContent(
         fullUrl: String,
         eventTags: ImmutableListOfLists<String>,
         description: String?,
         callbackUri: String? = null,
     ): MediaUrlContent? {
-        val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-        return if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-            createImageContent(fullUrl, eventTags, description, callbackUri)
-        } else if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-            createVideoContent(fullUrl, eventTags, description, callbackUri)
+        val frags = Nip54InlineMetadata().parse(fullUrl)
+        val tags = Nip92MediaAttachments.parse(fullUrl, eventTags.lists)
+
+        val contentType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE]
+
+        val isImage: Boolean
+        val isVideo: Boolean
+
+        if (contentType != null) {
+            isImage = contentType.startsWith("image/")
+            isVideo = contentType.startsWith("video/")
+        } else if (fullUrl.startsWith("data:")) {
+            isImage = fullUrl.startsWith("data:image/")
+            isVideo = fullUrl.startsWith("data:video/")
+        } else {
+            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
+            isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+            isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+        }
+
+        return if (isImage) {
+            MediaUrlImage(
+                url = fullUrl,
+                description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
+                hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
+                blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
+                dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
+                contentWarning = frags["content-warning"] ?: tags["content-warning"],
+                uri = callbackUri,
+                mimeType = contentType,
+            )
+        } else if (isVideo) {
+            MediaUrlVideo(
+                url = fullUrl,
+                description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
+                hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
+                blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
+                dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
+                contentWarning = frags["content-warning"] ?: tags["content-warning"],
+                uri = callbackUri,
+                mimeType = contentType,
+            )
         } else {
             null
         }
@@ -136,7 +133,7 @@ class RichTextParser {
         val urlSet = parseValidUrls(content)
 
         val imagesForPager =
-            urlSet.mapNotNull { fullUrl -> parseMediaUrl(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
+            urlSet.mapNotNull { fullUrl -> createMediaContent(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
 
         val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)
 
@@ -147,7 +144,7 @@ class RichTextParser {
         val imagesForPagerWithBase64 =
             imagesForPager +
                 base64Images
-                    .map { createImageContent(it.segmentText, tags, content, callbackUri) }
+                    .mapNotNull { createMediaContent(it.segmentText, tags, content, callbackUri) }
                     .associateBy { it.url }
 
         return RichTextViewerState(
@@ -347,8 +344,11 @@ class RichTextParser {
             "^((http|https)://)?([A-Za-z0-9-_]+(\\.[A-Za-z0-9-_]+)+)(:[0-9]+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?"
                 .toRegex(RegexOption.IGNORE_CASE)
 
-        val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        val videoExtensions = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
+        val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
+        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8")
+
+        val imageExtensions = imageExt + imageExt.map { it.uppercase() }
+        val videoExtensions = videoExt + videoExt.map { it.uppercase() }
 
         val base64contentPattern = Pattern.compile("data:image/(${imageExtensions.joinToString(separator = "|") { it } });base64,([a-zA-Z0-9+/]+={0,2})")
 

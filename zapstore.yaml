@@ -1,6 +1,5 @@
 amethyst:
   android:
-    identifier: com.vitorpamplona.amethyst
     name: Amethyst
     description: The all-in-one Nostr client
     license: MIT

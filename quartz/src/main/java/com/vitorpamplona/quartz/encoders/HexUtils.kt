@@ -27,65 +27,53 @@ fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
 
 fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
 
-object HexValidator {
-    private fun isHexChar(c: Char): Boolean =
-        when (c) {
-            in '0'..'9' -> true
-            in 'a'..'f' -> true
-            in 'A'..'F' -> true
-            else -> false
-        }
+val lowerCaseHex = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
+val upperCaseHex = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
 
+val hexToByte: IntArray =
+    IntArray(256) { -1 }.apply {
+        lowerCaseHex.forEachIndexed { index, char -> this[char.code] = index }
+        upperCaseHex.forEachIndexed { index, char -> this[char.code] = index }
+    }
+
+// Encodes both chars in a single Int variable
+val byteToHex =
+    IntArray(256) {
+        (lowerCaseHex[(it shr 4)].code shl 8) or lowerCaseHex[(it and 0xF)].code
+    }
+
+object HexValidator {
     fun isHex(hex: String?): Boolean {
         if (hex == null) return false
         if (hex.isEmpty()) return false
-        if (hex.length % 2 != 0) return false // must be even
-        var isHex = true
+        if (hex.length and 1 != 0) return false // must be even
 
-        for (c in hex) {
-            if (!isHexChar(c)) {
-                isHex = false
-                break
-            }
+        for (c in hex.indices) {
+            if (hexToByte[hex[c].code] < 0) return false
         }
-        return isHex
+
+        return true
     }
 }
 
 object Hex {
-    val hexCode =
-        arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
-
-    // Faster if no calculations are needed.
-    private fun hexToBin(ch: Char): Int =
-        when (ch) {
-            in '0'..'9' -> ch - '0'
-            in 'a'..'f' -> ch - 'a' + 10
-            in 'A'..'F' -> ch - 'A' + 10
-            else -> throw IllegalArgumentException("illegal hex character: $ch")
-        }
-
     @JvmStatic
     fun decode(hex: String): ByteArray {
         // faster version of hex decoder
-        require(hex.length % 2 == 0)
-        val outSize = hex.length / 2
-        val out = ByteArray(outSize)
-
-        for (i in 0 until outSize) {
-            out[i] = (hexToBin(hex[2 * i]) * 16 + hexToBin(hex[2 * i + 1])).toByte()
+        require(hex.length and 1 == 0)
+        return ByteArray(hex.length / 2) {
+            (hexToByte[hex[2 * it].code] shl 4 or hexToByte[hex[2 * it + 1].code]).toByte()
         }
-
-        return out
     }
 
     @JvmStatic
     fun encode(input: ByteArray): String {
-        val len = input.size
-        val out = CharArray(len * 2)
-        for (i in 0 until len) {
-            out[i * 2] = hexCode[(input[i].toInt() shr 4) and 0xF]
-            out[i * 2 + 1] = hexCode[input[i].toInt() and 0xF]
+        val out = CharArray(input.size * 2)
+        var outIdx = 0
+        for (i in 0 until input.size) {
+            val chars = byteToHex[input[i].toInt() and 0xFF]
+            out[outIdx++] = (chars shr 8).toChar()
+            out[outIdx++] = (chars and 0xFF).toChar()
         }
         return String(out)
     }

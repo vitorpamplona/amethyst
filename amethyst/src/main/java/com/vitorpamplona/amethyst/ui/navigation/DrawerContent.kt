@@ -89,7 +89,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -112,7 +111,6 @@ import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
-import com.vitorpamplona.ammolite.relays.RelayPool
 import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.HexKey
@@ -437,7 +435,6 @@ fun ListContent(
 ) {
     val route = remember(accountViewModel) { "User/${accountViewModel.userProfile().pubkeyHex}" }
 
-    var wantsToEditRelays by remember { mutableStateOf(false) }
     var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
@@ -483,7 +480,7 @@ fun ListContent(
             accountViewModel = accountViewModel,
             onClick = {
                 nav.closeDrawer()
-                wantsToEditRelays = true
+                nav.nav(Route.EditRelays.base)
             },
         )
 
@@ -545,9 +542,6 @@ fun ListContent(
         )
     }
 
-    if (wantsToEditRelays) {
-        AllRelayListView({ wantsToEditRelays = false }, accountViewModel = accountViewModel, nav = nav)
-    }
     if (editMediaServers) {
         MediaServersListView({ editMediaServers = false }, accountViewModel = accountViewModel, nav = nav)
     }
@@ -576,7 +570,7 @@ fun ListContent(
 
 @Composable
 private fun RelayStatus(accountViewModel: AccountViewModel) {
-    val connectedRelaysText by RelayPool.statusFlow.collectAsStateWithLifecycle(RelayPoolStatus(0, 0))
+    val connectedRelaysText by accountViewModel.relayStatusFlow().collectAsStateWithLifecycle(RelayPoolStatus(0, 0))
 
     RenderRelayStatus(connectedRelaysText)
 }

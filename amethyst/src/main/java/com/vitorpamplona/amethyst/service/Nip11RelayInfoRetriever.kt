@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import android.util.LruCache
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.utils.TimeUtils

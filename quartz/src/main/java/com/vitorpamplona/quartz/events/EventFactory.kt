@@ -20,15 +20,13 @@
  */
 package com.vitorpamplona.quartz.events
 
+import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.nip46.NostrConnectEvent
 
 class EventFactory {
     companion object {
-        val additionalFactories =
-            mutableMapOf(
-                WikiNoteEvent.KIND to ::WikiNoteEvent,
-            )
+        val factories: MutableMap<Int, (HexKey, HexKey, Long, Array<Array<String>>, String, HexKey) -> Event> = mutableMapOf()
 
         fun create(
             id: String,
@@ -48,6 +46,8 @@ class EventFactory {
             BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeDefinitionEvent.KIND -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             BadgeProfilesEvent.KIND -> BadgeProfilesEvent(id, pubKey, createdAt, tags, content, sig)
+            BlossomServersEvent.KIND -> BlossomServersEvent(id, pubKey, createdAt, tags, content, sig)
+            BlossomAuthorizationEvent.KIND -> BlossomAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
             BookmarkListEvent.KIND -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarDateSlotEvent.KIND -> CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
             CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)
@@ -59,6 +59,20 @@ class EventFactory {
             ChannelMessageEvent.KIND -> ChannelMessageEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMetadataEvent.KIND -> ChannelMetadataEvent(id, pubKey, createdAt, tags, content, sig)
             ChannelMuteUserEvent.KIND -> ChannelMuteUserEvent(id, pubKey, createdAt, tags, content, sig)
+            ChatMessageEncryptedFileHeaderEvent.KIND -> {
+                if (id.isBlank()) {
+                    ChatMessageEncryptedFileHeaderEvent(
+                        Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey(),
+                        pubKey,
+                        createdAt,
+                        tags,
+                        content,
+                        sig,
+                    )
+                } else {
+                    ChatMessageEncryptedFileHeaderEvent(id, pubKey, createdAt, tags, content, sig)
+                }
+            }
             ChatMessageEvent.KIND -> {
                 if (id.isBlank()) {
                     ChatMessageEvent(
@@ -75,6 +89,7 @@ class EventFactory {
             }
             ChatMessageRelayListEvent.KIND -> ChatMessageRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ClassifiedsEvent.KIND -> ClassifiedsEvent(id, pubKey, createdAt, tags, content, sig)
+            CommentEvent.KIND -> CommentEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityDefinitionEvent.KIND -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
             CommunityPostApprovalEvent.KIND -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
@@ -98,6 +113,9 @@ class EventFactory {
             GoalEvent.KIND -> GoalEvent(id, pubKey, createdAt, tags, content, sig)
             HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
             HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
+            InteractiveStoryPrologueEvent.KIND -> InteractiveStoryPrologueEvent(id, pubKey, createdAt, tags, content, sig)
+            InteractiveStorySceneEvent.KIND -> InteractiveStorySceneEvent(id, pubKey, createdAt, tags, content, sig)
+            InteractiveStoryReadingStateEvent.KIND -> InteractiveStoryReadingStateEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesChatMessageEvent.KIND -> LiveActivitiesChatMessageEvent(id, pubKey, createdAt, tags, content, sig)
             LiveActivitiesEvent.KIND -> LiveActivitiesEvent(id, pubKey, createdAt, tags, content, sig)
             LnZapEvent.KIND -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -117,12 +135,14 @@ class EventFactory {
             NIP90UserDiscoveryResponseEvent.KIND -> NIP90UserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
             OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
             PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
+            PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)
             PinListEvent.KIND -> PinListEvent(id, pubKey, createdAt, tags, content, sig)
             PollNoteEvent.KIND -> PollNoteEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateDmEvent.KIND -> PrivateDmEvent(id, pubKey, createdAt, tags, content, sig)
             PrivateOutboxRelayListEvent.KIND -> PrivateOutboxRelayListEvent(id, pubKey, createdAt, tags, content, sig)
             ReactionEvent.KIND -> ReactionEvent(id, pubKey, createdAt, tags, content, sig)
             RecommendRelayEvent.KIND -> RecommendRelayEvent(id, pubKey, createdAt, tags, content, sig)
+            RelationshipStatusEvent.KIND -> RelationshipStatusEvent(id, pubKey, createdAt, tags, content, sig)
             RelayAuthEvent.KIND -> RelayAuthEvent(id, pubKey, createdAt, tags, content, sig)
             RelaySetEvent.KIND -> RelaySetEvent(id, pubKey, createdAt, tags, content, sig)
             ReportEvent.KIND -> ReportEvent(id, pubKey, createdAt, tags, content, sig)
@@ -139,7 +159,7 @@ class EventFactory {
             VideoViewEvent.KIND -> VideoViewEvent(id, pubKey, createdAt, tags, content, sig)
             WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
             else -> {
-                additionalFactories[kind]?.let {
+                factories[kind]?.let {
                     return it(id, pubKey, createdAt, tags, content, sig)
                 }
 

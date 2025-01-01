@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
@@ -81,7 +82,7 @@ fun RenderLoaded(
             ZoomableContentView(
                 content = MediaUrlImage(url, uri = callbackUri),
                 roundedCorner = true,
-                isFiniteHeight = false,
+                contentScale = ContentScale.FillWidth,
                 accountViewModel = accountViewModel,
             )
         }
@@ -90,7 +91,7 @@ fun RenderLoaded(
             ZoomableContentView(
                 content = MediaUrlVideo(url, uri = callbackUri),
                 roundedCorner = true,
-                isFiniteHeight = false,
+                contentScale = ContentScale.FillWidth,
                 accountViewModel = accountViewModel,
             )
         }

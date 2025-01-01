@@ -20,43 +20,36 @@
  */
 package com.vitorpamplona.quartz.encoders
 
-import com.vitorpamplona.quartz.events.FileHeaderEvent
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlin.coroutines.cancellation.CancellationException
 
 class Nip54InlineMetadata {
-    fun convertFromFileHeader(header: FileHeaderEvent): String? {
-        val myUrl = header.url() ?: return null
-        return createUrl(
-            myUrl,
-            header.tags,
+    fun createUrl(header: IMetaTag): String =
+        createUrl(
+            header.url,
+            header.properties,
         )
-    }
 
     fun createUrl(
-        imageUrl: String,
-        tags: Array<Array<String>>,
+        url: String,
+        tags: Map<String, String>,
     ): String {
         val extension =
             tags
                 .mapNotNull {
-                    if (it.isNotEmpty() && it[0] != "url") {
-                        if (it.size > 1) {
-                            "${it[0]}=${URLEncoder.encode(it[1], "utf-8")}"
-                        } else {
-                            "${it[0]}}="
-                        }
+                    if (it.key != "url") {
+                        "${it.key}=${URLEncoder.encode(it.value, "utf-8")}"
                     } else {
                         null
                     }
                 }.joinToString("&")
 
-        return if (imageUrl.contains("#")) {
-            "$imageUrl&$extension"
+        return if (url.contains("#")) {
+            "$url&$extension"
         } else {
-            "$imageUrl#$extension"
+            "$url#$extension"
         }
     }
 

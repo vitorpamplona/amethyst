@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -28,26 +29,55 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
     private var eventToWatch: String? = null
 
-    fun createLoadEventsIfNotLoadedFilter(): TypedFilter? {
-        val threadToLoad = eventToWatch ?: return null
+    fun createLoadEventsIfNotLoadedFilter(): List<TypedFilter> {
+        val threadToLoad = eventToWatch ?: return emptyList()
+
+        val branch = ThreadAssembler().findThreadFor(threadToLoad) ?: return emptyList()
 
         val eventsToLoad =
-            ThreadAssembler()
-                .findThreadFor(threadToLoad)
+            branch.allNotes
                 .filter { it.event == null }
                 .map { it.idHex }
                 .toSet()
                 .ifEmpty { null }
-                ?: return null
 
-        if (eventsToLoad.isEmpty()) return null
+        val address = if (branch.root is AddressableNote) branch.root.idHex else null
+        val event = if (branch.root !is AddressableNote) branch.root.idHex else branch.root.event?.id()
 
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    ids = eventsToLoad.toList(),
-                ),
+        return listOfNotNull(
+            eventsToLoad?.let {
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        SincePerRelayFilter(
+                            ids = it.toList(),
+                        ),
+                )
+            },
+            event?.let {
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        SincePerRelayFilter(
+                            tags =
+                                mapOf(
+                                    "e" to listOf(event),
+                                ),
+                        ),
+                )
+            },
+            address?.let {
+                TypedFilter(
+                    types = COMMON_FEED_TYPES,
+                    filter =
+                        SincePerRelayFilter(
+                            tags =
+                                mapOf(
+                                    "a" to listOf(address),
+                                ),
+                        ),
+                )
+            },
         )
     }
 
@@ -59,8 +89,7 @@ object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
         }
 
     override fun updateChannelFilters() {
-        loadEventsChannel.typedFilters =
-            listOfNotNull(createLoadEventsIfNotLoadedFilter()).ifEmpty { null }
+        loadEventsChannel.typedFilters = createLoadEventsIfNotLoadedFilter()
     }
 
     fun loadThread(noteId: String?) {

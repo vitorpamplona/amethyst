@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.RepostEvent
+import java.lang.Long.min
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,13 +55,23 @@ object ThreadLevelCalculator {
         now: Long,
     ): LevelSignature {
         val replyTo = note.replyTo
+
+        // estimates the min date by replies if it doesn't exist.
+        val createdAt =
+            note.createdAt() ?: min(
+                note.replies.minOfOrNull { it.createdAt() ?: now } ?: now,
+                note.reactions.values.minOfOrNull { it.minOfOrNull { it.createdAt() ?: now } ?: now } ?: now,
+            )
+
+        val noteAuthor = note.author
+
         if (
             note.event is RepostEvent || note.event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()
         ) {
             return LevelSignature(
-                signature = "/" + formattedDateTime(note.createdAt() ?: 0) + note.idHex.substring(0, 8) + ";",
-                createdAt = note.createdAt(),
-                author = note.author,
+                signature = "/" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) + ";",
+                createdAt = createdAt,
+                author = noteAuthor,
             )
         }
 
@@ -86,23 +97,21 @@ object ThreadLevelCalculator {
         val parentSignature = parent?.signature?.removeSuffix(";") ?: ""
 
         val threadOrder =
-            if (parent?.author == note.author && note.createdAt() != null) {
+            if (noteAuthor != null && parent?.author == noteAuthor) {
                 // author of the thread first, in **ascending** order
-                "9" +
-                    formattedDateTime((parent?.createdAt ?: 0) + (now - (note.createdAt() ?: 0))) +
-                    note.idHex.substring(0, 8)
-            } else if (note.author?.pubkeyHex == account.pubkeyHex) {
-                "8" + formattedDateTime(note.createdAt() ?: 0) + note.idHex.substring(0, 8) // my replies
-            } else if (note.author?.pubkeyHex in accountFollowingSet) {
-                "7" + formattedDateTime(note.createdAt() ?: 0) + note.idHex.substring(0, 8) // my follows replies.
+                "9" + formattedDateTime((parent.createdAt ?: 0) + (now - createdAt)) + note.idHex.substring(0, 8)
+            } else if (noteAuthor != null && noteAuthor.pubkeyHex == account.pubkeyHex) {
+                "8" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) // my replies
+            } else if (noteAuthor != null && noteAuthor.pubkeyHex in accountFollowingSet) {
+                "7" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) // my follows replies.
             } else {
-                "0" + formattedDateTime(note.createdAt() ?: 0) + note.idHex.substring(0, 8) // everyone else.
+                "0" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) // everyone else.
             }
 
         val mySignature =
             LevelSignature(
-                signature = parentSignature + "/" + threadOrder + ";",
-                createdAt = note.createdAt(),
+                signature = "$parentSignature/$threadOrder;",
+                createdAt = createdAt,
                 author = note.author,
             )
 

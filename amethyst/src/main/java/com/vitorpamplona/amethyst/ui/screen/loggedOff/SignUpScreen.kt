@@ -129,7 +129,7 @@ fun SignUpPage(
             onValueChange = { displayName.value = it },
             keyboardOptions =
                 KeyboardOptions(
-                    autoCorrect = false,
+                    autoCorrectEnabled = false,
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Go,
                 ),
@@ -208,7 +208,7 @@ fun SignUpPage(
                     }
 
                     if (displayName.value.text.isBlank()) {
-                        errorMessage = stringRes(context, R.string.key_is_required)
+                        errorMessage = stringRes(context, R.string.name_is_required)
                     }
 
                     if (acceptedTerms.value && displayName.value.text.isNotBlank()) {

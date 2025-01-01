@@ -45,6 +45,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
@@ -151,7 +152,7 @@ fun NewUserMetadataView(
                             )
                         },
                         leadingIcon = {
-                            UploadFromGallery(
+                            SelectSingleFromGallery(
                                 isUploading = postViewModel.isUploadingImageForPicture,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp),
@@ -176,13 +177,29 @@ fun NewUserMetadataView(
                             )
                         },
                         leadingIcon = {
-                            UploadFromGallery(
+                            SelectSingleFromGallery(
                                 isUploading = postViewModel.isUploadingImageForBanner,
                                 tint = MaterialTheme.colorScheme.placeholderText,
                                 modifier = Modifier.padding(start = 5.dp),
                             ) {
                                 postViewModel.uploadForBanner(it, context, onError = accountViewModel::toast)
                             }
+                        },
+                        singleLine = true,
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.pronouns)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.pronouns.value,
+                        onValueChange = { postViewModel.pronouns.value = it },
+                        placeholder = {
+                            Text(
+                                text = "they/them, ...",
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
                         },
                         singleLine = true,
                     )

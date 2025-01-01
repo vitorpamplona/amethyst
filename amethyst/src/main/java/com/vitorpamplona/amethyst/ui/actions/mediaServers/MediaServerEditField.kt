@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.encoders.HttpUrlFormatter
 
 @Composable
 fun MediaServerEditField(
+    label: Int = R.string.add_a_nip96_server,
     modifier: Modifier = Modifier,
     onAddServer: (String) -> Unit,
 ) {
@@ -63,7 +64,7 @@ fun MediaServerEditField(
             ),
     ) {
         OutlinedTextField(
-            label = { Text(text = stringRes(R.string.add_a_nip96_server)) },
+            label = { Text(text = stringRes(label)) },
             modifier = Modifier.weight(1f),
             value = url,
             onValueChange = { url = it },

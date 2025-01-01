@@ -270,6 +270,11 @@ object Nip19Bech32 {
             }.build()
             .toNEvent()
 
+    @Deprecated("Use nevent instead")
+    fun createNote(eventId: HexKey): String = eventId.hexToByteArray().toNote()
+
+    fun createNPub(authorPubKeyHex: HexKey): String = authorPubKeyHex.hexToByteArray().toNpub()
+
     fun createNProfile(
         authorPubKeyHex: String,
         relay: List<String>,
@@ -299,6 +304,7 @@ fun ByteArray.toNsec() = Bech32.encodeBytes(hrp = "nsec", this, Bech32.Encoding.
 
 fun ByteArray.toNpub() = Bech32.encodeBytes(hrp = "npub", this, Bech32.Encoding.Bech32)
 
+@Deprecated("Prefer nevent1 instead")
 fun ByteArray.toNote() = Bech32.encodeBytes(hrp = "note", this, Bech32.Encoding.Bech32)
 
 fun ByteArray.toNEvent() = Bech32.encodeBytes(hrp = "nevent", this, Bech32.Encoding.Bech32)

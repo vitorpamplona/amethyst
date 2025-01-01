@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.module.kotlin.addDeserializer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.ATag
@@ -50,6 +49,8 @@ import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import com.vitorpamplona.quartz.utils.remove
+import com.vitorpamplona.quartz.utils.startsWith
 import java.math.BigDecimal
 import java.security.MessageDigest
 
@@ -280,7 +281,13 @@ open class Event(
         return PoWRank.getCommited(id, commitedPoW)
     }
 
-    override fun getGeoHash(): String? = tags.firstOrNull { it.size > 1 && it[0] == "g" }?.get(1)?.ifBlank { null }
+    override fun getGeoHash(): String? =
+        tags
+            .filter { it.size > 1 && it[0] == "g" }
+            .maxByOrNull {
+                it[1].length
+            }?.get(1)
+            ?.ifBlank { null }
 
     override fun getReward(): BigDecimal? =
         try {
@@ -288,6 +295,8 @@ open class Event(
         } catch (e: Exception) {
             null
         }
+
+    fun filterTags(startsWith: Array<String>) = tags.remove(startsWith)
 
     open fun toNIP19(): String =
         if (this is AddressableEvent) {
@@ -550,7 +559,7 @@ class HostStub(
 interface AddressableEvent {
     fun dTag(): String
 
-    fun address(): ATag
+    fun address(relayHint: String? = null): ATag
 
     fun addressTag(): String
 }
@@ -568,7 +577,7 @@ open class BaseAddressableEvent(
     AddressableEvent {
     override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
 
-    override fun address() = ATag(kind, pubKey, dTag(), null)
+    override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 
     /**
      * Creates the tag in a memory effecient way (without creating the ATag class
@@ -582,3 +591,5 @@ data class ZapSplitSetup(
     val weight: Double,
     val isLnAddress: Boolean,
 )
+
+interface RootScope

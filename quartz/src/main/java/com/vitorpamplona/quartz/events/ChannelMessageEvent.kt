@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -40,10 +41,9 @@ class ChannelMessageEvent(
         tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
             ?: tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    override fun replyTos() =
-        tags
-            .filter { it.firstOrNull() == "e" && it.getOrNull(1) != channel() }
-            .mapNotNull { it.getOrNull(1) }
+    override fun markedReplyTos() = super.markedReplyTos().filter { it != channel() }
+
+    override fun unMarkedReplyTos() = super.unMarkedReplyTos().filter { it != channel() }
 
     companion object {
         const val KIND = 42
@@ -59,8 +59,9 @@ class ChannelMessageEvent(
             createdAt: Long = TimeUtils.now(),
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
+            directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             isDraft: Boolean,
             onReady: (ChannelMessageEvent) -> Unit,
         ) {
@@ -68,8 +69,14 @@ class ChannelMessageEvent(
                 mutableListOf(
                     arrayOf("e", channel, "", "root"),
                 )
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
             mentions?.forEach { tags.add(arrayOf("p", it)) }
+            replyTos?.forEach {
+                if (it in directMentions) {
+                    tags.add(arrayOf("q", it))
+                } else {
+                    tags.add(arrayOf("e", it))
+                }
+            }
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
@@ -78,12 +85,8 @@ class ChannelMessageEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            nip94attachments?.let {
-                it.forEach {
-                    Nip92MediaAttachments().convertFromFileHeader(it)?.let {
-                        tags.add(it)
-                    }
-                }
+            imetas?.forEach {
+                tags.add(Nip92MediaAttachments.createTag(it))
             }
             tags.add(
                 arrayOf("alt", ALT),

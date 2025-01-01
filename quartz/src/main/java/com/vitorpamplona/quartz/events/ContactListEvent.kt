@@ -85,8 +85,6 @@ class ContactListEvent(
 
     fun unverifiedFollowGeohashSet() = tags.filter { it.size > 1 && it[0] == "g" }.mapNotNull { it.getOrNull(1) }
 
-    fun unverifiedFollowAddressSet() = tags.filter { it.size > 1 && it[0] == "a" }.mapNotNull { it.getOrNull(1) }
-
     fun follows() =
         tags.mapNotNull {
             try {
@@ -141,21 +139,11 @@ class ContactListEvent(
             val tags =
                 listOf(arrayOf("alt", ALT)) +
                     followUsers.map {
-                        if (it.relayUri != null) {
-                            arrayOf("p", it.pubKeyHex, it.relayUri)
-                        } else {
-                            arrayOf("p", it.pubKeyHex)
-                        }
+                        listOfNotNull("p", it.pubKeyHex, it.relayUri).toTypedArray()
                     } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
-                    followCommunities.map {
-                        if (it.relay != null) {
-                            arrayOf("a", it.toTag(), it.relay)
-                        } else {
-                            arrayOf("a", it.toTag())
-                        }
-                    } +
+                    followCommunities.map { it.toATagArray() } +
                     followGeohashes.map { arrayOf("g", it) }
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
@@ -189,13 +177,7 @@ class ContactListEvent(
                 } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
-                    followCommunities.map {
-                        if (it.relay != null) {
-                            arrayOf("a", it.toTag(), it.relay)
-                        } else {
-                            arrayOf("a", it.toTag())
-                        }
-                    } +
+                    followCommunities.map { it.toATagArray() } +
                     followGeohashes.map { arrayOf("g", it) }
 
             return create(
@@ -452,6 +434,7 @@ class UserMetadata {
     var website: String? = null
     var about: String? = null
     var bot: Boolean? = null
+    var pronouns: String? = null
 
     var nip05: String? = null
     var nip05Verified: Boolean = false
@@ -482,6 +465,8 @@ class UserMetadata {
     fun profilePicture(): String? = picture
 
     fun cleanBlankNames() {
+        if (pronouns == "null") pronouns = null
+
         if (picture?.isNotEmpty() == true) picture = picture?.trim()
         if (nip05?.isNotEmpty() == true) nip05 = nip05?.trim()
         if (displayName?.isNotEmpty() == true) displayName = displayName?.trim()
@@ -489,6 +474,7 @@ class UserMetadata {
         if (username?.isNotEmpty() == true) username = username?.trim()
         if (lud06?.isNotEmpty() == true) lud06 = lud06?.trim()
         if (lud16?.isNotEmpty() == true) lud16 = lud16?.trim()
+        if (pronouns?.isNotEmpty() == true) pronouns = pronouns?.trim()
 
         if (banner?.isNotEmpty() == true) banner = banner?.trim()
         if (website?.isNotEmpty() == true) website = website?.trim()
@@ -505,6 +491,7 @@ class UserMetadata {
         if (banner?.isBlank() == true) banner = null
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
+        if (pronouns?.isBlank() == true) pronouns = null
     }
 }
 

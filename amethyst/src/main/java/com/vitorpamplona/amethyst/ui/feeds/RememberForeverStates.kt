@@ -38,21 +38,19 @@ private data class ScrollState(
 )
 
 object ScrollStateKeys {
-    const val GLOBAL_SCREEN = "Global"
-    const val NOTIFICATION_SCREEN = "Notifications"
-    const val VIDEO_SCREEN = "Video"
-    const val DISCOVER_SCREEN = "Discover"
-    val HOME_FOLLOWS = Route.Home.base + "Follows"
-    val HOME_REPLIES = Route.Home.base + "FollowsReplies"
-    val PROFILE_GALLERY = Route.Home.base + "ProfileGallery"
+    const val NOTIFICATION_SCREEN = "NotificationsFeed"
+    const val VIDEO_SCREEN = "VideoFeed"
+    val HOME_FOLLOWS = Route.Home.base + "FollowsFeed"
+    val HOME_REPLIES = Route.Home.base + "FollowsRepliesFeed"
+    val PROFILE_GALLERY = Route.Home.base + "ProfileGalleryFeed"
 
-    val DRAFTS = Route.Home.base + "Drafts"
+    val DRAFTS = Route.Home.base + "DraftsFeed"
 
-    val DISCOVER_CONTENT = Route.Home.base + "DiscoverContent"
-    val DISCOVER_MARKETPLACE = Route.Home.base + "Marketplace"
-    val DISCOVER_LIVE = Route.Home.base + "Live"
-    val DISCOVER_COMMUNITY = Route.Home.base + "Communities"
-    val DISCOVER_CHATS = Route.Home.base + "Chats"
+    val DISCOVER_CONTENT = Route.Home.base + "DiscoverContentFeed"
+    val DISCOVER_MARKETPLACE = Route.Home.base + "MarketplaceFeed"
+    val DISCOVER_LIVE = Route.Home.base + "LiveFeed"
+    val DISCOVER_COMMUNITY = Route.Home.base + "CommunitiesFeed"
+    val DISCOVER_CHATS = Route.Home.base + "ChatsFeed"
 }
 
 object PagerStateKeys {

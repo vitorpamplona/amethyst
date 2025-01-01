@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.note.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ChatBubbleMaxSizeModifier
@@ -95,17 +96,19 @@ import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
+import com.vitorpamplona.amethyst.ui.theme.chatBackground
 import com.vitorpamplona.amethyst.ui.theme.incognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.events.ChatroomKeyable
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmptyTagList
 import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.events.NIP17Group
 import com.vitorpamplona.quartz.events.PrivateDmEvent
 import com.vitorpamplona.quartz.events.toImmutableListOfLists
 
@@ -174,7 +177,7 @@ fun NormalChatNote(
                     false // never shows the user's pictures
                 } else if (noteEvent is PrivateDmEvent) {
                     false // one-on-one, never shows it.
-                } else if (noteEvent is ChatMessageEvent) {
+                } else if (noteEvent is ChatroomKeyable) {
                     // only shows in a group chat.
                     noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex).users.size > 1
                 } else {
@@ -274,7 +277,7 @@ fun ChatBubbleLayout(
     inner: @Composable (MutableState<Color>) -> Unit,
 ) {
     val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
-    val otherColors = MaterialTheme.colorScheme.subtleBorder
+    val otherColors = MaterialTheme.colorScheme.chatBackground
     val defaultBackground = MaterialTheme.colorScheme.background
 
     val backgroundBubbleColor =
@@ -581,6 +584,13 @@ private fun NoteRow(
                     accountViewModel,
                     nav,
                 )
+            is ChatMessageEncryptedFileHeaderEvent ->
+                RenderEncryptedFile(
+                    note,
+                    backgroundBubbleColor,
+                    accountViewModel,
+                    nav,
+                )
             else ->
                 RenderRegularTextNote(
                     note,
@@ -632,15 +642,8 @@ private fun RenderDraftEvent(
 }
 
 @Composable
-private fun ConstrainedStatusRow(
-    firstColumn: @Composable () -> Unit,
-    secondColumn: @Composable () -> Unit,
-) {
-}
-
-@Composable
 fun IncognitoBadge(baseNote: Note) {
-    if (baseNote.event is ChatMessageEvent) {
+    if (baseNote.event is NIP17Group) {
         Icon(
             painter = painterResource(id = R.drawable.incognito),
             null,

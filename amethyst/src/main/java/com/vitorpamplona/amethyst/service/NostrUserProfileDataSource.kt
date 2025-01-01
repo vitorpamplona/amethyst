@@ -33,10 +33,12 @@ import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
@@ -44,6 +46,8 @@ import com.vitorpamplona.quartz.events.RepostEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
 import com.vitorpamplona.quartz.events.TorrentEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WikiNoteEvent
 
 object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
@@ -101,6 +105,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                             listOf(
                                 TorrentEvent.KIND,
                                 TorrentCommentEvent.KIND,
+                                InteractiveStoryPrologueEvent.KIND,
                             ),
                         authors = listOf(it.pubkeyHex),
                         limit = 20,
@@ -180,7 +185,7 @@ object NostrUserProfileDataSource : AmethystNostrDataSource("UserProfileFeed") {
                 filter =
                     SincePerRelayFilter(
                         kinds =
-                            listOf(ProfileGalleryEntryEvent.KIND),
+                            listOf(ProfileGalleryEntryEvent.KIND, PictureEvent.KIND, VideoVerticalEvent.KIND, VideoHorizontalEvent.KIND),
                         authors = listOf(it.pubkeyHex),
                         limit = 1000,
                     ),

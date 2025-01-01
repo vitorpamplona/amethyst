@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -36,12 +35,14 @@ import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppSpecificDataEvent
 import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
+import com.vitorpamplona.quartz.events.BlossomServersEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.events.CalendarRSVPEvent
 import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
@@ -54,6 +55,8 @@ import com.vitorpamplona.quartz.events.GitIssueEvent
 import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -69,7 +72,6 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.flow.filter
 
 // TODO: Migrate this to a property of AccountVi
 object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
@@ -93,10 +95,11 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             ChatMessageRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
                             FileServersEvent.KIND,
+                            BlossomServersEvent.KIND,
                             PrivateOutboxRelayListEvent.KIND,
                         ),
                     authors = listOf(account.userProfile().pubkeyHex),
-                    limit = 10,
+                    limit = 20,
                 ),
         )
 
@@ -115,11 +118,12 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             ChatMessageRelayListEvent.KIND,
                             SearchRelayListEvent.KIND,
                             FileServersEvent.KIND,
+                            BlossomServersEvent.KIND,
                             MuteListEvent.KIND,
                             PeopleListEvent.KIND,
                         ),
                     authors = otherAuthors,
-                    limit = otherAuthors.size * 10,
+                    limit = otherAuthors.size * 20,
                 ),
         )
     }
@@ -237,9 +241,12 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                             GitIssueEvent.KIND,
                             GitPatchEvent.KIND,
                             HighlightEvent.KIND,
+                            CommentEvent.KIND,
                             CalendarDateSlotEvent.KIND,
                             CalendarTimeSlotEvent.KIND,
                             CalendarRSVPEvent.KIND,
+                            InteractiveStoryPrologueEvent.KIND,
+                            InteractiveStorySceneEvent.KIND,
                         ),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     limit = 400,
@@ -484,9 +491,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         super.auth(relay, challenge)
 
         if (this::account.isInitialized) {
-            account.createAuthEvent(relay, challenge) {
-                Client.sendIfExists(it, relay)
-            }
+            account.sendAuthEvent(relay, challenge)
         }
     }
 

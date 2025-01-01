@@ -45,8 +45,8 @@ class AppMetadata {
     var website: String? = null
     var about: String? = null
     var subscription: Boolean? = false
-    var cashuAccepted: Boolean? = false
-    var encryptionSupported: Boolean? = false
+    var acceptsNutZaps: Boolean? = false
+    var supportsEncryption: Boolean? = false
     var personalized: Boolean? = false
     var amount: String? = null
 
@@ -71,8 +71,8 @@ class AppMetadata {
             (website?.bytesUsedInMemory() ?: 0L) +
             (about?.bytesUsedInMemory() ?: 0L) +
             (subscription?.bytesUsedInMemory() ?: 0L) +
-            (cashuAccepted?.bytesUsedInMemory() ?: 0L) +
-            (encryptionSupported?.bytesUsedInMemory() ?: 0L) +
+            (acceptsNutZaps?.bytesUsedInMemory() ?: 0L) +
+            (supportsEncryption?.bytesUsedInMemory() ?: 0L) +
             (personalized?.bytesUsedInMemory() ?: 0L) + // A Boolean has 8 bytes of header, plus 1 byte of payload, for a total of 9 bytes of information. The JVM then rounds it up to the next multiple of 8. so the one instance of java.lang.Boolean takes up 16 bytes of memory.
             (amount?.bytesUsedInMemory() ?: 0L) +
             (nip05?.bytesUsedInMemory() ?: 0L) +
@@ -95,7 +95,7 @@ class AppMetadata {
 
     fun nip05(): String? = nip05
 
-    fun profilePicture(): String? = picture
+    fun profilePicture(): String? = picture ?: image
 
     fun cleanBlankNames() {
         if (picture?.isNotEmpty() == true) picture = picture?.trim()

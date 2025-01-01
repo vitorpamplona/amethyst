@@ -255,8 +255,10 @@ private fun TranslationMessage(
                     }
                 },
                 onClick = {
-                    accountViewModel.account.toggleDontTranslateFrom(source)
-                    langSettingsPopupExpanded = false
+                    scope.launch(Dispatchers.IO) {
+                        accountViewModel.account.toggleDontTranslateFrom(source)
+                        langSettingsPopupExpanded = false
+                    }
                 },
             )
             HorizontalDivider(thickness = DividerThickness)

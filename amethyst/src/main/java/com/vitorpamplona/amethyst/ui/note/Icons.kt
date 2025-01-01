@@ -31,7 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.AddReaction
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.AddReaction
-import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
@@ -469,7 +468,7 @@ fun PinIcon(
 ) {
     Icon(
         imageVector = Icons.Default.PushPin,
-        contentDescription = null,
+        contentDescription = stringRes(id = R.string.accessibility_pushpin),
         modifier = modifier,
         tint = tint,
     )
@@ -620,7 +619,7 @@ fun ZapSplitPreview() {
                 tint = BitcoinOrange,
             )
             Icon(
-                imageVector = Icons.Outlined.ArrowForwardIos,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
                 contentDescription = stringRes(id = R.string.zaps),
                 modifier =
                     Modifier

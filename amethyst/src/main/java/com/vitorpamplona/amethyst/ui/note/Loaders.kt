@@ -215,6 +215,7 @@ fun LoadCityName(
                         CachedGeoLocations
                             .geoLocate(geohashStr, geoHash.toLocation(), context)
                             ?.ifBlank { null }
+
                     if (newCityName != null && newCityName != cityName) {
                         cityName = newCityName
                     }

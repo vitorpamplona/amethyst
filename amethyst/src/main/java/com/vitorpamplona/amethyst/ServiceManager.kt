@@ -33,6 +33,7 @@ import coil3.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.Base64Fetcher
+import com.vitorpamplona.amethyst.service.BlurHashFetcher
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -49,12 +50,12 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorType
-import com.vitorpamplona.ammolite.relays.Client
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.quartz.encoders.bechToBytes
 import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -72,10 +73,12 @@ import kotlinx.coroutines.runBlocking
 
 @Stable
 class ServiceManager(
+    val client: NostrClient,
     val scope: CoroutineScope,
 ) {
-    private var isStarted: Boolean =
-        false // to not open amber in a loop trying to use auth relays and registering for notifications
+    // to not open amber in a loop trying to use auth relays and registering for notifications
+    private var isStarted: Boolean = false
+
     private var account: Account? = null
 
     private var collectorJob: Job? = null
@@ -134,6 +137,9 @@ class ServiceManager(
                     }
                     add(SvgDecoder.Factory())
                     add(Base64Fetcher.Factory)
+                    add(BlurHashFetcher.Factory)
+                    add(Base64Fetcher.BKeyer)
+                    add(BlurHashFetcher.BKeyer)
                     add(
                         OkHttpNetworkFetcherFactory(
                             callFactory = {
@@ -152,7 +158,7 @@ class ServiceManager(
 
         if (myAccount != null) {
             val relaySet = myAccount.connectToRelaysWithProxy.value
-            Client.reconnect(relaySet)
+            client.reconnect(relaySet)
 
             collectorJob?.cancel()
             collectorJob = null
@@ -161,7 +167,7 @@ class ServiceManager(
                     myAccount.connectToRelaysWithProxy.collectLatest {
                         delay(500)
                         if (isStarted) {
-                            Client.reconnect(it, onlyIfChanged = true)
+                            client.reconnect(it, onlyIfChanged = true)
                         }
                     }
                 }
@@ -227,7 +233,7 @@ class ServiceManager(
         NostrUserProfileDataSource.stopSync()
         NostrVideoDataSource.stopSync()
 
-        Client.reconnect(null)
+        client.reconnect(null)
         isStarted = false
     }
 

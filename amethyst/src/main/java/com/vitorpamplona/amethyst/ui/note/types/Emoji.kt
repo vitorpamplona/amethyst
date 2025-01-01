@@ -137,7 +137,7 @@ public fun RenderEmojiPack(
                     IconButton(onClick = { onClick(emoji) }, modifier = Size35Modifier) {
                         AsyncImage(
                             model = emoji.url,
-                            contentDescription = null,
+                            contentDescription = emoji.code,
                             modifier = Size35Modifier,
                         )
                     }
@@ -148,7 +148,7 @@ public fun RenderEmojiPack(
                     ) {
                         AsyncImage(
                             model = emoji.url,
-                            contentDescription = null,
+                            contentDescription = emoji.code,
                             modifier = Size35Modifier,
                         )
                     }

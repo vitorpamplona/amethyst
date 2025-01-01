@@ -37,8 +37,9 @@ import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Settings
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.ui.tor.TorType
@@ -379,6 +380,12 @@ object LocalPreferences {
                             remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                         }
 
+                        if (settings.localRelayServers.isNotEmpty()) {
+                            putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
+                        } else {
+                            remove(PrefKeys.LOCAL_RELAY_SERVERS)
+                        }
+
                         if (settings.backupMuteList != null) {
                             putString(
                                 PrefKeys.LATEST_MUTE_LIST,
@@ -434,6 +441,7 @@ object LocalPreferences {
                     }.apply()
             }
         }
+        Log.d("LocalPreferences", "Saved to encrypted storage")
     }
 
     suspend fun loadCurrentAccountFromEncryptedStorage(): AccountSettings? = currentAccount()?.let { loadCurrentAccountFromEncryptedStorage(it) }
@@ -520,7 +528,7 @@ object LocalPreferences {
                 val localRelays = parseOrNull<Set<RelaySetupInfo>>(PrefKeys.RELAYS) ?: emptySet()
 
                 val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
-                val defaultFileServer = parseOrNull<Nip96MediaServers.ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: Nip96MediaServers.DEFAULT[0]
+                val defaultFileServer = parseOrNull<ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: DEFAULT_MEDIA_SERVERS[0]
 
                 val pendingAttestations = parseOrNull<Map<HexKey, String>>(PrefKeys.PENDING_ATTESTATIONS) ?: mapOf()
                 val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()

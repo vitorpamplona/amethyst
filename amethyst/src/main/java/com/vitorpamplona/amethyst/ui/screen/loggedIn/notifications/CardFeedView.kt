@@ -22,7 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,16 +33,19 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -53,8 +59,10 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.elements.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
 fun RefreshableCardView(
@@ -108,7 +116,7 @@ fun RenderCardFeed(
     ) { state ->
         when (state) {
             is CardFeedState.Empty -> {
-                FeedEmpty(feedContent::invalidateData)
+                NotificationFeedEmpty(feedContent::invalidateData)
             }
             is CardFeedState.FeedError -> {
                 FeedError(state.errorMessage, feedContent::invalidateData)
@@ -126,6 +134,19 @@ fun RenderCardFeed(
                 LoadingFeed()
             }
         }
+    }
+}
+
+@Composable
+fun NotificationFeedEmpty(onRefresh: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(stringRes(R.string.notification_feed_is_empty))
+        Spacer(modifier = StdVertSpacer)
+        OutlinedButton(onClick = onRefresh) { Text(text = stringRes(R.string.refresh)) }
     }
 }
 

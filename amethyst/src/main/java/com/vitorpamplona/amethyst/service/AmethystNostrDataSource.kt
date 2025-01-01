@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.ammolite.relays.NostrDataSource
 import com.vitorpamplona.ammolite.relays.Relay
@@ -28,7 +29,7 @@ import com.vitorpamplona.quartz.events.Event
 
 abstract class AmethystNostrDataSource(
     debugName: String,
-) : NostrDataSource(debugName) {
+) : NostrDataSource(Amethyst.instance.client, debugName) {
     override fun consume(
         event: Event,
         relay: Relay,

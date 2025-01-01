@@ -157,7 +157,7 @@ object LanguageTranslatorService {
         while (matcher.find()) {
             try {
                 val tag = matcher.group()
-                val short = "A$counter"
+                val short = "C$counter"
                 counter++
                 returningList.put(short, tag)
             } catch (e: Exception) {
@@ -194,7 +194,7 @@ object LanguageTranslatorService {
             .filter { !it.originalUrl.contains("，") && !it.originalUrl.contains("。") }
             .associate {
                 counter++
-                "A$counter" to it.originalUrl
+                "B$counter" to it.originalUrl
             }
     }
 

@@ -28,8 +28,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -99,6 +98,7 @@ import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
@@ -119,7 +119,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.quartz.encoders.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -142,7 +142,7 @@ fun LoadThumbAndThenVideoView(
     thumbUri: String,
     authorName: String? = null,
     roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     nostrUriCallback: String? = null,
     accountViewModel: AccountViewModel,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -174,7 +174,7 @@ fun LoadThumbAndThenVideoView(
                 title = title,
                 thumb = VideoThumb(loadingFinished.second),
                 roundedCorner = roundedCorner,
-                isFiniteHeight = isFiniteHeight,
+                contentScale = contentScale,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -188,7 +188,7 @@ fun LoadThumbAndThenVideoView(
                 title = title,
                 thumb = null,
                 roundedCorner = roundedCorner,
-                isFiniteHeight = isFiniteHeight,
+                contentScale = contentScale,
                 artworkUri = thumbUri,
                 authorName = authorName,
                 nostrUriCallback = nostrUriCallback,
@@ -207,11 +207,11 @@ fun VideoView(
     thumb: VideoThumb? = null,
     roundedCorner: Boolean,
     gallery: Boolean = false,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: String? = null,
+    dimensions: Dimension? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -228,7 +228,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, isFiniteHeight, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, onControllerVisibilityChanged, accountViewModel, alwaysShowVideo)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, onControllerVisibilityChanged, accountViewModel, alwaysShowVideo)
 }
 
 @Composable
@@ -238,17 +238,18 @@ fun VideoView(
     title: String? = null,
     thumb: VideoThumb? = null,
     borderModifier: Modifier,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: String? = null,
+    dimensions: Dimension? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
     alwaysShowVideo: Boolean = false,
+    showControls: Boolean = true,
 ) {
     val defaultToStart by remember(videoUri) { mutableStateOf(DEFAULT_MUTED_SETTING.value) }
 
@@ -260,7 +261,7 @@ fun VideoView(
         }
 
     if (blurhash == null) {
-        val ratio = aspectRatio(dimensions)
+        val ratio = dimensions?.aspectRatio()
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
                 Modifier.aspectRatio(ratio)
@@ -281,7 +282,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     borderModifier = borderModifier,
-                    isFiniteHeight = isFiniteHeight,
+                    contentScale = contentScale,
                     waveform = waveform,
                     artworkUri = artworkUri,
                     authorName = authorName,
@@ -294,7 +295,7 @@ fun VideoView(
             }
         }
     } else {
-        val ratio = aspectRatio(dimensions)
+        val ratio = dimensions?.aspectRatio()
 
         val modifier =
             if (ratio != null) {
@@ -308,7 +309,7 @@ fun VideoView(
             DisplayBlurHash(
                 blurhash,
                 null,
-                if (isFiniteHeight) ContentScale.FillWidth else ContentScale.FillWidth,
+                contentScale,
                 if (ratio != null) borderModifier.aspectRatio(ratio) else borderModifier,
             )
 
@@ -327,7 +328,7 @@ fun VideoView(
                     title = title,
                     thumb = thumb,
                     borderModifier = borderModifier,
-                    isFiniteHeight = isFiniteHeight,
+                    contentScale = contentScale,
                     waveform = waveform,
                     artworkUri = artworkUri,
                     authorName = authorName,
@@ -336,6 +337,7 @@ fun VideoView(
                     onControllerVisibilityChanged = onControllerVisibilityChanged,
                     onDialog = onDialog,
                     accountViewModel = accountViewModel,
+                    showControls = showControls,
                 )
             }
         }
@@ -351,7 +353,7 @@ fun VideoViewInner(
     title: String? = null,
     thumb: VideoThumb? = null,
     showControls: Boolean = true,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     borderModifier: Modifier,
     waveform: ImmutableList<Int>? = null,
     artworkUri: String? = null,
@@ -362,22 +364,22 @@ fun VideoViewInner(
     onDialog: ((Boolean) -> Unit)? = null,
     accountViewModel: AccountViewModel,
 ) {
-    VideoPlayerActiveMutex(videoUri) { videoModifier, activeOnScreen ->
-        GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
-            GetVideoController(
-                mediaItem = mediaItem,
-                videoUri = videoUri,
-                defaultToStart = defaultToStart,
-                nostrUriCallback = nostrUriCallback,
-                proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(videoUri)),
-            ) { controller, keepPlaying ->
+    GetMediaItem(videoUri, title, artworkUri, authorName) { mediaItem ->
+        GetVideoController(
+            mediaItem = mediaItem,
+            videoUri = videoUri,
+            defaultToStart = defaultToStart,
+            nostrUriCallback = nostrUriCallback,
+            proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(videoUri)),
+        ) { controller, keepPlaying ->
+            VideoPlayerActiveMutex(controller) { videoModifier, activeOnScreen ->
                 RenderVideoPlayer(
                     videoUri = videoUri,
                     mimeType = mimeType,
                     controller = controller,
                     thumbData = thumb,
                     showControls = showControls,
-                    isFiniteHeight = isFiniteHeight,
+                    contentScale = contentScale,
                     nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
                     keepPlaying = keepPlaying,
@@ -669,22 +671,22 @@ class VisibilityData {
  */
 @Composable
 fun VideoPlayerActiveMutex(
-    videoUri: String,
+    controller: MediaController,
     inner: @Composable (Modifier, MutableState<Boolean>) -> Unit,
 ) {
-    val myCache = remember(videoUri) { VisibilityData() }
+    val myCache = remember(controller) { VisibilityData() }
 
     // Is the current video the closest to the center?
-    val active = remember(videoUri) { mutableStateOf<Boolean>(false) }
+    val active = remember(controller) { mutableStateOf<Boolean>(false) }
 
     // Keep track of all available videos.
-    DisposableEffect(key1 = videoUri) {
+    DisposableEffect(key1 = controller) {
         trackingVideos.add(myCache)
         onDispose { trackingVideos.remove(myCache) }
     }
 
     val videoModifier =
-        remember(videoUri) {
+        remember(controller) {
             Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges { distanceToCenter ->
                 myCache.distanceToCenter = distanceToCenter
 
@@ -728,7 +730,7 @@ private fun RenderVideoPlayer(
     controller: MediaController,
     thumbData: VideoThumb?,
     showControls: Boolean = true,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     nostrUriCallback: String?,
     waveform: ImmutableList<Int>? = null,
     keepPlaying: MutableState<Boolean>,
@@ -750,24 +752,25 @@ private fun RenderVideoPlayer(
             factory = { context: Context ->
                 PlayerView(context).apply {
                     player = controller
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
-                        )
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
+
                     controllerAutoShow = false
                     useController = showControls
                     thumbData?.thumb?.let { defaultArtwork = it }
                     hideController()
+
                     resizeMode =
-                        if (isFiniteHeight) {
-                            AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        } else {
-                            AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                        when (contentScale) {
+                            ContentScale.Fit -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            ContentScale.FillWidth -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
+                            ContentScale.Crop -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                            ContentScale.FillHeight -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT
+                            ContentScale.Inside -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            else -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
                         }
+
                     if (showControls) {
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {
@@ -1187,9 +1190,17 @@ fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
                     onSaveClick(localContext)
                 }
             }
-
+        val scope = rememberCoroutineScope()
         IconButton(
             onClick = {
+                scope.launch {
+                    Toast
+                        .makeText(
+                            localContext,
+                            stringRes(localContext, R.string.video_download_has_started_toast),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                }
                 if (
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                     writeStoragePermissionState.status.isGranted

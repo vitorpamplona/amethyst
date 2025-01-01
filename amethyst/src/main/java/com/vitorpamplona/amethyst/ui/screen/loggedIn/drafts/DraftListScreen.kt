@@ -210,7 +210,6 @@ private fun DraftFeedLoaded(
                             .fillMaxWidth()
                             .animateContentSize(),
                     onStartToEnd = { accountViewModel.delete(item) },
-                    onEndToStart = { accountViewModel.delete(item) },
                 ) {
                     NoteCompose(
                         item,

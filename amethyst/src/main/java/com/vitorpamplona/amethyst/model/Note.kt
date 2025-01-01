@@ -25,9 +25,11 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.distinctUntilChanged
+import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
+import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.relays.updated
 import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -40,7 +42,6 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.toNote
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.BaseTextNoteEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -70,18 +71,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
 import java.math.BigDecimal
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 
 @Stable
 class AddressableNote(
     val address: ATag,
 ) : Note(address.toTag()) {
-    override fun idNote() = address.toNAddr()
+    override fun idNote() = address.toNAddr(relayHintUrl())
 
-    override fun toNEvent() = address.toNAddr()
+    override fun toNEvent() = address.toNAddr(relayHintUrl())
 
     override fun idDisplayNote() = idNote().toShortenHex()
 
@@ -96,7 +96,7 @@ class AddressableNote(
         return minOf(publishedAt, lastCreatedAt)
     }
 
-    fun dTag(): String? = (event as? AddressableEvent)?.dTag()
+    fun dTag(): String = address.dTag
 
     override fun wasOrShouldBeDeletedBy(
         deletionEvents: Set<HexKey>,
@@ -145,7 +145,7 @@ open class Note(
 
     fun id() = Hex.decode(idHex)
 
-    open fun idNote() = id().toNote()
+    open fun idNote() = toNEvent()
 
     open fun toNEvent(): String {
         val myEvent = event
@@ -156,13 +156,27 @@ open class Note(
                     host.id,
                     host.pubKey,
                     host.kind,
-                    relays.firstOrNull()?.url,
+                    relayHintUrl(),
                 )
             } else {
-                Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
+                Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relayHintUrl())
             }
         } else {
-            Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relays.firstOrNull()?.url)
+            Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relayHintUrl())
+        }
+    }
+
+    fun relayHintUrl(): String? {
+        val authorRelay = author?.latestMetadataRelay
+
+        return if (relays.isNotEmpty()) {
+            if (authorRelay != null && relays.any { it.url == authorRelay }) {
+                authorRelay
+            } else {
+                relays.firstOrNull()?.url
+            }
+        } else {
+            null
         }
     }
 
@@ -423,31 +437,36 @@ open class Note(
         }
     }
 
-    private fun recursiveIsPaidByCalculation(
+    private suspend fun isPaidByCalculation(
         account: Account,
-        remainingZapPayments: List<Pair<Note, Note?>>,
+        zapEvents: List<Pair<Note, Note?>>,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        if (remainingZapPayments.isEmpty()) {
+        if (zapEvents.isEmpty()) {
             return
         }
 
-        val next = remainingZapPayments.first()
+        var hasSentOne = false
 
-        val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
-        if (zapResponseEvent != null) {
-            account.decryptZapPaymentResponseEvent(zapResponseEvent) { response ->
-                if (
-                    response is PayInvoiceSuccessResponse &&
-                    account.isNIP47Author(zapResponseEvent.requestAuthor())
-                ) {
+        launchAndWaitAll(zapEvents) { next ->
+            val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
+
+            if (zapResponseEvent != null) {
+                val result =
+                    tryAndWait { continuation ->
+                        account.decryptZapPaymentResponseEvent(zapResponseEvent) { response ->
+                            if (
+                                response is PayInvoiceSuccessResponse &&
+                                account.isNIP47Author(zapResponseEvent.requestAuthor())
+                            ) {
+                                continuation.resume(true)
+                            }
+                        }
+                    }
+
+                if (!hasSentOne && result == true) {
+                    hasSentOne = true
                     onWasZappedByAuthor()
-                } else {
-                    recursiveIsPaidByCalculation(
-                        account,
-                        remainingZapPayments.minus(next),
-                        onWasZappedByAuthor,
-                    )
                 }
             }
         }
@@ -457,14 +476,14 @@ open class Note(
         option: Int?,
         user: User,
         account: Account,
-        remainingZapEvents: Map<Note, Note?>,
+        zapEvents: Map<Note, Note?>,
         onWasZappedByAuthor: () -> Unit,
     ) {
-        if (remainingZapEvents.isEmpty()) {
+        if (zapEvents.isEmpty()) {
             return
         }
 
-        remainingZapEvents.forEach { next ->
+        zapEvents.forEach { next ->
             val zapRequest = next.key.event as LnZapRequestEvent
             val zapEvent = next.value?.event as? LnZapEvent
 
@@ -487,11 +506,9 @@ open class Note(
                 } else {
                     if (account.isWriteable()) {
                         val result =
-                            withTimeoutOrNull(1000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    zapRequest.decryptPrivateZap(account.signer) {
-                                        continuation.resume(it)
-                                    }
+                            tryAndWait { continuation ->
+                                zapRequest.decryptPrivateZap(account.signer) {
+                                    continuation.resume(it)
                                 }
                             }
 
@@ -512,7 +529,7 @@ open class Note(
     ) {
         isZappedByCalculation(null, user, account, zaps, onWasZappedByAuthor)
         if (account.userProfile() == user) {
-            recursiveIsPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
+            isPaidByCalculation(account, zapPayments.toList(), onWasZappedByAuthor)
         }
     }
 
@@ -564,23 +581,79 @@ open class Note(
         zapsAmount = sumOfAmounts
     }
 
-    private fun recursiveZappedAmountCalculation(
-        invoiceSet: LinkedHashSet<String>,
-        remainingZapPayments: List<Pair<Note, Note?>>,
+    private suspend fun zappedAmountCalculation(
+        startAmount: BigDecimal,
+        paidInvoiceSet: LinkedHashSet<String>,
+        zapPayments: List<Pair<Note, Note?>>,
         signer: NostrSigner,
-        output: BigDecimal,
         onReady: (BigDecimal) -> Unit,
     ) {
-        if (remainingZapPayments.isEmpty()) {
-            onReady(output)
+        if (zapPayments.isEmpty()) {
+            onReady(startAmount)
             return
         }
 
-        val next = remainingZapPayments.first()
+        var output: BigDecimal = startAmount
 
-        (next.second?.event as? LnZapPaymentResponseEvent)?.response(signer) { noteEvent ->
+        launchAndWaitAll(zapPayments) { next ->
+            val result =
+                tryAndWait { continuation ->
+                    processZapAmountFromResponse(
+                        next.first,
+                        next.second,
+                        continuation,
+                        signer,
+                    )
+                }
+
+            if (result != null && !paidInvoiceSet.contains(result.invoice)) {
+                paidInvoiceSet.add(result.invoice)
+                output = output.add(result.amount)
+            }
+        }
+
+        onReady(output)
+    }
+
+    private fun processZapAmountFromResponse(
+        paymentRequest: Note,
+        paymentResponse: Note?,
+        continuation: Continuation<InvoiceAmount?>,
+        signer: NostrSigner,
+    ) {
+        val nwcRequest = paymentRequest.event as? LnZapPaymentRequestEvent
+        val nwcResponse = paymentResponse?.event as? LnZapPaymentResponseEvent
+
+        if (nwcRequest != null && nwcResponse != null) {
+            processZapAmountFromResponse(
+                nwcRequest,
+                nwcResponse,
+                continuation,
+                signer,
+            )
+        } else {
+            continuation.resume(null)
+        }
+    }
+
+    class InvoiceAmount(
+        val invoice: String,
+        val amount: BigDecimal,
+    )
+
+    private fun processZapAmountFromResponse(
+        nwcRequest: LnZapPaymentRequestEvent,
+        nwcResponse: LnZapPaymentResponseEvent,
+        continuation: Continuation<InvoiceAmount?>,
+        signer: NostrSigner,
+    ) {
+        // if we can decrypt the reply
+        nwcResponse.response(signer) { noteEvent ->
+            // if it is a sucess
             if (noteEvent is PayInvoiceSuccessResponse) {
-                (next.first.event as? LnZapPaymentRequestEvent)?.lnInvoice(signer) { invoice ->
+                // if we can decrypt the invoice
+                nwcRequest.lnInvoice(signer) { invoice ->
+                    // if we can parse the amount
                     val amount =
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice)
@@ -589,26 +662,20 @@ open class Note(
                             null
                         }
 
-                    var newAmount = output
-
-                    if (amount != null && !invoiceSet.contains(invoice)) {
-                        invoiceSet.add(invoice)
-                        newAmount += amount
+                    // avoid double counting
+                    if (amount != null) {
+                        continuation.resume(InvoiceAmount(invoice, amount))
+                    } else {
+                        continuation.resume(null)
                     }
-
-                    recursiveZappedAmountCalculation(
-                        invoiceSet,
-                        remainingZapPayments.minus(next),
-                        signer,
-                        newAmount,
-                        onReady,
-                    )
                 }
+            } else {
+                continuation.resume(null)
             }
         }
     }
 
-    fun zappedAmountWithNWCPayments(
+    suspend fun zappedAmountWithNWCPayments(
         signer: NostrSigner,
         onReady: (BigDecimal) -> Unit,
     ) {
@@ -619,11 +686,11 @@ open class Note(
         val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
         zaps.forEach { (it.value?.event as? LnZapEvent)?.lnInvoice()?.let { invoiceSet.add(it) } }
 
-        recursiveZappedAmountCalculation(
+        zappedAmountCalculation(
+            zapsAmount,
             invoiceSet,
             zapPayments.toList(),
             signer,
-            zapsAmount,
             onReady,
         )
     }

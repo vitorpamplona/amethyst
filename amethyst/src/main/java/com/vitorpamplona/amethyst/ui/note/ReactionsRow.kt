@@ -38,7 +38,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +47,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
@@ -100,9 +98,12 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -110,9 +111,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
-import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -129,6 +128,7 @@ import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightWithPadding
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiserWithPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.ui.theme.Size14dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size18dp
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -992,13 +992,13 @@ fun ZapReaction(
     accountViewModel: AccountViewModel,
     iconSize: Dp = Size20dp,
     iconSizeModifier: Modifier = Size20Modifier,
-    animationSize: Dp = 14.dp,
+    animationSize: Dp = Size14dp,
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
-    var showErrorMessageDialog by remember { mutableStateOf<List<String>>(emptyList()) }
+    val errorViewModel: UserBasedErrorMessageViewModel = viewModel()
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -1030,10 +1030,10 @@ fun ZapReaction(
                                     wantsToZap = true
                                 }
                             },
-                            onError = { _, message ->
+                            onError = { _, message, user ->
                                 scope.launch {
                                     zappingProgress = 0f
-                                    showErrorMessageDialog = showErrorMessageDialog + message
+                                    errorViewModel.add(message, user)
                                 }
                             },
                             onPayViaIntent = { wantsToPay = it },
@@ -1059,10 +1059,10 @@ fun ZapReaction(
                         wantsToChangeZapAmount = true
                     }
                 },
-                onError = { _, message ->
+                onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = showErrorMessageDialog + message
+                        errorViewModel.add(message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -1070,22 +1070,12 @@ fun ZapReaction(
             )
         }
 
-        if (showErrorMessageDialog.isNotEmpty()) {
-            val msg = showErrorMessageDialog.joinToString("\n")
-            ErrorMessageDialog(
-                title = stringRes(id = R.string.error_dialog_zap_error),
-                textContent = msg,
-                onClickStartMessage = {
-                    baseNote.author?.let {
-                        scope.launch(Dispatchers.IO) {
-                            val route = routeToMessage(it, msg, accountViewModel)
-                            nav.nav(route)
-                        }
-                    }
-                },
-                onDismiss = { showErrorMessageDialog = emptyList() },
-            )
-        }
+        MultiUserErrorMessageDialog(
+            title = stringRes(id = R.string.error_dialog_zap_error),
+            model = errorViewModel,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
 
         if (wantsToChangeZapAmount) {
             UpdateZapAmountDialog(
@@ -1103,12 +1093,12 @@ fun ZapReaction(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = showErrorMessageDialog + it
+                        errorViewModel.add(it)
                     }
                 },
                 justShowError = {
                     scope.launch {
-                        showErrorMessageDialog = showErrorMessageDialog + it
+                        errorViewModel.add(it)
                     }
                 },
             )
@@ -1117,10 +1107,10 @@ fun ZapReaction(
         if (wantsToSetCustomZap) {
             ZapCustomDialog(
                 onClose = { wantsToSetCustomZap = false },
-                onError = { _, message ->
+                onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        showErrorMessageDialog = showErrorMessageDialog + message
+                        errorViewModel.add(message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -1170,7 +1160,7 @@ fun zapClick(
     context: Context,
     onZappingProgress: (Float) -> Unit,
     onMultipleChoices: () -> Unit,
-    onError: (String, String) -> Unit,
+    onError: (String, String, User?) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     if (baseNote.isDraft()) {
@@ -1566,7 +1556,7 @@ fun ZapAmountChoicePopup(
     popupYOffset: Dp,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
-    onError: (title: String, text: String) -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
@@ -1585,7 +1575,7 @@ fun ZapAmountChoicePopup(
     popupYOffset: Dp,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
-    onError: (title: String, text: String) -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
@@ -1602,7 +1592,7 @@ fun ZapAmountChoicePopup(
     popupYOffset: Dp,
     visibilityState: MutableTransitionState<Boolean>,
     onChangeAmount: () -> Unit,
-    onError: (title: String, text: String) -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {

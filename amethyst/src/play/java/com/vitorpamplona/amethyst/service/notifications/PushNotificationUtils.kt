@@ -28,16 +28,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 
 object PushNotificationUtils {
-    var hasInit: Boolean = false
+    var hasInit: List<AccountInfo>? = null
 
     suspend fun init(accounts: List<AccountInfo>) =
         with(Dispatchers.IO) {
-            if (hasInit) {
+            if (hasInit?.equals(accounts) == true) {
                 return@with
             }
             // get user notification token provided by firebase
             try {
                 RegisterAccounts(accounts).go(FirebaseMessaging.getInstance().token.await())
+
+                hasInit = accounts.toList()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("Firebase token", "failed to get firebase token", e)

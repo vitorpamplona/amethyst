@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -29,15 +28,21 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.fonfon.kgeohash.toGeoHash
+import com.fonfon.kgeohash.GeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.FileHeader
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.tryAndWait
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.amethyst.ui.tor.TorType
-import com.vitorpamplona.ammolite.relays.Client
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.Relay
@@ -45,22 +50,28 @@ import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelaySetupInfoToConnect
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Dimension
+import com.vitorpamplona.quartz.encoders.ETag
+import com.vitorpamplona.quartz.encoders.EventHint
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
+import com.vitorpamplona.quartz.encoders.PTag
 import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.AppSpecificDataEvent
+import com.vitorpamplona.quartz.events.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.events.BlossomServersEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Contact
 import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
@@ -79,6 +90,10 @@ import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
@@ -87,9 +102,12 @@ import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.NIP17Factory
+import com.vitorpamplona.quartz.events.NIP17Group
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
+import com.vitorpamplona.quartz.events.PictureMeta
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.Price
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -103,9 +121,12 @@ import com.vitorpamplona.quartz.events.Response
 import com.vitorpamplona.quartz.events.SealedGossipEvent
 import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import com.vitorpamplona.quartz.events.StatusEvent
+import com.vitorpamplona.quartz.events.StoryOption
 import com.vitorpamplona.quartz.events.TextNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteModificationEvent
 import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoVerticalEvent
 import com.vitorpamplona.quartz.events.WrappedEvent
 import com.vitorpamplona.quartz.events.ZapSplitSetup
 import com.vitorpamplona.quartz.signers.NostrSigner
@@ -130,9 +151,8 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
+import org.czeal.rfc3986.URIReference
 import java.math.BigDecimal
 import java.util.Locale
 import java.util.UUID
@@ -173,7 +193,7 @@ class Account(
         val listName: String,
         val peopleList: StateFlow<NoteState> = MutableStateFlow(NoteState(Note(" "))),
         val kind3: StateFlow<Account.LiveFollowList?> = MutableStateFlow(null),
-        val location: StateFlow<Location?> = MutableStateFlow(null),
+        val location: StateFlow<LocationState.LocationResult?> = MutableStateFlow(null),
     )
 
     val connectToRelaysFlow =
@@ -544,7 +564,7 @@ class Account(
             AROUND_ME ->
                 FeedsBaseFlows(
                     listName,
-                    location = Amethyst.instance.locationManager.locationStateFlow,
+                    location = Amethyst.instance.locationManager.geohashStateFlow,
                 )
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
@@ -562,30 +582,63 @@ class Account(
             }
         }
 
+    fun compute50kmLine(geoHash: GeoHash): List<String> {
+        val hashes = mutableListOf<String>()
+
+        hashes.add(geoHash.toString())
+
+        var currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.westernNeighbour
+            hashes.add(currentGeoHash.toString())
+        }
+
+        currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.easternNeighbour
+            hashes.add(currentGeoHash.toString())
+        }
+
+        return hashes
+    }
+
+    fun compute50kmRange(geoHash: GeoHash): List<String> {
+        val hashes = mutableListOf<String>()
+
+        hashes.addAll(compute50kmLine(geoHash))
+
+        var currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.northernNeighbour
+            hashes.addAll(compute50kmLine(currentGeoHash))
+        }
+
+        currentGeoHash = geoHash
+        repeat(5) {
+            currentGeoHash = currentGeoHash.southernNeighbour
+            hashes.addAll(compute50kmLine(currentGeoHash))
+        }
+
+        return hashes
+    }
+
     suspend fun mapIntoFollowLists(
         listName: String,
         kind3: LiveFollowList?,
         noteState: NoteState,
-        location: Location?,
+        location: LocationState.LocationResult?,
     ): LiveFollowList? =
         if (listName == GLOBAL_FOLLOWS) {
             null
         } else if (listName == KIND3_FOLLOWS) {
             kind3
         } else if (listName == AROUND_ME) {
-            val hash = location?.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits)
-            if (hash != null) {
+            val geohashResult = location ?: Amethyst.instance.locationManager.geohashStateFlow.value
+            if (geohashResult is LocationState.LocationResult.Success) {
                 // 2 neighbors deep = 25x25km
-                val hashes =
-                    listOf(hash.toString()) +
-                        hash.adjacent
-                            .map { listOf(it.toString()) + it.adjacent.map { it.toString() } }
-                            .flatten()
-                            .distinct()
-
                 LiveFollowList(
                     authorsPlusMe = setOf(signer.pubKey),
-                    geotags = hashes.toSet(),
+                    geotags = compute50kmRange(geohashResult.geoHash).toSet(),
                 )
             } else {
                 LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
@@ -619,6 +672,19 @@ class Account(
                 SharingStarted.Eagerly,
                 runBlocking {
                     loadAndCombineFlows(settings.defaultHomeFollowList.value)
+                },
+            )
+    }
+
+    val liveServerList: StateFlow<List<ServerName>> by lazy {
+        combine(getFileServersListFlow(), getBlossomServersListFlow()) { nip96, blossom ->
+            mergeServerList(nip96.note.event as? FileServersEvent, blossom.note.event as? BlossomServersEvent)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking {
+                    mergeServerList(getFileServersList(), getBlossomServersList())
                 },
             )
     }
@@ -899,11 +965,9 @@ class Account(
     }
 
     suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowList? =
-        withTimeoutOrNull(1000) {
-            suspendCancellableCoroutine { continuation ->
-                decryptLiveFollows(peopleListFollows) {
-                    continuation.resume(it)
-                }
+        tryAndWait { continuation ->
+            decryptLiveFollows(peopleListFollows) {
+                continuation.resume(it)
             }
         }
 
@@ -921,25 +985,21 @@ class Account(
     }
 
     suspend fun decryptPeopleList(event: PeopleListEvent?): PeopleListEvent.UsersAndWords {
-        if (event == null) return PeopleListEvent.UsersAndWords()
+        if (event == null || !isWriteable()) return PeopleListEvent.UsersAndWords()
 
-        return withTimeoutOrNull(1000) {
-            suspendCancellableCoroutine { continuation ->
-                event.publicAndPrivateUsersAndWords(signer) {
-                    continuation.resume(it)
-                }
+        return tryAndWait { continuation ->
+            event.publicAndPrivateUsersAndWords(signer) {
+                continuation.resume(it)
             }
         } ?: PeopleListEvent.UsersAndWords()
     }
 
     suspend fun decryptMuteList(event: MuteListEvent?): PeopleListEvent.UsersAndWords {
-        if (event == null) return PeopleListEvent.UsersAndWords()
+        if (event == null || !isWriteable()) return PeopleListEvent.UsersAndWords()
 
-        return withTimeoutOrNull(1000) {
-            suspendCancellableCoroutine { continuation ->
-                event.publicAndPrivateUsersAndWords(signer) {
-                    continuation.resume(it)
-                }
+        return tryAndWait { continuation ->
+            event.publicAndPrivateUsersAndWords(signer) {
+                continuation.resume(it)
             }
         } ?: PeopleListEvent.UsersAndWords()
     }
@@ -994,11 +1054,9 @@ class Account(
                     emit(null)
                 } else {
                     emit(
-                        withTimeoutOrNull(1000) {
-                            suspendCancellableCoroutine { continuation ->
-                                userState.user.latestBookmarkList?.privateTags(signer) {
-                                    continuation.resume(userState.user.latestBookmarkList)
-                                }
+                        tryAndWait { continuation ->
+                            userState.user.latestBookmarkList?.privateTags(signer) {
+                                continuation.resume(userState.user.latestBookmarkList)
                             }
                         },
                     )
@@ -1106,7 +1164,7 @@ class Account(
                 otherTags = emptyArray(),
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1123,7 +1181,7 @@ class Account(
                 relayUse = relays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -1137,7 +1195,7 @@ class Account(
                 signer = signer,
             ) {
                 // Keep this local to avoid erasing a good contact list.
-                // Client.send(it)
+                // Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1152,6 +1210,7 @@ class Account(
         picture: String? = null,
         banner: String? = null,
         website: String? = null,
+        pronouns: String? = null,
         about: String? = null,
         nip05: String? = null,
         lnAddress: String? = null,
@@ -1168,6 +1227,7 @@ class Account(
             picture = picture,
             banner = banner,
             website = website,
+            pronouns = pronouns,
             about = about,
             nip05 = nip05,
             lnAddress = lnAddress,
@@ -1177,7 +1237,7 @@ class Account(
             github = github,
             signer = signer,
         ) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }
 
@@ -1209,14 +1269,9 @@ class Account(
             return
         }
 
-        if (note.event is ChatMessageEvent) {
-            val event = note.event as ChatMessageEvent
-            val users =
-                event
-                    .recipientsPubKey()
-                    .plus(event.pubKey)
-                    .toSet()
-                    .toList()
+        val noteEvent = note.event
+        if (noteEvent is NIP17Group) {
+            val users = noteEvent.groupMembers().toList()
 
             if (reaction.startsWith(":")) {
                 val emojiUrl = EmojiUrl.decode(reaction)
@@ -1253,7 +1308,7 @@ class Account(
                 if (emojiUrl != null) {
                     note.event?.let {
                         ReactionEvent.create(emojiUrl, it, signer) {
-                            Client.send(it)
+                            Amethyst.instance.client.send(it)
                             LocalCache.consume(it)
                         }
                     }
@@ -1264,7 +1319,7 @@ class Account(
 
             note.event?.let {
                 ReactionEvent.create(reaction, it, signer) {
-                    Client.send(it)
+                    Amethyst.instance.client.send(it)
                     LocalCache.consume(it)
                 }
             }
@@ -1339,7 +1394,7 @@ class Account(
         zappedNote?.isZappedBy(userProfile(), this, onWasZapped)
     }
 
-    fun calculateZappedAmount(
+    suspend fun calculateZappedAmount(
         zappedNote: Note?,
         onReady: (BigDecimal) -> Unit,
     ) {
@@ -1370,7 +1425,7 @@ class Account(
 
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 
-                Client.sendSingle(
+                Amethyst.instance.client.sendSingle(
                     signedEvent = event,
                     relayTemplate =
                         RelaySetupInfoToConnect(
@@ -1423,14 +1478,14 @@ class Account(
 
         note.event?.let {
             ReactionEvent.createWarning(it, signer) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
 
         note.event?.let {
             ReportEvent.create(it, type, signer, content) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1448,7 +1503,7 @@ class Account(
         }
 
         ReportEvent.create(user.pubkeyHex, type, signer) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }
     }
@@ -1465,22 +1520,52 @@ class Account(
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNoteVersions.chunked(200).forEach { chunkedList ->
                 DeletionEvent.create(chunkedList, signer) { deletionEvent ->
-                    Client.send(deletionEvent)
+                    Amethyst.instance.client.send(deletionEvent)
                     LocalCache.justConsume(deletionEvent, null)
                 }
             }
         }
     }
 
-    fun createHTTPAuthorization(
+    suspend fun createHTTPAuthorization(
         url: String,
         method: String,
         body: ByteArray? = null,
-        onReady: (HTTPAuthorizationEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
+    ): HTTPAuthorizationEvent? {
+        if (!isWriteable()) return null
 
-        HTTPAuthorizationEvent.create(url, method, body, signer, onReady = onReady)
+        return tryAndWait { continuation ->
+            HTTPAuthorizationEvent.create(url, method, body, signer) {
+                continuation.resume(it)
+            }
+        }
+    }
+
+    suspend fun createBlossomUploadAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+    ): BlossomAuthorizationEvent? {
+        if (!isWriteable()) return null
+
+        return tryAndWait { continuation ->
+            BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer) {
+                continuation.resume(it)
+            }
+        }
+    }
+
+    suspend fun createBlossomDeleteAuth(
+        hash: HexKey,
+        alt: String,
+    ): BlossomAuthorizationEvent? {
+        if (!isWriteable()) return null
+
+        return tryAndWait { continuation ->
+            BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer) {
+                continuation.resume(it)
+            }
+        }
     }
 
     suspend fun boost(note: Note) {
@@ -1494,12 +1579,12 @@ class Account(
         note.event?.let {
             if (it.kind() == 1) {
                 RepostEvent.create(it, signer) {
-                    Client.send(it)
+                    Amethyst.instance.client.send(it)
                     LocalCache.justConsume(it, null)
                 }
             } else {
                 GenericRepostEvent.create(it, signer) {
-                    Client.send(it)
+                    Amethyst.instance.client.send(it)
                     LocalCache.justConsume(it, null)
                 }
             }
@@ -1510,7 +1595,7 @@ class Account(
         note.event?.let {
             if (it is WrappedEvent && it.host != null) {
                 it.host?.let {
-                    Client.sendFilterAndStopOnFirstResponse(
+                    Amethyst.instance.client.sendFilterAndStopOnFirstResponse(
                         filters =
                             listOf(
                                 TypedFilter(
@@ -1521,12 +1606,12 @@ class Account(
                                 ),
                             ),
                         onResponse = {
-                            Client.send(it)
+                            Amethyst.instance.client.send(it)
                         },
                     )
                 }
             } else {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
             }
         }
     }
@@ -1540,7 +1625,7 @@ class Account(
             if (pair.value != newAttestation) {
                 OtsEvent.create(pair.key, newAttestation, signer) {
                     LocalCache.justConsume(it, null)
-                    Client.send(it)
+                    Amethyst.instance.client.send(it)
 
                     settings.pendingAttestations.update {
                         it - pair.key
@@ -1571,7 +1656,7 @@ class Account(
 
         if (contactList != null) {
             ContactListEvent.followUser(contactList, user.pubkeyHex, signer) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -1587,7 +1672,7 @@ class Account(
                     },
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1600,7 +1685,7 @@ class Account(
 
         if (contactList != null) {
             ContactListEvent.followEvent(contactList, channel.idHex, signer) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -1616,7 +1701,7 @@ class Account(
                     },
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1629,7 +1714,7 @@ class Account(
 
         if (contactList != null) {
             ContactListEvent.followAddressableEvent(contactList, community.address, signer) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -1646,7 +1731,7 @@ class Account(
                 relayUse = relays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1663,7 +1748,7 @@ class Account(
                 tag,
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -1679,7 +1764,7 @@ class Account(
                     },
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -1715,7 +1800,7 @@ class Account(
     }
 
     fun onNewEventCreated(event: Event) {
-        Client.send(event)
+        Amethyst.instance.client.send(event)
         LocalCache.justConsume(event, null)
     }
 
@@ -1814,7 +1899,7 @@ class Account(
                 hash = headerInfo.hash,
                 size = headerInfo.size.toString(),
                 dimensions = headerInfo.dim,
-                blurhash = headerInfo.blurHash,
+                blurhash = headerInfo.blurHash?.blurhash,
                 alt = alt,
                 sensitiveContent = sensitiveContent,
                 signer = signer,
@@ -1833,10 +1918,10 @@ class Account(
     ): Note? {
         if (!isWriteable()) return null
 
-        Client.send(data, relayList = relayList)
+        Amethyst.instance.client.send(data, relayList = relayList)
         LocalCache.consume(data, null)
 
-        Client.send(signedEvent, relayList = relayList)
+        Amethyst.instance.client.send(signedEvent, relayList = relayList)
         LocalCache.consume(signedEvent, null)
 
         return LocalCache.getNoteIfExists(signedEvent.id)
@@ -1857,17 +1942,17 @@ class Account(
         signedEvent: FileStorageHeaderEvent,
         relayList: List<RelaySetupInfo>,
     ) {
-        Client.send(data, relayList = relayList)
-        Client.send(signedEvent, relayList = relayList)
+        Amethyst.instance.client.send(data, relayList = relayList)
+        Amethyst.instance.client.send(signedEvent, relayList = relayList)
     }
 
     fun sendHeader(
-        signedEvent: FileHeaderEvent,
+        signedEvent: Event,
         relayList: List<RelaySetupInfo>,
         onReady: (Note) -> Unit,
     ) {
-        Client.send(signedEvent, relayList = relayList)
-        LocalCache.consume(signedEvent, null)
+        Amethyst.instance.client.send(signedEvent, relayList = relayList)
+        LocalCache.justConsume(signedEvent, null)
 
         LocalCache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
     }
@@ -1890,7 +1975,7 @@ class Account(
             hash = headerInfo.hash,
             size = headerInfo.size.toString(),
             dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
+            blurhash = headerInfo.blurHash?.blurhash,
             alt = alt,
             originalHash = originalHash,
             sensitiveContent = sensitiveContent,
@@ -1900,8 +1985,40 @@ class Account(
         }
     }
 
+    fun sendAllAsOnePictureEvent(
+        urlHeaderInfo: Map<String, FileHeader>,
+        caption: String?,
+        sensitiveContent: Boolean,
+        relayList: List<RelaySetupInfo>,
+        onReady: (Note) -> Unit,
+    ) {
+        val iMetas =
+            urlHeaderInfo.map {
+                PictureMeta(
+                    it.key,
+                    it.value.mimeType,
+                    it.value.blurHash?.blurhash,
+                    it.value.dim,
+                    caption,
+                    it.value.hash,
+                    it.value.size.toLong(),
+                    emptyList(),
+                    emptyList(),
+                )
+            }
+
+        PictureEvent.create(
+            images = iMetas,
+            msg = caption,
+            markAsSensitive = sensitiveContent,
+            signer = signer,
+        ) { event ->
+            sendHeader(event, relayList = relayList, onReady)
+        }
+    }
+
     fun sendHeader(
-        imageUrl: String,
+        url: String,
         magnetUri: String?,
         headerInfo: FileHeader,
         alt: String?,
@@ -1912,20 +2029,70 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        FileHeaderEvent.create(
-            url = imageUrl,
-            magnetUri = magnetUri,
-            mimeType = headerInfo.mimeType,
-            hash = headerInfo.hash,
-            size = headerInfo.size.toString(),
-            dimensions = headerInfo.dim,
-            blurhash = headerInfo.blurHash,
-            alt = alt,
-            originalHash = originalHash,
-            sensitiveContent = sensitiveContent,
-            signer = signer,
-        ) { event ->
-            sendHeader(event, relayList = relayList, onReady)
+        val isImage = headerInfo.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(url)
+        val isVideo = headerInfo.mimeType?.startsWith("video/") == true || RichTextParser.isVideoUrl(url)
+
+        if (isImage) {
+            PictureEvent.create(
+                url = url,
+                msg = alt,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toLong(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash?.blurhash,
+                markAsSensitive = sensitiveContent,
+                alt = alt,
+                signer = signer,
+            ) { event ->
+                sendHeader(event, relayList = relayList, onReady)
+            }
+        } else if (isVideo && headerInfo.dim != null) {
+            if (headerInfo.dim.height > headerInfo.dim.width) {
+                VideoVerticalEvent.create(
+                    url = url,
+                    mimeType = headerInfo.mimeType,
+                    hash = headerInfo.hash,
+                    size = headerInfo.size,
+                    dimensions = headerInfo.dim,
+                    blurhash = headerInfo.blurHash?.blurhash,
+                    alt = alt,
+                    sensitiveContent = sensitiveContent,
+                    signer = signer,
+                ) { event ->
+                    sendHeader(event, relayList = relayList, onReady)
+                }
+            } else {
+                VideoHorizontalEvent.create(
+                    url = url,
+                    mimeType = headerInfo.mimeType,
+                    hash = headerInfo.hash,
+                    size = headerInfo.size,
+                    dimensions = headerInfo.dim,
+                    blurhash = headerInfo.blurHash?.blurhash,
+                    alt = alt,
+                    sensitiveContent = sensitiveContent,
+                    signer = signer,
+                ) { event ->
+                    sendHeader(event, relayList = relayList, onReady)
+                }
+            }
+        } else {
+            FileHeaderEvent.create(
+                url = url,
+                magnetUri = magnetUri,
+                mimeType = headerInfo.mimeType,
+                hash = headerInfo.hash,
+                size = headerInfo.size.toString(),
+                dimensions = headerInfo.dim,
+                blurhash = headerInfo.blurHash?.blurhash,
+                alt = alt,
+                originalHash = originalHash,
+                sensitiveContent = sensitiveContent,
+                signer = signer,
+            ) { event ->
+                sendHeader(event, relayList = relayList, onReady)
+            }
         }
     }
 
@@ -1944,7 +2111,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<Event>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -1971,7 +2138,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -1984,13 +2151,13 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it, relayList = relayList)
+                Amethyst.instance.client.send(it, relayList = relayList)
                 LocalCache.justConsume(it, null)
 
-                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                replyTo?.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
                 addresses?.forEach {
                     LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
             }
@@ -2011,7 +2178,7 @@ class Account(
         forkedFrom: Event?,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2033,7 +2200,7 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2047,19 +2214,19 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it, relayList = relayList)
+                Amethyst.instance.client.send(it, relayList = relayList)
                 LocalCache.justConsume(it, null)
 
                 // broadcast replied notes
                 replyingTo?.let {
                     LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
-                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                replyTo?.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
                 addresses?.forEach {
                     LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
             }
@@ -2079,7 +2246,7 @@ class Account(
         forkedFrom: Event?,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2099,7 +2266,7 @@ class Account(
             torrent = root,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2113,19 +2280,19 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it, relayList = relayList)
+                Amethyst.instance.client.send(it, relayList = relayList)
                 LocalCache.justConsume(it, null)
 
                 // broadcast replied notes
                 replyingTo?.let {
                     LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
-                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                replyTo?.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
                 addresses?.forEach {
                     LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
             }
@@ -2138,7 +2305,7 @@ class Account(
             val noteEvent = note.event
             if (noteEvent is DraftEvent) {
                 noteEvent.createDeletedEvent(signer) {
-                    Client.sendPrivately(
+                    Amethyst.instance.client.sendPrivately(
                         it,
                         note.relays.map { it.url }.map {
                             RelaySetupInfoToConnect(
@@ -2157,6 +2324,352 @@ class Account(
         }
     }
 
+    suspend fun sendReplyComment(
+        message: String,
+        replyingTo: Note,
+        directMentionsUsers: Set<User> = emptySet(),
+        directMentionsNotes: Set<Note> = emptySet(),
+        imetas: List<IMetaTag>? = null,
+        geohash: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        relayList: List<RelaySetupInfo>,
+        draftTag: String? = null,
+    ) {
+        if (!isWriteable()) return
+
+        val usersMentioned =
+            directMentionsUsers
+                .mapTo(HashSet(directMentionsUsers.size)) {
+                    PTag(it.pubkeyHex, it.latestMetadataRelay)
+                }
+
+        val addressesMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note is AddressableNote) {
+                        note.address
+                    } else {
+                        null
+                    }
+                }
+
+        val eventsMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note !is AddressableNote) {
+                        ETag(note.idHex, note.author?.pubkeyHex, note.relayHintUrl())
+                    } else {
+                        null
+                    }
+                }
+
+        if (replyingTo.event is CommentEvent) {
+            CommentEvent.replyComment(
+                msg = message,
+                replyingTo = EventHint(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                imetas = imetas,
+                geohash = geohash,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
+                    Amethyst.instance.client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+
+                    replyingTo.event?.let {
+                        Amethyst.instance.client.send(it, relayList = relayList)
+                    }
+                }
+            }
+        } else {
+            CommentEvent.firstReplyToEvent(
+                msg = message,
+                replyingTo = EventHint(replyingTo.event as Event, replyingTo.relayHintUrl()),
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                imetas = imetas,
+                geohash = geohash,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
+                    Amethyst.instance.client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+
+                    replyingTo.event?.let {
+                        Amethyst.instance.client.send(it, relayList = relayList)
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun sendGeoComment(
+        message: String,
+        geohash: String,
+        replyingTo: Note? = null,
+        directMentionsUsers: Set<User> = emptySet(),
+        directMentionsNotes: Set<Note> = emptySet(),
+        imetas: List<IMetaTag>? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        relayList: List<RelaySetupInfo>,
+        draftTag: String? = null,
+    ) {
+        if (!isWriteable()) return
+
+        val usersMentioned =
+            directMentionsUsers
+                .mapTo(HashSet(directMentionsUsers.size)) {
+                    PTag(it.pubkeyHex, it.latestMetadataRelay)
+                }
+
+        val addressesMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note is AddressableNote) {
+                        note.address
+                    } else {
+                        null
+                    }
+                }
+
+        val eventsMentioned =
+            directMentionsNotes
+                .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
+                    if (note !is AddressableNote) {
+                        ETag(note.idHex, note.author?.pubkeyHex, note.relayHintUrl())
+                    } else {
+                        null
+                    }
+                }
+
+        if (replyingTo != null) {
+            CommentEvent.replyComment(
+                msg = message,
+                replyingTo = EventHint<CommentEvent>(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                imetas = imetas,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
+                    Amethyst.instance.client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+
+                    replyingTo.event?.let {
+                        Amethyst.instance.client.send(it, relayList = relayList)
+                    }
+                }
+            }
+        } else {
+            CommentEvent.createGeoComment(
+                msg = message,
+                geohash = geohash,
+                usersMentioned = usersMentioned,
+                addressesMentioned = addressesMentioned,
+                eventsMentioned = eventsMentioned,
+                imetas = imetas,
+                zapReceiver = zapReceiver,
+                markAsSensitive = wantsToMarkAsSensitive,
+                zapRaiserAmount = zapRaiserAmount,
+                isDraft = draftTag != null,
+                signer = signer,
+            ) {
+                if (draftTag != null) {
+                    if (message.isBlank()) {
+                        deleteDraft(draftTag)
+                    } else {
+                        DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                            sendDraftEvent(draftEvent)
+                        }
+                    }
+                } else {
+                    Amethyst.instance.client.send(it, relayList = relayList)
+                    LocalCache.justConsume(it, null)
+                }
+            }
+        }
+    }
+
+    suspend fun createInteractiveStoryReadingState(
+        root: InteractiveStoryBaseEvent,
+        rootRelay: String?,
+        readingScene: InteractiveStoryBaseEvent,
+        readingSceneRelay: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val relayList = getPrivateOutBoxRelayList()
+
+        InteractiveStoryReadingStateEvent.create(
+            root = root,
+            rootRelay = rootRelay,
+            currentScene = readingScene,
+            currentSceneRelay = readingSceneRelay,
+            signer = signer,
+        ) {
+            if (relayList.isNotEmpty()) {
+                Amethyst.instance.client.sendPrivately(it, relayList = relayList)
+            } else {
+                Amethyst.instance.client.send(it)
+            }
+            LocalCache.justConsume(it, null)
+        }
+    }
+
+    suspend fun updateInteractiveStoryReadingState(
+        readingState: InteractiveStoryReadingStateEvent,
+        readingScene: InteractiveStoryBaseEvent,
+        readingSceneRelay: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val relayList = getPrivateOutBoxRelayList()
+
+        InteractiveStoryReadingStateEvent.update(
+            base = readingState,
+            currentScene = readingScene,
+            currentSceneRelay = readingSceneRelay,
+            signer = signer,
+        ) {
+            if (relayList.isNotEmpty()) {
+                Amethyst.instance.client.sendPrivately(it, relayList = relayList)
+            } else {
+                Amethyst.instance.client.send(it)
+            }
+            LocalCache.justConsume(it, null)
+        }
+    }
+
+    suspend fun sendInteractiveStoryPrologue(
+        baseId: String,
+        title: String,
+        content: String,
+        options: List<StoryOption>,
+        summary: String? = null,
+        image: String? = null,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        imetas: List<IMetaTag>? = null,
+        draftTag: String? = null,
+        relayList: List<RelaySetupInfo>,
+    ) {
+        if (!isWriteable()) return
+
+        InteractiveStoryPrologueEvent.create(
+            baseId = baseId,
+            title = title,
+            content = content,
+            options = options,
+            summary = summary,
+            image = image,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            imetas = imetas,
+            signer = signer,
+            isDraft = draftTag != null,
+        ) {
+            if (draftTag != null) {
+                if (content.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        sendDraftEvent(draftEvent)
+                    }
+                }
+            } else {
+                Amethyst.instance.client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    suspend fun sendInteractiveStoryScene(
+        baseId: String,
+        title: String,
+        content: String,
+        options: List<StoryOption>,
+        zapReceiver: List<ZapSplitSetup>? = null,
+        wantsToMarkAsSensitive: Boolean = false,
+        zapRaiserAmount: Long? = null,
+        imetas: List<IMetaTag>? = null,
+        draftTag: String? = null,
+        relayList: List<RelaySetupInfo>,
+    ) {
+        if (!isWriteable()) return
+
+        InteractiveStorySceneEvent.create(
+            baseId = baseId,
+            title = title,
+            content = content,
+            options = options,
+            zapReceiver = zapReceiver,
+            markAsSensitive = wantsToMarkAsSensitive,
+            zapRaiserAmount = zapRaiserAmount,
+            imetas = imetas,
+            signer = signer,
+            isDraft = draftTag != null,
+        ) {
+            if (draftTag != null) {
+                if (content.isBlank()) {
+                    deleteDraft(draftTag)
+                } else {
+                    DraftEvent.create(draftTag, it, signer) { draftEvent ->
+                        sendDraftEvent(draftEvent)
+                    }
+                }
+            } else {
+                Amethyst.instance.client.send(it, relayList = relayList)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
     suspend fun sendPost(
         message: String,
         replyTo: List<Note>?,
@@ -2171,7 +2684,7 @@ class Account(
         forkedFrom: Event?,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2193,7 +2706,7 @@ class Account(
             root = root,
             directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2207,19 +2720,19 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it, relayList = relayList)
+                Amethyst.instance.client.send(it, relayList = relayList)
                 LocalCache.justConsume(it, null)
 
                 // broadcast replied notes
                 replyingTo?.let {
                     LocalCache.getNoteIfExists(replyingTo)?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
-                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                replyTo?.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
                 addresses?.forEach {
                     LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
             }
@@ -2245,7 +2758,7 @@ class Account(
             signer = signer,
         ) {
             LocalCache.justConsume(it, null)
-            Client.send(it, relayList = relayList)
+            Amethyst.instance.client.send(it, relayList = relayList)
         }
     }
 
@@ -2263,7 +2776,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2287,7 +2800,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             isDraft = draftTag != null,
         ) {
             if (draftTag != null) {
@@ -2299,14 +2812,14 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it, relayList = relayList)
+                Amethyst.instance.client.send(it, relayList = relayList)
                 LocalCache.justConsume(it, null)
 
                 // Rebroadcast replies and tags to the current relay set
-                replyTo?.forEach { it.event?.let { Client.send(it, relayList = relayList) } }
+                replyTo?.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
                 addresses?.forEach {
                     LocalCache.getAddressableNoteIfExists(it.toTag())?.event?.let {
-                        Client.send(it, relayList = relayList)
+                        Amethyst.instance.client.send(it, relayList = relayList)
                     }
                 }
             }
@@ -2321,8 +2834,9 @@ class Account(
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
+        directMentions: Set<HexKey>,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2338,8 +2852,9 @@ class Account(
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
+            directMentions = directMentions,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2352,7 +2867,7 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -2367,7 +2882,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2385,7 +2900,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2398,7 +2913,7 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -2413,7 +2928,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         sendPrivateMessage(
@@ -2425,7 +2940,7 @@ class Account(
             wantsToMarkAsSensitive,
             zapRaiserAmount,
             geohash,
-            nip94attachments,
+            imetas,
             draftTag,
         )
     }
@@ -2439,7 +2954,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2457,7 +2972,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             signer = signer,
             advertiseNip18 = false,
             isDraft = draftTag != null,
@@ -2471,9 +2986,51 @@ class Account(
                     }
                 }
             } else {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
+        }
+    }
+
+    fun sendNIP17EncryptedFile(
+        url: String,
+        toUsers: List<HexKey>,
+        replyingTo: Note? = null,
+        contentType: String?,
+        algo: String,
+        key: ByteArray,
+        nonce: ByteArray? = null,
+        originalHash: String? = null,
+        hash: String? = null,
+        size: Int? = null,
+        dimensions: Dimension? = null,
+        blurhash: String? = null,
+        sensitiveContent: Boolean? = null,
+        alt: String?,
+    ) {
+        if (!isWriteable()) return
+
+        val repliesToHex = listOfNotNull(replyingTo?.idHex).ifEmpty { null }
+
+        NIP17Factory().createEncryptedFileNIP17(
+            url = url,
+            to = toUsers,
+            repliesToHex = repliesToHex,
+            contentType = contentType,
+            algo = algo,
+            key = key,
+            nonce = nonce,
+            originalHash = originalHash,
+            hash = hash,
+            size = size,
+            dimensions = dimensions,
+            blurhash = blurhash,
+            sensitiveContent = sensitiveContent,
+            alt = alt,
+            draftTag = null,
+            signer = signer,
+        ) {
+            broadcastPrivately(it)
         }
     }
 
@@ -2487,7 +3044,7 @@ class Account(
         wantsToMarkAsSensitive: Boolean,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String? = null,
     ) {
         if (!isWriteable()) return
@@ -2505,7 +3062,7 @@ class Account(
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
             draftTag = draftTag,
             signer = signer,
         ) {
@@ -2523,22 +3080,23 @@ class Account(
         }
     }
 
-    fun sendDraftEvent(draftEvent: DraftEvent) {
-        val relayList =
-            normalizedPrivateOutBoxRelaySet.value.map {
-                RelaySetupInfoToConnect(
-                    it,
-                    shouldUseTorForClean(it),
-                    true,
-                    true,
-                    emptySet(),
-                )
-            }
+    fun getPrivateOutBoxRelayList(): List<RelaySetupInfoToConnect> =
+        normalizedPrivateOutBoxRelaySet.value.map {
+            RelaySetupInfoToConnect(
+                it,
+                shouldUseTorForClean(it),
+                true,
+                true,
+                emptySet(),
+            )
+        }
 
+    fun sendDraftEvent(draftEvent: DraftEvent) {
+        val relayList = getPrivateOutBoxRelayList()
         if (relayList.isNotEmpty()) {
-            Client.sendPrivately(draftEvent, relayList)
+            Amethyst.instance.client.sendPrivately(draftEvent, relayList)
         } else {
-            Client.send(draftEvent)
+            Amethyst.instance.client.send(draftEvent)
         }
         LocalCache.justConsume(draftEvent, null)
     }
@@ -2588,12 +3146,12 @@ class Account(
                     }
 
                 if (relayList != null) {
-                    Client.sendPrivately(signedEvent = wrap, relayList = relayList)
+                    Amethyst.instance.client.sendPrivately(signedEvent = wrap, relayList = relayList)
                 } else {
-                    Client.send(wrap)
+                    Amethyst.instance.client.send(wrap)
                 }
             } else {
-                Client.send(wrap)
+                Amethyst.instance.client.send(wrap)
             }
         }
     }
@@ -2611,7 +3169,7 @@ class Account(
             picture = picture,
             signer = signer,
         ) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
 
             LocalCache.getChannelIfExists(it.id)?.let { follow(it) }
@@ -2626,7 +3184,7 @@ class Account(
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
         StatusEvent.update(oldEvent, newStatus, signer) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }
     }
@@ -2635,7 +3193,7 @@ class Account(
         if (!isWriteable()) return
 
         StatusEvent.create(newStatus, "general", expiration = null, signer) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }
     }
@@ -2645,11 +3203,11 @@ class Account(
         val oldEvent = oldStatus.event as? StatusEvent ?: return
 
         StatusEvent.clear(oldEvent, signer) { event ->
-            Client.send(event)
+            Amethyst.instance.client.send(event)
             LocalCache.justConsume(event, null)
 
             DeletionEvent.createForVersionOnly(listOf(event), signer) { event2 ->
-                Client.send(event2)
+                Amethyst.instance.client.send(event2)
                 LocalCache.justConsume(event2, null)
             }
         }
@@ -2670,7 +3228,7 @@ class Account(
             noteEvent.taggedAddresses().filter { it != emojiListEvent.address() },
             signer,
         ) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }
     }
@@ -2688,7 +3246,7 @@ class Account(
                 listOf(emojiListEvent.address()),
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -2703,7 +3261,7 @@ class Account(
                 noteEvent.taggedAddresses().plus(emojiListEvent.address()),
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -2714,7 +3272,7 @@ class Account(
         url: String,
         relay: String?,
         blurhash: String?,
-        dim: String?,
+        dim: Dimension?,
         hash: String?,
         mimeType: String?,
     ) {
@@ -2734,7 +3292,7 @@ class Account(
             originalHash = originalHash, */
             signer = signer,
         ) { event ->
-            Client.send(event)
+            Amethyst.instance.client.send(event)
             LocalCache.consume(event, null)
         }
     }
@@ -2757,7 +3315,7 @@ class Account(
                 isPrivate,
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it)
             }
         } else {
@@ -2767,7 +3325,7 @@ class Account(
                 isPrivate,
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it)
             }
         }
@@ -2788,7 +3346,7 @@ class Account(
                 isPrivate,
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it)
             }
         } else {
@@ -2798,17 +3356,20 @@ class Account(
                 isPrivate,
                 signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it)
             }
         }
     }
 
-    fun createAuthEvent(
+    fun sendAuthEvent(
         relay: Relay,
         challenge: String,
-        onReady: (RelayAuthEvent) -> Unit,
-    ) = createAuthEvent(relay.url, challenge, onReady = onReady)
+    ) {
+        createAuthEvent(relay.url, challenge) {
+            Amethyst.instance.client.sendIfExists(it, relay)
+        }
+    }
 
     fun createAuthEvent(
         relayUrl: String,
@@ -2925,7 +3486,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         } else {
@@ -2934,7 +3495,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         }
@@ -2950,7 +3511,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         }
@@ -2964,7 +3525,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         }
@@ -2980,7 +3541,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         } else {
@@ -2989,7 +3550,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         }
@@ -3005,7 +3566,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         }
@@ -3019,7 +3580,7 @@ class Account(
                 isPrivate = true,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.consume(it, null)
             }
         }
@@ -3049,7 +3610,7 @@ class Account(
             originalChannelIdHex = channel.idHex,
             signer = signer,
         ) {
-            Client.send(it)
+            Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
 
             follow(channel)
@@ -3079,9 +3640,9 @@ class Account(
                 }
 
             if (relayList != null) {
-                Client.sendPrivately(it, relayList)
+                Amethyst.instance.client.sendPrivately(it, relayList)
             } else {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
             }
             LocalCache.justConsume(it, null)
             onReady(it)
@@ -3296,7 +3857,7 @@ class Account(
                 relays = dmRelays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -3304,7 +3865,7 @@ class Account(
                 relays = dmRelays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -3330,7 +3891,7 @@ class Account(
                 relays = relays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -3338,7 +3899,7 @@ class Account(
                 relays = relays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -3364,7 +3925,7 @@ class Account(
                 relays = searchRelays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -3372,7 +3933,7 @@ class Account(
                 relays = searchRelays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -3398,7 +3959,7 @@ class Account(
                 relays = relays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -3406,7 +3967,7 @@ class Account(
                 relays = relays,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }
@@ -3417,6 +3978,31 @@ class Account(
     fun getFileServersListFlow(): StateFlow<NoteState> = getFileServersNote().flow().metadata.stateFlow
 
     fun getFileServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddressATag(userProfile().pubkeyHex))
+
+    fun getBlossomServersList(): BlossomServersEvent? = getBlossomServersNote().event as? BlossomServersEvent
+
+    fun getBlossomServersListFlow(): StateFlow<NoteState> = getBlossomServersNote().flow().metadata.stateFlow
+
+    fun getBlossomServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(BlossomServersEvent.createAddressATag(userProfile().pubkeyHex))
+
+    fun host(url: String): String =
+        try {
+            URIReference.parse(url).host.value
+        } catch (e: Exception) {
+            url
+        }
+
+    fun mergeServerList(
+        nip96: FileServersEvent?,
+        blossom: BlossomServersEvent?,
+    ): List<ServerName> {
+        val nip96servers = nip96?.servers()?.map { ServerName(host(it), it, ServerType.NIP96) } ?: emptyList()
+        val blossomServers = blossom?.servers()?.map { ServerName(host(it), it, ServerType.Blossom) } ?: emptyList()
+
+        val result = (nip96servers + blossomServers).ifEmpty { DEFAULT_MEDIA_SERVERS }
+
+        return result + ServerName("NIP95", "", ServerType.NIP95)
+    }
 
     fun sendFileServersList(servers: List<String>) {
         if (!isWriteable()) return
@@ -3429,7 +4015,7 @@ class Account(
                 relays = servers,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         } else {
@@ -3437,7 +4023,32 @@ class Account(
                 relays = servers,
                 signer = signer,
             ) {
-                Client.send(it)
+                Amethyst.instance.client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    fun sendBlossomServersList(servers: List<String>) {
+        if (!isWriteable()) return
+
+        val serverList = getBlossomServersList()
+
+        if (serverList != null && serverList.tags.isNotEmpty()) {
+            BlossomServersEvent.updateRelayList(
+                earlierVersion = serverList,
+                relays = servers,
+                signer = signer,
+            ) {
+                Amethyst.instance.client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        } else {
+            BlossomServersEvent.createFromScratch(
+                relays = servers,
+                signer = signer,
+            ) {
+                Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
         }

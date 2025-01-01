@@ -21,12 +21,13 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.Dimension
 import java.io.File
 
 @Immutable
 abstract class BaseMediaContent(
     val description: String? = null,
-    val dim: String? = null,
+    val dim: Dimension? = null,
     val blurhash: String? = null,
 )
 
@@ -35,30 +36,44 @@ abstract class MediaUrlContent(
     val url: String,
     description: String? = null,
     val hash: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     val uri: String? = null,
     val mimeType: String? = null,
 ) : BaseMediaContent(description, dim, blurhash)
 
 @Immutable
-class MediaUrlImage(
+open class MediaUrlImage(
     url: String,
     description: String? = null,
     hash: String? = null,
     blurhash: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     uri: String? = null,
     val contentWarning: String? = null,
     mimeType: String? = null,
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
 
-@Immutable
-class MediaUrlVideo(
+class EncryptedMediaUrlImage(
     url: String,
     description: String? = null,
     hash: String? = null,
-    dim: String? = null,
+    blurhash: String? = null,
+    dim: Dimension? = null,
+    uri: String? = null,
+    contentWarning: String? = null,
+    mimeType: String? = null,
+    val encryptionAlgo: String,
+    val encryptionKey: ByteArray,
+    val encryptionNonce: ByteArray,
+) : MediaUrlImage(url, description, hash, blurhash, dim, uri, contentWarning, mimeType)
+
+@Immutable
+open class MediaUrlVideo(
+    url: String,
+    description: String? = null,
+    hash: String? = null,
+    dim: Dimension? = null,
     uri: String? = null,
     val artworkUri: String? = null,
     val authorName: String? = null,
@@ -68,12 +83,29 @@ class MediaUrlVideo(
 ) : MediaUrlContent(url, description, hash, dim, blurhash, uri, mimeType)
 
 @Immutable
+class EncryptedMediaUrlVideo(
+    url: String,
+    description: String? = null,
+    hash: String? = null,
+    dim: Dimension? = null,
+    uri: String? = null,
+    artworkUri: String? = null,
+    authorName: String? = null,
+    blurhash: String? = null,
+    contentWarning: String? = null,
+    mimeType: String? = null,
+    val encryptionAlgo: String,
+    val encryptionKey: ByteArray,
+    val encryptionNonce: ByteArray,
+) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType)
+
+@Immutable
 abstract class MediaPreloadedContent(
     val localFile: File?,
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     val uri: String,
     val id: String? = null,
@@ -86,7 +118,7 @@ class MediaLocalImage(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,
@@ -97,7 +129,7 @@ class MediaLocalVideo(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    dim: String? = null,
+    dim: Dimension? = null,
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,

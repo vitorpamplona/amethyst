@@ -19,12 +19,8 @@
     <!-- To take pictures -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- To Upload media (newer devices) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-
     <!-- To Upload media (old devices) -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <!-- To read QRs that contain nostr:<NIP19> -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -120,10 +116,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
-
-            <meta-data
-                android:name="android.app.lib_name"
-                android:value="" />
         </activity>
 
         <activity
@@ -152,6 +144,15 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver
+            android:name=".service.notifications.PokeyReceiver"
+            android:exported="true"
+            >
+            <intent-filter>
+                <action android:name="com.shared.NOSTR" />
+            </intent-filter>
+        </receiver>
     </application>
+
 
 </manifest>

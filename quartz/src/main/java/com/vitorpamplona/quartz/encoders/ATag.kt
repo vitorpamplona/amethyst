@@ -24,14 +24,25 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
 @Immutable
 data class ATag(
     val kind: Int,
     val pubKeyHex: String,
     val dTag: String,
-    val relay: String?,
 ) {
+    var relay: String? = null
+
+    constructor(
+        kind: Int,
+        pubKeyHex: String,
+        dTag: String,
+        relayHint: String?,
+    ) : this(kind, pubKeyHex, dTag) {
+        this.relay = relayHint
+    }
+
     fun countMemory(): Long =
         5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
             8L + // kind
@@ -41,11 +52,15 @@ data class ATag(
 
     fun toTag() = assembleATag(kind, pubKeyHex, dTag)
 
-    fun toNAddr(): String =
+    fun toATagArray() = removeTrailingNullsAndEmptyOthers("a", toTag(), relay)
+
+    fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", toTag(), relay)
+
+    fun toNAddr(overrideRelay: String? = relay): String =
         TlvBuilder()
             .apply {
                 addString(Nip19Bech32.TlvTypes.SPECIAL, dTag)
-                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, relay)
+                addStringIfNotNull(Nip19Bech32.TlvTypes.RELAY, overrideRelay ?: relay)
                 addHex(Nip19Bech32.TlvTypes.AUTHOR, pubKeyHex)
                 addInt(Nip19Bech32.TlvTypes.KIND, kind)
             }.build()

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,21 +40,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
@@ -68,18 +65,16 @@ import com.vitorpamplona.ammolite.relays.RelayStat
 
 @Composable
 fun AllRelayListView(
-    onClose: () -> Unit,
-    relayToAdd: String = "",
+    relayToAdd: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    MappedAllRelayListView(onClose, relayToAdd, accountViewModel, rememberExtendedNav(nav, onClose))
+    MappedAllRelayListView(relayToAdd ?: "", accountViewModel, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MappedAllRelayListView(
-    onClose: () -> Unit,
     relayToAdd: String = "",
     accountViewModel: AccountViewModel,
     newNav: INav,
@@ -113,154 +108,150 @@ fun MappedAllRelayListView(
         privateOutboxViewModel.load(accountViewModel.account)
     }
 
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = MinHorzSpacer)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Spacer(modifier = MinHorzSpacer)
 
-                            Text(
-                                text = stringRes(R.string.relay_settings),
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.titleLarge,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 1,
-                            )
+                        Text(
+                            text = stringRes(R.string.relay_settings),
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleLarge,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                        )
 
-                            SaveButton(
-                                onPost = {
-                                    kind3ViewModel.create()
-                                    dmViewModel.create()
-                                    nip65ViewModel.create()
-                                    searchViewModel.create()
-                                    localViewModel.create()
-                                    privateOutboxViewModel.create()
-                                    onClose()
-                                },
-                                true,
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        Row {
-                            Spacer(modifier = StdHorzSpacer)
-                            CloseButton(
-                                onPress = {
-                                    kind3ViewModel.clear()
-                                    dmViewModel.clear()
-                                    nip65ViewModel.clear()
-                                    searchViewModel.clear()
-                                    localViewModel.clear()
-                                    privateOutboxViewModel.clear()
-                                    onClose()
-                                },
-                            )
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                )
-            },
-        ) { pad ->
-            LazyColumn(
-                contentPadding = FeedPadding,
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            start = 10.dp,
-                            end = 10.dp,
-                            top = pad.calculateTopPadding(),
-                            bottom = pad.calculateBottomPadding(),
-                        ).consumeWindowInsets(pad),
-            ) {
-                item {
-                    SettingsCategory(
-                        stringRes(R.string.public_home_section),
-                        stringRes(R.string.public_home_section_explainer),
-                        Modifier.padding(bottom = 8.dp),
-                    )
-                }
-                renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
-
-                item {
-                    SettingsCategory(
-                        stringRes(R.string.public_notif_section),
-                        stringRes(R.string.public_notif_section_explainer),
-                    )
-                }
-                renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
-
-                item {
-                    SettingsCategoryWithButton(
-                        stringRes(R.string.private_inbox_section),
-                        stringRes(R.string.private_inbox_section_explainer),
-                        action = {
-                            ResetDMRelays(dmViewModel)
-                        },
-                    )
-                }
-                renderDMItems(dmFeedState, dmViewModel, accountViewModel, newNav)
-
-                item {
-                    SettingsCategory(
-                        stringRes(R.string.private_outbox_section),
-                        stringRes(R.string.private_outbox_section_explainer),
-                    )
-                }
-                renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
-
-                item {
-                    SettingsCategoryWithButton(
-                        stringRes(R.string.search_section),
-                        stringRes(R.string.search_section_explainer),
-                        action = {
-                            ResetSearchRelays(searchViewModel)
-                        },
-                    )
-                }
-                renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
-
-                item {
-                    SettingsCategory(
-                        stringRes(R.string.local_section),
-                        stringRes(R.string.local_section_explainer),
-                    )
-                }
-                renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
-
-                item {
-                    SettingsCategoryWithButton(
-                        stringRes(R.string.kind_3_section),
-                        stringRes(R.string.kind_3_section_description),
-                        action = {
-                            ResetKind3Relays(kind3ViewModel)
-                        },
-                    )
-                }
-                renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, newNav, relayToAdd)
-
-                if (kind3Proposals.isNotEmpty()) {
-                    item {
-                        SettingsCategory(
-                            stringRes(R.string.kind_3_recommended_section),
-                            stringRes(R.string.kind_3_recommended_section_description),
+                        SaveButton(
+                            onPost = {
+                                kind3ViewModel.create()
+                                dmViewModel.create()
+                                nip65ViewModel.create()
+                                searchViewModel.create()
+                                localViewModel.create()
+                                privateOutboxViewModel.create()
+                                newNav.popBack()
+                            },
+                            true,
                         )
                     }
-                    renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, newNav)
+                },
+                navigationIcon = {
+                    Row {
+                        Spacer(modifier = StdHorzSpacer)
+                        CloseButton(
+                            onPress = {
+                                kind3ViewModel.clear()
+                                dmViewModel.clear()
+                                nip65ViewModel.clear()
+                                searchViewModel.clear()
+                                localViewModel.clear()
+                                privateOutboxViewModel.clear()
+                                newNav.popBack()
+                            },
+                        )
+                    }
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+            )
+        },
+    ) { pad ->
+        LazyColumn(
+            contentPadding = FeedPadding,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = 10.dp,
+                        end = 10.dp,
+                        top = pad.calculateTopPadding(),
+                        bottom = pad.calculateBottomPadding(),
+                    ).consumeWindowInsets(pad)
+                    .imePadding(),
+        ) {
+            item {
+                SettingsCategory(
+                    stringRes(R.string.public_home_section),
+                    stringRes(R.string.public_home_section_explainer),
+                    Modifier.padding(bottom = 8.dp),
+                )
+            }
+            renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.public_notif_section),
+                    stringRes(R.string.public_notif_section_explainer),
+                )
+            }
+            renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategoryWithButton(
+                    stringRes(R.string.private_inbox_section),
+                    stringRes(R.string.private_inbox_section_explainer),
+                    action = {
+                        ResetDMRelays(dmViewModel)
+                    },
+                )
+            }
+            renderDMItems(dmFeedState, dmViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.private_outbox_section),
+                    stringRes(R.string.private_outbox_section_explainer),
+                )
+            }
+            renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategoryWithButton(
+                    stringRes(R.string.search_section),
+                    stringRes(R.string.search_section_explainer),
+                    action = {
+                        ResetSearchRelays(searchViewModel)
+                    },
+                )
+            }
+            renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.local_section),
+                    stringRes(R.string.local_section_explainer),
+                )
+            }
+            renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategoryWithButton(
+                    stringRes(R.string.kind_3_section),
+                    stringRes(R.string.kind_3_section_description),
+                    action = {
+                        ResetKind3Relays(kind3ViewModel)
+                    },
+                )
+            }
+            renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, newNav, relayToAdd)
+
+            if (kind3Proposals.isNotEmpty()) {
+                item {
+                    SettingsCategory(
+                        stringRes(R.string.kind_3_recommended_section),
+                        stringRes(R.string.kind_3_recommended_section_description),
+                    )
                 }
+                renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, newNav)
             }
         }
     }

@@ -22,8 +22,10 @@ package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
 import com.vitorpamplona.ammolite.BuildConfig
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
+import com.vitorpamplona.ammolite.sockets.WebSocket
+import com.vitorpamplona.ammolite.sockets.WebSocketListener
+import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
@@ -31,10 +33,6 @@ import com.vitorpamplona.quartz.events.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import kotlinx.coroutines.CancellationException
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
 import java.util.concurrent.atomic.AtomicBoolean
 
 enum class FeedType {
@@ -45,6 +43,9 @@ enum class FeedType {
     SEARCH,
     WALLET_CONNECT,
 }
+
+val ALL_FEED_TYPES =
+    setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL, FeedType.SEARCH)
 
 val COMMON_FEED_TYPES =
     setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
@@ -58,6 +59,8 @@ class Relay(
     val write: Boolean = true,
     val forceProxy: Boolean = false,
     val activeTypes: Set<FeedType>,
+    val socketBuilder: WebsocketBuilder,
+    val subs: SubscriptionManager,
 ) {
     companion object {
         // waits 3 minutes to reconnect once things fail
@@ -129,13 +132,8 @@ class Relay(
 
             lastConnectTentative = TimeUtils.now()
 
-            val request =
-                Request
-                    .Builder()
-                    .url(url.trim())
-                    .build()
-
-            socket = HttpClientManager.getHttpClient(forceProxy).newWebSocket(request, RelayListener(onConnected))
+            socket = socketBuilder.build(url, false, RelayListener(onConnected))
+            socket?.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
@@ -150,19 +148,15 @@ class Relay(
 
     inner class RelayListener(
         val onConnected: (Relay) -> Unit,
-    ) : WebSocketListener() {
+    ) : WebSocketListener {
         override fun onOpen(
-            webSocket: WebSocket,
-            response: Response,
+            pingMillis: Long,
+            compression: Boolean,
         ) {
             checkNotInMainThread()
             Log.d("Relay", "Connect onOpen $url $socket")
 
-            markConnectionAsReady(
-                pingInMs = response.receivedResponseAtMillis - response.sentRequestAtMillis,
-                usingCompression =
-                    response.headers.get("Sec-WebSocket-Extensions")?.contains("permessage-deflate") ?: false,
-            )
+            markConnectionAsReady(pingMillis, compression)
 
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected(this@Relay)
@@ -170,10 +164,7 @@ class Relay(
             listeners.forEach { it.onRelayStateChange(this@Relay, StateType.CONNECT, null) }
         }
 
-        override fun onMessage(
-            webSocket: WebSocket,
-            text: String,
-        ) {
+        override fun onMessage(text: String) {
             checkNotInMainThread()
 
             RelayStats.addBytesReceived(url, text.bytesUsedInMemory())
@@ -190,7 +181,6 @@ class Relay(
         }
 
         override fun onClosing(
-            webSocket: WebSocket,
             code: Int,
             reason: String,
         ) {
@@ -208,7 +198,6 @@ class Relay(
         }
 
         override fun onClosed(
-            webSocket: WebSocket,
             code: Int,
             reason: String,
         ) {
@@ -222,9 +211,8 @@ class Relay(
         }
 
         override fun onFailure(
-            webSocket: WebSocket,
             t: Throwable,
-            response: Response?,
+            responseMessage: String?,
         ) {
             checkNotInMainThread()
 
@@ -232,19 +220,19 @@ class Relay(
 
             // checks if this is an actual failure. Closing the socket generates an onFailure as well.
             if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
-                RelayStats.newError(url, response?.message ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
+                RelayStats.newError(url, responseMessage ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
             }
 
             // Failures disconnect the relay.
             markConnectionAsClosed()
 
-            Log.w("Relay", "Relay onFailure $url, ${response?.message} $response ${t.message} $socket")
+            Log.w("Relay", "Relay onFailure $url, $responseMessage $responseMessage ${t.message} $socket")
             t.printStackTrace()
             listeners.forEach {
                 it.onError(
                     this@Relay,
                     "",
-                    Error("WebSocket Failure. Response: $response. Exception: ${t.message}", t),
+                    Error("WebSocket Failure. Response: $responseMessage. Exception: ${t.message}", t),
                 )
             }
         }
@@ -458,7 +446,7 @@ class Relay(
 
     fun renewFilters() {
         // Force update all filters after AUTH.
-        Client.allSubscriptions().forEach {
+        subs.allSubscriptions().forEach {
             sendFilter(requestId = it.key, it.value)
         }
     }

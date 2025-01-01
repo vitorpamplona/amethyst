@@ -134,6 +134,17 @@ class DraftEvent(
 
         fun create(
             dTag: String,
+            originalNote: InteractiveStoryBaseEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tags = mutableListOf<Array<String>>()
+            create(dTag, originalNote, tags, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
             originalNote: LiveActivitiesChatMessageEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -184,6 +195,18 @@ class DraftEvent(
                 originalNote.tags().filter {
                     it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
                 }
+
+            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+        }
+
+        fun create(
+            dTag: String,
+            originalNote: CommentEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (DraftEvent) -> Unit,
+        ) {
+            val tagsWithMarkers = originalNote.getRootScopes() + originalNote.getDirectReplies()
 
             create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
         }

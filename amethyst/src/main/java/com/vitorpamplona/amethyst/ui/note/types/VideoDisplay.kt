@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
@@ -38,43 +39,38 @@ import com.vitorpamplona.quartz.events.VideoEvent
 fun JustVideoDisplay(
     note: Note,
     roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
 ) {
     val event = (note.event as? VideoEvent) ?: return
-    val fullUrl = event.url() ?: return
+    val imeta = event.imetaTags().getOrNull(0) ?: return
 
     val content by
         remember(note) {
-            val blurHash = event.blurhash()
-            val hash = event.hash()
-            val dimensions = event.dimensions()
-            val description = event.content.ifEmpty { null } ?: event.alt()
-            val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
-            val uri = note.toNostrUri()
-            val mimeType = event.mimeType()
+            val description = event.content.ifEmpty { null } ?: imeta.alt ?: event.alt()
+            val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {
                     MediaUrlImage(
-                        url = fullUrl,
+                        url = imeta.url,
                         description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri,
-                        mimeType = mimeType,
+                        hash = imeta.hash,
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
+                        uri = note.toNostrUri(),
+                        mimeType = imeta.mimeType,
                     )
                 } else {
                     MediaUrlVideo(
-                        url = fullUrl,
+                        url = imeta.url,
                         description = description,
-                        hash = hash,
-                        blurhash = blurHash,
-                        dim = dimensions,
-                        uri = uri,
+                        hash = imeta.hash,
+                        blurhash = imeta.blurhash,
+                        dim = imeta.dimension,
+                        uri = note.toNostrUri(),
                         authorName = note.author?.toBestDisplayName(),
-                        mimeType = mimeType,
+                        mimeType = imeta.mimeType,
                     )
                 },
             )
@@ -84,7 +80,7 @@ fun JustVideoDisplay(
         ZoomableContentView(
             content = content,
             roundedCorner = roundedCorner,
-            isFiniteHeight = isFiniteHeight,
+            contentScale = contentScale,
             accountViewModel = accountViewModel,
         )
     }

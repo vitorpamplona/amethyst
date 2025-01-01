@@ -42,15 +42,30 @@ jobs:
       - name: Build APK (gradle)
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK
+      - name: Upload Play APK
         uses: actions/upload-artifact@v4
         with:
-          name: Debug APK
-          path: amethyst/build/outputs/apk/debug/app-debug.apk
+          name: Play Debug APK
+          path: amethyst/build/outputs/apk/play/debug/amethyst-play-universal-debug.apk
+
+      - name: Upload FDroid APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FDroid Debug APK
+          path: amethyst/build/outputs/apk/fdroid/debug/amethyst-fdroid-universal-debug.apk
+
+      - name: Upload Compose Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: Compose Reports
+          path: amethyst/build/compose_compiler
+
+      - name: Tests
+        run: ./gradlew test --no-daemon
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         with:
-          name: Build Reports
+          name: Test Reports
           path: amethyst/build/reports
 

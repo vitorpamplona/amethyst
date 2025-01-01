@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -85,7 +86,7 @@ class MarkdownMediaRenderer(
     ) {
         if (canPreview) {
             val content =
-                parser.parseMediaUrl(
+                parser.createMediaContent(
                     fullUrl = uri,
                     eventTags = tags ?: EmptyTagList,
                     description = title?.ifEmpty { null } ?: startOfText,
@@ -95,7 +96,7 @@ class MarkdownMediaRenderer(
                 ZoomableContentView(
                     content = content,
                     roundedCorner = true,
-                    isFiniteHeight = false,
+                    contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
             }
@@ -109,7 +110,7 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
-        val content = parser.parseMediaUrl(uri, eventTags = tags ?: EmptyTagList, startOfText, callbackUri)
+        val content = parser.createMediaContent(uri, eventTags = tags ?: EmptyTagList, startOfText, callbackUri)
 
         if (canPreview) {
             if (content != null) {
@@ -117,7 +118,7 @@ class MarkdownMediaRenderer(
                     ZoomableContentView(
                         content = content,
                         roundedCorner = true,
-                        isFiniteHeight = false,
+                        contentScale = ContentScale.FillWidth,
                         accountViewModel = accountViewModel,
                     )
                 }
@@ -183,7 +184,7 @@ class MarkdownMediaRenderer(
         richTextStringBuilder: RichTextString.Builder,
     ) {
         val tagWithoutHash = tag.removePrefix("#")
-        renderAsCompleteLink(tag, "nostr:Hashtag?id=$tagWithoutHash", richTextStringBuilder)
+        renderAsCompleteLink(tag, "nostr:nashtag?id=$tagWithoutHash", richTextStringBuilder)
 
         val hashtagIcon: HashtagIcon? = checkForHashtagWithIcon(tagWithoutHash)
         if (hashtagIcon != null) {

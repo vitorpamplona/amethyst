@@ -221,9 +221,6 @@ object NotificationUtils {
                 .setContentTitle(messageTitle)
                 .setContentText(stringRes(applicationContext, R.string.app_notification_private_message))
                 .setLargeIcon(picture?.bitmap)
-                // .setGroup(messageTitle)
-                // .setGroup(notificationGroupKey) //-> Might need a Group summary as well before we
-                // activate this
                 .setContentIntent(contentPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
@@ -239,9 +236,6 @@ object NotificationUtils {
                 .setContentTitle(messageTitle)
                 .setContentText(messageBody)
                 .setLargeIcon(picture?.bitmap)
-                // .setGroup(messageTitle)
-                // .setGroup(notificationGroupKey)  //-> Might need a Group summary as well before we
-                // activate this
                 .setContentIntent(contentPendingIntent)
                 .setPublicVersion(builderPublic.build())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

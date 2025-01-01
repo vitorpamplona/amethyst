@@ -54,7 +54,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.ui.RichTextStyle
@@ -115,7 +114,10 @@ private val DarkSubtleButton = DarkColorPalette.onSurface.copy(alpha = 0.22f)
 private val LightSubtleButton = LightColorPalette.onSurface.copy(alpha = 0.22f)
 
 private val DarkSubtleBorder = DarkColorPalette.onSurface.copy(alpha = 0.12f)
-private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.12f)
+private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.05f)
+
+private val DarkChatBackground = DarkColorPalette.onSurface.copy(alpha = 0.12f)
+private val LightChatBackground = LightColorPalette.onSurface.copy(alpha = 0.08f)
 
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
@@ -381,6 +383,9 @@ val ColorScheme.grayText: Color
 
 val ColorScheme.subtleBorder: Color
     get() = if (isLight) LightSubtleBorder else DarkSubtleBorder
+
+val ColorScheme.chatBackground: Color
+    get() = if (isLight) LightChatBackground else DarkChatBackground
 
 val ColorScheme.subtleButton: Color
     get() = if (isLight) LightSubtleButton else DarkSubtleButton

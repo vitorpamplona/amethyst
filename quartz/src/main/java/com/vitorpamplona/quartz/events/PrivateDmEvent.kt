@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.HexValidator
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -124,16 +125,13 @@ class PrivateDmEvent(
             markAsSensitive: Boolean,
             zapRaiserAmount: Long?,
             geohash: String? = null,
-            nip94attachments: List<FileHeaderEvent>? = null,
+            imetas: List<IMetaTag>? = null,
             isDraft: Boolean,
             onReady: (PrivateDmEvent) -> Unit,
         ) {
             var message = msg
-            nip94attachments?.forEach {
-                val myUrl = it.url()
-                if (myUrl != null) {
-                    message = message.replace(myUrl, Nip54InlineMetadata().createUrl(myUrl, it.tags))
-                }
+            imetas?.forEach {
+                message = message.replace(it.url, Nip54InlineMetadata().createUrl(it.url, it.properties))
             }
 
             message =
@@ -156,13 +154,10 @@ class PrivateDmEvent(
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             /* Privacy issue: DO NOT ADD THESE TO THE TAGS.
-            nip94attachments?.let {
-                it.forEach {
-                    Nip92().convertFromFileHeader(it)?.let {
-                        tags.add(it)
-                    }
-                }
-            }*/
+            imetas?.forEach {
+                tags.add(Nip92MediaAttachments.createTag(it))
+            }
+             */
 
             tags.add(arrayOf("alt", ALT))
 
