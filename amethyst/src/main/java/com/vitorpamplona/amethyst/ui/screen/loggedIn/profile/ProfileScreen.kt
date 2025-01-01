@@ -60,14 +60,17 @@ import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlaylistAddCheck
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -926,7 +929,7 @@ private fun ProfileActions(
             userHex = baseUser.pubkeyHex,
             followLists = tempFollowLists,
             addUser = { index, list ->
-                list.members = list.members.plus(baseUser.pubkeyHex)
+                list.members.add(baseUser.pubkeyHex)
             },
         )
     }
@@ -1117,9 +1120,9 @@ private fun DropDownMenuHeader(
 class FollowInfo(
     val name: String,
     val isPrivate: Boolean,
-    memberList: List<String> = mutableListOf(),
+    memberList: MutableList<String> = mutableListOf(),
 ) {
-    var members by mutableStateOf(memberList)
+    var members = memberList
 }
 
 fun generateFollowLists(): List<FollowInfo> =
@@ -1167,26 +1170,60 @@ fun FollowSetItem(
         ) {
             Text(listHeader, fontWeight = FontWeight.Bold)
             Spacer(modifier = StdVertSpacer)
-            FilterChip(
-                selected = isUserInList,
-                enabled = isUserInList,
-                onClick = {},
-                label = {
-                    Text(text = if (isUserInList) "In List" else "Not in List")
-                },
-                leadingIcon =
-                    if (isUserInList) {
-                        {
+            Row {
+                FilterChip(
+                    selected = isUserInList,
+                    enabled = isUserInList,
+                    onClick = {},
+                    label = {
+                        Text(text = if (isUserInList) "In List" else "Not in List")
+                    },
+                    leadingIcon =
+                        if (isUserInList) {
+                            {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
+                                    contentDescription = null,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    shape = ButtonBorder,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                AssistChip(
+                    onClick = {},
+                    label = {
+                        Text(text = if (isUserInList) "Delete" else "Add")
+                    },
+                    leadingIcon = {
+                        if (isUserInList) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
+                                imageVector = Icons.Filled.Delete,
                                 contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onError,
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
-                    } else {
-                        null
                     },
-                shape = ButtonBorder,
-            )
+                    shape = ButtonBorder,
+                    colors =
+                        AssistChipDefaults.assistChipColors(
+                            containerColor =
+                                if (isUserInList) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                        ),
+                )
+            }
         }
 
         listIsPublic.let {
