@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.RepostEvent
-import kotlin.time.measureTimedValue
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.toImmutableSet
 
 class ThreadAssembler {
     private fun searchRoot(
@@ -71,32 +73,50 @@ class ThreadAssembler {
         return null
     }
 
-    fun findThreadFor(noteId: String): Set<Note> {
+    @Stable
+    class ThreadInfo(
+        val root: Note,
+        val allNotes: ImmutableSet<Note>,
+    )
+
+    fun findThreadFor(noteId: String): ThreadInfo? {
         checkNotInMainThread()
 
-        val (result, elapsed) =
-            measureTimedValue {
-                val note = LocalCache.checkGetOrCreateNote(noteId) ?: return emptySet<Note>()
+        val note = LocalCache.checkGetOrCreateNote(noteId) ?: return null
 
-                if (note.event != null) {
-                    val thread = OnlyLatestVersionSet()
+        return if (note.event != null) {
+            val thread = OnlyLatestVersionSet()
 
-                    val threadRoot = searchRoot(note, thread) ?: note
+            val threadRoot = searchRoot(note, thread) ?: note
 
-                    loadDown(threadRoot, thread)
-                    // adds the replies of the note in case the search for Root
-                    // did not added them.
-                    note.replies.forEach { loadDown(it, thread) }
+            loadUp(note, thread)
 
-                    thread
-                } else {
-                    setOf(note)
-                }
-            }
+            loadDown(threadRoot, thread)
+            // adds the replies of the note in case the search for Root
+            // did not added them.
+            note.replies.forEach { loadDown(it, thread) }
 
-        println("Model Refresh: Thread loaded in $elapsed")
+            ThreadInfo(
+                root = note,
+                allNotes = thread.toImmutableSet(),
+            )
+        } else {
+            ThreadInfo(
+                root = note,
+                allNotes = setOf(note).toImmutableSet(),
+            )
+        }
+    }
 
-        return result
+    fun loadUp(
+        note: Note,
+        thread: MutableSet<Note>,
+    ) {
+        if (note !in thread) {
+            thread.add(note)
+
+            note.replyTo?.forEach { loadUp(it, thread) }
+        }
     }
 
     fun loadDown(

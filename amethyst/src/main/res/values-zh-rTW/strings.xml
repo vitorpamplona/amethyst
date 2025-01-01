@@ -345,7 +345,6 @@
     <string name="zap_forward_lnAddress">LnAddress 或 @User</string>
     <string name="media_servers">媒體服務器</string>
     <string name="set_preferred_media_servers">設置首選媒體上傳服務器</string>
-    <string name="no_media_server_message">尚未設置自定義媒體服務器。可以使用默認的內置服務器列表或自行添加 ↓</string>
     <string name="built_in_media_servers_title">內置媒體服務器</string>
     <string name="built_in_servers_description">Amethyst 的默認列表。可單獨添加或添加整個列表。</string>
     <string name="use_default_servers">使用默認列表</string>

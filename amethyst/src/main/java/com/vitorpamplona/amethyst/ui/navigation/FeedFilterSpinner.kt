@@ -54,7 +54,8 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.ui.actions.LoadingAnimation
+import com.vitorpamplona.amethyst.service.LocationState
+import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.AroundMeFeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.events.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -104,6 +104,12 @@ fun FeedFilterSpinner(
             }
         }
 
+    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+    LaunchedEffect(locationPermissionState.status.isGranted) {
+        Amethyst.instance.locationManager.setLocationPermission(locationPermissionState.status.isGranted)
+    }
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,
@@ -115,27 +121,45 @@ fun FeedFilterSpinner(
                 Text(currentText)
 
                 if (selected is AroundMeFeedDefinition) {
-                    val locationPermissionState =
-                        rememberPermissionState(
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        )
-
                     if (!locationPermissionState.status.isGranted) {
                         LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
+
+                        Text(
+                            text = stringRes(R.string.lack_location_permissions),
+                            fontSize = 12.sp,
+                            lineHeight = 12.sp,
+                        )
                     } else {
                         val location by Amethyst.instance.locationManager.geohashStateFlow
-                            .collectAsStateWithLifecycle(null)
+                            .collectAsStateWithLifecycle()
 
-                        location?.let {
-                            LoadCityName(
-                                geohashStr = it,
-                                onLoading = {
-                                    Spacer(modifier = StdHorzSpacer)
-                                    LoadingAnimation()
-                                },
-                            ) { cityName ->
+                        when (val myLocation = location) {
+                            is LocationState.LocationResult.Success -> {
+                                LoadCityName(
+                                    geohashStr = myLocation.geoHash.toString(),
+                                    onLoading = {
+                                        Spacer(modifier = StdHorzSpacer)
+                                        LoadingAnimation()
+                                    },
+                                ) { cityName ->
+                                    Text(
+                                        text = "($cityName)",
+                                        fontSize = 12.sp,
+                                        lineHeight = 12.sp,
+                                    )
+                                }
+                            }
+
+                            LocationState.LocationResult.LackPermission -> {
                                 Text(
-                                    text = "($cityName)",
+                                    text = stringRes(R.string.lack_location_permissions),
+                                    fontSize = 12.sp,
+                                    lineHeight = 12.sp,
+                                )
+                            }
+                            LocationState.LocationResult.Loading -> {
+                                Text(
+                                    text = stringRes(R.string.loading_location),
                                     fontSize = 12.sp,
                                     lineHeight = 12.sp,
                                 )

@@ -50,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -191,7 +192,11 @@ private fun HomePages(
             }
         },
         floatingButton = {
-            NewNoteButton(accountViewModel, nav)
+            val list =
+                accountViewModel.account.settings.defaultHomeFollowList
+                    .collectAsStateWithLifecycle()
+
+            NewNoteButton(nav, list.value == AROUND_ME)
         },
         accountViewModel = accountViewModel,
     ) {

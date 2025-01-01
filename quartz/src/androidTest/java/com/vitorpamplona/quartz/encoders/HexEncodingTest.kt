@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.encoders
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -63,6 +65,45 @@ class HexEncodingTest {
                     .encode(bytes),
                 Hex.encode(bytes),
             )
+            assertEquals(
+                bytes.toList(),
+                Hex.decode(hex).toList(),
+            )
+        }
+    }
+
+    @Test
+    fun testIsHex() {
+        assertFalse("/0", HexValidator.isHex("/0"))
+        assertFalse("/.", HexValidator.isHex("/."))
+        assertFalse("!!", HexValidator.isHex("!!"))
+        assertFalse("::", HexValidator.isHex("::"))
+        assertFalse("@@", HexValidator.isHex("@@"))
+        assertFalse("GG", HexValidator.isHex("GG"))
+        assertFalse("FG", HexValidator.isHex("FG"))
+        assertFalse("`a", HexValidator.isHex("`a"))
+        assertFalse("gg", HexValidator.isHex("gg"))
+        assertFalse("fg", HexValidator.isHex("fg"))
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @Test
+    fun testRandomsIsHex() {
+        for (i in 0..10000) {
+            val bytes = CryptoUtils.privkeyCreate()
+            val hex = bytes.toHexString(HexFormat.Default)
+            assertTrue(hex, HexValidator.isHex(hex))
+            val hexUpper = bytes.toHexString(HexFormat.UpperCase)
+            assertTrue(hexUpper, HexValidator.isHex(hexUpper))
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @Test
+    fun testRandomsUppercase() {
+        for (i in 0..1000) {
+            val bytes = CryptoUtils.privkeyCreate()
+            val hex = bytes.toHexString(HexFormat.UpperCase)
             assertEquals(
                 bytes.toList(),
                 Hex.decode(hex).toList(),

@@ -28,6 +28,7 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
+import com.vitorpamplona.quartz.events.RelationshipStatusEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.StatusEvent
 
@@ -71,7 +72,7 @@ object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
                             types = EVENT_FINDER_TYPES,
                             filter =
                                 SincePerRelayFilter(
-                                    kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
+                                    kinds = listOf(MetadataEvent.KIND, StatusEvent.KIND, RelationshipStatusEvent.KIND, AdvertisedRelayListEvent.KIND, ChatMessageRelayListEvent.KIND),
                                     authors = groupIds,
                                     since = minEOSEs,
                                 ),

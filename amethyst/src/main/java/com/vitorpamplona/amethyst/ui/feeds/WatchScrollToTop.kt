@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.PagerState
@@ -75,7 +74,6 @@ fun WatchScrollToTop(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WatchScrollToTop(
     videoFeedContentState: FeedContentState,

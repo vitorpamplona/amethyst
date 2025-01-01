@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalAutofill
 import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -92,10 +94,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.authenticate
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -123,8 +128,7 @@ fun DialogContentsPreview() {
     ThemeComparisonRow {
         DialogContents(
             mockAccountViewModel(),
-            {},
-        )
+        ) {}
     }
 }
 
@@ -183,7 +187,15 @@ private fun DialogContents(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                NSecCopyButton(accountViewModel)
+                Row {
+                    Column {
+                        NSecCopyButton(accountViewModel)
+                    }
+
+                    Column {
+                        QrCodeButton(accountViewModel)
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(30.dp))
 
@@ -238,7 +250,7 @@ private fun DialogContents(
                     },
                     keyboardOptions =
                         KeyboardOptions(
-                            autoCorrect = false,
+                            autoCorrectEnabled = false,
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Go,
                         ),
@@ -349,30 +361,38 @@ private fun EncryptNSecCopyButton(
             }
         }
 
-    OutlinedButton(
-        modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = {
-            authenticate(
-                title = stringRes(context, R.string.copy_my_secret_key),
-                context = context,
-                keyguardLauncher = keyguardLauncher,
-                onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
-                onError = { title, message -> accountViewModel.toast(title, message) },
-            )
-        },
-        shape = ButtonBorder,
-        contentPadding = ButtonPadding,
-        enabled = password.value.text.isNotBlank(),
-    ) {
-        Icon(
-            imageVector = Icons.Default.Key,
-            contentDescription =
-                stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
-            modifier = Modifier.padding(end = 5.dp),
-        )
-        Text(
-            stringRes(id = R.string.encrypt_and_copy_my_secret_key),
-        )
+    Row {
+        Column {
+            OutlinedButton(
+                modifier = Modifier.padding(horizontal = 3.dp),
+                onClick = {
+                    authenticate(
+                        title = stringRes(context, R.string.copy_my_secret_key),
+                        context = context,
+                        keyguardLauncher = keyguardLauncher,
+                        onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
+                        onError = { title, message -> accountViewModel.toast(title, message) },
+                    )
+                },
+                shape = ButtonBorder,
+                contentPadding = ButtonPadding,
+                enabled = password.value.text.isNotBlank(),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Key,
+                    contentDescription =
+                        stringRes(R.string.copies_the_nsec_id_your_password_to_the_clipboard_for_backup),
+                    modifier = Modifier.padding(end = 5.dp),
+                )
+                Text(
+                    stringRes(id = R.string.encrypt_and_copy_my_secret_key),
+                )
+            }
+        }
+
+        Column {
+            QrCodeButtonEncrypted(accountViewModel, password)
+        }
     }
 }
 
@@ -443,6 +463,122 @@ private fun encryptCopyNSec(
                             stringRes(context, R.string.failed_to_encrypt_key),
                             Toast.LENGTH_SHORT,
                         ).show()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QrCodeButtonBase(
+    accountViewModel: AccountViewModel,
+    isEnabled: Boolean = true,
+    contentDescription: Int,
+    onDialogShow: () -> String?,
+) {
+    val context = LocalContext.current
+
+    // store the dialog open or close state
+    var dialogOpen by remember { mutableStateOf(false) }
+
+    val keyguardLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                dialogOpen = true
+            }
+        }
+
+    IconButton(
+        enabled = isEnabled,
+        onClick = {
+            authenticate(
+                title = stringRes(context, R.string.copy_my_secret_key),
+                context = context,
+                keyguardLauncher = keyguardLauncher,
+                onApproved = { dialogOpen = true },
+                onError = { title, message -> accountViewModel.toast(title, message) },
+            )
+        },
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_qrcode),
+            contentDescription = stringRes(id = contentDescription),
+            modifier = Modifier.size(24.dp),
+            tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
+        )
+    }
+
+    if (dialogOpen) {
+        ShowKeyQRDialog(
+            onDialogShow(),
+            onClose = { dialogOpen = false },
+        )
+    }
+}
+
+@Composable
+private fun QrCodeButton(accountViewModel: AccountViewModel) {
+    QrCodeButtonBase(
+        accountViewModel = accountViewModel,
+        contentDescription = R.string.show_private_key_qr_code,
+        onDialogShow = {
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toNsec()
+        },
+    )
+}
+
+@Composable
+private fun QrCodeButtonEncrypted(
+    accountViewModel: AccountViewModel,
+    password: MutableState<TextFieldValue>,
+) {
+    QrCodeButtonBase(
+        accountViewModel = accountViewModel,
+        isEnabled = password.value.text.isNotBlank(),
+        contentDescription = R.string.show_encrypted_private_key_qr_code,
+        onDialogShow = {
+            accountViewModel.account.settings.keyPair.privKey
+                ?.toHexKey()
+                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
+        },
+    )
+}
+
+@Composable
+private fun ShowKeyQRDialog(
+    qrCode: String?,
+    onClose: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(10.dp),
+            ) {
+                // Back button at the top
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BackButton(onPress = onClose)
+                }
+
+                // QR Code content
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 10.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    QrCodeDrawer(qrCode ?: "error")
                 }
             }
         }

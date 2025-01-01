@@ -47,6 +47,8 @@ import com.vitorpamplona.quartz.events.BadgeAwardEvent
 import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.events.BadgeProfilesEvent
 import com.vitorpamplona.quartz.events.BaseAddressableEvent
+import com.vitorpamplona.quartz.events.BaseTextNoteEvent
+import com.vitorpamplona.quartz.events.BlossomServersEvent
 import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.events.CalendarEvent
@@ -58,10 +60,12 @@ import com.vitorpamplona.quartz.events.ChannelListEvent
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.events.ChatroomKey
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.CommunityListEvent
 import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
@@ -83,6 +87,9 @@ import com.vitorpamplona.quartz.events.GitPatchEvent
 import com.vitorpamplona.quartz.events.GitReplyEvent
 import com.vitorpamplona.quartz.events.GitRepositoryEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
@@ -100,6 +107,7 @@ import com.vitorpamplona.quartz.events.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.events.NNSEvent
 import com.vitorpamplona.quartz.events.OtsEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.PinListEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.PrivateDmEvent
@@ -107,6 +115,7 @@ import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.events.ReactionEvent
 import com.vitorpamplona.quartz.events.RecommendRelayEvent
+import com.vitorpamplona.quartz.events.RelationshipStatusEvent
 import com.vitorpamplona.quartz.events.RelaySetEvent
 import com.vitorpamplona.quartz.events.ReportEvent
 import com.vitorpamplona.quartz.events.RepostEvent
@@ -438,61 +447,30 @@ object LocalCache {
     fun consume(
         event: TextNoteEvent,
         relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        if (antiSpam.isSpam(event, relay)) {
-            return
-        }
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: TorrentEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        if (antiSpam.isSpam(event, relay)) {
-            return
-        }
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
-        event: TorrentCommentEvent,
+        event: InteractiveStoryPrologueEvent,
+        relay: Relay?,
+    ) = consumeBaseReplaceable(event, relay)
+
+    fun consume(
+        event: InteractiveStorySceneEvent,
+        relay: Relay?,
+    ) = consumeBaseReplaceable(event, relay)
+
+    fun consume(
+        event: InteractiveStoryReadingStateEvent,
+        relay: Relay?,
+    ) = consumeBaseReplaceable(event, relay)
+
+    fun consumeRegularEvent(
+        event: Event,
         relay: Relay?,
     ) {
         val note = getOrCreateNote(event.id)
@@ -506,242 +484,69 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        if (antiSpam.isSpam(event, relay)) {
+        val replyTo = computeReplyTo(event)
+
+        if (event is BaseTextNoteEvent && antiSpam.isSpam(event, relay)) {
             return
         }
-
-        val replyTo = computeReplyTo(event)
 
         note.loadEvent(event, author, replyTo)
 
         // Counts the replies
-        replyTo.forEach {
-            it.addReply(note)
-        }
+        replyTo.forEach { it.addReply(note) }
 
         refreshObservers(note)
     }
+
+    fun consume(
+        event: PictureEvent,
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
+
+    fun consume(
+        event: TorrentCommentEvent,
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90ContentDiscoveryResponseEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        // Log.d("TN", "New Response ${event.taggedEvents().joinToString(", ") { it }}}")
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90ContentDiscoveryRequestEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90StatusEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90UserDiscoveryResponseEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90UserDiscoveryRequestEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: GitPatchEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        if (antiSpam.isSpam(event, relay)) {
-            return
-        }
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: GitIssueEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        if (antiSpam.isSpam(event, relay)) {
-            return
-        }
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: GitReplyEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        if (antiSpam.isSpam(event, relay)) {
-            return
-        }
-
-        val replyTo = computeReplyTo(event)
-
-        // println("New GitReply ${event.id} for ${replyTo.firstOrNull()?.event?.id()} ${event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.firstOrNull()}")
-
-        note.loadEvent(event, author, replyTo)
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: LongTextNoteEvent,
@@ -818,7 +623,11 @@ object LocalCache {
             is LongTextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is GitReplyEvent -> event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
             is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+            is CommentEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
+
             is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is ChatMessageEncryptedFileHeaderEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
+
             is LnZapEvent ->
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
@@ -866,35 +675,8 @@ object LocalCache {
 
     fun consume(
         event: PollNoteEvent,
-        relay: Relay? = null,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        if (antiSpam.isSpam(event, relay)) {
-            return
-        }
-
-        val replyTo = computeReplyTo(event)
-
-        note.loadEvent(event, author, replyTo)
-
-        // Log.d("TN", "New Note (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${note.event?.content()?.split("\n")?.take(100)} ${formattedDateTime(event.createdAt)}")
-
-        // Counts the replies
-        replyTo.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     private fun consume(
         event: LiveActivitiesEvent,
@@ -949,6 +731,13 @@ object LocalCache {
 
     fun consume(
         event: ChannelListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: BlossomServersEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -1085,6 +874,13 @@ object LocalCache {
     }
 
     fun consume(
+        event: RelationshipStatusEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
         event: OtsEvent,
         relay: Relay?,
     ) {
@@ -1134,25 +930,10 @@ object LocalCache {
         }
     }
 
-    fun consume(event: BadgeAwardEvent) {
-        val note = getOrCreateNote(event.id)
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        // Log.d("TN", "New Boost (${notes.size},${users.size}) ${note.author?.toBestDisplayName()}
-        // ${formattedDateTime(event.createdAt)}")
-
-        val author = getOrCreateUser(event.pubKey)
-        val awardDefinition = computeReplyTo(event)
-
-        note.loadEvent(event, author, awardDefinition)
-
-        // Replies of an Badge Definition are Award Events
-        awardDefinition.forEach { it.addReply(note) }
-
-        refreshObservers(note)
-    }
+    fun consume(
+        event: BadgeAwardEvent,
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
 
     private fun comsume(
         event: NNSEvent,
@@ -1633,6 +1414,11 @@ object LocalCache {
     }
 
     fun consume(
+        event: CommentEvent,
+        relay: Relay?,
+    ) = consumeRegularEvent(event, relay)
+
+    fun consume(
         event: LiveActivitiesChatMessageEvent,
         relay: Relay?,
     ) {
@@ -1727,102 +1513,27 @@ object LocalCache {
     fun consume(
         event: AudioHeaderEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FileHeaderEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: ProfileGalleryEntryEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FileStorageHeaderEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FhirResourceEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: TextNoteModificationEvent,
@@ -1855,22 +1566,7 @@ object LocalCache {
     fun consume(
         event: HighlightEvent,
         relay: Relay?,
-    ) {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return
-
-        note.loadEvent(event, author, emptyList())
-
-        refreshObservers(note)
-    }
+    ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FileStorageEvent,
@@ -1928,7 +1624,50 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val recipientsHex = event.recipientsPubKey().plus(event.pubKey).toSet()
+        val recipientsHex = event.groupMembers()
+        val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+        // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
+
+        val repliesTo = computeReplyTo(event)
+
+        note.loadEvent(event, author, repliesTo)
+
+        if (recipients.isNotEmpty()) {
+            recipients.forEach {
+                val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                val authorGroup =
+                    if (groupMinusRecipient.isEmpty()) {
+                        // note to self
+                        ChatroomKey(persistentSetOf(it.pubkeyHex))
+                    } else {
+                        ChatroomKey(groupMinusRecipient.toImmutableSet())
+                    }
+
+                it.addMessage(authorGroup, note)
+            }
+        }
+
+        refreshObservers(note)
+    }
+
+    private fun consume(
+        event: ChatMessageEncryptedFileHeaderEvent,
+        relay: Relay?,
+    ) {
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        val recipientsHex = event.groupMembers()
         val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
 
         // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
@@ -2058,14 +1797,24 @@ object LocalCache {
             }
         }
 
-        return users.filter { _, user: User ->
-            (
-                (user.anyNameStartsWith(username)) ||
-                    user.pubkeyHex.startsWith(username, true) ||
-                    user.pubkeyNpub().startsWith(username, true)
-            ) &&
-                (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.flowHiddenUsers.value.hiddenWordsCase)))
-        }
+        val finds =
+            users.filter { _, user: User ->
+                (
+                    (user.anyNameStartsWith(username)) ||
+                        user.pubkeyHex.startsWith(username, true) ||
+                        user.pubkeyNpub().startsWith(username, true)
+                ) &&
+                    (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.flowHiddenUsers.value.hiddenWordsCase)))
+            }
+
+        return finds.sortedWith(
+            compareBy(
+                { forAccount?.isFollowing(it) == false },
+                { !it.toBestDisplayName().startsWith(username, ignoreCase = true) },
+                { it.toBestDisplayName().lowercase() },
+                { it.pubkeyHex },
+            ),
+        )
     }
 
     fun findNotesStartingWith(
@@ -2095,8 +1844,7 @@ object LocalCache {
             }
 
             if (note.event?.matchTag1With(text) == true ||
-                note.idHex.startsWith(text, true) ||
-                note.idNote().startsWith(text, true)
+                note.idHex.startsWith(text, true)
             ) {
                 if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
                     return@filter true
@@ -2575,7 +2323,27 @@ object LocalCache {
                 }
             }
             is ChatMessageEvent -> {
-                val recipientsHex = draft.recipientsPubKey().plus(draftWrap.pubKey).toSet()
+                val recipientsHex = draft.groupMembers()
+                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+                if (recipients.isNotEmpty()) {
+                    recipients.forEach {
+                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                        val authorGroup =
+                            if (groupMinusRecipient.isEmpty()) {
+                                // note to self
+                                ChatroomKey(persistentSetOf(it.pubkeyHex))
+                            } else {
+                                ChatroomKey(groupMinusRecipient.toImmutableSet())
+                            }
+
+                        it.addMessage(authorGroup, note)
+                    }
+                }
+            }
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                val recipientsHex = draft.groupMembers()
                 val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
 
                 if (recipients.isNotEmpty()) {
@@ -2625,6 +2393,26 @@ object LocalCache {
             }
             is ChatMessageEvent -> {
                 val recipientsHex = draft.recipientsPubKey().plus(author.pubkeyHex).toSet()
+                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
+
+                if (recipients.isNotEmpty()) {
+                    recipients.forEach {
+                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
+
+                        val authorGroup =
+                            if (groupMinusRecipient.isEmpty()) {
+                                // note to self
+                                ChatroomKey(persistentSetOf(it.pubkeyHex))
+                            } else {
+                                ChatroomKey(groupMinusRecipient.toImmutableSet())
+                            }
+
+                        it.removeMessage(authorGroup, draftWrap)
+                    }
+                }
+            }
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                val recipientsHex = draft.groupMembers()
                 val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
 
                 if (recipients.isNotEmpty()) {
@@ -2694,9 +2482,10 @@ object LocalCache {
                 is AppSpecificDataEvent -> consume(event, relay)
                 is AudioHeaderEvent -> consume(event, relay)
                 is AudioTrackEvent -> consume(event, relay)
-                is BadgeAwardEvent -> consume(event)
+                is BadgeAwardEvent -> consume(event, relay)
                 is BadgeDefinitionEvent -> consume(event, relay)
                 is BadgeProfilesEvent -> consume(event)
+                is BlossomServersEvent -> consume(event, relay)
                 is BookmarkListEvent -> consume(event)
                 is CalendarEvent -> consume(event, relay)
                 is CalendarDateSlotEvent -> consume(event, relay)
@@ -2708,9 +2497,11 @@ object LocalCache {
                 is ChannelMessageEvent -> consume(event, relay)
                 is ChannelMetadataEvent -> consume(event)
                 is ChannelMuteUserEvent -> consume(event)
+                is ChatMessageEncryptedFileHeaderEvent -> consume(event, relay)
                 is ChatMessageEvent -> consume(event, relay)
                 is ChatMessageRelayListEvent -> consume(event, relay)
                 is ClassifiedsEvent -> consume(event, relay)
+                is CommentEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityListEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
@@ -2738,6 +2529,9 @@ object LocalCache {
                 is GitPatchEvent -> consume(event, relay)
                 is GitRepositoryEvent -> consume(event, relay)
                 is HighlightEvent -> consume(event, relay)
+                is InteractiveStoryPrologueEvent -> consume(event, relay)
+                is InteractiveStorySceneEvent -> consume(event, relay)
+                is InteractiveStoryReadingStateEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
                 is LnZapEvent -> {
@@ -2760,6 +2554,7 @@ object LocalCache {
                 is MuteListEvent -> consume(event, relay)
                 is NNSEvent -> comsume(event, relay)
                 is OtsEvent -> consume(event, relay)
+                is PictureEvent -> consume(event, relay)
                 is PrivateDmEvent -> consume(event, relay)
                 is PrivateOutboxRelayListEvent -> consume(event, relay)
                 is PinListEvent -> consume(event, relay)
@@ -2767,6 +2562,7 @@ object LocalCache {
                 is PollNoteEvent -> consume(event, relay)
                 is ReactionEvent -> consume(event)
                 is RecommendRelayEvent -> consume(event)
+                is RelationshipStatusEvent -> consume(event, relay)
                 is RelaySetEvent -> consume(event, relay)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {

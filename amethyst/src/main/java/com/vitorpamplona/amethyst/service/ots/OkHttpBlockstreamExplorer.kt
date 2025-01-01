@@ -24,7 +24,7 @@ import android.util.Log
 import android.util.LruCache
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.ots.BlockHeader
 import com.vitorpamplona.quartz.ots.exceptions.UrlException

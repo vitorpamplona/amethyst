@@ -29,8 +29,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 var locale = Locale.getDefault()
-var yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
-var monthFormatter = SimpleDateFormat(" • MMM dd", locale)
+var yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
+var monthFormatter = SimpleDateFormat("MMM dd", locale)
 
 fun timeAgo(
     time: Long?,
@@ -46,20 +46,20 @@ fun timeAgo(
 
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat(" • MMM dd", locale)
+            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
+            monthFormatter = SimpleDateFormat("MMM dd", locale)
         }
 
-        yearFormatter.format(time * 1000)
+        " • " + yearFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_MONTH) {
         // Dec 12
         if (locale != Locale.getDefault()) {
             locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(" • MMM dd, yyyy", locale)
-            monthFormatter = SimpleDateFormat(" • MMM dd", locale)
+            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
+            monthFormatter = SimpleDateFormat("MMM dd", locale)
         }
 
-        monthFormatter.format(time * 1000)
+        " • " + monthFormatter.format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
         // 2 days
         " • " + (timeDifference / TimeUtils.ONE_DAY).toString() + stringRes(context, R.string.d)
@@ -109,6 +109,40 @@ fun timeAgoNoDot(
         (timeDifference / TimeUtils.ONE_MINUTE).toString() + stringRes(context, R.string.m)
     } else {
         stringRes(context, R.string.now)
+    }
+}
+
+fun dateFormatter(
+    time: Long?,
+    never: String,
+    today: String,
+): String {
+    if (time == null) return " "
+    if (time == 0L) return " $never"
+
+    val timeDifference = TimeUtils.now() - time
+
+    return if (timeDifference > TimeUtils.ONE_YEAR) {
+        // Dec 12, 2022
+
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
+            monthFormatter = SimpleDateFormat("MMM dd", locale)
+        }
+
+        yearFormatter.format(time * 1000)
+    } else if (timeDifference > TimeUtils.ONE_DAY) {
+        // Dec 12
+        if (locale != Locale.getDefault()) {
+            locale = Locale.getDefault()
+            yearFormatter = SimpleDateFormat("MMM dd, yyyy", locale)
+            monthFormatter = SimpleDateFormat("MMM dd", locale)
+        }
+
+        monthFormatter.format(time * 1000)
+    } else {
+        today
     }
 }
 

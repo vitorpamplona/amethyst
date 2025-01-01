@@ -20,6 +20,9 @@ Join the social network you control.
 
 ## Download and Install
 
+[<img src="./docs/design/zapstore.svg"
+alt="Get it on Zap Store"
+height="70">](https://github.com/zapstore/zapstore/releases)
 [<img src="./docs/design/obtainium.png"
 alt="Get it on Obtaininum"
 height="70">](https://github.com/ImranR98/Obtainium)

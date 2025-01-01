@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

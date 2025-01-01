@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
@@ -38,7 +39,7 @@ import com.vitorpamplona.quartz.events.FileHeaderEvent
 fun FileHeaderDisplay(
     note: Note,
     roundedCorner: Boolean,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
 ) {
     val event = (note.event as? FileHeaderEvent) ?: return
@@ -84,7 +85,7 @@ fun FileHeaderDisplay(
         ZoomableContentView(
             content = content,
             roundedCorner = roundedCorner,
-            isFiniteHeight = isFiniteHeight,
+            contentScale = contentScale,
             accountViewModel = accountViewModel,
         )
     }

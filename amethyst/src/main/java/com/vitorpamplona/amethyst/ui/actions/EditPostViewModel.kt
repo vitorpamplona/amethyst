@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
-import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,17 +36,21 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.FileHeader
-import com.vitorpamplona.amethyst.service.Nip96Uploader
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.ui.components.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
+import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.encoders.IMetaTag
+import com.vitorpamplona.quartz.encoders.IMetaTagBuilder
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import kotlinx.coroutines.CancellationException
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -61,7 +63,7 @@ open class EditPostViewModel : ViewModel() {
 
     var subject by mutableStateOf(TextFieldValue(""))
 
-    var nip94attachments by mutableStateOf<List<FileHeaderEvent>>(emptyList())
+    var iMetaAttachments by mutableStateOf<List<IMetaTag>>(emptyList())
     var nip95attachments by
         mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
@@ -74,7 +76,7 @@ open class EditPostViewModel : ViewModel() {
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
 
     // Images and Videos
-    var contentToAddUrl by mutableStateOf<Uri?>(null)
+    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -99,7 +101,7 @@ open class EditPostViewModel : ViewModel() {
         this.account = accountViewModel.account
 
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        contentToAddUrl = null
+        multiOrchestrator = null
 
         message = TextFieldValue(versionLookingAt?.event?.content() ?: edit.event?.content() ?: "")
         urlPreview = findUrlInMessage()
@@ -145,89 +147,77 @@ open class EditPostViewModel : ViewModel() {
     }
 
     fun upload(
-        galleryUri: Uri,
         alt: String?,
         sensitiveContent: Boolean,
         mediaQuality: Int,
         isPrivate: Boolean = false,
-        server: ServerOption,
+        server: ServerName,
         onError: (String, String) -> Unit,
         context: Context,
     ) {
-        isUploadingImage = true
-        contentToAddUrl = null
+        viewModelScope.launch {
+            val myAccount = account ?: return@launch
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
-        val contentResolver = context.contentResolver
-        val contentType = contentResolver.getType(galleryUri)
+            isUploadingImage = true
 
-        viewModelScope.launch(Dispatchers.IO) {
-            MediaCompressor()
-                .compress(
-                    galleryUri,
-                    contentType,
-                    context.applicationContext,
-                    onReady = { fileUri, contentType, size ->
-                        if (server.isNip95) {
-                            contentResolver.openInputStream(fileUri)?.use {
-                                createNIP95Record(
-                                    it.readBytes(),
-                                    contentType,
-                                    alt,
-                                    sensitiveContent,
-                                    onError = {
-                                        onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
-                                    },
-                                    context,
-                                )
-                            }
-                        } else {
-                            viewModelScope.launch(Dispatchers.IO) {
-                                try {
-                                    val result =
-                                        Nip96Uploader(account)
-                                            .uploadImage(
-                                                uri = fileUri,
-                                                contentType = contentType,
-                                                size = size,
-                                                alt = alt,
-                                                sensitiveContent = if (sensitiveContent) "" else null,
-                                                server = server.server,
-                                                contentResolver = contentResolver,
-                                                forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
-                                                onProgress = {},
-                                                context = context,
-                                            )
-
-                                    createNIP94Record(
-                                        uploadingResult = result,
-                                        localContentType = contentType,
-                                        alt = alt,
-                                        sensitiveContent = sensitiveContent,
-                                        forceProxy = account?.let { it::shouldUseTorForNIP96 } ?: { false },
-                                        onError = {
-                                            onError(stringRes(context, R.string.failed_to_upload_media_no_details), it)
-                                        },
-                                        context = context,
-                                    )
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    Log.e(
-                                        "ImageUploader",
-                                        "Failed to upload ${e.message}",
-                                        e,
-                                    )
-                                    isUploadingImage = false
-                                    onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
-                                }
-                            }
-                        }
-                    },
-                    onError = {
-                        isUploadingImage = false
-                        onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, it))
-                    },
-                    mediaQuality = MediaCompressor().intToCompressorQuality(mediaQuality),
+            val results =
+                myMultiOrchestrator.upload(
+                    viewModelScope,
+                    alt,
+                    sensitiveContent,
+                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    server,
+                    myAccount,
+                    context,
                 )
+
+            if (results.allGood) {
+                results.successful.forEach { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, sensitiveContent) { nip95 ->
+                            nip95attachments = nip95attachments + nip95
+                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+
+                            note?.let {
+                                message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            }
+
+                            urlPreview = findUrlInMessage()
+                        }
+                    } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        val iMeta =
+                            IMetaTagBuilder(state.result.url)
+                                .apply {
+                                    hash(state.result.fileHeader.hash)
+                                    size(state.result.fileHeader.size)
+                                    state.result.fileHeader.mimeType
+                                        ?.let { mimeType(it) }
+                                    state.result.fileHeader.dim
+                                        ?.let { dims(it) }
+                                    state.result.fileHeader.blurHash
+                                        ?.let { blurhash(it.blurhash) }
+                                    state.result.magnet?.let { magnet(it) }
+                                    state.result.uploadedHash?.let { originalHash(it) }
+                                    alt?.let { alt(it) }
+                                    if (sensitiveContent) sensitiveContent("")
+                                }.build()
+
+                        iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
+
+                        message = message.insertUrlAtCursor(state.result.url)
+                        urlPreview = findUrlInMessage()
+                    }
+                }
+
+                this@EditPostViewModel.multiOrchestrator = null
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            }
+
+            isUploadingImage = false
         }
     }
 
@@ -237,7 +227,7 @@ open class EditPostViewModel : ViewModel() {
 
         editedFromNote = null
 
-        contentToAddUrl = null
+        multiOrchestrator = null
         urlPreview = null
         isUploadingImage = false
 
@@ -272,11 +262,7 @@ open class EditPostViewModel : ViewModel() {
             if (lastWord.startsWith("@") && lastWord.length > 2) {
                 NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
                 viewModelScope.launch(Dispatchers.IO) {
-                    userSuggestions =
-                        LocalCache
-                            .findUsersStartingWith(lastWord.removePrefix("@"), account)
-                            .sortedWith(compareBy({ account?.isFollowing(it) }, { it.toBestDisplayName() }, { it.pubkeyHex }))
-                            .reversed()
+                    userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"), account)
                 }
             } else {
                 NostrSearchEventOrUserDataSource.clear()
@@ -309,117 +295,13 @@ open class EditPostViewModel : ViewModel() {
         }
     }
 
-    fun canPost(): Boolean =
-        message.text.isNotBlank() &&
-            !isUploadingImage &&
-            !wantsInvoice &&
-            contentToAddUrl == null
+    fun canPost() = message.text.isNotBlank() && !isUploadingImage && !wantsInvoice && multiOrchestrator == null
 
-    suspend fun createNIP94Record(
-        uploadingResult: Nip96Uploader.PartialEvent,
-        localContentType: String?,
-        alt: String?,
-        sensitiveContent: Boolean,
-        forceProxy: (String) -> Boolean,
-        onError: (String) -> Unit = {},
-        context: Context,
-    ) {
-        // Images don't seem to be ready immediately after upload
-        val imageUrl = uploadingResult.tags?.firstOrNull { it.size > 1 && it[0] == "url" }?.get(1)
-        val remoteMimeType =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "m" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val originalHash =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "ox" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val dim =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "dim" }
-                ?.get(1)
-                ?.ifBlank { null }
-        val magnet =
-            uploadingResult.tags
-                ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
-                ?.get(1)
-                ?.ifBlank { null }
-
-        if (imageUrl.isNullOrBlank()) {
-            Log.e("ImageDownload", "Couldn't download image from server")
-            cancel()
-            isUploadingImage = false
-            onError(stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
-            return
-        }
-
-        FileHeader.prepare(
-            fileUrl = imageUrl,
-            mimeType = remoteMimeType ?: localContentType,
-            dimPrecomputed = dim,
-            forceProxy = forceProxy(imageUrl),
-            onReady = { header: FileHeader ->
-                account?.createHeader(imageUrl, magnet, header, alt, sensitiveContent, originalHash) { event ->
-                    isUploadingImage = false
-                    nip94attachments = nip94attachments + event
-
-                    message = message.insertUrlAtCursor(imageUrl)
-                    urlPreview = findUrlInMessage()
-                }
-            },
-            onError = {
-                isUploadingImage = false
-                onError(stringRes(context, R.string.could_not_prepare_header, it))
-            },
-        )
+    fun selectImage(uris: ImmutableList<SelectedMedia>) {
+        multiOrchestrator = MultiOrchestrator(uris)
     }
 
-    fun createNIP95Record(
-        bytes: ByteArray,
-        mimeType: String?,
-        alt: String?,
-        sensitiveContent: Boolean,
-        onError: (String) -> Unit = {},
-        context: Context,
-    ) {
-        if (bytes.size > 80000) {
-            viewModelScope.launch {
-                onError(stringRes(context, id = R.string.media_too_big_for_nip95))
-                isUploadingImage = false
-            }
-            return
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            FileHeader.prepare(
-                bytes,
-                mimeType,
-                null,
-                onReady = {
-                    account?.createNip95(bytes, headerInfo = it, alt, sensitiveContent) { nip95 ->
-                        nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
-
-                        isUploadingImage = false
-
-                        note?.let {
-                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                        }
-
-                        urlPreview = findUrlInMessage()
-                    }
-                },
-                onError = {
-                    isUploadingImage = false
-                    onError(stringRes(context, R.string.could_not_prepare_header, it))
-                },
-            )
-        }
-    }
-
-    fun selectImage(uri: Uri) {
-        contentToAddUrl = uri
+    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
+        this.multiOrchestrator?.remove(selected)
     }
 }

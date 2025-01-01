@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDM
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.events.ChatMessageEvent
 import com.vitorpamplona.quartz.events.DraftEvent
 import com.vitorpamplona.quartz.events.Event
@@ -58,7 +60,6 @@ class EventNotificationConsumer(
     suspend fun consume(event: GiftWrapEvent) {
         Log.d(TAG, "New Notification Arrived")
         if (!LocalCache.justVerify(event)) return
-        if (!notificationManager().areNotificationsEnabled()) return
 
         // PushNotification Wraps don't include a receiver.
         // Test with all logged in accounts
@@ -94,22 +95,71 @@ class EventNotificationConsumer(
         }
 
         pushWrappedEvent.unwrapThrowing(signer) { notificationEvent ->
-            val consumed = LocalCache.hasConsumed(notificationEvent)
-            val verified = LocalCache.justVerify(notificationEvent)
-            Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
-            if (!consumed && verified) {
-                Log.d(TAG, "New Notification was verified")
-                unwrapAndConsume(notificationEvent, signer) { innerEvent ->
-                    Log.d(TAG, "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
-                    if (innerEvent is PrivateDmEvent) {
-                        Log.d(TAG, "New Nip-04 DM to Notify")
-                        notify(innerEvent, signer, account)
-                    } else if (innerEvent is LnZapEvent) {
-                        Log.d(TAG, "New Zap to Notify")
-                        notify(innerEvent, signer, account)
-                    } else if (innerEvent is ChatMessageEvent) {
-                        Log.d(TAG, "New ChatMessage to Notify")
-                        notify(innerEvent, signer, account)
+            consumeNotificationEvent(notificationEvent, signer, account)
+        }
+    }
+
+    fun consumeNotificationEvent(
+        notificationEvent: Event,
+        signer: NostrSigner,
+        account: AccountSettings,
+    ) {
+        val consumed = LocalCache.hasConsumed(notificationEvent)
+        val verified = LocalCache.justVerify(notificationEvent)
+        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
+        if (!consumed && verified) {
+            Log.d(TAG, "New Notification was verified")
+            unwrapAndConsume(notificationEvent, signer) { innerEvent ->
+                if (!notificationManager().areNotificationsEnabled()) return@unwrapAndConsume
+
+                Log.d(TAG, "Unwrapped consume $consumed ${innerEvent.javaClass.simpleName}")
+                if (innerEvent is PrivateDmEvent) {
+                    Log.d(TAG, "New Nip-04 DM to Notify")
+                    notify(innerEvent, signer, account)
+                } else if (innerEvent is LnZapEvent) {
+                    Log.d(TAG, "New Zap to Notify")
+                    notify(innerEvent, signer, account)
+                } else if (innerEvent is ChatMessageEvent) {
+                    Log.d(TAG, "New ChatMessage to Notify")
+                    notify(innerEvent, signer, account)
+                } else if (innerEvent is ChatMessageEncryptedFileHeaderEvent) {
+                    Log.d(TAG, "New ChatMessage File to Notify")
+                    notify(innerEvent, signer, account)
+                }
+            }
+        }
+    }
+
+    suspend fun findAccountAndConsume(event: Event) {
+        Log.d(TAG, "New Notification Arrived")
+        if (!LocalCache.justVerify(event)) return
+
+        val users = event.taggedUsers().map { LocalCache.getOrCreateUser(it) }
+        val npubs = users.map { it.pubkeyNpub() }.toSet()
+
+        // PushNotification Wraps don't include a receiver.
+        // Test with all logged in accounts
+        var matchAccount = false
+        LocalPreferences.allSavedAccounts().forEach {
+            if (!matchAccount && (it.hasPrivKey || it.loggedInWithExternalSigner) && it.npub in npubs) {
+                LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
+                    Log.d(TAG, "New Notification Testing if for ${it.npub}")
+                    try {
+                        // TODO: Modify the external launcher to launch as different users.
+                        // Right now it only registers if Amber has already approved this signature
+                        val signer = acc.createSigner()
+                        if (signer is NostrSignerExternal) {
+                            signer.launcher.registerLauncher(
+                                launcher = { },
+                                contentResolver = Amethyst.instance::contentResolverFn,
+                            )
+                        }
+
+                        consumeNotificationEvent(event, signer, acc)
+                        matchAccount = true
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.d(TAG, "Message was not for user ${it.npub}: ${e.message}")
                     }
                 }
             }
@@ -149,6 +199,51 @@ class EventNotificationConsumer(
     }
 
     private fun notify(
+        event: ChatMessageEncryptedFileHeaderEvent,
+        signer: NostrSigner,
+        acc: AccountSettings,
+    ) {
+        if (
+            // old event being re-broadcasted
+            event.createdAt > TimeUtils.fifteenMinutesAgo() &&
+            // don't display if it comes from me.
+            event.pubKey != signer.pubKey
+        ) { // from the user
+            Log.d(TAG, "Notifying")
+            val myUser = LocalCache.getUserIfExists(signer.pubKey) ?: return
+            val chatNote = LocalCache.getNoteIfExists(event.id) ?: return
+            val chatRoom = event.chatroomKey(signer.pubKey)
+
+            val followingKeySet = acc.backupContactList?.unverifiedFollowKeySet()?.toSet() ?: return
+
+            val isKnownRoom =
+                (
+                    myUser.privateChatrooms[chatRoom]?.senderIntersects(followingKeySet) == true ||
+                        myUser.hasSentMessagesTo(chatRoom)
+                )
+
+            if (isKnownRoom) {
+                val content = chatNote.event?.content() ?: ""
+                val user = chatNote.author?.toBestDisplayName() ?: ""
+                val userPicture = chatNote.author?.profilePicture()
+                val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
+
+                // TODO: Show Image on notification
+                notificationManager()
+                    .sendDMNotification(
+                        event.id,
+                        content,
+                        user,
+                        event.createdAt,
+                        userPicture,
+                        noteUri,
+                        applicationContext,
+                    )
+            }
+        }
+    }
+
+    private fun notify(
         event: ChatMessageEvent,
         signer: NostrSigner,
         acc: AccountSettings,
@@ -176,7 +271,7 @@ class EventNotificationConsumer(
                 val content = chatNote.event?.content() ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
-                val noteUri = chatNote.toNEvent()
+                val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
                 notificationManager()
                     .sendDMNotification(
                         event.id,
@@ -216,7 +311,7 @@ class EventNotificationConsumer(
                     decryptContent(note, signer) { content ->
                         val user = note.author?.toBestDisplayName() ?: ""
                         val userPicture = note.author?.profilePicture()
-                        val noteUri = note.toNEvent()
+                        val noteUri = note.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
                         notificationManager()
                             .sendDMNotification(event.id, content, user, event.createdAt, userPicture, noteUri, applicationContext)
                     }
@@ -322,7 +417,7 @@ class EventNotificationConsumer(
                                     )
                             }
                             val userPicture = senderInfo.first.profilePicture()
-                            val noteUri = "nostr:Notifications"
+                            val noteUri = "notifications?account=" + acc.keyPair.pubKey.toNpub()
 
                             Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
 
@@ -353,9 +448,9 @@ class EventNotificationConsumer(
                             )
 
                         val userPicture = senderInfo.first.profilePicture()
-                        val noteUri = "nostr:Notifications"
+                        val noteUri = "notifications?account=" + acc.keyPair.pubKey.toNpub()
 
-                        Log.d(TAG, "Notify ${event.id} $content $title $noteUri")
+                        Log.d(TAG, "Notify ${event.id} $title $noteUri")
 
                         notificationManager()
                             .sendZapNotification(

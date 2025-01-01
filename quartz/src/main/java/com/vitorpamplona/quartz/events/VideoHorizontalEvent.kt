@@ -21,9 +21,11 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.UUID
 
 @Immutable
 class VideoHorizontalEvent(
@@ -33,48 +35,45 @@ class VideoHorizontalEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : VideoEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : VideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     companion object {
         const val KIND = 34235
         const val ALT_DESCRIPTION = "Horizontal Video"
 
         fun create(
             url: String,
-            magnetUri: String? = null,
             mimeType: String? = null,
             alt: String? = null,
             hash: String? = null,
-            size: String? = null,
-            dimensions: String? = null,
+            size: Int? = null,
+            duration: Int? = null,
+            dimensions: Dimension? = null,
             blurhash: String? = null,
-            originalHash: String? = null,
-            magnetURI: String? = null,
-            torrentInfoHash: String? = null,
-            encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
+            service: String? = null,
+            dTag: String = UUID.randomUUID().toString(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (VideoHorizontalEvent) -> Unit,
         ) {
             create(
-                KIND,
-                url,
-                magnetUri,
-                mimeType,
-                alt,
-                hash,
-                size,
-                dimensions,
-                blurhash,
-                originalHash,
-                magnetURI,
-                torrentInfoHash,
-                encryptionKey,
-                sensitiveContent,
-                ALT_DESCRIPTION,
-                signer,
-                createdAt,
-                onReady,
+                kind = KIND,
+                dTag = dTag,
+                url = url,
+                mimeType = mimeType,
+                alt = alt,
+                hash = hash,
+                size = size,
+                duration = duration,
+                dimensions = dimensions,
+                blurhash = blurhash,
+                sensitiveContent = sensitiveContent,
+                service = service,
+                altDescription = ALT_DESCRIPTION,
+                signer = signer,
+                createdAt = createdAt,
+                onReady = onReady,
             )
         }
     }

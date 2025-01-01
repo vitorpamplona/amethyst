@@ -153,7 +153,6 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
@@ -179,6 +178,7 @@ import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.RenderGalleryFeed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -1286,6 +1286,14 @@ private fun DrawAdditionalInfo(
                 fontSize = 25.sp,
             )
             Spacer(StdHorzSpacer)
+            user.info?.pronouns?.let {
+                Text(
+                    text = "($it)",
+                    modifier = Modifier,
+                )
+                Spacer(StdHorzSpacer)
+            }
+
             DrawPlayName(it)
         }
     }
@@ -1562,13 +1570,17 @@ private fun WatchApp(
     val appState by baseApp.live().metadata.observeAsState()
 
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
+    var appName by remember(baseApp) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = appState) {
         withContext(Dispatchers.Default) {
-            val newAppLogo =
-                (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.picture?.ifBlank { null }
-            if (newAppLogo != appLogo) {
-                appLogo = newAppLogo
+            (appState?.note?.event as? AppDefinitionEvent)?.appMetaData()?.let { metaData ->
+                metaData.picture?.ifBlank { null }?.let { newLogo ->
+                    if (newLogo != appLogo) appLogo = newLogo
+                }
+                metaData.name?.ifBlank { null }?.let { newName ->
+                    if (newName != appName) appName = newName
+                }
             }
         }
     }
@@ -1583,7 +1595,7 @@ private fun WatchApp(
         ) {
             AsyncImage(
                 model = appLogo,
-                contentDescription = null,
+                contentDescription = appName,
                 modifier =
                     remember {
                         Modifier
@@ -1827,17 +1839,13 @@ fun TabNotesNewThreads(
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            enablePullRefresh = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
@@ -1848,21 +1856,16 @@ fun TabNotesConversations(
     nav: INav,
 ) {
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            RefresheableFeedView(
-                feedViewModel,
-                null,
-                enablePullRefresh = false,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RefresheableFeedView(
+            feedViewModel,
+            null,
+            enablePullRefresh = false,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TabGallery(
     feedViewModel: NostrUserProfileGalleryFeedViewModel,
@@ -1871,66 +1874,17 @@ fun TabGallery(
 ) {
     LaunchedEffect(Unit) { feedViewModel.invalidateData() }
 
-    // Column(Modifier.fillMaxHeight()) {
-
-    RefresheableBox(feedViewModel, true) {
+    Column(Modifier.fillMaxHeight()) {
         SaveableGridFeedState(feedViewModel, scrollStateKey = ScrollStateKeys.PROFILE_GALLERY) { listState ->
             RenderGalleryFeed(
                 feedViewModel,
-                null,
                 listState,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         }
     }
-
-    // }
 }
-
-/*@Composable
-fun Gallery(
-    baseUser: User,
-    feedViewModel: UserFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    WatchFollowChanges(baseUser, feedViewModel)
-
-    Column(Modifier.fillMaxHeight()) {
-        Column {
-            baseUser.latestGalleryList?.let {
-                // val note2 = getOrCreateAddressableNoteInternal(aTag)
-                val note = LocalCache.getOrCreateAddressableNote(it.address())
-                note.event = it
-                var notes = listOf<GalleryThumb>()
-                for (tag in note.event?.tags()!!) {
-                    if (tag.size > 2) {
-                        if (tag[0] == "g") {
-                            // TODO get the node by id on main thread. LoadNote does nothing.
-                            val thumb =
-                                GalleryThumb(
-                                    baseNote = note,
-                                    id = tag[2],
-                                    // TODO use the original note once it's loaded baseNote = basenote,
-                                    image = tag[1],
-                                    title = null,
-                                )
-                            notes = notes + thumb
-                            // }
-                        }
-                    }
-                    ProfileGallery(
-                        baseNotes = notes,
-                        modifier = Modifier,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
-            }
-        }
-    }
-} */
 
 @Composable
 fun TabFollowedTags(
@@ -1998,9 +1952,7 @@ fun TabFollows(
     WatchFollowChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
+        RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
     }
 }
 
@@ -2014,9 +1966,7 @@ fun TabFollowers(
     WatchFollowerChanges(baseUser, feedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column {
-            RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
-        }
+        RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
     }
 }
 
@@ -2050,7 +2000,7 @@ fun TabReceivedZaps(
     WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
 
     Column(Modifier.fillMaxHeight()) {
-        Column { LnZapFeedView(zapFeedViewModel, accountViewModel, nav) }
+        LnZapFeedView(zapFeedViewModel, accountViewModel, nav)
     }
 }
 
@@ -2132,11 +2082,7 @@ fun TabRelays(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.padding(vertical = 0.dp),
-        ) {
-            RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
-        }
+        RelayFeedView(feedViewModel, accountViewModel, enablePullRefresh = false, nav = nav)
     }
 }
 

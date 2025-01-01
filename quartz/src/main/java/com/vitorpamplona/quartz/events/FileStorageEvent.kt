@@ -40,8 +40,6 @@ class FileStorageEvent(
 
     fun type() = tags.firstOrNull { it.size > 1 && it[0] == TYPE }?.get(1)
 
-    fun decryptKey() = tags.firstOrNull { it.size > 2 && it[0] == DECRYPT }?.let { AESGCM(it[1], it[2]) }
-
     fun decode(): ByteArray? =
         try {
             Base64.getDecoder().decode(content)

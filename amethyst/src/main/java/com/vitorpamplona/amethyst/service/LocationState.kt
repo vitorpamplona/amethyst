@@ -26,21 +26,28 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Looper
 import android.util.Log
 import android.util.LruCache
+import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_DISTANCE
 import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_TIME
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
 class LocationFlow(
@@ -90,26 +97,47 @@ class LocationState(
         const val MIN_DISTANCE: Float = 100.0f
     }
 
-    private var latestLocation: Location = Location(LocationManager.NETWORK_PROVIDER)
+    sealed class LocationResult {
+        data class Success(
+            val geoHash: GeoHash,
+        ) : LocationResult()
 
-    val locationStateFlow =
-        LocationFlow(context)
-            .get(MIN_TIME, MIN_DISTANCE)
-            .onEach {
-                latestLocation = it
+        object LackPermission : LocationResult()
+
+        object Loading : LocationResult()
+    }
+
+    private var hasLocationPermission = MutableStateFlow<Boolean>(false)
+    private var latestLocation: LocationResult = LocationResult.Loading
+
+    fun setLocationPermission(newValue: Boolean) {
+        if (newValue != hasLocationPermission.value) {
+            hasLocationPermission.tryEmit(newValue)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val geohashStateFlow =
+        hasLocationPermission
+            .transformLatest {
+                emitAll(
+                    LocationFlow
+                        (context)
+                        .get(MIN_TIME, MIN_DISTANCE)
+                        .map {
+                            LocationResult.Success(it.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits)) as LocationResult
+                        }.onEach {
+                            latestLocation = it
+                        }.catch { e ->
+                            e.printStackTrace()
+                            latestLocation = LocationResult.LackPermission
+                            emit(LocationResult.LackPermission)
+                        },
+                )
             }.stateIn(
                 scope,
                 SharingStarted.WhileSubscribed(5000),
                 latestLocation,
-            )
-
-    val geohashStateFlow =
-        locationStateFlow
-            .map { it.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits).toString() }
-            .stateIn(
-                scope,
-                SharingStarted.WhileSubscribed(5000),
-                "",
             )
 }
 
@@ -144,8 +172,11 @@ private class ReverseGeoLocationUtil {
     ): String? {
         return try {
             Geocoder(context)
-                .getFromLocation(location.latitude, location.longitude, 1)
-                ?.firstOrNull()
+                .getFromLocation(
+                    location.latitude,
+                    location.longitude,
+                    1,
+                )?.firstOrNull()
                 ?.let { address ->
                     listOfNotNull(address.locality ?: address.subAdminArea, address.countryCode)
                         .joinToString(", ")
@@ -156,4 +187,53 @@ private class ReverseGeoLocationUtil {
             return null
         }
     }
+}
+
+class ReverseGeoLocationFlow(
+    private val context: Context,
+) {
+    @SuppressLint("MissingPermission")
+    fun get(location: Location): Flow<String?> =
+        callbackFlow {
+            val locationManager = Geocoder(context)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val locationCallback =
+                    (
+                        Geocoder.GeocodeListener { addresses ->
+                            launch {
+                                send(
+                                    addresses.firstOrNull()?.let {
+                                        listOfNotNull(it.locality ?: it.subAdminArea, it.countryCode).joinToString(", ")
+                                    },
+                                )
+                            }
+                        }
+                    )
+                Log.d("GeoLocation Service", "LocationState Start")
+
+                locationManager
+                    .getFromLocation(
+                        location.latitude,
+                        location.longitude,
+                        1,
+                        locationCallback,
+                    )
+            } else {
+                launch {
+                    send(
+                        Geocoder(context)
+                            .getFromLocation(
+                                location.latitude,
+                                location.longitude,
+                                1,
+                            )?.firstOrNull()
+                            ?.let { address ->
+                                listOfNotNull(address.locality ?: address.subAdminArea, address.countryCode)
+                                    .joinToString(", ")
+                            },
+                    )
+                }
+            }
+        }
 }

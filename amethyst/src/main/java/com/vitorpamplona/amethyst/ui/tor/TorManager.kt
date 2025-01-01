@@ -27,7 +27,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity.BIND_AUTO_CREATE
-import com.vitorpamplona.ammolite.service.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import org.torproject.jni.TorService
 import org.torproject.jni.TorService.LocalBinder
 

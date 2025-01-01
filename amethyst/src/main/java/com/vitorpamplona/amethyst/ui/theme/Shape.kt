@@ -89,6 +89,7 @@ val Size5dp = 5.dp
 val Size10dp = 10.dp
 val Size12dp = 12.dp
 val Size13dp = 13.dp
+val Size14dp = 14.dp
 val Size15dp = 15.dp
 val Size16dp = 16.dp
 val Size17dp = 17.dp

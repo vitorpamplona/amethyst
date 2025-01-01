@@ -22,17 +22,20 @@ package com.vitorpamplona.amethyst.service
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
+import coil3.Uri
 import coil3.asImage
 import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
+import coil3.key.Keyer
 import coil3.request.ImageRequest
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.base64contentPattern
+import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.encoders.toHexKey
 import java.util.Base64
 
 @Stable
@@ -66,13 +69,24 @@ class Base64Fetcher(
             data: Uri,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher? {
-            return if (base64contentPattern.matcher(data.toString()).find()) {
-                return Base64Fetcher(options, data)
+        ): Fetcher? =
+            if (data.scheme == "data") {
+                Base64Fetcher(options, data)
             } else {
                 null
             }
-        }
+    }
+
+    object BKeyer : Keyer<Uri> {
+        override fun key(
+            data: Uri,
+            options: Options,
+        ): String? =
+            if (data.scheme == "data") {
+                CryptoUtils.sha256(data.toString().toByteArray()).toHexKey()
+            } else {
+                null
+            }
     }
 }
 

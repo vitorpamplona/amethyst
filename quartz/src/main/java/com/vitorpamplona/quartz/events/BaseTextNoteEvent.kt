@@ -57,21 +57,15 @@ open class BaseTextNoteEvent(
 
     fun isForkFromAddressWithPubkey(authorHex: HexKey) = tags.any { it.size > 3 && it[0] == "a" && it[3] == "fork" && it[1].contains(authorHex) }
 
-    open fun replyTos(): List<HexKey> {
-        val oldStylePositional = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
+    open fun markedReplyTos(): List<HexKey> {
         val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
         val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
-
-        val newStyleReplyTos = listOfNotNull(newStyleReply, newStyleRoot)
-
-        return if (newStyleReplyTos.isNotEmpty()) {
-            newStyleReplyTos
-        } else {
-            oldStylePositional
-        }
+        return listOfNotNull(newStyleReply, newStyleRoot)
     }
 
-    fun replyingTo(): HexKey? {
+    open fun unMarkedReplyTos(): List<HexKey> = tags.filter { it.size > 1 && it.size <= 3 && it[0] == "e" }.map { it[1] }
+
+    open fun replyingTo(): HexKey? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it.size <= 3 && it[0] == "e" }?.get(1)
         val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "reply" }?.get(1)
         val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }?.get(1)
@@ -79,7 +73,7 @@ open class BaseTextNoteEvent(
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
-    fun replyingToAddress(): ATag? {
+    open fun replyingToAddress(): ATag? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it.size <= 3 && it[0] == "a" }?.let { ATag.parseAtag(it[1], it[2]) }
         val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "a" && it[3] == "reply" }?.let { ATag.parseAtag(it[1], it[2]) }
         val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }?.let { ATag.parseAtag(it[1], it[2]) }
@@ -87,7 +81,7 @@ open class BaseTextNoteEvent(
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
 
-    fun replyingToAddressOrEvent(): String? {
+    open fun replyingToAddressOrEvent(): String? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it.size <= 3 && (it[0] == "e" || it[0] == "a") }?.get(1)
         val newStyleReply = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "reply" }?.get(1)
         val newStyleRoot = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }?.get(1)
@@ -190,21 +184,33 @@ open class BaseTextNoteEvent(
     }
 
     fun tagsWithoutCitations(): List<String> {
-        val repliesTo = replyTos()
+        val certainRepliesTo = markedReplyTos()
+        val uncertainRepliesTo = unMarkedReplyTos()
+
         val tagAddresses =
             taggedAddresses()
                 .filter {
                     it.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
                     // removes forks from itself.
                 }.map { it.toTag() }
-        if (repliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
+
+        if (certainRepliesTo.isEmpty() && uncertainRepliesTo.isEmpty() && tagAddresses.isEmpty()) return emptyList()
 
         val citations = findCitations()
 
         return if (citations.isEmpty()) {
-            repliesTo + tagAddresses
+            if (certainRepliesTo.isNotEmpty()) {
+                certainRepliesTo + tagAddresses
+            } else {
+                uncertainRepliesTo + tagAddresses
+            }
         } else {
-            repliesTo.filter { it !in citations }
+            if (certainRepliesTo.isNotEmpty()) {
+                certainRepliesTo + tagAddresses.filter { it !in citations }
+            } else {
+                // mix bag between `e` for replies and `e` for citations
+                uncertainRepliesTo.filter { it !in citations }
+            }
         }
     }
 }

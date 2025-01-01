@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
@@ -38,9 +38,12 @@ import com.vitorpamplona.quartz.events.BookmarkListEvent
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
 import com.vitorpamplona.quartz.events.ChannelMetadataEvent
 import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.EmojiPackEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
 import com.vitorpamplona.quartz.events.MetadataEvent
@@ -93,7 +96,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                     listOfNotNull(
                         ATag.parse(it, null)?.let { aTag ->
                             TypedFilter(
-                                types = COMMON_FEED_TYPES,
+                                types = ALL_FEED_TYPES,
                                 filter =
                                     SincePerRelayFilter(
                                         kinds = listOf(MetadataEvent.KIND, aTag.kind),
@@ -108,19 +111,19 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                     // event ids
                     listOf(
                         TypedFilter(
-                            types = COMMON_FEED_TYPES,
+                            types = ALL_FEED_TYPES,
                             filter =
                                 SincePerRelayFilter(
-                                    ids = listOfNotNull(hexToWatch),
+                                    ids = listOfNotNull(it),
                                 ),
                         ),
                         // authors
                         TypedFilter(
-                            types = COMMON_FEED_TYPES,
+                            types = ALL_FEED_TYPES,
                             filter =
                                 SincePerRelayFilter(
                                     kinds = listOf(MetadataEvent.KIND),
-                                    authors = listOfNotNull(hexToWatch),
+                                    authors = listOfNotNull(it),
                                     // just to be sure
                                     limit = 5,
                                 ),
@@ -177,6 +180,20 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                                     PollNoteEvent.KIND,
                                     NNSEvent.KIND,
                                     WikiNoteEvent.KIND,
+                                    CommentEvent.KIND,
+                                ),
+                            search = mySearchString,
+                            limit = 100,
+                        ),
+                ),
+                TypedFilter(
+                    types = setOf(FeedType.SEARCH),
+                    filter =
+                        SincePerRelayFilter(
+                            kinds =
+                                listOf(
+                                    InteractiveStoryPrologueEvent.KIND,
+                                    InteractiveStorySceneEvent.KIND,
                                 ),
                             search = mySearchString,
                             limit = 100,

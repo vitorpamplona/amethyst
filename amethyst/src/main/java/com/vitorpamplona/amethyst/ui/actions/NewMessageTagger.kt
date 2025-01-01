@@ -39,27 +39,21 @@ class NewMessageTagger(
     var dao: Dao,
 ) {
     val directMentions = mutableSetOf<HexKey>()
+    val directMentionsNotes = mutableSetOf<Note>()
+    val directMentionsUsers = mutableSetOf<User>()
 
     fun addUserToMentions(user: User) {
+        directMentionsUsers.add(user)
         directMentions.add(user.pubkeyHex)
         pTags = if (pTags?.contains(user) == true) pTags else pTags?.plus(user) ?: listOf(user)
     }
 
     fun addNoteToReplyTos(note: Note) {
+        directMentionsNotes.add(note)
         directMentions.add(note.idHex)
 
         note.author?.let { addUserToMentions(it) }
         eTags = if (eTags?.contains(note) == true) eTags else eTags?.plus(note) ?: listOf(note)
-    }
-
-    fun tagIndex(user: User): Int {
-        // Postr Events assembles replies before mentions in the tag order
-        return (if (channelHex != null) 1 else 0) + (eTags?.size ?: 0) + (pTags?.indexOf(user) ?: 0)
-    }
-
-    fun tagIndex(note: Note): Int {
-        // Postr Events assembles replies before mentions in the tag order
-        return (if (channelHex != null) 1 else 0) + (eTags?.indexOf(note) ?: 0)
     }
 
     suspend fun run() {

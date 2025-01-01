@@ -45,9 +45,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
@@ -61,6 +61,8 @@ import com.vitorpamplona.quartz.events.SearchRelayListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun DisplayRelaySet(
@@ -289,15 +291,13 @@ private fun RelayOptionsAction(
             }
         }
 
-    var wantsToAddRelay by remember { mutableStateOf("") }
-
-    if (wantsToAddRelay.isNotEmpty()) {
-        AllRelayListView({ wantsToAddRelay = "" }, wantsToAddRelay, accountViewModel, nav = nav)
-    }
-
     if (isCurrentlyOnTheUsersList) {
-        AddRelayButton { wantsToAddRelay = relay }
+        AddRelayButton {
+            nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(relay, StandardCharsets.UTF_8.toString()))
+        }
     } else {
-        RemoveRelayButton { wantsToAddRelay = relay }
+        RemoveRelayButton {
+            nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(relay, StandardCharsets.UTF_8.toString()))
+        }
     }
 }

@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,20 +62,20 @@ import java.util.Locale
 @Composable
 fun RenderAudioTrack(
     note: Note,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? AudioTrackEvent ?: return
 
-    AudioTrackHeader(noteEvent, note, isFiniteHeight, accountViewModel, nav)
+    AudioTrackHeader(noteEvent, note, contentScale, accountViewModel, nav)
 }
 
 @Composable
 fun AudioTrackHeader(
     noteEvent: AudioTrackEvent,
     note: Note,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -148,7 +149,7 @@ fun AudioTrackHeader(
                             thumbUri = cover,
                             authorName = note.author?.toBestDisplayName(),
                             roundedCorner = true,
-                            isFiniteHeight = isFiniteHeight,
+                            contentScale = contentScale,
                             nostrUriCallback = "nostr:${note.toNEvent()}",
                             accountViewModel = accountViewModel,
                         )
@@ -159,7 +160,7 @@ fun AudioTrackHeader(
                             title = noteEvent.subject(),
                             authorName = note.author?.toBestDisplayName(),
                             roundedCorner = true,
-                            isFiniteHeight = isFiniteHeight,
+                            contentScale = contentScale,
                             accountViewModel = accountViewModel,
                         )
                     }
@@ -172,20 +173,20 @@ fun AudioTrackHeader(
 @Composable
 fun RenderAudioHeader(
     note: Note,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? AudioHeaderEvent ?: return
 
-    AudioHeader(noteEvent, note, isFiniteHeight, accountViewModel, nav)
+    AudioHeader(noteEvent, note, contentScale, accountViewModel, nav)
 }
 
 @Composable
 fun AudioHeader(
     noteEvent: AudioHeaderEvent,
     note: Note,
-    isFiniteHeight: Boolean,
+    contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -210,7 +211,7 @@ fun AudioHeader(
                         title = noteEvent.subject(),
                         authorName = note.author?.toBestDisplayName(),
                         roundedCorner = true,
-                        isFiniteHeight = isFiniteHeight,
+                        contentScale = contentScale,
                         accountViewModel = accountViewModel,
                         nostrUriCallback = note.toNostrUri(),
                     )

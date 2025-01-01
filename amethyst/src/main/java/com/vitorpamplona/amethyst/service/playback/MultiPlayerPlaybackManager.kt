@@ -91,7 +91,7 @@ class MultiPlayerPlaybackManager(
 
         val player =
             ExoPlayer.Builder(context).run {
-                dataSourceFactory?.let { setMediaSourceFactory(it) }
+                setMediaSourceFactory(dataSourceFactory)
                 build()
             }
 

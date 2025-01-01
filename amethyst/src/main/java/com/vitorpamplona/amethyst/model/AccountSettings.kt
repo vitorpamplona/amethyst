@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import android.util.Log
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.service.Nip96MediaServers
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
@@ -96,7 +99,7 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
     var localRelayServers: Set<String> = setOf(),
-    var defaultFileServer: Nip96MediaServers.ServerName = Nip96MediaServers.DEFAULT[0],
+    var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
     val defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     val defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
@@ -120,7 +123,6 @@ class AccountSettings(
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
 ) {
     val saveable = MutableStateFlow(AccountSettingsUpdater(this))
-
     val syncedSettings: AccountSyncedSettings =
         backupSyncedSettings?.let { AccountSyncedSettings(it) }
             ?: AccountSyncedSettings(AccountSyncedSettingsInternal())
@@ -141,7 +143,19 @@ class AccountSettings(
         } else {
             when (val packageName = externalSignerPackageName) {
                 null -> NostrSignerInternal(keyPair)
-                else -> NostrSignerExternal(keyPair.pubKey.toHexKey(), ExternalSignerLauncher(keyPair.pubKey.toHexKey(), packageName))
+                else -> {
+                    val externalSignerLauncher = ExternalSignerLauncher(keyPair.pubKey.toHexKey(), packageName)
+                    // TODO: How to handle the launcher here?
+                    try {
+                        externalSignerLauncher.registerLauncher(
+                            launcher = { },
+                            contentResolver = Amethyst.instance::contentResolverFn,
+                        )
+                    } catch (e: Exception) {
+                        Log.d("AccountSettings", "Failed to initialize external signer", e)
+                    }
+                    NostrSignerExternal(keyPair.pubKey.toHexKey(), externalSignerLauncher)
+                }
             }
         }
 
@@ -189,7 +203,7 @@ class AccountSettings(
     // file servers
     // ---
 
-    fun changeDefaultFileServer(server: Nip96MediaServers.ServerName) {
+    fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
             saveAccountSettings()

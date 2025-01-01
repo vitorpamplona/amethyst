@@ -59,7 +59,7 @@ dependencies {
     // LibSodium for ChaCha encryption (NIP-44)
     // Wait for @aar support in version catalogs
     implementation "com.goterl:lazysodium-android:5.1.0@aar"
-    implementation 'net.java.dev.jna:jna:5.14.0@aar'
+    implementation 'net.java.dev.jna:jna:5.15.0@aar'
 
     //implementation (libs.lazysodium.android) { artifact { type = "aar" } }
     //implementation (libs.jna) { artifact { type = "aar" } }
@@ -73,7 +73,7 @@ dependencies {
     // Parses URLs from Text:
     api libs.url.detector
 
-    // Parses URLs from Text:
+    // Normalizes URLs
     api libs.rfc3986.normalizer
 
     testImplementation libs.junit

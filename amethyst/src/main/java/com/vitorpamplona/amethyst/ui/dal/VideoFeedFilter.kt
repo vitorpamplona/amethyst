@@ -20,15 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isImageOrVideoUrl
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
+import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.FileHeaderEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.events.MuteListEvent
 import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.events.PictureEvent
 import com.vitorpamplona.quartz.events.VideoHorizontalEvent
+import com.vitorpamplona.quartz.events.VideoMeta
 import com.vitorpamplona.quartz.events.VideoVerticalEvent
 
 class VideoFeedFilter(
@@ -46,7 +51,10 @@ class VideoFeedFilter(
         val notes =
             LocalCache.notes.filterIntoSet { _, it ->
                 acceptableEvent(it, params)
-            }
+            } +
+                LocalCache.addressables.filterIntoSet { _, it ->
+                    acceptableEvent(it, params)
+                }
 
         return sort(notes)
     }
@@ -59,20 +67,48 @@ class VideoFeedFilter(
         return collection.filterTo(HashSet()) { acceptableEvent(it, params) }
     }
 
+    fun acceptableUrls(
+        baseUrls: List<String>,
+        mimeType: String?,
+    ): Boolean {
+        // we don't have an youtube player
+        val urls = baseUrls.filter { !it.contains("youtu.be") }
+
+        val isSupportedMimeType = mimeType?.let { SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it) } ?: false
+
+        return urls.isNotEmpty() && (urls.any { isImageOrVideoUrl(it) } || isSupportedMimeType)
+    }
+
+    fun acceptableiMetas(iMetas: List<VideoMeta>): Boolean =
+        iMetas.any {
+            !it.url.contains("youtu.be") && (isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
+        }
+
+    fun acceptanceEvent(noteEvent: FileHeaderEvent) = acceptableUrls(noteEvent.urls(), noteEvent.mimeType())
+
+    fun acceptanceEvent(noteEvent: VideoVerticalEvent) = acceptableiMetas(noteEvent.imetaTags())
+
+    fun acceptanceEvent(noteEvent: VideoHorizontalEvent) = acceptableiMetas(noteEvent.imetaTags())
+
     fun acceptableEvent(
-        it: Note,
+        note: Note,
         params: FilterByListParams,
     ): Boolean {
-        val noteEvent = it.event
+        val noteEvent = note.event
+
+        if (noteEvent is AddressableEvent && note !is AddressableNote) {
+            return false
+        }
 
         return (
-            (noteEvent is FileHeaderEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
-                (noteEvent is VideoVerticalEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
-                (noteEvent is VideoHorizontalEvent && noteEvent.hasUrl() && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
-                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
+            (noteEvent is FileHeaderEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is VideoVerticalEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is VideoHorizontalEvent && acceptanceEvent(noteEvent)) ||
+                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
+                noteEvent is PictureEvent
         ) &&
             params.match(noteEvent) &&
-            (params.isHiddenList || account.isAcceptable(it))
+            (params.isHiddenList || account.isAcceptable(note))
     }
 
     fun buildFilterParams(account: Account): FilterByListParams =

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.AccountSettings
 
 sealed class AccountState {
@@ -27,14 +28,10 @@ sealed class AccountState {
 
     object LoggedOff : AccountState()
 
-    class LoggedInViewOnly(
-        val accountSettings: AccountSettings,
-    ) : AccountState() {
-        val currentViewModelStore = AccountCentricViewModelStore(accountSettings)
-    }
-
+    @Stable
     class LoggedIn(
         val accountSettings: AccountSettings,
+        var route: String? = null,
     ) : AccountState() {
         val currentViewModelStore = AccountCentricViewModelStore(accountSettings)
     }

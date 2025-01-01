@@ -121,10 +121,13 @@
     <string name="avatar_url">Avatar URL</string>
     <string name="banner_url">Banner URL</string>
     <string name="website_url">Website URL</string>
+    <string name="pronouns">Pronouns</string>
     <string name="ln_address">LN Address</string>
     <string name="ln_url_outdated">LN URL (outdated)</string>
     <string name="save_to_gallery">Save to Gallery</string>
     <string name="image_saved_to_the_gallery">Image saved to the phone\'s photo gallery</string>
+    <string name="video_download_has_started_toast">Video download has started…</string>
+    <string name="media_download_has_started_toast">Media download has started…</string>
     <string name="failed_to_save_the_image">Failed to save the image</string>
     <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
     <string name="failed_to_save_the_video">Failed to save the video</string>
@@ -152,6 +155,8 @@
     <string name="lightning_address">Lightning Address</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Copies the Nsec ID (your password) to the clipboard for backup</string>
     <string name="copy_private_key_to_the_clipboard">Copy Secret Key to the Clipboard</string>
+    <string name="show_private_key_qr_code">Show private key QR code</string>
+    <string name="show_encrypted_private_key_qr_code">Show encrypted private key QR code</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Copies the public key to the clipboard for sharing</string>
     <string name="copy_public_key_npub_to_the_clipboard">Copy Public Key (NPub) to the Clipboard</string>
     <string name="send_a_direct_message">Send a Direct Message</string>
@@ -188,6 +193,7 @@
     <string name="loading_account">Loading account</string>
     <string name="error_loading_replies">"Error loading replies: "</string>
     <string name="try_again">Try again</string>
+    <string name="notification_feed_is_empty">No notifications yet.</string>
     <string name="feed_is_empty">Feed is empty.</string>
     <string name="refresh">Refresh</string>
     <string name="created">created</string>
@@ -208,6 +214,8 @@
     <string name="translations_translated_from">translated from</string>
     <string name="translations_to">to</string>
     <string name="translations_show_in_lang_first">Show in %1$s first</string>
+    <string name="chat_about_topic">Public chat about %1$s</string>
+    <string name="community_about_topic">Public community about %1$s</string>
     <string name="translations_always_translate_to_lang">Always translate to %1$s</string>
     <string name="translations_never_translate_from_lang">Never translate from %1$s</string>
     <string name="nip_05">Nostr Address</string>
@@ -281,7 +289,7 @@
     <string name="quick_action_unfollow">Unfollow</string>
     <string name="quick_action_follow">Follow</string>
     <string name="quick_action_request_deletion_gallery_title">Delete from Gallery</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Remove this media from your Gallery, you can readd it later</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">Remove this media from your Gallery.</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
     <string name="quick_action_block_dialog_btn">Block</string>
@@ -360,11 +368,15 @@
     <string name="hash_verification_passed">This content is the same since the post</string>
     <string name="hash_verification_failed">This content has changed. The author might not have seen or approved the change</string>
 
+    <string name="content_description_add_media">Add Media</string>
     <string name="content_description_add_image">Add Image</string>
     <string name="content_description_add_video">Add Video</string>
     <string name="content_description_add_document">Add Document</string>
 
     <string name="add_content">Add to Message</string>
+    <string name="add_caption">Add a Caption</string>
+    <string name="add_caption_example">My lovely friend</string>
+
     <string name="content_description">Description of the contents</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
 
@@ -385,18 +397,31 @@
 
 
     <string name="file_server">File Server</string>
+    <string name="file_server_description">Choose a server to upload this file to</string>
+
     <string name="zap_forward_lnAddress">LnAddress or @User</string>
 
 
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
-    <string name="no_media_server_message">You have no custom media servers set. You can use Amethyst\'s list, or add one below ↓</string>
+
+    <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
+    <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
+
     <string name="built_in_media_servers_title">Built-in Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>
     <string name="add_media_server">Add media server</string>
     <string name="delete_media_server">Delete media server</string>
 
+    <string name="uploading_state_ready">Not Started</string>
+    <string name="uploading_state_compressing">Compressing</string>
+    <string name="uploading_state_uploading">Uploading</string>
+    <string name="uploading_state_server_processing">Processing</string>
+    <string name="uploading_state_downloading">Downloading</string>
+    <string name="uploading_state_hashing">Hashing</string>
+    <string name="uploading_state_finished">Done</string>
+    <string name="uploading_state_error">Error</string>
 
     <string name="upload_server_relays_nip95">Your relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Files are hosted by your relays. New NIP: check if they support</string>
@@ -645,6 +670,12 @@
     <string name="geohash_title">Expose Location as </string>
     <string name="geohash_explainer">Adds a Geohash of your location to the post. The public will know you are within 5km (3mi) of the current location</string>
 
+    <string name="geohash_exclusive">Location-exclusive Post</string>
+    <string name="geohash_exclusive_explainer">Only followers of the location will see it. Your general followers won\'t see it.</string>
+
+    <string name="loading_location">Loading location</string>
+    <string name="lack_location_permissions">No Location Permissions</string>
+
     <string name="add_sensitive_content_explainer">Adds sensitive content warning before showing your content. This is ideal for any NSFW content or content some people may find offensive or disturbing</string>
 
     <string name="new_feature_nip17_might_not_be_available_title">New Feature</string>
@@ -680,6 +711,8 @@
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
     <string name="add_media_to_gallery">Add Media to Gallery</string>
+    <string name="media_added">Media added</string>
+    <string name="media_added_to_profile_gallery">Media added to your Profile Gallery</string>
 
     <string name="created_at">Created at</string>
     <string name="rules">Rules</string>
@@ -693,6 +726,7 @@
 
     <string name="error_dialog_zap_error">Unable to send zap</string>
     <string name="error_dialog_talk_to_user">Message the User</string>
+    <string name="error_dialog_talk_to_user_name">Message %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
 
     <string name="relay_information_document_error_assemble_url">Failed to reach %1$s: %2$s</string>
@@ -768,6 +802,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Could not resolve %1$s. Check if you are connected, if the server is up and if the lightning address %2$s is correct.\n\nException was: %3$s</string>
     <string name="could_not_fetch_invoice_from">Could not fetch invoice from %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Could not fetch invoice from %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error Parsing JSON from Lightning Address. Check the user\'s lightning setup</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Error Parsing JSON from %1$s. Check the user\'s lightning setup</string>
 
@@ -853,7 +888,9 @@
     <string name="failed_to_upload_media">Uploading error: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="could_not_download_from_the_server">Could not download uploaded media from the server</string>
+    <string name="could_not_check_downloaded_file">Could not check downloaded file after upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Could not prepare local file to upload: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Failed to upload to %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Failed to upload: %1$s</string>
     <string name="failed_to_delete_with_message">Failed to delete: %1$s</string>
     <string name="media_too_big_for_nip95">Media is too big for NIP-95</string>
@@ -992,6 +1029,7 @@
     <string name="accessibility_turn_off_sealed_message">Sealed message on. Click to turn off sealed message</string>
     <string name="accessibility_send">Send</string>
     <string name="accessibility_play_username">Play username as audio</string>
+    <string name="accessibility_pushpin">Pushpin</string>
     <string name="accessibility_scan_qr_code">Scan QR code</string>
     <string name="accessibility_navigate_to_alby">Navigate to the third-party wallet provider Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">It\'s not possible to reply a draft note</string>
@@ -1039,7 +1077,14 @@
     <string name="http_status_508">Loop Detected - The server detects an infinite loop while processing the request</string>
     <string name="http_status_511">Network Authentication Required - The client must be authenticated to access the network</string>
 
+    <string name="media_servers_nip96_section">NIP-96 Servers</string>
+    <string name="media_servers_nip96_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
+
+    <string name="media_servers_blossom_section">Blossom Servers</string>
+    <string name="media_servers_blossom_explainer">Add as many servers as you want. You can choose which one to use later when uploading your picture</string>
+
     <string name="add_a_nip96_server">Add a NIP-96 Server</string>
+    <string name="add_a_blossom_server">Add a Blossom Server</string>
     <string name="delete_all">Delete all</string>
     <string name="delete_all_drafts_confirmation">Are you sure you want to delete all drafts?</string>
     <string name="and_more" translatable="false">" +%1$s"</string>

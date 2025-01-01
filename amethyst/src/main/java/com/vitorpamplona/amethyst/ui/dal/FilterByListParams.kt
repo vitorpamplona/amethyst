@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
+import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
@@ -33,6 +35,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class FilterByListParams(
     val isGlobal: Boolean,
     val isHiddenList: Boolean,
+    val isAroundMe: Boolean,
     val followLists: Account.LiveFollowList?,
     val hiddenLists: Account.LiveHiddenUsers,
     val now: Long = TimeUtils.oneMinuteFromNow(),
@@ -43,10 +46,16 @@ class FilterByListParams(
 
     fun isEventInList(noteEvent: Event): Boolean {
         if (followLists == null) return false
+        if (isAroundMe && followLists.geotags.isEmpty()) return false
 
         return if (noteEvent is LiveActivitiesEvent) {
             noteEvent.participantsIntersect(followLists.authors) ||
                 noteEvent.isTaggedHashes(followLists.hashtags) ||
+                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
+                noteEvent.isTaggedAddressableNotes(followLists.addresses)
+        } else if (noteEvent is CommentEvent) {
+            // ignore follows and checks only the root scope
+            noteEvent.isTaggedHashes(followLists.hashtags) ||
                 noteEvent.isTaggedGeoHashes(followLists.geotags) ||
                 noteEvent.isTaggedAddressableNotes(followLists.addresses)
         } else {
@@ -95,6 +104,7 @@ class FilterByListParams(
             FilterByListParams(
                 isGlobal = selectedListName == GLOBAL_FOLLOWS,
                 isHiddenList = showHiddenKey(selectedListName, userHex),
+                isAroundMe = selectedListName == AROUND_ME,
                 followLists = followLists,
                 hiddenLists = hiddenUsers,
             )

@@ -208,6 +208,7 @@ class MetadataEvent(
             nip05: String?,
             lnAddress: String?,
             lnURL: String?,
+            pronouns: String?,
             twitter: String?,
             mastodon: String?,
             github: String?,
@@ -231,6 +232,7 @@ class MetadataEvent(
             picture?.let { addIfNotBlank(currentJson, "picture", it.trim()) }
             banner?.let { addIfNotBlank(currentJson, "banner", it.trim()) }
             website?.let { addIfNotBlank(currentJson, "website", it.trim()) }
+            pronouns?.let { addIfNotBlank(currentJson, "pronouns", it.trim()) }
             about?.let { addIfNotBlank(currentJson, "about", it.trim()) }
             nip05?.let { addIfNotBlank(currentJson, "nip05", it.trim()) }
             lnAddress?.let { addIfNotBlank(currentJson, "lud16", it.trim()) }
@@ -281,7 +283,7 @@ class MetadataEvent(
             key: String,
             value: String,
         ) {
-            if (value.isBlank()) {
+            if (value.isBlank() || value == "null") {
                 currentJson.remove(key)
             } else {
                 currentJson.put(key, value.trim())

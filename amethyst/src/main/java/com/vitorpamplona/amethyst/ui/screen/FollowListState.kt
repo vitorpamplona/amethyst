@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.events.ContactListEvent
 import com.vitorpamplona.quartz.events.DeletionEvent
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesEvent
 import com.vitorpamplona.quartz.events.LongTextNoteEvent
@@ -105,7 +106,7 @@ class FollowListState(
             unpackList = listOf(MuteListEvent.blockListFor(account.userProfile().pubkeyHex)),
         )
 
-    val defaultLists = persistentListOf(kind3Follow, globalFollow, aroundMe, muteListFollow)
+    val defaultLists = persistentListOf(kind3Follow, aroundMe, globalFollow, muteListFollow)
 
     fun getPeopleLists(): List<FeedDefinition> =
         account
@@ -354,6 +355,7 @@ val DEFAULT_FEED_KINDS =
         LiveActivitiesChatMessageEvent.KIND,
         LiveActivitiesEvent.KIND,
         WikiNoteEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
     )
 
 val DEFAULT_COMMUNITY_FEEDS =
@@ -367,4 +369,5 @@ val DEFAULT_COMMUNITY_FEEDS =
         PinListEvent.KIND,
         WikiNoteEvent.KIND,
         CommunityPostApprovalEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
     )

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -36,8 +37,6 @@ class FileStorageHeaderEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun dataEventId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
 
-    fun encryptionKey() = tags.firstOrNull { it.size > 2 && it[0] == ENCRYPTION_KEY }?.let { AESGCM(it[1], it[2]) }
-
     fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
 
     fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
@@ -46,7 +45,7 @@ class FileStorageHeaderEvent(
 
     fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)
+    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
 
     fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
 
@@ -76,11 +75,10 @@ class FileStorageHeaderEvent(
             alt: String? = null,
             hash: String? = null,
             size: String? = null,
-            dimensions: String? = null,
+            dimensions: Dimension? = null,
             blurhash: String? = null,
             magnetURI: String? = null,
             torrentInfoHash: String? = null,
-            encryptionKey: AESGCM? = null,
             sensitiveContent: Boolean? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -93,11 +91,10 @@ class FileStorageHeaderEvent(
                     hash?.let { arrayOf(HASH, it) },
                     alt?.let { arrayOf(ALT, it) } ?: arrayOf("alt", ALT_DESCRIPTION),
                     size?.let { arrayOf(FILE_SIZE, it) },
-                    dimensions?.let { arrayOf(DIMENSION, it) },
+                    dimensions?.let { arrayOf(DIMENSION, it.toString()) },
                     blurhash?.let { arrayOf(BLUR_HASH, it) },
                     magnetURI?.let { arrayOf(MAGNET_URI, it) },
                     torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
-                    encryptionKey?.let { arrayOf(ENCRYPTION_KEY, it.key, it.nonce) },
                     sensitiveContent?.let {
                         if (it) {
                             arrayOf("content-warning", "")

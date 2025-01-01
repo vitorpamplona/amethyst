@@ -347,7 +347,6 @@
     <string name="zap_forward_lnAddress">LnAddress หรือ @ชื่อผู้ใช้</string>
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">ตั้งค่า media server ที่คุณต้องการ</string>
-    <string name="no_media_server_message">คุณยังไม่ได้ตั้งค่า media servers คุณสามารถใช้รายการของ Amethyst หรือตั้งค่าใหม่ด้านล่าง ↓</string>
     <string name="built_in_media_servers_title">Built-in Media Servers</string>
     <string name="built_in_servers_description">รายการค่าเริ่มต้นของ Amethyst คุณสามารถเพิ่มทีละรายการหรือเพิ่มทั้งรายการก็ได้</string>
     <string name="use_default_servers">ใช้รายการค่าเริ่มต้น</string>

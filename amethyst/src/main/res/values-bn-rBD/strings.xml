@@ -74,7 +74,7 @@
     <string name="preview_card_image_for">"%1$s এর জন্য কার্ড ইমেজের পূর্বরূপ দেখুন"</string>
     <string name="new_channel">নতুন চ্যানেল</string>
     <string name="channel_name">চ্যানেলের নাম</string>
-    <string name="my_awesome_group">আমার চম‍‌‌‍ৎকার গ্রুপ</string>
+    <string name="my_awesome_group">আমার অসাধারণ দল</string>
     <string name="picture_url">ছবির Url</string>
     <string name="description">বিবরণ</string>
     <string name="about_us">"আমাদের সম্পর্কে.. "</string>
@@ -506,6 +506,7 @@
     <string name="error_opening_external_signer">স্বাক্ষরের অ্যাপ খোলা যাচ্ছে না</string>
     <string name="sign_request_rejected">স্বাক্ষরের অনুরোধ প্রত্যাখ্যান করা হয়েছে</string>
     <string name="no_reactions_setup">কোন প্রতিক্রিয়া সেটআপ</string>
+    <string name="select_push_server">একটি নির্বাচন করুন UnifiedPush অ্যাপ</string>
     <string name="push_server_none">কোনটি নয়</string>
     <string name="send_the_seller_a_message">বিক্রেতাকে একটি বার্তা পাঠান</string>
     <string name="hi_seller_is_this_still_available">হাই %1$s, এটা কি এখনও পাওয়া যায়?</string>
@@ -518,6 +519,7 @@
     <string name="classifieds_location">অবস্থান</string>
     <string name="classifieds_location_placeholder">শহর, রাজ্য, দেশ</string>
     <string name="classifieds_condition_new">নতুন</string>
+    <string name="classifieds_condition_new_explainer">এটি একটি সম্পূর্ণ নতুন ইউনিট, মূল বাক্সে।</string>
     <string name="classifieds_condition_good">ভাল</string>
     <string name="classifieds_condition_fair">ন্যায্য</string>
     <string name="classifieds_category_clothing">পোশাক</string>
@@ -528,15 +530,22 @@
     <string name="classifieds_category_home">নীড়</string>
     <string name="classifieds_category_office">দপ্তর</string>
     <string name="classifieds_category_food">খাদ্য</string>
+    <string name="route_home">নীড়</string>
+    <string name="route_search">অনুসন্ধান করুন</string>
+    <string name="route_discover">আবিস্কার</string>
+    <string name="route_messages">বার্তা</string>
     <string name="route_security_filters">নিরাপত্তা-ফিল্টার</string>
     <string name="new_post">নতুন পোস্ট</string>
     <string name="reply_description">উত্তর</string>
     <string name="boost_or_quote_description">বুস্ট বা উদ্ধৃতি</string>
     <string name="like_description">লাইক দিন</string>
+    <string name="profile_image_of_user">এর প্রোফাইল ছবি %1$s</string>
     <string name="note_options">নোট অপশন</string>
     <string name="poll">ভোট</string>
     <string name="disable_poll">পোল নিষ্ক্রিয় করুন</string>
     <string name="add_location">অবস্থান</string>
     <string name="invalid_nip19_uri">ঠিকানা সঠিক নয়</string>
+    <string name="zap_the_devs_description">আপনার অনুদান আমাদের পার্থক্য গড়তে সাহায্য করে। প্রতিটি ইঞ্চি গুরুত্বপূর্ণ!</string>
+    <string name="donate_now">এখনই দান করুন</string>
     <string name="accessibility_scan_qr_code">QR কোড স্ক্যান করুন</string>
 </resources>

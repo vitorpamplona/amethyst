@@ -116,12 +116,15 @@
     <string name="avatar_url">Avatar-URL</string>
     <string name="banner_url">Banner-URL</string>
     <string name="website_url">Website-URL</string>
+    <string name="pronouns">Pronomen</string>
     <string name="ln_address">LN-Adresse</string>
     <string name="ln_url_outdated">LN-URL (veraltet)</string>
     <string name="save_to_gallery">In die Galerie abspeichern</string>
     <string name="image_saved_to_the_gallery">Bild in der Gal
 
 erie gespeichert</string>
+    <string name="video_download_has_started_toast">Der Videodownload wurde gestartet…</string>
+    <string name="media_download_has_started_toast">Der Mediendownload wurde gestartet…</string>
     <string name="failed_to_save_the_image">Fehler beim Speichern des Bildes</string>
     <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
@@ -149,6 +152,8 @@ erie gespeichert</string>
     <string name="lightning_address">Lightning-Adresse</string>
     <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">Kopiert die Nsec-ID (Ihr Passwort) zur Sicherung in die Zwischenablage</string>
     <string name="copy_private_key_to_the_clipboard">Kopiere geheimen Schlüssel in die Zwischenablage</string>
+    <string name="show_private_key_qr_code">Privaten QR-Code anzeigen</string>
+    <string name="show_encrypted_private_key_qr_code">QR-Code für verschlüsselten privaten Schlüssel anzeigen</string>
     <string name="copies_the_public_key_to_the_clipboard_for_sharing">Kopiert den öffentlichen Schlüssel zum Teilen in die Zwischenablage</string>
     <string name="copy_public_key_npub_to_the_clipboard">Kopiere öffentlichen Schlüssel (NPub) in die Zwischenablage</string>
     <string name="send_a_direct_message">Sende eine Direktnachricht</string>
@@ -187,6 +192,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="loading_account">Konto wird geladen</string>
     <string name="error_loading_replies">"Fehler beim Laden der Antworten: "</string>
     <string name="try_again">Erneut versuchen</string>
+    <string name="notification_feed_is_empty">Noch keine Benachrichtigungen.</string>
     <string name="feed_is_empty">Feed ist leer.</string>
     <string name="refresh">Aktualisieren</string>
     <string name="created">erstellt</string>
@@ -206,6 +212,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="translations_translated_from">übersetzt von</string>
     <string name="translations_to">zu</string>
     <string name="translations_show_in_lang_first">Zuerst in %1$s anzeigen</string>
+    <string name="chat_about_topic">Öffentlicher Chat über %1$s</string>
+    <string name="community_about_topic">Öffentliche Gemeinschaft über %1$s</string>
     <string name="translations_always_translate_to_lang">Immer ins %1$s übersetzen</string>
     <string name="translations_never_translate_from_lang">Niemals aus dem %1$s übersetzen</string>
     <string name="nip_05">Nostr-Adresse</string>
@@ -336,10 +344,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="hash_verification_info_title">Was bedeutet das?</string>
     <string name="hash_verification_passed">Das Bild ist seitdem Beitrag dasselbe</string>
     <string name="hash_verification_failed">Das Bild hat sich geändert. Der Autor hat die Änderung möglicherweise nicht bemerkt.</string>
+    <string name="content_description_add_media">Medien hinzufügen</string>
     <string name="content_description_add_image">Bild hinzufügen</string>
     <string name="content_description_add_video">Video hinzufügen</string>
     <string name="content_description_add_document">Dokument hinzufügen</string>
     <string name="add_content">Zur Nachricht hinzufügen</string>
+    <string name="add_caption">Untertitel hinzufügen</string>
+    <string name="add_caption_example">Mein netter Freund</string>
     <string name="content_description">Beschreibung des Inhalts</string>
     <string name="content_description_example">Ein blaues Boot an einem weißen Sandstrand bei Sonnenuntergang</string>
     <string name="zap_type">Zap-Typ</string>
@@ -353,15 +364,25 @@ anz der Bedingungen ist erforderlich</string>
     <string name="zap_type_nonzap">Keine Zap</string>
     <string name="zap_type_nonzap_explainer">Keine Spur in Nostr, nur in Lightning</string>
     <string name="file_server">Dateiserver</string>
+    <string name="file_server_description">Wählen Sie einen Server zum Hochladen dieser Datei</string>
     <string name="zap_forward_lnAddress">LnAddress oder @Benutzer</string>
     <string name="media_servers">Medienserver</string>
     <string name="set_preferred_media_servers">Legen Sie Ihre bevorzugten Medienupload Server fest.</string>
-    <string name="no_media_server_message">Sie haben keine benutzerdefinierten Medienserver gesetzt. Sie können die Liste von Amethyst verwenden oder unten einen hinzufügen</string>
+    <string name="no_nip96_server_message">Du hast keine NIP-96-Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
+    <string name="no_blossom_server_message">Du hast keine Blossom Server gesetzt. Du kannst die Amethyst-Liste verwenden oder unten einen hinzufügen ↓</string>
     <string name="built_in_media_servers_title">Integrierte Medienserver</string>
     <string name="built_in_servers_description">Amethysts Standardliste. Sie können sie einzeln hinzufügen oder die Liste hinzufügen.</string>
     <string name="use_default_servers">Standardliste verwenden</string>
     <string name="add_media_server">Medienserver hinzufügen</string>
     <string name="delete_media_server">Medienserver löschen</string>
+    <string name="uploading_state_ready">Noch nicht angefangen</string>
+    <string name="uploading_state_compressing">Komprimieren</string>
+    <string name="uploading_state_uploading">Hochladen</string>
+    <string name="uploading_state_server_processing">Verarbeitung</string>
+    <string name="uploading_state_downloading">Herunterladen</string>
+    <string name="uploading_state_hashing">Hashen</string>
+    <string name="uploading_state_finished">Fertig</string>
+    <string name="uploading_state_error">Fehler</string>
     <string name="upload_server_relays_nip95">Deine Relays (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">Dateien werden von deinen Relays gehostet. Neuer NIP: Überprüfe, ob sie unterstützt werden</string>
     <string name="privacy_options">Privatsphäre-Optionen</string>
@@ -375,6 +396,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="no">Nein</string>
     <string name="follow_list_selection">Folgen-Liste</string>
     <string name="follow_list_kind3follows">Alle Folgen</string>
+    <string name="follow_list_aroundme">In der Nähe</string>
     <string name="follow_list_global">Weltweit</string>
     <string name="follow_list_mute_list">Stummliste</string>
     <string name="connect_through_your_orbot_setup_short">Standard-Port ist 9050</string>
@@ -543,11 +565,16 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nip05_checking">Nostr-Adresse wird überprüft</string>
     <string name="select_deselect_all">Alle auswählen/abwählen</string>
     <string name="default_relays">Standard</string>
+    <string name="default_relays_longer">Auf Standardeinstellung zurücksetzen</string>
     <string name="select_a_relay_to_continue">Wählen Sie ein Relais aus, um fortzufahren</string>
     <string name="zap_forward_title">Weiterleiten von Zaps an:</string>
     <string name="zap_forward_explainer">Unterstützende Clients leiten Zaps an die LNAddress oder das Benutzerprofil unten weiter, anstatt an Ihre eigene Adresse</string>
     <string name="geohash_title">Ort preisgeben als </string>
     <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass Sie sich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
+    <string name="geohash_exclusive">Standort-exklusiver Beitrag</string>
+    <string name="geohash_exclusive_explainer">Nur Anhänger des Ortes werden es sehen. Deine allgemeinen Anhänger werden es nicht sehen.</string>
+    <string name="loading_location">Standort wird geladen</string>
+    <string name="lack_location_permissions">Keine Standortberechtigungen</string>
     <string name="add_sensitive_content_explainer">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor Ihr Inhalt angezeigt wird. Dies ist ideal für NSFW-Inhalte (nicht sicher für die Arbeit) oder Inhalte, die manche Menschen als anstößig oder verstörend empfinden könnten</string>
     <string name="new_feature_nip17_might_not_be_available_title">Neues Feature</string>
     <string name="new_feature_nip17_might_not_be_available_description">Um diesen Modus zu aktivieren, muss Amethyst eine NIP-17-Nachricht senden (GiftWrapped, Versiegelte Direkt- und Gruppennachrichten). NIP-17 ist neu und die meisten Clients haben es noch nicht implementiert. Stellen Sie sicher, dass der Empfänger einen kompatiblen Client verwendet.</string>
@@ -576,6 +603,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
     <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
     <string name="add_media_to_gallery">Medien zur Galerie hinzufügen</string>
+    <string name="media_added">Medien hinzugefügt</string>
+    <string name="media_added_to_profile_gallery">Medien wurden zu Ihrer Profilgalerie hinzugefügt</string>
     <string name="created_at">Erstellt am</string>
     <string name="rules">Regeln</string>
     <string name="login_with_external_signer">Mit Amber anmelden</string>
@@ -710,7 +739,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="failed_to_upload_media">Fehler beim Hochladen: %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">Der Server hat nach dem Hochladen keine URL angegeben</string>
     <string name="could_not_download_from_the_server">Hochgeladene Medien konnten nicht vom Server heruntergeladen werden</string>
+    <string name="could_not_check_downloaded_file">Die heruntergeladene Datei konnte nach dem Hochladen nicht überprüft werden: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Lokale Datei konnte nicht zum Hochladen vorbereitet werden: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="failed_to_upload_with_message">Upload fehlgeschlagen: %1$s</string>
     <string name="failed_to_delete_with_message">Löschen fehlgeschlagen: %1$s</string>
     <string name="media_too_big_for_nip95">Medien sind zu groß für NIP-95</string>
@@ -772,6 +803,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="dm_relays_not_found">Richten Sie Ihre privaten Posteingangs-Relais ein</string>
     <string name="dm_relays_not_found_description">Diese Einstellung lässt alle wissen, welche Relais verwendet werden sollen, wenn sie Nachrichten an Sie senden. Ohne diese könnten Sie einige Nachrichten verpassen.</string>
     <string name="dm_relays_not_found_examples">Gute Optionen sind:\n - inbox.nostr.wine (bezahlt)\n - you.nostr1.com (persönliche Relais - bezahlt)</string>
+    <string name="dm_relays_not_found_examples2">Gute Optionen sind:\n - auth.nostr1.com (gratis)\n - inbox.nostr.wine (bezahlt)\n - relay.0xchat.com (gratis)</string>
     <string name="dm_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die als Ihr privater Posteingang dienen sollen. DM Posteingangs-Relais sollten Nachrichten von jedem akzeptieren, aber nur Ihnen erlauben, sie herunterzuladen.</string>
     <string name="dm_relays_not_found_create_now">Jetzt einrichten</string>
     <string name="search_relays_title">Suchrelais</string>
@@ -825,6 +857,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="accessibility_turn_off_sealed_message">Versiegelte Nachricht an. Klicken Sie, um die versiegelte Nachricht auszuschalten</string>
     <string name="accessibility_send">Senden</string>
     <string name="accessibility_play_username">Benutzernamen als Audio abspielen</string>
+    <string name="accessibility_pushpin">Reißzwecke</string>
     <string name="accessibility_scan_qr_code">QR-Code scannen</string>
     <string name="accessibility_navigate_to_alby">Navigieren Sie zum Drittanbieter-Wallet-Anbieter Alby</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Es ist nicht möglich, auf einen Entwurf zu antworten</string>
@@ -867,7 +900,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="http_status_507">Unzureichender Speicher - Der Server hat nicht genug Speicher, um die Anfrage erfolgreich zu verarbeiten</string>
     <string name="http_status_508">Schleife erkannt - Der Server erkennt eine Endlosschleife, während er die Anfrage bearbeitet</string>
     <string name="http_status_511">Netzwerk-Authentifizierung erforderlich - Der Client muss authentifiziert werden, um auf das Netzwerk zuzugreifen</string>
+    <string name="media_servers_nip96_section">NIP-96 Server</string>
+    <string name="media_servers_nip96_explainer">Fügen Sie beliebig viele Server hinzu. Sie können wählen, welche später beim Hochladen Ihres Bildes verwendet werden soll</string>
+    <string name="media_servers_blossom_section">Blossom Server</string>
+    <string name="media_servers_blossom_explainer">Fügen Sie beliebig viele Server hinzu. Sie können wählen, welche später beim Hochladen Ihres Bildes verwendet werden soll</string>
     <string name="add_a_nip96_server">NIP-96 Server hinzufügen</string>
+    <string name="add_a_blossom_server">Blossom Server hinzufügen</string>
     <string name="delete_all">Alles löschen</string>
     <string name="delete_all_drafts_confirmation">Möchten Sie wirklich alle Entwürfe löschen?</string>
     <string name="stack">Stapel:</string>

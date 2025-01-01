@@ -20,18 +20,26 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
+import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoderOld
+import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Assert
 import org.junit.Test
+import org.junit.runner.RunWith
 import kotlin.math.roundToInt
 
+@RunWith(AndroidJUnit4::class)
 class BlurhashTest {
     val warmHex = "[45#Y7_2^-xt%OSb%4S0-qt0xbotaRInV|M{RlD~M{M_IVIUNHM{M{M{M{RjNGRkoyj]o[t8tPt8"
     val testHex = "|NHL-]~pabocs+jDM{j?of4T9ZR+WBWZbdR-WCog04ITn\$t6t6t6t6oJoLZ}?bIUWBs:M{WCogRjs:s+o#R+WBoft7axWBx]IV%LogM{t5xaWBay%KRjxus.WCNGWWt7j[j]s+R-S5ofjYV@j[ofD%t8RPoJt7t7R*WCof"
 
     @Test
     fun testAspectRatioWarm() {
-        Assert.assertEquals(0.44444445f, BlurHashDecoderOld.aspectRatio(warmHex)!!, 0.001f)
         Assert.assertEquals(0.44444445f, BlurHashDecoder.aspectRatio(warmHex)!!, 0.001f)
     }
 
@@ -46,8 +54,17 @@ class BlurhashTest {
     }
 
     @Test
+    fun testDecoderWarm25Pixels() {
+        val aspectRatio = BlurHashDecoder.aspectRatio(warmHex) ?: 1.0f
+
+        val bmp1 = BlurHashDecoderOld.decode(warmHex, 25, (25 * (1 / aspectRatio)).roundToInt())
+        val bmp2 = BlurHashDecoder.decodeKeepAspectRatio(warmHex, 25)
+
+        assertTrue(bmp1!!.sameAs(bmp2!!))
+    }
+
+    @Test
     fun testAspectRatioTest() {
-        Assert.assertEquals(1.0f, BlurHashDecoderOld.aspectRatio(testHex)!!)
         Assert.assertEquals(1.0f, BlurHashDecoder.aspectRatio(testHex)!!)
     }
 
@@ -60,4 +77,30 @@ class BlurhashTest {
 
         assertTrue(bmp1!!.sameAs(bmp2!!))
     }
+
+    @Test
+    fun testBlack() {
+        assertEquals("U00000fQfQfQfQfQfQfQfQfQfQfQfQfQfQfQ", load("/black.png").toBlurhash())
+    }
+
+    @Test
+    fun test1x1() {
+        assertEquals("U~TSUA~q~q~q~q~q~q~q~q~q~q~q~q~q~q~q", load("/1x1.png").toBlurhash())
+    }
+
+    @Test
+    fun testWhite() {
+        assertEquals("U2TSUA~qfQ~q~qj[fQj[fQfQfQfQ~qj[fQj[", load("/white.png").toBlurhash())
+    }
+
+    @Test
+    fun testLorikeet() {
+        println("${load("/lorikeet.jpg").toBlurhash()}")
+        assertEquals("rFDcT@_LNs#p%Mt*nNM}E2VrIVX6VuV@WUo{xtjv9]RRw[OXS}rrWFX9w{OZxaxWNHX4n\$M}NGaK%0RkM}w{xto|jFs,Sh-Tj]bcwJnjXSxZs.NI", load("/lorikeet.jpg").toBlurhash())
+    }
+
+    private fun load(filename: String): Bitmap =
+        javaClass.getResourceAsStream(filename).use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        }
 }

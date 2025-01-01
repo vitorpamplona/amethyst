@@ -36,6 +36,7 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.model.Account
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
@@ -87,6 +89,8 @@ import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventInterface
 import com.vitorpamplona.quartz.events.GenericRepostEvent
 import com.vitorpamplona.quartz.events.GiftWrapEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.events.LnZapEvent
 import com.vitorpamplona.quartz.events.LnZapRequestEvent
 import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
@@ -108,9 +112,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -121,12 +123,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
 
 @Immutable open class ToastMsg
 
@@ -154,6 +152,8 @@ class AccountViewModel(
 ) : ViewModel(),
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
+
+    var firstRoute: String? = null
 
     // TODO: contact lists are not notes yet
     // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
@@ -506,6 +506,12 @@ class AccountViewModel(
         }
     }
 
+    class DecryptedInfo(
+        val zapRequest: Note,
+        val zapEvent: Note?,
+        val info: ZapAmountCommentNotification,
+    )
+
     fun decryptAmountMessageInGroup(
         zaps: ImmutableList<CombinedZap>,
         onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit,
@@ -524,17 +530,19 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulSigningOperations<CombinedZap, ZapAmountCommentNotification>(
-                operationsInput = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
+            collectSuccessfulOperations<CombinedZap, DecryptedInfo>(
+                items = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
                 runRequestFor = { next, onReady ->
                     checkNotInMainThread()
 
-                    innerDecryptAmountMessage(next.request, next.response, onReady)
+                    innerDecryptAmountMessage(next.request, next.response) {
+                        onReady(DecryptedInfo(next.request, next.response, it))
+                    }
                 },
             ) {
                 checkNotInMainThread()
 
-                it.forEach { decrypted -> initialResults[decrypted.key.request] = decrypted.value }
+                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
 
                 onNewState(initialResults.values.toImmutableList())
             }
@@ -628,13 +636,15 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulSigningOperations<Pair<Note, Note?>, ZapAmountCommentNotification>(
-                operationsInput = myList,
+            collectSuccessfulOperations<Pair<Note, Note?>, DecryptedInfo>(
+                items = myList,
                 runRequestFor = { next, onReady ->
-                    innerDecryptAmountMessage(next.first, next.second, onReady)
+                    innerDecryptAmountMessage(next.first, next.second) {
+                        onReady(DecryptedInfo(next.first, next.second, it))
+                    }
                 },
             ) {
-                it.forEach { decrypted -> initialResults[decrypted.key.first] = decrypted.value }
+                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
 
                 onNewState(initialResults.values.toImmutableList())
             }
@@ -693,7 +703,7 @@ class AccountViewModel(
         message: String,
         context: Context,
         showErrorIfNoLnAddress: Boolean = true,
-        onError: (String, String) -> Unit,
+        onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
@@ -759,7 +769,7 @@ class AccountViewModel(
         url: String,
         relay: String?,
         blurhash: String?,
-        dim: String?,
+        dim: Dimension?,
         hash: String?,
         mimeType: String?,
     ) {
@@ -901,9 +911,7 @@ class AccountViewModel(
         }
     }
 
-    fun markDonatedInThisVersion() {
-        account.markDonatedInThisVersion()
-    }
+    fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
 
@@ -1106,7 +1114,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
     }
 
-    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote? = LocalCache.getOrCreateAddressableNote(key)
+    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
 
     fun getOrCreateAddressableNote(
         key: ATag,
@@ -1562,6 +1570,28 @@ class AccountViewModel(
             AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
         )
 
+    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddressATag(account.signer.pubKey, dATag))
+
+    fun updateInteractiveStoryReadingState(
+        root: InteractiveStoryBaseEvent,
+        readingScene: InteractiveStoryBaseEvent,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
+
+            val readingState = getInteractiveStoryReadingState(root.addressTag())
+            val readingStateEvent = readingState.event as? InteractiveStoryReadingStateEvent
+
+            if (readingStateEvent != null) {
+                account.updateInteractiveStoryReadingState(readingStateEvent, readingScene, sceneNoteRelayHint)
+            } else {
+                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.address()).relayHintUrl()
+
+                account.createInteractiveStoryReadingState(root, rootNoteRelayHint, readingScene, sceneNoteRelayHint)
+            }
+        }
+    }
+
     fun sendSats(
         lnaddress: String,
         milliSats: Long,
@@ -1605,6 +1635,8 @@ class AccountViewModel(
             }
         }
     }
+
+    fun relayStatusFlow() = Amethyst.instance.client.relayStatusFlow()
 
     val draftNoteCache = CachedDraftNotes(this)
 
@@ -1678,42 +1710,6 @@ class AccountViewModel(
     val baseNote: Note?,
     val nip19: Nip19Bech32.ParseReturn,
 )
-
-public suspend fun <T, K> collectSuccessfulSigningOperations(
-    operationsInput: List<T>,
-    runRequestFor: (T, (K) -> Unit) -> Unit,
-    output: MutableMap<T, K> = mutableMapOf(),
-    onReady: suspend (MutableMap<T, K>) -> Unit,
-) {
-    if (operationsInput.isEmpty()) {
-        onReady(output)
-        return
-    }
-
-    coroutineScope {
-        val jobs =
-            operationsInput.map {
-                async {
-                    val result =
-                        withTimeoutOrNull(10000) {
-                            suspendCancellableCoroutine { continuation ->
-                                runRequestFor(it) { result: K -> continuation.resume(result) }
-                            }
-                        }
-                    if (result != null) {
-                        output[it] = result
-                    }
-                }
-            }
-
-        // runs in parallel to avoid overcrowding Amber.
-        withTimeoutOrNull(15000) {
-            jobs.joinAll()
-        }
-    }
-
-    onReady(output)
-}
 
 @Composable
 fun mockAccountViewModel(): AccountViewModel {

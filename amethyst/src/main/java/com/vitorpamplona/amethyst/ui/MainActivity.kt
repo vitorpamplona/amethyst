@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -31,7 +28,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +39,7 @@ import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.components.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -50,7 +47,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.ammolite.service.HttpClientManager
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
 import com.vitorpamplona.quartz.events.ChannelCreateEvent
@@ -259,30 +255,12 @@ class MainActivity : AppCompatActivity() {
         }
 }
 
-class GetMediaActivityResultContract : ActivityResultContracts.GetContent() {
-    @SuppressLint("MissingSuperCall")
-    override fun createIntent(
-        context: Context,
-        input: String,
-    ): Intent {
-        // Force only images and videos to be selectable
-        // Force OPEN Document because of the resulting URI must be passed to the
-        // Playback service and the picker's permissions only allow the activity to read the URI
-        return Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            // Force only images and videos to be selectable
-            type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
-        }
-    }
-}
-
 fun uriToRoute(uri: String?): String? =
-    if (uri.equals("nostr:Notifications", true)) {
+    if (uri?.startsWith("notifications", true) == true || uri?.startsWith("nostr:notifications", true) == true) {
         Route.Notification.route.replace("{scrollToTop}", "true")
     } else {
-        if (uri?.startsWith("nostr:Hashtag?id=") == true) {
-            Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:Hashtag?id="))
+        if (uri?.startsWith("hashtag?id=") == true || uri?.startsWith("nostr:hashtag?id=") == true) {
+            Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:").removePrefix("hashtag?id="))
         } else {
             val nip19 = Nip19Bech32.uriToRoute(uri)?.entity
             when (nip19) {
@@ -302,6 +280,7 @@ fun uriToRoute(uri: String?): String? =
                         "Event/${nip19.hex}"
                     }
                 }
+
                 is Nip19Bech32.NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
                         "Community/${nip19.atag}"
@@ -311,12 +290,14 @@ fun uriToRoute(uri: String?): String? =
                         "Event/${nip19.atag}"
                     }
                 }
+
                 is Nip19Bech32.NEmbed -> {
                     if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
                         LocalCache.verifyAndConsume(nip19.event, null)
                     }
                     "Event/${nip19.event.id}"
                 }
+
                 else -> null
             }
         }

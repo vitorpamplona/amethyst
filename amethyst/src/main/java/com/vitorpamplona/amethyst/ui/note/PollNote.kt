@@ -73,6 +73,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
@@ -559,7 +560,7 @@ fun ZapVote(
                             poolOption.option,
                             "",
                             context,
-                            onError = { title, message ->
+                            onError = { title, message, user ->
                                 zappingProgress = 0f
                                 showErrorMessageDialog = StringToastMsg(title, message)
                             },
@@ -583,7 +584,7 @@ fun ZapVote(
                     zappingProgress = 0f
                 },
                 onChangeAmount = { wantsToZap = false },
-                onError = { title, message ->
+                onError = { title, message, user ->
                     showErrorMessageDialog = StringToastMsg(title, message)
                     zappingProgress = 0f
                 },
@@ -604,7 +605,7 @@ fun ZapVote(
                         showErrorMessageDialog =
                             StringToastMsg(
                                 stringRes(context, R.string.error_dialog_zap_error),
-                                it,
+                                it.error,
                             )
                     }
                 },
@@ -613,7 +614,7 @@ fun ZapVote(
                         showErrorMessageDialog =
                             StringToastMsg(
                                 stringRes(context, R.string.error_dialog_zap_error),
-                                it,
+                                it.error,
                             )
                     }
                 },
@@ -681,7 +682,7 @@ fun FilteredZapAmountChoicePopup(
     pollOption: Int,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
-    onError: (title: String, text: String) -> Unit,
+    onError: (title: String, text: String, toUser: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {

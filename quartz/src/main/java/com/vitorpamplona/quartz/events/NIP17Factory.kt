@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.events
 
+import com.vitorpamplona.quartz.encoders.Dimension
 import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.signers.NostrSigner
 
 class NIP17Factory {
@@ -79,7 +81,7 @@ class NIP17Factory {
         markAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
-        nip94attachments: List<FileHeaderEvent>? = null,
+        imetas: List<IMetaTag>? = null,
         draftTag: String? = null,
         onReady: (Result) -> Unit,
     ) {
@@ -97,7 +99,66 @@ class NIP17Factory {
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             isDraft = draftTag != null,
-            nip94attachments = nip94attachments,
+            imetas = imetas,
+        ) { senderMessage ->
+            if (draftTag != null) {
+                onReady(
+                    Result(
+                        msg = senderMessage,
+                        wraps = listOf(),
+                    ),
+                )
+            } else {
+                createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
+                    onReady(
+                        Result(
+                            msg = senderMessage,
+                            wraps = wraps,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun createEncryptedFileNIP17(
+        url: String,
+        to: List<HexKey>,
+        repliesToHex: List<HexKey>? = null,
+        contentType: String?,
+        algo: String,
+        key: ByteArray,
+        nonce: ByteArray? = null,
+        originalHash: String? = null,
+        hash: String? = null,
+        size: Int? = null,
+        dimensions: Dimension? = null,
+        blurhash: String? = null,
+        sensitiveContent: Boolean? = null,
+        alt: String?,
+        draftTag: String? = null,
+        signer: NostrSigner,
+        onReady: (Result) -> Unit,
+    ) {
+        val senderPublicKey = signer.pubKey
+
+        ChatMessageEncryptedFileHeaderEvent.create(
+            url = url,
+            to = to,
+            repliesTo = repliesToHex,
+            contentType = contentType,
+            algo = algo,
+            key = key,
+            nonce = nonce,
+            originalHash = originalHash,
+            hash = hash,
+            size = size,
+            dimensions = dimensions,
+            blurhash = blurhash,
+            sensitiveContent = sensitiveContent,
+            alt = alt,
+            signer = signer,
+            isDraft = draftTag != null,
         ) { senderMessage ->
             if (draftTag != null) {
                 onReady(
