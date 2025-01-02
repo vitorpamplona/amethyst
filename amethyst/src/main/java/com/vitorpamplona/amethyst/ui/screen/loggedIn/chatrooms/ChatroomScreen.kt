@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMs
@@ -108,7 +109,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.UserLine
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -560,7 +560,11 @@ fun PrivateMessageEditFieldRow(
     ) {
         val context = LocalContext.current
 
-        ShowUserSuggestionList(channelScreenModel, accountViewModel)
+        ShowUserSuggestionList(
+            channelScreenModel.userSuggestions,
+            channelScreenModel::autocompleteWithUser,
+            accountViewModel,
+        )
 
         MyTextField(
             value = channelScreenModel.message,
@@ -652,34 +656,6 @@ fun PrivateMessageEditFieldRow(
                 ),
             visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         )
-    }
-}
-
-@Composable
-fun ShowUserSuggestionList(
-    channelScreenModel: NewPostViewModel,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
-) {
-    val userSuggestions = channelScreenModel.userSuggestions
-    if (userSuggestions.isNotEmpty()) {
-        LazyColumn(
-            contentPadding =
-                PaddingValues(
-                    top = 10.dp,
-                ),
-            modifier = modifier,
-        ) {
-            itemsIndexed(
-                userSuggestions,
-                key = { _, item -> item.pubkeyHex },
-            ) { _, item ->
-                UserLine(item, accountViewModel) { channelScreenModel.autocompleteWithUser(item) }
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
-            }
-        }
     }
 }
 
