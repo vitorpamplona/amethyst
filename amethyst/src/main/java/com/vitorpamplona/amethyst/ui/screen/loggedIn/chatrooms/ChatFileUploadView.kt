@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +33,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -51,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,16 +64,18 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.TitleIconModifier
+import com.vitorpamplona.amethyst.ui.navigation.rememberHeightDecreaser
+import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.toImmutableList
 
@@ -101,52 +105,61 @@ fun ChatFileUploadView(
         Scaffold(
             topBar = {
                 TopAppBar(
+                    scrollBehavior = rememberHeightDecreaser(),
+                    modifier = Modifier,
                     title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = StdHorzSpacer)
+                        val room = postViewModel.chatroom
 
+                        if (room == null) {
                             Text(
                                 text = stringRes(R.string.dm_upload),
-                                modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Center,
                                 style = MaterialTheme.typography.titleLarge,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
                             )
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                NonClickableUserPictures(
+                                    room = room,
+                                    accountViewModel = accountViewModel,
+                                    size = Size34dp,
+                                )
 
-                            PostButton(
-                                onPost = {
-                                    postViewModel.upload(
-                                        onError = accountViewModel::toast,
-                                        context = context,
-                                    )
-
-                                    postViewModel.selectedServer?.let {
-                                        if (it.type != ServerType.NIP95) {
-                                            account.settings.changeDefaultFileServer(it)
-                                        }
-                                    }
-
-                                    onClose()
-                                },
-                                isActive = postViewModel.canPost(),
-                            )
+                                RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp), FontWeight.Normal, accountViewModel)
+                            }
                         }
                     },
                     navigationIcon = {
-                        Row {
-                            Spacer(modifier = StdHorzSpacer)
-                            CloseButton(
-                                onPress = {
-                                    postViewModel.cancelModel()
-                                    onClose()
-                                },
-                            )
+                        IconButton(
+                            modifier = TitleIconModifier,
+                            onClick = {
+                                postViewModel.cancelModel()
+                                onClose()
+                            },
+                        ) {
+                            ArrowBackIcon()
                         }
+                    },
+                    actions = {
+                        SendButton(
+                            modifier = Modifier.padding(end = 5.dp),
+                            onPost = {
+                                postViewModel.upload(
+                                    onError = accountViewModel::toast,
+                                    context = context,
+                                ) {
+                                    onClose
+                                }
+
+                                postViewModel.selectedServer?.let {
+                                    if (it.type != ServerType.NIP95) {
+                                        account.settings.changeDefaultFileServer(it)
+                                    }
+                                }
+                            },
+                            isActive = postViewModel.canPost(),
+                        )
                     },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
@@ -277,5 +290,20 @@ private fun ImageVideoPostChat(
             valueRange = 0f..3f,
             steps = 2,
         )
+    }
+}
+
+@Composable
+fun SendButton(
+    onPost: () -> Unit = {},
+    isActive: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        modifier = modifier,
+        enabled = isActive,
+        onClick = onPost,
+    ) {
+        Text(text = stringRes(R.string.accessibility_send))
     }
 }

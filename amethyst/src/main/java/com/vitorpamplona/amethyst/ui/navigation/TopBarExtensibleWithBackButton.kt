@@ -108,4 +108,4 @@ private val AppBarHorizontalPadding = 4.dp
 private val TitleInsetWithoutIcon = Modifier.width(16.dp - AppBarHorizontalPadding)
 
 // Start inset for the title when there is a navigation icon provided
-private val TitleIconModifier = Modifier.width(48.dp - AppBarHorizontalPadding)
+val TitleIconModifier = Modifier.width(48.dp - AppBarHorizontalPadding)

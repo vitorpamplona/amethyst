@@ -31,7 +31,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -59,7 +58,6 @@ open class ChatFileUploadModel : ViewModel() {
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
-    var onceUploaded: () -> Unit = {}
 
     // 0 = Low, 1 = Medium, 2 = High, 3=UNCOMPRESSED
     var mediaQualitySlider by mutableIntStateOf(1)
@@ -84,6 +82,7 @@ open class ChatFileUploadModel : ViewModel() {
     fun upload(
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        onceUploaded: () -> Unit,
     ) {
         val myAccount = account ?: return
         val mySelectedServer = selectedServer ?: return
@@ -157,8 +156,4 @@ open class ChatFileUploadModel : ViewModel() {
     fun canPost(): Boolean = !isUploadingImage && multiOrchestrator != null && selectedServer != null
 
     fun defaultServer() = account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
-
-    fun onceUploaded(onceUploaded: () -> Unit) {
-        this.onceUploaded = onceUploaded
-    }
 }

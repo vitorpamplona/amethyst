@@ -79,6 +79,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Chatroom
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -205,20 +206,15 @@ private fun RenderRoomTopBar(
     } else {
         TopBarExtensibleWithBackButton(
             title = {
-                NonClickableUserPictures(
-                    room = room,
-                    accountViewModel = accountViewModel,
-                    size = Size34dp,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    NonClickableUserPictures(
+                        room = room,
+                        accountViewModel = accountViewModel,
+                        size = Size34dp,
+                    )
 
-                RoomNameOnlyDisplay(
-                    room,
-                    Modifier
-                        .padding(start = 10.dp)
-                        .weight(1f),
-                    fontWeight = FontWeight.Normal,
-                    accountViewModel,
-                )
+                    RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp).weight(1f), FontWeight.Normal, accountViewModel)
+                }
             },
             extendableRow = {
                 LongRoomHeader(room = room, accountViewModel = accountViewModel, nav = nav)
@@ -787,10 +783,7 @@ fun GroupChatroomHeader(
                     size = Size34dp,
                 )
 
-                Column(modifier = Modifier.padding(start = 10.dp)) {
-                    RoomNameOnlyDisplay(room, Modifier, FontWeight.Bold, accountViewModel)
-                    DisplayUserSetAsSubject(room, accountViewModel, FontWeight.Normal)
-                }
+                RoomNameOnlyDisplay(room, Modifier.padding(start = 10.dp), FontWeight.Bold, accountViewModel)
             }
         }
     }
@@ -989,8 +982,10 @@ fun RoomNameOnlyDisplay(
             .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
 
     CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
-        if (it != null && it.isNotBlank()) {
+        if (!it.isNullOrBlank()) {
             DisplayRoomSubject(it, fontWeight)
+        } else {
+            DisplayUserSetAsSubject(room, accountViewModel, FontWeight.Normal)
         }
     }
 }
