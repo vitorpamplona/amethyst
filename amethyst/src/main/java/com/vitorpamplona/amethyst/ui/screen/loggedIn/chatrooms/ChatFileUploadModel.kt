@@ -85,8 +85,6 @@ open class ChatFileUploadModel : ViewModel() {
         onError: (title: String, message: String) -> Unit,
         context: Context,
     ) {
-        println("AABBCC uploading $account $selectedServer $chatroom $multiOrchestrator")
-
         val myAccount = account ?: return
         val mySelectedServer = selectedServer ?: return
         val myChatroom = chatroom ?: return
@@ -94,8 +92,6 @@ open class ChatFileUploadModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.Default) {
             isUploadingImage = true
-
-            println("AABBCC uploading")
 
             val cipher = AESGCM()
 
@@ -110,8 +106,6 @@ open class ChatFileUploadModel : ViewModel() {
                     myAccount,
                     context,
                 )
-
-            println("AABBCC uploading")
 
             if (results.allGood) {
                 results.successful.forEach { state ->
