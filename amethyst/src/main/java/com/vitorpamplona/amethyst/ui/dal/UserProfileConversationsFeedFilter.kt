@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.events.PollNoteEvent
 import com.vitorpamplona.quartz.events.TextNoteEvent
@@ -61,6 +62,7 @@ class UserProfileConversationsFeedFilter(
                     it.event is PollNoteEvent ||
                     it.event is ChannelMessageEvent ||
                     it.event is LiveActivitiesChatMessageEvent ||
+                    it.event is CommentEvent ||
                     it.event is TorrentCommentEvent
             ) &&
             !it.isNewThread() &&
