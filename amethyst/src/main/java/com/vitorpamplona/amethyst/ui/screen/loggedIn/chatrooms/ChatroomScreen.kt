@@ -23,13 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -65,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -85,8 +82,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
@@ -387,6 +382,8 @@ fun PrepareChatroomViewModels(
         }
     }
 
+    val imageUpload: ChatFileUploadModel = viewModel()
+
     if (draftMessage != null) {
         LaunchedEffect(key1 = draftMessage) { newPostModel.updateMessage(TextFieldValue(draftMessage)) }
     }
@@ -395,6 +392,7 @@ fun PrepareChatroomViewModels(
         room = room,
         feedViewModel = feedViewModel,
         newPostModel = newPostModel,
+        fileUpload = imageUpload,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -405,11 +403,10 @@ fun ChatroomScreen(
     room: ChatroomKey,
     feedViewModel: NostrChatroomFeedViewModel,
     newPostModel: NewPostViewModel,
+    fileUpload: ChatFileUploadModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-
     NostrChatroomDataSource.loadMessagesBetween(accountViewModel.account, room)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -483,6 +480,15 @@ fun ChatroomScreen(
             }
         }
 
+        fileUpload.multiOrchestrator?.let {
+            ChatFileUploadView(
+                fileUpload,
+                onClose = fileUpload::cancelModel,
+                accountViewModel,
+                nav,
+            )
+        }
+
         // LAST ROW
         PrivateMessageEditFieldRow(
             newPostModel,
@@ -500,16 +506,7 @@ fun ChatroomScreen(
                 }
             },
             onSendNewMedia = {
-                newPostModel.selectImage(it)
-                newPostModel.uploadAsSeparatePrivateEvent(
-                    toUsers = room.users,
-                    alt = null,
-                    sensitiveContent = false,
-                    mediaQuality = MediaCompressor.compressorQualityToInt(CompressorQuality.MEDIUM),
-                    server = accountViewModel.account.settings.defaultFileServer,
-                    onError = accountViewModel::toast,
-                    context = context,
-                )
+                fileUpload.load(it, room, accountViewModel.account)
             },
         )
     }
@@ -558,8 +555,6 @@ fun PrivateMessageEditFieldRow(
     Column(
         modifier = EditFieldModifier,
     ) {
-        val context = LocalContext.current
-
         ShowUserSuggestionList(
             channelScreenModel.userSuggestions,
             channelScreenModel::autocompleteWithUser,
