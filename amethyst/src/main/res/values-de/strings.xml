@@ -613,6 +613,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Sie können einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwenden Sie denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lassen Sie es leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_zap_error">Zap konnte nicht gesendet werden</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
+    <string name="error_dialog_talk_to_user_name">Nachricht %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Konnte %1$s nicht erreichen: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Fehler beim Zusammenstellen der NIP-11-URL für %1$s: %2$s</string>
@@ -672,6 +673,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Konnte %1$s nicht auflösen. Überprüfen Sie, ob Sie verbunden sind, ob der Server online ist und ob die Lightning-Adresse %2$s korrekt ist</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Konnte %1$s nicht auflösen. Überprüfen Sie, ob Sie verbunden sind, ob der Server online ist und ob die Lightning-Adresse %2$s korrekt ist.\n\nAusnahme war: %3$s</string>
     <string name="could_not_fetch_invoice_from">Konnte Rechnung nicht von %1$s abholen</string>
+    <string name="could_not_fetch_invoice_from_details">Rechnung konnte nicht von %1$s abgerufen werden: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fehler beim analysieren von JSON aus der Lightning-Adresse. Überprüfen Sie die Lightning-Konfiguration des Benutzers</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fehler beim Parsen von JSON von %1$s. Überprüfen Sie die Blitzeinrichtung des Benutzers</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback-URL nicht in der Serverkonfiguration der Lightning-Adresse des Benutzers gefunden</string>
@@ -811,6 +813,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="search_relays_not_found_description">Das Erstellen einer Relaisliste, die speziell für die Suche und Benutzerkennzeichnung entwickelt wurde, wird diese Ergebnisse verbessern.</string>
     <string name="search_relays_not_found_editing">Fügen Sie 1–3 Relais ein, die beim Suchen nach Inhalten oder beim Taggen von Benutzern verwendet werden sollen. Stellen Sie sicher, dass Ihre ausgewählten Relais NIP-50 implementieren</string>
     <string name="search_relays_not_found_examples">Gute Optionen sind:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">DM-Upload</string>
     <string name="relay_settings">Relaiseinstellungen</string>
     <string name="public_home_section">Öffentliche Heimrelais</string>
     <string name="public_home_section_explainer">Dieser Relais-Typ speichert alle Ihre Inhalte. Amethyst sendet Ihre Beiträge hierher und andere werden diese Relais verwenden, um Ihre Inhalte zu finden. Fügen Sie 1–3 Relais ein. Sie können persönliche Relais, bezahlte Relais oder öffentliche Relais sein.</string>
