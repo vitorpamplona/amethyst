@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -478,7 +479,11 @@ fun EditFieldRow(
     ) {
         val context = LocalContext.current
 
-        ShowUserSuggestionList(channelScreenModel, accountViewModel)
+        ShowUserSuggestionList(
+            channelScreenModel.userSuggestions,
+            channelScreenModel::autocompleteWithUser,
+            accountViewModel,
+        )
 
         MyTextField(
             value = channelScreenModel.message,

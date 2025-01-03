@@ -157,10 +157,10 @@ import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
+import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -569,7 +569,8 @@ fun NewPostScreen(
                 }
 
                 ShowUserSuggestionList(
-                    postViewModel,
+                    postViewModel.userSuggestions,
+                    postViewModel::autocompleteWithUser,
                     accountViewModel,
                     modifier = Modifier.heightIn(0.dp, 300.dp),
                 )
@@ -578,21 +579,6 @@ fun NewPostScreen(
             }
         }
     }
-//    Dialog(
-//        onDismissRequest = {
-//            scope.launch {
-//                postViewModel.sendDraftSync(relayList = relayList)
-//                onClose()
-//            }
-//        },
-//        properties =
-//        DialogProperties(
-//            usePlatformDefaultWidth = false,
-//            dismissOnClickOutside = false,
-//            decorFitsSystemWindows = false,
-//        ),
-//    ) {
-//    }
 }
 
 @Composable

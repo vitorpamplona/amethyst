@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.crypto.nip17.AESGCM
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.IMetaTag
@@ -855,70 +854,6 @@ open class NewPostViewModel : ViewModel() {
                     draftTag = localDraft,
                 )
             }
-        }
-    }
-
-    fun uploadAsSeparatePrivateEvent(
-        toUsers: Set<HexKey>,
-        alt: String?,
-        sensitiveContent: Boolean,
-        mediaQuality: Int,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        context: Context,
-    ) {
-        val myAccount = account ?: return
-
-        viewModelScope.launch(Dispatchers.Default) {
-            isUploadingImage = true
-
-            val cipher = AESGCM()
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
-
-            val results =
-                myMultiOrchestrator.uploadEncrypted(
-                    viewModelScope,
-                    alt,
-                    sensitiveContent,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
-                    cipher,
-                    server,
-                    myAccount,
-                    context,
-                )
-
-            if (results.allGood) {
-                results.successful.forEach { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        account?.sendNIP17EncryptedFile(
-                            url = state.result.url,
-                            toUsers = toUsers.toList(),
-                            replyingTo = originalNote,
-                            contentType = state.result.mimeTypeBeforeEncryption,
-                            algo = cipher.name(),
-                            key = cipher.keyBytes,
-                            nonce = cipher.nonce,
-                            originalHash = state.result.hashBeforeEncryption,
-                            hash = state.result.fileHeader.hash,
-                            size = state.result.fileHeader.size,
-                            dimensions = state.result.fileHeader.dim,
-                            blurhash =
-                                state.result.fileHeader.blurHash
-                                    ?.blurhash,
-                            alt = alt,
-                            sensitiveContent = sensitiveContent,
-                        )
-                    }
-                }
-
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            isUploadingImage = false
         }
     }
 

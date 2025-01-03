@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">LN链接（过期）</string>
     <string name="save_to_gallery">保存到相册</string>
     <string name="image_saved_to_the_gallery">图片已保存到相册</string>
+    <string name="video_download_has_started_toast">视频下载已开始…</string>
+    <string name="media_download_has_started_toast">媒体下载已开始…</string>
     <string name="failed_to_save_the_image">保存图片失败</string>
     <string name="video_saved_to_the_gallery">视频已保存到媒体库</string>
     <string name="failed_to_save_the_video">保存视频失败</string>
@@ -598,6 +600,8 @@
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
     <string name="add_media_to_gallery">添加媒体到图库</string>
+    <string name="media_added">媒体已添加</string>
+    <string name="media_added_to_profile_gallery">媒体已添加到个人资料相册中</string>
     <string name="created_at">创建于</string>
     <string name="rules">规则</string>
     <string name="login_with_external_signer">使用 Amber 登录</string>
@@ -606,6 +610,7 @@
     <string name="poll_zap_value_min_max_explainer">投票按照打闪金额进行加权。 你可以设置最小金额以避免垃圾邮件，也可以设置最大金额以避免大型攻击者攻击民意调查。在两个字段中使用相同的金额以确保每张投票的价值相同。 留空即可接受任何金额。</string>
     <string name="error_dialog_zap_error">无法发送打闪</string>
     <string name="error_dialog_talk_to_user">向用户发送消息</string>
+    <string name="error_dialog_talk_to_user_name">向 %1$s 发消息</string>
     <string name="error_dialog_button_ok">好</string>
     <string name="relay_information_document_error_assemble_url">无法连接 %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">组合 %1$s 的 NIP-11 URL 失败: %2$s</string>
@@ -665,6 +670,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">无法解析 %1$s。请检查你是否已连接，服务器是否启动，以及闪电地址 %2$s 是否正确。\n\n异常为：%3$s</string>
     <string name="could_not_fetch_invoice_from">无法从 %1$s 获取发票</string>
+    <string name="could_not_fetch_invoice_from_details">无法从 %1$s 获取发票：%2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">从闪电地址解析JSON出错。请检查用户的打闪设置</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">从 %1$s 解析 JSON 发生错误。请检查用户的闪电设置</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">在用户闪电地址服务器配置中找不到回调URL</string>

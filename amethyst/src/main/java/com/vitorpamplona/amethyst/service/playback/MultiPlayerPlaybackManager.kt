@@ -49,7 +49,7 @@ class MultiPlayerPlaybackManager(
     private val playingMap = mutableMapOf<String, MediaSession>()
 
     private val cache =
-        object : LruCache<String, MediaSession>(10) { // up to 10 videos in the screen at the same time
+        object : LruCache<String, MediaSession>(20) { // up to 10 videos in the screen at the same time
             override fun entryRemoved(
                 evicted: Boolean,
                 key: String?,
