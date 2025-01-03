@@ -607,6 +607,7 @@
     <string name="poll_zap_value_min_max_explainer">Röster viktas av zap-beloppet. Du kan ställa in en minsta mängd för att undvika spammare och en maximal mängd för att undvika att en stor zapper tar över omröstningen. Använd samma belopp i båda fälten för att se till att varje röst värderas till samma belopp. Lämna tomt för att acceptera valfritt belopp.</string>
     <string name="error_dialog_zap_error">Kunde inte skicka zap</string>
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
+    <string name="error_dialog_talk_to_user_name">Meddelande %1$s</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Misslyckades att nå %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Det gick inte att montera NIP-11 url för %1$s: %2$s</string>
@@ -666,6 +667,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Kunde inte lösa %1$s. Kontrollera om du är ansluten, om servern är uppe och om Lightning Addressen %2$s är korrekt</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kunde inte lösa %1$s. Kontrollera om du är ansluten, om servern är uppe och om Lightning Addressen %2$s är korrekt.\n\nUndantag var: %3$s</string>
     <string name="could_not_fetch_invoice_from">Kunde inte hämta fakturan från %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Kunde inte hämta faktura från %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fel vid tolkning av JSON från Lightning Address. Kontrollera användarens Lightning-konfiguration</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fel vid tolkning av JSON från %1$s. Kontrollera användarens blixtkonfiguration</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Återuppringnings-URL hittades inte i användarens konfiguration för Lightning Address-servern</string>
@@ -805,6 +807,7 @@
     <string name="search_relays_not_found_description">Att skapa en relälista speciellt utformad för sökning och användartaggning kommer att förbättra dessa resultat.</string>
     <string name="search_relays_not_found_editing">Sätt in mellan 1–3 reläer att använda när du söker efter innehåll eller taggar användare. Se till att dina valda reläer implementerar NIP-50</string>
     <string name="search_relays_not_found_examples">Bra alternativ är:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">DM uppladdning</string>
     <string name="relay_settings">Relä inställningar</string>
     <string name="public_home_section">Offentliga hemreläer</string>
     <string name="public_home_section_explainer">Denna typ av relä lagrar allt ditt innehåll. Amethyst skickar dina inlägg hit och andra kommer att använda dessa reläer för att hitta ditt innehåll. Sätt in mellan 1–3 reläer. De kan vara personliga reläer, betalda reläer eller offentliga reläer.</string>
