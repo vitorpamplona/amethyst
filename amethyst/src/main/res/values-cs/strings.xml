@@ -608,6 +608,7 @@
     <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_zap_error">Nelze odeslat zap</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
+    <string name="error_dialog_talk_to_user_name">Zpráva %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Nepodařilo se dosáhnout %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Nepodařilo se sestavit adresu URL NIP-11 pro %1$s: %2$s</string>
@@ -667,6 +668,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nepodařilo se vyřešit %1$s. Zkontrolujte, zda jste připojeni, zda je server aktivní a zda je adresa %2$s správná.\n\nVýjimka byla: %3$s</string>
     <string name="could_not_fetch_invoice_from">Nepodařilo se načíst fakturu z %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Nelze získat fakturu z %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Chyba při analýze JSON z Lightning adresy. Zkontrolujte uživatelovo bleskové nastavení</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Chyba při analýze JSON z %1$s. Zkontrolujte uživatelské bleskové nastavení</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL adresa zpětného volání nebyla nalezena v konfiguraci serveru pro bleskovou adresu uživatele</string>
@@ -806,6 +808,7 @@
     <string name="search_relays_not_found_description">Vytvoření seznamu relé speciálně navržených pro vyhledávání a označování uživatelů zlepší tyto výsledky.</string>
     <string name="search_relays_not_found_editing">Vložte mezi 1–3 relé, která chcete použít při vyhledávání obsahu nebo označování uživatelů. Ujistěte se, že vaše vybraná relé implementují NIP-50</string>
     <string name="search_relays_not_found_examples">Dobré možnosti jsou:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">Nahrát DM</string>
     <string name="relay_settings">Nastavení relé</string>
     <string name="public_home_section">Veřejná domácí relé</string>
     <string name="public_home_section_explainer">Tento typ relé ukládá veškerý váš obsah. Amethyst sem pošle vaše příspěvky a ostatní použijí tato relé, aby našli váš obsah. Vložte mezi 1–3 relé. Mohou to být osobní relé, placená relé nebo veřejná relé.</string>
