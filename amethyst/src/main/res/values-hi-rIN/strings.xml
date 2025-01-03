@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">लै॰जाल पता (पुराना)</string>
     <string name="save_to_gallery">चित्रालय में अभिलेखन करें</string>
     <string name="image_saved_to_the_gallery">चित्र का अभिलेखन किया गया चित्रालय क्रमक में</string>
+    <string name="video_download_has_started_toast">चलचित्र अवरोहण आरम्भ हुआ …</string>
+    <string name="media_download_has_started_toast">अभिलेख अवरोहण आरम्भ हुआ …</string>
     <string name="failed_to_save_the_image">चित्र का अभिलेखन असफल</string>
     <string name="video_saved_to_the_gallery">चलचित्र को संचारयन्त्र के चलचित्रालय में सुरक्षित रखा गया</string>
     <string name="failed_to_save_the_video">चलचित्र को सुरक्षित रखने में असफल</string>
@@ -598,6 +600,8 @@
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
     <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका विभेदक की अनुकृति करें</string>
     <string name="add_media_to_gallery">अभिलेख को चित्रालय में जोडें</string>
+    <string name="media_added">अभिलेख जोडा गया</string>
+    <string name="media_added_to_profile_gallery">अभिलेख जोडा गया आपके परिचय चित्रालय में</string>
     <string name="created_at">तब बनाया गया</string>
     <string name="rules">नियमावली</string>
     <string name="login_with_external_signer">आम्बेर के साथ प्रवेशांकन करें</string>
@@ -606,6 +610,7 @@
     <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेख भेजनेवालों से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों स्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
     <string name="error_dialog_zap_error">ज्साप भेजने में असफल</string>
     <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>
+    <string name="error_dialog_talk_to_user_name">सूचना %1$s</string>
     <string name="error_dialog_button_ok">ठीक है</string>
     <string name="relay_information_document_error_assemble_url">%1$s तक जा नहीं पाए : %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">%1$s के लिए निप॰-११ जालपता बनाने में असफल : %2$s</string>
@@ -665,6 +670,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">%1$s का सुलझाव नहीं कर पाए। जाँच करें यदि आप संयोजित हैं, यदि सेवा संगणक चल रहा है तथा यदि लैटनिंग पता %2$s सम्यक है</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">%1$s का सुलझाव नहीं कर पाए। जाँच करें यदि आप संयोजित हैं, यदि सेवा संगणक चल रहा है तथा यदि लैटनिंग पता %2$s सम्यक है।\n\nअपवर्ग था : %3$s</string>
     <string name="could_not_fetch_invoice_from">%1$s से चालान नहीं लाया जा सका</string>
+    <string name="could_not_fetch_invoice_from_details">चालान नहीं लाया जा सका %1$s से : %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">लैटनिंग पता से जेसोन॰ परखनें में अपक्रम। उपयोगकर्ता की लैटनिंग स्थापना की जाँच करें</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">%1$s से जेसोन॰ परखनें में अपक्रम। उपयोगकर्ता की लैटनिंग स्थापना की जाँच करें</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">प्रत्याह्वान जालपता उपलब्ध नहीं उपयोगकर्ता के लैटनिंग पता सेवासंगणक की समाकृति में</string>
@@ -804,6 +810,7 @@
     <string name="search_relays_not_found_description">खोज तथा उपयोगकर्ता सूचक जोडने के लिए स्पष्टतः रूपांकित पुनःप्रसारक सूची बनाने से इन परिणामों में शोधन होगा।</string>
     <string name="search_relays_not_found_editing">विषयवस्तु खोजने के लिए अथवा उपयोगकर्ता सूचक जोडने में उपयोग करनें के लिए १ - ३ पुनःप्रसारकों को जोडें। सुनिश्चित करें कि आपके चयनित पुनःप्रसारक निप॰-५० को कार्यान्वित किये हैं।</string>
     <string name="search_relays_not_found_examples">ये अच्छे विकल्प हैं :\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">सीधा संदेश आरोहण</string>
     <string name="relay_settings">पुनःप्रसारक स्थापना विकल्प</string>
     <string name="public_home_section">सार्वजनिक मुख्य पुनःप्रसारक</string>
     <string name="public_home_section_explainer">यह पुनःप्रसारक प्रकार आपके सभी विषयवस्तु रखता है। अमेथिस्ट आपके पत्रों को प्रकाशित करने के लिए यहाँ भेजेगा तथा अन्य लोग आपके विषयवस्तु ढूँढने के लिए इनका प्रयोग करेंगे। १ - ३ पुनःप्रसारकों को जोडें। ये व्यक्तिगत अथवा सशुल्क अथवा सार्वजनिक पुनःप्रसारक हो सकते हैं।</string>
