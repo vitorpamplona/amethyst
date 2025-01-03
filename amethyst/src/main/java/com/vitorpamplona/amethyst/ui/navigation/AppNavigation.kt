@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
@@ -131,6 +132,14 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutHorizontallyToEnd },
             ) { BookmarkListScreen(accountViewModel, nav) }
+
+            composable(
+                Route.Lists.route,
+                enterTransition = { slideInHorizontallyFromEnd },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutHorizontallyToEnd },
+            ) { ListsScreen(accountViewModel, nav) }
 
             composable(
                 Route.Drafts.route,
