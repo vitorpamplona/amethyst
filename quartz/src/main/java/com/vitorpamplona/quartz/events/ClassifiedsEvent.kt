@@ -115,6 +115,7 @@ class ClassifiedsEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             isDraft: Boolean,
@@ -190,9 +191,8 @@ class ClassifiedsEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            imetas?.forEach {
-                tags.add(Nip92MediaAttachments.createTag(it))
-            }
+            imetas?.forEach { tags.add(Nip92MediaAttachments.createTag(it)) }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             tags.add(arrayOf("alt", ALT))
 
             if (isDraft) {

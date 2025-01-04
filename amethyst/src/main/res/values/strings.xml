@@ -377,6 +377,8 @@
     <string name="add_caption">Add a Caption</string>
     <string name="add_caption_example">My lovely friend</string>
 
+    <string name="use_direct_url">Use direct URL</string>
+
     <string name="content_description">Description of the contents</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset</string>
 

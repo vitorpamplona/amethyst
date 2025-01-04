@@ -82,6 +82,7 @@ class NIP17Factory {
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String? = null,
         onReady: (Result) -> Unit,
     ) {
@@ -100,6 +101,7 @@ class NIP17Factory {
             geohash = geohash,
             isDraft = draftTag != null,
             imetas = imetas,
+            emojis = emojis,
         ) { senderMessage ->
             if (draftTag != null) {
                 onReady(

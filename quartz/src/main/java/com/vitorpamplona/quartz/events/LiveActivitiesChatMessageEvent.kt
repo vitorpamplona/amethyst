@@ -75,6 +75,7 @@ class LiveActivitiesChatMessageEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             isDraft: Boolean,
             onReady: (LiveActivitiesChatMessageEvent) -> Unit,
         ) {
@@ -96,6 +97,7 @@ class LiveActivitiesChatMessageEvent(
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             tags.add(arrayOf("alt", ALT))
 
             if (isDraft) {

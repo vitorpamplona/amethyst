@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">LN URL (verouderd)</string>
     <string name="save_to_gallery">Opslaan in galerij</string>
     <string name="image_saved_to_the_gallery">Afbeelding opgeslagen in galerij</string>
+    <string name="video_download_has_started_toast">Video download is gestart…</string>
+    <string name="media_download_has_started_toast">Media download is gestart…</string>
     <string name="failed_to_save_the_image">De afbeelding is niet opgeslagen</string>
     <string name="video_saved_to_the_gallery">Video\'s opgeslagen in galerij</string>
     <string name="failed_to_save_the_video">De video is niet opgeslagen</string>
@@ -598,6 +600,8 @@
     <string name="copy_url_to_clipboard">Kopieer URL naar klembord</string>
     <string name="copy_the_note_id_to_the_clipboard">Note naar klembord kopiëren</string>
     <string name="add_media_to_gallery">Media toevoegen aan galerij</string>
+    <string name="media_added">Media toegevoegd</string>
+    <string name="media_added_to_profile_gallery">Media toegevoegd aan je profielgalerij</string>
     <string name="created_at">Gemaakt op</string>
     <string name="rules">Regels</string>
     <string name="login_with_external_signer">Login met Amber</string>
@@ -606,6 +610,7 @@
     <string name="poll_zap_value_min_max_explainer">Stemmen worden gewogen door het aantal zap. U kunt een minimumbedrag instellen om spammers te voorkomen en een maximumbedrag om te voorkomen dat een grote zappers de enquête overneemt. Gebruik hetzelfde bedrag in beide velden om ervoor te zorgen dat elke stem hetzelfde wordt gewaardeerd. Laat het leeg om elk bedrag te accepteren.</string>
     <string name="error_dialog_zap_error">Kan zap niet verzenden</string>
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>
+    <string name="error_dialog_talk_to_user_name">Bericht %1$s</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="relay_information_document_error_assemble_url">Mislukt om %1$s te bereiken: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Fout bij het verzamelen van de NIP-11 url voor %1$s: %2$s</string>
@@ -665,6 +670,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Kan %1$s niet oplossen. Controleer of u verbonden bent, of de server online is en of het Lightning Adress %2$s juist is</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Kon %1$s niet oplossen. Controleer of u verbonden bent, of de server online is en of het Lightning Adress %2$s juist is. \n\nUitzondering was: %3$s</string>
     <string name="could_not_fetch_invoice_from">Kan invoice niet ophalen van %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Kan invoice niet ophalen van %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Fout bij het verwerken van JSON uit Lightning Adress. Controleer de Lightning setup van de gebruiker</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Fout bij het verwerken van JSON uit %1$s. Controleer de Lightning set-up van de gebruiker</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Callback URL niet gevonden in de Lightning Adress configuratie van de gebruiker</string>
@@ -734,6 +740,7 @@
     <string name="could_not_download_from_the_server">Kan de geüploade media niet downloaden van de server</string>
     <string name="could_not_check_downloaded_file">Kan het gedownloade bestand niet controleren na upload: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Kon lokaal bestand niet voorbereiden voor upload: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Mislukt om naar %1$s te uploaden: %2$s</string>
     <string name="failed_to_upload_with_message">Uploaden van media mislukt: %1$s</string>
     <string name="failed_to_delete_with_message">Verwijderen van media mislukt: %1$s</string>
     <string name="media_too_big_for_nip95">Media is te groot voor NIP-95</string>
@@ -803,6 +810,7 @@
     <string name="search_relays_not_found_description">Het maken van een relay lijst speciaal ontworpen voor zoekopdracht en gebruikers-tagging zal deze resultaten verbeteren.</string>
     <string name="search_relays_not_found_editing">Voeg tussen de 1 en 3 relays toe om te gebruiken bij het zoeken naar content of bij het taggen van gebruikers. Zorg ervoor dat uw gekozen relays implementatie van NIP-50</string>
     <string name="search_relays_not_found_examples">Goede opties zijn:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">DM uploaden</string>
     <string name="relay_settings">Relay-instellingen</string>
     <string name="public_home_section">Openbare thuis relays</string>
     <string name="public_home_section_explainer">Dit relay type slaat al je inhoud op. Amethyst stuurt je berichten hierheen en anderen gebruiken deze relays om je inhoud te vinden. Voeg tussen de 1 en 3 relays toe. Het gaat om persoonlijke relays, betaalde relays of openbare relays.</string>

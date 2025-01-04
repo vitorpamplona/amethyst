@@ -157,8 +157,10 @@ import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
+import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
@@ -209,6 +211,7 @@ fun NewPostScreen(
     nav: Nav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
+    postViewModel.account = accountViewModel.account
     postViewModel.wantsDirectMessage = enableMessageInterface
     postViewModel.wantsToAddGeoHash = enableGeolocation
 
@@ -277,6 +280,8 @@ fun NewPostScreen(
         activity.addOnNewIntentListener(consumer)
         onDispose { activity.removeOnNewIntentListener(consumer) }
     }
+
+    WatchAndLoadMyEmojiList(accountViewModel)
 
     Scaffold(
         topBar = {
@@ -571,6 +576,14 @@ fun NewPostScreen(
                 ShowUserSuggestionList(
                     postViewModel.userSuggestions,
                     postViewModel::autocompleteWithUser,
+                    accountViewModel,
+                    modifier = Modifier.heightIn(0.dp, 300.dp),
+                )
+
+                ShowEmojiSuggestionList(
+                    postViewModel.emojiSuggestions,
+                    postViewModel::autocompleteWithEmoji,
+                    postViewModel::autocompleteWithEmojiUrl,
                     accountViewModel,
                     modifier = Modifier.heightIn(0.dp, 300.dp),
                 )

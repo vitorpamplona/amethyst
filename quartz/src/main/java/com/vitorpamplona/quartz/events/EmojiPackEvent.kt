@@ -62,6 +62,8 @@ data class EmojiUrl(
 ) {
     fun encode(): String = ":$code:$url"
 
+    fun toTagArray() = arrayOf("emoji", code, url)
+
     companion object {
         fun decode(encodedEmojiSetup: String): EmojiUrl? {
             val emojiParts = encodedEmojiSetup.split(":", limit = 3)
@@ -71,5 +73,12 @@ data class EmojiUrl(
                 null
             }
         }
+
+        fun parse(tag: Array<String>): EmojiUrl? =
+            if (tag.size > 2 && tag[0] == "emoji") {
+                EmojiUrl(tag[1], tag[2])
+            } else {
+                null
+            }
     }
 }

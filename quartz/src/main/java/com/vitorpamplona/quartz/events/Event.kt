@@ -164,7 +164,7 @@ open class Event(
                 ATag.parse(aTagValue, relay)
             }
 
-    override fun taggedEmojis() = tags.filter { it.size > 2 && it[0] == "emoji" }.map { EmojiUrl(it[1], it[2]) }
+    override fun taggedEmojis() = tags.filter { it.size > 2 && it[0] == "emoji" }.mapNotNull { EmojiUrl.parse(it) }
 
     override fun isSensitive() =
         tags.any {

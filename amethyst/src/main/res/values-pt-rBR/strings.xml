@@ -608,6 +608,7 @@
     <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
     <string name="error_dialog_zap_error">Não foi possível enviar o Zap</string>
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>
+    <string name="error_dialog_talk_to_user_name">Mensagem %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Falha ao acessar %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Falha ao montar NIP-11 url para %1$s: %2$s</string>
@@ -667,6 +668,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Não foi possível resolver %1$s. Verifique se você está conectado, se o servidor está funcionando e se o endereço Lightning %2$s está correto</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Não foi possível resolver %1$s. Verifique se você está conectado, se o servidor está funcionando e se o endereço Lightning %2$s está correto.\n\nExceção foi: %3$s</string>
     <string name="could_not_fetch_invoice_from">Não foi possível obter a fatura de %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Não foi possível obter a fatura de %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Erro ao analisar JSON do Endereço Lightning. Verifique a configuração de Lightning do usuário</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Erro ao analisar JSON do %1$s. Verifique a configuração lightning do usuário</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL de retorno não encontrada na configuração do servidor de endereço Lightning do usuário</string>
@@ -806,6 +808,7 @@
     <string name="search_relays_not_found_description">Criar uma lista de relés especificamente projetada para pesquisa e marcação de usuários melhorará esses resultados.</string>
     <string name="search_relays_not_found_editing">Insira entre 1–3 relés para usar ao pesquisar conteúdo ou marcar usuários. Certifique-se de que seus relés escolhidos implementem o NIP-50</string>
     <string name="search_relays_not_found_examples">Boas opções são:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">Envio de DM</string>
     <string name="relay_settings">Configurações de Relay</string>
     <string name="public_home_section">Relés Públicos de Casa</string>
     <string name="public_home_section_explainer">Esse tipo de relé armazena todo o seu conteúdo. Amethyst enviará suas postagens aqui e outros usarão esses relés para encontrar seu conteúdo. Insira entre 1–3 relés. Eles podem ser relés pessoais, relés pagos ou relés públicos.</string>

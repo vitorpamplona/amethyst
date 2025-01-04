@@ -63,6 +63,7 @@ class TorrentCommentEvent(
             zapRaiserAmount: Long?,
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             forkedFrom: Event? = null,
             isDraft: Boolean,
             onReady: (TorrentCommentEvent) -> Unit,
@@ -126,6 +127,7 @@ class TorrentCommentEvent(
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             tags.add(arrayOf("alt", ALT))
 
             if (isDraft) {
