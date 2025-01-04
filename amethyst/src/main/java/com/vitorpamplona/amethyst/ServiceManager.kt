@@ -24,6 +24,7 @@ import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.Stable
 import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -88,12 +89,13 @@ class ServiceManager(
         start()
     }
 
+    @OptIn(DelicateCoilApi::class)
     private fun start() {
         Log.d("ServiceManager", "Pre Starting Relay Services $isStarted $account")
         if (isStarted && account != null) {
             return
         }
-        Log.d("ServiceManager", "Starting Relay Services")
+        Log.d("ServiceManager", "Starting Relay Services Tor: ${account?.settings?.torSettings?.torType?.value}")
 
         val myAccount = account
 
@@ -126,7 +128,7 @@ class ServiceManager(
             ?.security
             ?.filterSpamFromStrangers ?: true
 
-        SingletonImageLoader.setSafe {
+        SingletonImageLoader.setUnsafe {
             Amethyst.instance
                 .imageLoaderBuilder()
                 .components {

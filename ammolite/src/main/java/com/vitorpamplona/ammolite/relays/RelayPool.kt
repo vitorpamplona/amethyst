@@ -91,7 +91,8 @@ class RelayPool : Relay.Listener {
 
     fun loadRelays(relayList: List<Relay>) {
         check(relayList.isNotEmpty()) { "Relay list should never be empty" }
-        relayList.forEach { addRelay(it) }
+        relayList.forEach { addRelayInner(it) }
+        updateStatus()
     }
 
     fun unloadRelays() {
@@ -142,9 +143,13 @@ class RelayPool : Relay.Listener {
     }
 
     fun addRelay(relay: Relay) {
+        addRelayInner(relay)
+        updateStatus()
+    }
+
+    private fun addRelayInner(relay: Relay) {
         relay.register(this)
         relays += relay
-        updateStatus()
     }
 
     fun removeRelay(relay: Relay) {
