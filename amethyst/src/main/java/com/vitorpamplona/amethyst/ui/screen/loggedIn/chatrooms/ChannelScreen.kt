@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -397,6 +398,7 @@ private suspend fun innerSendPost(
 
     val urls = findURLs(tagger.message)
     val usedAttachments = newPostModel.iMetaAttachments.filter { it.url in urls.toSet() }
+    val emojis = newPostModel.findEmoji(newPostModel.message.text, accountViewModel.account.myEmojis.value)
 
     if (channel is PublicChatChannel) {
         accountViewModel.account.sendChannelMessage(
@@ -407,6 +409,7 @@ private suspend fun innerSendPost(
             directMentions = tagger.directMentions,
             wantsToMarkAsSensitive = false,
             imetas = usedAttachments,
+            emojis = emojis,
             draftTag = draftTag,
         )
     } else if (channel is LiveActivitiesChannel) {
@@ -417,6 +420,7 @@ private suspend fun innerSendPost(
             mentions = tagger.pTags,
             wantsToMarkAsSensitive = false,
             imetas = usedAttachments,
+            emojis = emojis,
             draftTag = draftTag,
         )
     }
@@ -482,6 +486,13 @@ fun EditFieldRow(
         ShowUserSuggestionList(
             channelScreenModel.userSuggestions,
             channelScreenModel::autocompleteWithUser,
+            accountViewModel,
+        )
+
+        ShowEmojiSuggestionList(
+            channelScreenModel.emojiSuggestions,
+            channelScreenModel::autocompleteWithEmoji,
+            channelScreenModel::autocompleteWithEmojiUrl,
             accountViewModel,
         )
 

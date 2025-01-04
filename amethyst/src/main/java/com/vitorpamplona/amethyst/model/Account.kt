@@ -31,6 +31,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fonfon.kgeohash.GeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
@@ -1061,6 +1062,80 @@ class Account(
                 }
             }
         }
+    }
+
+    class EmojiMedia(
+        val code: String,
+        val url: MediaUrlImage,
+    )
+
+    fun getEmojiPackSelection(): EmojiPackSelectionEvent? = getEmojiPackSelectionNote().event as? EmojiPackSelectionEvent
+
+    fun getEmojiPackSelectionFlow(): StateFlow<NoteState> = getEmojiPackSelectionNote().flow().metadata.stateFlow
+
+    fun getEmojiPackSelectionNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(EmojiPackSelectionEvent.createAddressATag(userProfile().pubkeyHex))
+
+    fun convertEmojiSelectionPack(selection: EmojiPackSelectionEvent?): List<StateFlow<NoteState>>? =
+        selection?.taggedAddresses()?.map {
+            LocalCache
+                .getOrCreateAddressableNote(it)
+                .flow()
+                .metadata.stateFlow
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveEmojiSelectionPack: StateFlow<List<StateFlow<NoteState>>?> by lazy {
+        getEmojiPackSelectionFlow()
+            .transformLatest {
+                emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking(Dispatchers.Default) {
+                    convertEmojiSelectionPack(getEmojiPackSelection())
+                },
+            )
+    }
+
+    fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> =
+        pack.taggedEmojis().map {
+            EmojiMedia(it.code, MediaUrlImage(it.url))
+        }
+
+    fun mergePack(list: Array<NoteState>): List<EmojiMedia> =
+        list
+            .mapNotNull {
+                val ev = it.note.event as? EmojiPackEvent
+                if (ev != null) {
+                    convertEmojiPack(ev)
+                } else {
+                    null
+                }
+            }.flatten()
+            .distinctBy { it.url }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val myEmojis by lazy {
+        liveEmojiSelectionPack
+            .transformLatest { emojiList ->
+                if (emojiList != null) {
+                    emitAll(
+                        combineTransform(emojiList) {
+                            emit(mergePack(it))
+                        },
+                    )
+                } else {
+                    emit(emptyList())
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                runBlocking(Dispatchers.Default) {
+                    mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray())
+                },
+            )
     }
 
     fun addPaymentRequestIfNew(paymentRequest: PaymentRequest) {
@@ -2110,6 +2185,7 @@ class Account(
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2137,6 +2213,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2177,6 +2254,7 @@ class Account(
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2199,6 +2277,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2245,6 +2324,7 @@ class Account(
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2265,6 +2345,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2328,6 +2409,7 @@ class Account(
         directMentionsUsers: Set<User> = emptySet(),
         directMentionsNotes: Set<Note> = emptySet(),
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         geohash: String? = null,
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean = false,
@@ -2371,6 +2453,7 @@ class Account(
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
                 imetas = imetas,
+                emojis = emojis,
                 geohash = geohash,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
@@ -2403,6 +2486,7 @@ class Account(
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
                 imetas = imetas,
+                emojis = emojis,
                 geohash = geohash,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
@@ -2437,6 +2521,7 @@ class Account(
         directMentionsUsers: Set<User> = emptySet(),
         directMentionsNotes: Set<Note> = emptySet(),
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         zapReceiver: List<ZapSplitSetup>? = null,
         wantsToMarkAsSensitive: Boolean = false,
         zapRaiserAmount: Long? = null,
@@ -2479,6 +2564,7 @@ class Account(
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
                 imetas = imetas,
+                emojis = emojis,
                 zapReceiver = zapReceiver,
                 markAsSensitive = wantsToMarkAsSensitive,
                 zapRaiserAmount = zapRaiserAmount,
@@ -2683,6 +2769,7 @@ class Account(
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2705,6 +2792,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             forkedFrom = forkedFrom,
             signer = signer,
             isDraft = draftTag != null,
@@ -2775,6 +2863,7 @@ class Account(
         relayList: List<RelaySetupInfo>,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2835,6 +2924,7 @@ class Account(
         directMentions: Set<HexKey>,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2853,6 +2943,7 @@ class Account(
             directMentions = directMentions,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -2881,6 +2972,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String?,
     ) {
         if (!isWriteable()) return
@@ -2899,6 +2991,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             signer = signer,
             isDraft = draftTag != null,
         ) {
@@ -3043,6 +3136,7 @@ class Account(
         zapRaiserAmount: Long? = null,
         geohash: String? = null,
         imetas: List<IMetaTag>? = null,
+        emojis: List<EmojiUrl>? = null,
         draftTag: String? = null,
     ) {
         if (!isWriteable()) return
@@ -3061,6 +3155,7 @@ class Account(
             zapRaiserAmount = zapRaiserAmount,
             geohash = geohash,
             imetas = imetas,
+            emojis = emojis,
             draftTag = draftTag,
             signer = signer,
         ) {

@@ -53,6 +53,7 @@ open class InteractiveStoryBaseEvent(
             zapRaiserAmount: Long? = null,
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
         ): Array<Array<String>> {
             val tags = mutableListOf<Array<String>>()
             findHashtags(content).forEach {
@@ -75,6 +76,7 @@ open class InteractiveStoryBaseEvent(
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             return tags.toTypedArray()
         }
 

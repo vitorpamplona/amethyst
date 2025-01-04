@@ -58,6 +58,7 @@ class TextNoteEvent(
             directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             forkedFrom: Event? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -123,9 +124,8 @@ class TextNoteEvent(
             }
             zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            imetas?.forEach {
-                tags.add(Nip92MediaAttachments.createTag(it))
-            }
+            imetas?.forEach { tags.add(Nip92MediaAttachments.createTag(it)) }
+            emojis?.forEach { tags.add(it.toTagArray()) }
 
             if (isDraft) {
                 signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)

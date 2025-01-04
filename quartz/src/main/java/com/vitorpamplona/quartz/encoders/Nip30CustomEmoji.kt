@@ -50,6 +50,24 @@ class Nip30CustomEmoji {
 
         fun createEmojiMap(tags: ImmutableListOfLists<String>): Map<String, String> = tags.lists.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
 
+        fun findAllEmojis(input: String): List<String> {
+            val matcher = customEmojiPattern.matcher(input)
+            val emojiNamesInOrder = mutableListOf<String>()
+            while (matcher.find()) {
+                emojiNamesInOrder.add(matcher.group())
+            }
+            return emojiNamesInOrder
+        }
+
+        fun findAllEmojiCodes(input: String): List<String> {
+            val matcher = customEmojiPattern.matcher(input)
+            val emojiNamesInOrder = mutableListOf<String>()
+            while (matcher.find()) {
+                matcher.group(1)?.let { emojiNamesInOrder.add(it) }
+            }
+            return emojiNamesInOrder
+        }
+
         fun assembleAnnotatedList(
             input: String,
             allTags: ImmutableListOfLists<String>?,
@@ -65,12 +83,7 @@ class Nip30CustomEmoji {
             input: String,
             emojiPairs: Map<String, String>,
         ): ImmutableList<Renderable>? {
-            val matcher = customEmojiPattern.matcher(input)
-            val emojiNamesInOrder = mutableListOf<String>()
-            while (matcher.find()) {
-                emojiNamesInOrder.add(matcher.group())
-            }
-
+            val emojiNamesInOrder = findAllEmojis(input)
             if (emojiNamesInOrder.isEmpty()) {
                 return null
             }

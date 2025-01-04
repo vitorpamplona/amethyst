@@ -144,7 +144,6 @@ class UpdateReactionTypeViewModel : ViewModel() {
                 ?.value
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UpdateReactionTypeDialog(
     onClose: () -> Unit,

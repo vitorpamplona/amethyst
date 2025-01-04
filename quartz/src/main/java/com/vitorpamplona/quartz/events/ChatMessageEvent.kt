@@ -84,6 +84,7 @@ class ChatMessageEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             isDraft: Boolean,
             onReady: (ChatMessageEvent) -> Unit,
         ) {
@@ -103,6 +104,7 @@ class ChatMessageEvent(
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             // tags.add(arrayOf("alt", alt))
 
             if (isDraft) {

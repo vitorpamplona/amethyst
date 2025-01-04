@@ -62,6 +62,7 @@ class ChannelMessageEvent(
             directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             isDraft: Boolean,
             onReady: (ChannelMessageEvent) -> Unit,
         ) {
@@ -88,6 +89,7 @@ class ChannelMessageEvent(
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             tags.add(
                 arrayOf("alt", ALT),
             )

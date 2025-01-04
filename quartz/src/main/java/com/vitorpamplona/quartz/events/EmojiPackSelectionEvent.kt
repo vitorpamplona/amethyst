@@ -42,6 +42,10 @@ class EmojiPackSelectionEvent(
         const val FIXED_D_TAG = ""
         const val ALT = "Emoji selection"
 
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, AdvertisedRelayListEvent.FIXED_D_TAG, null)
+
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, AdvertisedRelayListEvent.FIXED_D_TAG)
+
         fun create(
             listOfEmojiPacks: List<ATag>?,
             signer: NostrSigner,

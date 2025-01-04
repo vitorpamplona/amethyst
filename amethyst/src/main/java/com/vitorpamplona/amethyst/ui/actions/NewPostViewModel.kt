@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.IMetaTag
 import com.vitorpamplona.quartz.encoders.IMetaTagBuilder
+import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
 import com.vitorpamplona.quartz.encoders.toNpub
 import com.vitorpamplona.quartz.events.AddressableEvent
 import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
@@ -65,6 +66,7 @@ import com.vitorpamplona.quartz.events.ClassifiedsEvent
 import com.vitorpamplona.quartz.events.CommentEvent
 import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.events.DraftEvent
+import com.vitorpamplona.quartz.events.EmojiUrl
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.FileStorageEvent
 import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
@@ -82,7 +84,12 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -119,6 +126,27 @@ open class NewPostViewModel : ViewModel() {
     var userSuggestions by mutableStateOf<List<User>>(emptyList())
     var userSuggestionAnchor: TextRange? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
+
+    val emojiSearch: MutableStateFlow<String> = MutableStateFlow("")
+    val emojiSuggestions: StateFlow<List<Account.EmojiMedia>> by lazy {
+        account!!
+            .myEmojis
+            .combine(emojiSearch) { list, search ->
+                if (search.length == 1) {
+                    list
+                } else if (search.isNotEmpty()) {
+                    val code = search.removePrefix(":")
+                    list.filter { it.code.startsWith(code) }
+                } else {
+                    emptyList()
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList(),
+            )
+    }
 
     // DMs
     var wantsDirectMessage by mutableStateOf(false)
@@ -196,6 +224,7 @@ open class NewPostViewModel : ViewModel() {
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
+        this.emojiSuggestions.value
 
         val noteEvent = draft?.event
         val noteAuthor = draft?.author
@@ -552,6 +581,7 @@ open class NewPostViewModel : ViewModel() {
             }
         }
 
+        val emojis = findEmoji(tagger.message, account?.myEmojis?.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filter { it.url in urls.toSet() }
 
@@ -569,6 +599,7 @@ open class NewPostViewModel : ViewModel() {
                 wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                 zapRaiserAmount = localZapRaiserAmount,
                 relayList = relayList,
+                emojis = emojis,
                 draftTag = localDraft,
             )
         } else if (wantsExclusiveGeoPost && geoHash != null && (originalNote == null || originalNote?.event is CommentEvent)) {
@@ -583,6 +614,7 @@ open class NewPostViewModel : ViewModel() {
                 wantsToMarkAsSensitive = wantsToMarkAsSensitive,
                 zapRaiserAmount = localZapRaiserAmount,
                 relayList = relayList,
+                emojis = emojis,
                 draftTag = localDraft,
             )
         } else if (originalNote?.channelHex() != null) {
@@ -597,6 +629,7 @@ open class NewPostViewModel : ViewModel() {
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             } else {
@@ -611,6 +644,7 @@ open class NewPostViewModel : ViewModel() {
                     directMentions = tagger.directMentions,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             }
@@ -639,6 +673,7 @@ open class NewPostViewModel : ViewModel() {
                 zapRaiserAmount = localZapRaiserAmount,
                 geohash = geoHash,
                 imetas = usedAttachments,
+                emojis = emojis,
                 draftTag = localDraft,
             )
         } else if (!dmUsers.isNullOrEmpty()) {
@@ -654,6 +689,7 @@ open class NewPostViewModel : ViewModel() {
                     zapRaiserAmount = localZapRaiserAmount,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             } else {
@@ -708,6 +744,7 @@ open class NewPostViewModel : ViewModel() {
                 relayList = relayList,
                 geohash = geoHash,
                 imetas = usedAttachments,
+                emojis = emojis,
                 draftTag = localDraft,
             )
         } else if (originalNote?.event is TorrentCommentEvent) {
@@ -747,6 +784,7 @@ open class NewPostViewModel : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             }
@@ -776,6 +814,7 @@ open class NewPostViewModel : ViewModel() {
                 relayList = relayList,
                 geohash = geoHash,
                 imetas = usedAttachments,
+                emojis = emojis,
                 draftTag = localDraft,
             )
         } else {
@@ -795,6 +834,7 @@ open class NewPostViewModel : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             } else if (wantsProduct) {
@@ -814,6 +854,7 @@ open class NewPostViewModel : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             } else {
@@ -851,9 +892,20 @@ open class NewPostViewModel : ViewModel() {
                     relayList = relayList,
                     geohash = geoHash,
                     imetas = usedAttachments,
+                    emojis = emojis,
                     draftTag = localDraft,
                 )
             }
+        }
+    }
+
+    fun findEmoji(
+        message: String,
+        myEmojiSet: List<Account.EmojiMedia>?,
+    ): List<EmojiUrl> {
+        if (myEmojiSet == null) return emptyList()
+        return Nip30CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrl(it.code, it.url.url) }
         }
     }
 
@@ -978,6 +1030,10 @@ open class NewPostViewModel : ViewModel() {
         userSuggestionAnchor = null
         userSuggestionsMainMessage = null
 
+        if (emojiSearch.value.isNotEmpty()) {
+            emojiSearch.tryEmit("")
+        }
+
         draftTag = UUID.randomUUID().toString()
 
         NostrSearchEventOrUserDataSource.clear()
@@ -1028,6 +1084,14 @@ open class NewPostViewModel : ViewModel() {
             } else {
                 NostrSearchEventOrUserDataSource.clear()
                 userSuggestions = emptyList()
+            }
+
+            if (lastWord.startsWith(":")) {
+                emojiSearch.tryEmit(lastWord)
+            } else {
+                if (emojiSearch.value.isNotBlank()) {
+                    emojiSearch.tryEmit("")
+                }
             }
         }
 
@@ -1128,6 +1192,54 @@ open class NewPostViewModel : ViewModel() {
             userSuggestionsMainMessage = null
             userSuggestions = emptyList()
         }
+
+        saveDraft()
+    }
+
+    open fun autocompleteWithEmoji(item: Account.EmojiMedia) {
+        userSuggestionAnchor?.let {
+            val lastWord =
+                message.text
+                    .substring(0, it.end)
+                    .substringAfterLast("\n")
+                    .substringAfterLast(" ")
+            val lastWordStart = it.end - lastWord.length
+            val wordToInsert = ":${item.code}:"
+
+            message =
+                TextFieldValue(
+                    message.text.replaceRange(lastWordStart, it.end, wordToInsert),
+                    TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
+                )
+
+            userSuggestionAnchor = null
+            emojiSearch.tryEmit("")
+        }
+
+        saveDraft()
+    }
+
+    open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
+        userSuggestionAnchor?.let {
+            val lastWord =
+                message.text
+                    .substring(0, it.end)
+                    .substringAfterLast("\n")
+                    .substringAfterLast(" ")
+            val lastWordStart = it.end - lastWord.length
+            val wordToInsert = item.url.url + " "
+
+            message =
+                TextFieldValue(
+                    message.text.replaceRange(lastWordStart, it.end, wordToInsert),
+                    TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
+                )
+
+            userSuggestionAnchor = null
+            emojiSearch.tryEmit("")
+        }
+
+        urlPreview = findUrlInMessage()
 
         saveDraft()
     }

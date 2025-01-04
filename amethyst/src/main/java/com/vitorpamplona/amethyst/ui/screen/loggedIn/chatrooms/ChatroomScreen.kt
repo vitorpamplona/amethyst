@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -517,6 +518,7 @@ private fun innerSendPost(
 ) {
     val urls = findURLs(newPostModel.message.text)
     val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
+    val emojis = newPostModel.findEmoji(newPostModel.message.text, accountViewModel.account.myEmojis.value)
 
     if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
         accountViewModel.account.sendNIP17PrivateMessage(
@@ -526,6 +528,7 @@ private fun innerSendPost(
             mentions = null,
             wantsToMarkAsSensitive = false,
             imetas = usedAttachments,
+            emojis = emojis,
             draftTag = dTag,
         )
     } else {
@@ -554,6 +557,13 @@ fun PrivateMessageEditFieldRow(
         ShowUserSuggestionList(
             channelScreenModel.userSuggestions,
             channelScreenModel::autocompleteWithUser,
+            accountViewModel,
+        )
+
+        ShowEmojiSuggestionList(
+            channelScreenModel.emojiSuggestions,
+            channelScreenModel::autocompleteWithEmoji,
+            channelScreenModel::autocompleteWithEmojiUrl,
             accountViewModel,
         )
 

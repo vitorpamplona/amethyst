@@ -92,6 +92,7 @@ class GitReplyEvent(
             directMentions: Set<HexKey> = emptySet(),
             geohash: String? = null,
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             forkedFrom: Event? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -152,6 +153,7 @@ class GitReplyEvent(
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
+            emojis?.forEach { tags.add(it.toTagArray()) }
             tags.add(arrayOf("alt", "a git issue reply"))
 
             if (isDraft) {

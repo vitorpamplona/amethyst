@@ -98,6 +98,7 @@ class CommentEvent(
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
@@ -120,7 +121,7 @@ class CommentEvent(
             tags.add(removeTrailingNullsAndEmptyOthers("e", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
             tags.add(arrayOf("k", "${replyingTo.event.kind}"))
 
-            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, emojis, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
         }
 
         fun replyComment(
@@ -130,6 +131,7 @@ class CommentEvent(
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
@@ -147,7 +149,7 @@ class CommentEvent(
             tags.add(removeTrailingNullsAndEmptyOthers("e", replyingTo.event.id, replyingTo.relay, replyingTo.event.pubKey))
             tags.add(arrayOf("k", "${replyingTo.event.kind}"))
 
-            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, emojis, geohash, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
         }
 
         fun createGeoComment(
@@ -157,6 +159,7 @@ class CommentEvent(
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
@@ -169,7 +172,7 @@ class CommentEvent(
             geohash?.let { tags.addAll(rootGeohashMipMap(it)) }
             tags.add(arrayOf("K", "geo"))
 
-            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, null, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
+            create(msg, tags, usersMentioned, addressesMentioned, eventsMentioned, imetas, emojis, null, zapReceiver, markAsSensitive, zapRaiserAmount, isDraft, signer, createdAt, onReady)
         }
 
         private fun create(
@@ -179,6 +182,7 @@ class CommentEvent(
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
             imetas: List<IMetaTag>? = null,
+            emojis: List<EmojiUrl>? = null,
             geohash: String? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
@@ -201,6 +205,8 @@ class CommentEvent(
             }
 
             findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
+
+            emojis?.forEach { tags.add(it.toTagArray()) }
 
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
