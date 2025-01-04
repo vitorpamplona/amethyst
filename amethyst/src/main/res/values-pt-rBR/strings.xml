@@ -345,6 +345,7 @@
     <string name="add_content">Adicionar à mensagem</string>
     <string name="add_caption">Adicionar uma legenda</string>
     <string name="add_caption_example">Meu amável amigo</string>
+    <string name="use_direct_url">Usar URL direto</string>
     <string name="content_description">Descrição do conteúdo</string>
     <string name="content_description_example">Um barco azul em uma praia de areia branca ao pôr do sol</string>
     <string name="zap_type">Tipo de Zap</string>

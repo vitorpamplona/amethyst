@@ -345,6 +345,7 @@
     <string name="add_content">Lägg till Meddelande</string>
     <string name="add_caption">Lägg till en rubrik</string>
     <string name="add_caption_example">Min underbara vän</string>
+    <string name="use_direct_url">Använd direkt URL</string>
     <string name="content_description">Beskrivning av innehållet</string>
     <string name="content_description_example">En blå båt på en vit sandstrand vid solnedgången</string>
     <string name="zap_type">Zap Typ</string>
