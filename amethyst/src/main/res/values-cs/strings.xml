@@ -345,6 +345,7 @@
     <string name="add_content">Přidat do zprávy</string>
     <string name="add_caption">Přidat titulek</string>
     <string name="add_caption_example">Můj milý přítel</string>
+    <string name="use_direct_url">Použít přímou URL</string>
     <string name="content_description">Popis obsahu</string>
     <string name="content_description_example">Modrá loď na bílé písčité pláži při západu slunce</string>
     <string name="zap_type">Typ zapsu</string>

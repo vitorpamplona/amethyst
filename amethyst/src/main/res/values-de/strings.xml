@@ -351,6 +351,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_content">Zur Nachricht hinzufügen</string>
     <string name="add_caption">Untertitel hinzufügen</string>
     <string name="add_caption_example">Mein netter Freund</string>
+    <string name="use_direct_url">Direkte URL verwenden</string>
     <string name="content_description">Beschreibung des Inhalts</string>
     <string name="content_description_example">Ein blaues Boot an einem weißen Sandstrand bei Sonnenuntergang</string>
     <string name="zap_type">Zap-Typ</string>
