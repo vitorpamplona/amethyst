@@ -71,6 +71,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
@@ -169,7 +170,7 @@ fun ReactionsRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val wantsToSeeReactions = remember(baseNote) { mutableStateOf(false) }
+    val wantsToSeeReactions = rememberSaveable(baseNote) { mutableStateOf(false) }
 
     InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
 
