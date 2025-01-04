@@ -224,7 +224,6 @@ open class NewPostViewModel : ViewModel() {
     ) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
-        this.emojiSuggestions.value
 
         val noteEvent = draft?.event
         val noteAuthor = draft?.author
