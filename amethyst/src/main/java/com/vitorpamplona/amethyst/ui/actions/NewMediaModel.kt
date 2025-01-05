@@ -83,6 +83,7 @@ open class NewMediaModel : ViewModel() {
     fun upload(
         context: Context,
         relayList: List<RelaySetupInfo>,
+        onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch {
@@ -196,6 +197,7 @@ open class NewMediaModel : ViewModel() {
                 videoJobs.joinAll()
                 imageJobs.joinAll()
 
+                onSucess()
                 onceUploaded()
                 cancelModel()
             } else {
