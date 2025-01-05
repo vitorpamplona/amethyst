@@ -228,6 +228,8 @@ class NostrClient(
         return result
     }
 
+    fun getAll(): List<Relay> = relayPool.getAll()
+
     fun sendFilterOnlyIfDisconnected(
         subscriptionId: String = UUID.randomUUID().toString().substring(0..10),
         filters: List<TypedFilter> = listOf(),
