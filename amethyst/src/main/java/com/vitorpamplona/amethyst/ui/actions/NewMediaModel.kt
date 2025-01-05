@@ -171,22 +171,26 @@ open class NewMediaModel : ViewModel() {
                     }
 
                 val imageJobs =
-                    listOf(
-                        viewModelScope.launch(Dispatchers.IO) {
-                            withTimeoutOrNull(30000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    account?.sendAllAsOnePictureEvent(
-                                        imageUrls,
-                                        caption,
-                                        sensitiveContent,
-                                        relayList,
-                                    ) {
-                                        continuation.resume(true)
+                    if (imageUrls.isNotEmpty()) {
+                        listOf(
+                            viewModelScope.launch(Dispatchers.IO) {
+                                withTimeoutOrNull(30000) {
+                                    suspendCancellableCoroutine { continuation ->
+                                        account?.sendAllAsOnePictureEvent(
+                                            imageUrls,
+                                            caption,
+                                            sensitiveContent,
+                                            relayList,
+                                        ) {
+                                            continuation.resume(true)
+                                        }
                                     }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        )
+                    } else {
+                        emptyList()
+                    }
 
                 nip95jobs.joinAll()
                 videoJobs.joinAll()
