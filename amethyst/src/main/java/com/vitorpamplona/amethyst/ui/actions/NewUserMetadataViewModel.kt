@@ -177,7 +177,7 @@ class NewUserMetadataViewModel : ViewModel() {
         try {
             val result =
                 if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().uploadImage(
+                    Nip96Uploader().upload(
                         uri = compResult.uri,
                         contentType = compResult.contentType,
                         size = compResult.size,
@@ -190,7 +190,7 @@ class NewUserMetadataViewModel : ViewModel() {
                         context = context,
                     )
                 } else {
-                    BlossomUploader().uploadImage(
+                    BlossomUploader().upload(
                         uri = compResult.uri,
                         contentType = compResult.contentType,
                         size = compResult.size,

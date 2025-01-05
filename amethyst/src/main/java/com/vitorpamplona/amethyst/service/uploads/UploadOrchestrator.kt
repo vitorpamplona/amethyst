@@ -142,7 +142,7 @@ class UploadOrchestrator {
         updateState(0.2, UploadingState.Uploading)
         return try {
             val result =
-                Nip96Uploader().uploadImage(
+                Nip96Uploader().upload(
                     uri = fileUri,
                     contentType = contentType,
                     size = size,
@@ -186,7 +186,7 @@ class UploadOrchestrator {
         return try {
             val result =
                 BlossomUploader()
-                    .uploadImage(
+                    .upload(
                         uri = fileUri,
                         contentType = contentType,
                         size = size,

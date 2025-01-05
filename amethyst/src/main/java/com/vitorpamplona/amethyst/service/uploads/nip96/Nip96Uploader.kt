@@ -52,7 +52,7 @@ val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
 class Nip96Uploader {
-    suspend fun uploadImage(
+    suspend fun upload(
         uri: Uri,
         contentType: String?,
         size: Long?,
@@ -63,7 +63,7 @@ class Nip96Uploader {
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
-    ) = uploadImage(
+    ) = upload(
         uri,
         contentType,
         size,
@@ -85,7 +85,7 @@ class Nip96Uploader {
 
     fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
 
-    suspend fun uploadImage(
+    suspend fun upload(
         uri: Uri,
         contentType: String?,
         size: Long?,
@@ -107,7 +107,7 @@ class Nip96Uploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return uploadImage(
+        return upload(
             imageInputStream,
             length,
             myContentType,
@@ -121,7 +121,7 @@ class Nip96Uploader {
         )
     }
 
-    suspend fun uploadImage(
+    suspend fun upload(
         inputStream: InputStream,
         length: Long,
         contentType: String?,

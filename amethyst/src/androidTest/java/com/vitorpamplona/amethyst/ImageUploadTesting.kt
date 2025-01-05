@@ -85,7 +85,7 @@ class ImageUploadTesting {
         val inputStream = paylod.inputStream()
         val result =
             BlossomUploader()
-                .uploadImage(
+                .upload(
                     inputStream = inputStream,
                     hash = initialHash,
                     length = paylod.size,
@@ -127,7 +127,7 @@ class ImageUploadTesting {
         val inputStream = paylod.inputStream()
         val result =
             Nip96Uploader()
-                .uploadImage(
+                .upload(
                     inputStream = inputStream,
                     length = paylod.size.toLong(),
                     contentType = "image/png",

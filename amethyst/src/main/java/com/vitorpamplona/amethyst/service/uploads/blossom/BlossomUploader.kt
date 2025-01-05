@@ -63,7 +63,7 @@ class BlossomUploader {
             }
         }.getOrNull()
 
-    suspend fun uploadImage(
+    suspend fun upload(
         uri: Uri,
         contentType: String?,
         size: Long?,
@@ -94,7 +94,7 @@ class BlossomUploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return uploadImage(
+        return upload(
             imageInputStream,
             hash,
             payload.size,
@@ -114,7 +114,7 @@ class BlossomUploader {
         return "Nostr $encodedNIP98Event"
     }
 
-    suspend fun uploadImage(
+    suspend fun upload(
         inputStream: InputStream,
         hash: HexKey,
         length: Int,
