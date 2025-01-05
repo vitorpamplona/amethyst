@@ -49,6 +49,8 @@ class NostrClient(
 
     fun buildRelay(it: RelaySetupInfoToConnect): Relay = Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes, websocketBuilder, subscriptions)
 
+    fun getRelay(url: String): Relay? = relayPool.getRelay(url)
+
     @Synchronized
     fun reconnect(
         relays: Array<RelaySetupInfoToConnect>?,
