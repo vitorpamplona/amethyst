@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.R.attr.mimeType
 import android.content.Context
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -43,6 +45,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -92,6 +95,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import java.util.UUID
 import kotlin.math.round
 
@@ -1227,6 +1231,28 @@ open class NewPostViewModel : ViewModel() {
                     .substringAfterLast(" ")
             val lastWordStart = it.end - lastWord.length
             val wordToInsert = item.url.url + " "
+
+            viewModelScope.launch(Dispatchers.IO) {
+                val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(item.url.url)
+                val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
+
+                val forceProxy = accountViewModel?.account?.shouldUseTorForImageDownload() ?: false
+                val imeta =
+                    FileHeader.prepare(item.url.url, mimeType, null, forceProxy).getOrNull()?.let {
+                        IMetaTagBuilder(item.url.url)
+                            .apply {
+                                hash(it.hash)
+                                size(it.size)
+                                it.mimeType?.let { mimeType(it) }
+                                it.dim?.let { dims(it) }
+                                it.blurHash?.let { blurhash(it.blurhash) }
+                            }.build()
+                    }
+
+                if (imeta != null) {
+                    iMetaAttachments += imeta
+                }
+            }
 
             message =
                 TextFieldValue(

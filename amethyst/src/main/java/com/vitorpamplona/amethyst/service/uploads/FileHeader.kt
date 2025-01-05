@@ -55,10 +55,10 @@ class FileHeader(
             forceProxy: Boolean,
         ): Result<FileHeader> =
             try {
-                val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
+                val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
 
                 if (imageData != null) {
-                    prepare(imageData, mimeType, dimPrecomputed)
+                    prepare(imageData.bytes, mimeType ?: imageData.contentType, dimPrecomputed)
                 } else {
                     Result.failure(UnableToDownload(fileUrl))
                 }

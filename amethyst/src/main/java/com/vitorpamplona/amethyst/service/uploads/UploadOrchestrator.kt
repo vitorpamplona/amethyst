@@ -224,15 +224,15 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(uploadResult.url, forceProxy(uploadResult.url))
+        val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(uploadResult.url, forceProxy(uploadResult.url))
 
         if (imageData != null) {
             updateState(0.8, UploadingState.Hashing)
 
             val result =
                 FileHeader.prepare(
-                    imageData,
-                    uploadResult.type ?: localContentType,
+                    imageData.bytes,
+                    uploadResult.type ?: localContentType ?: imageData.contentType,
                     uploadResult.dimension,
                 )
 
