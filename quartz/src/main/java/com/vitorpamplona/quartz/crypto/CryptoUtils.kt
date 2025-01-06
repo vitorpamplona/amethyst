@@ -74,7 +74,7 @@ object CryptoUtils {
 
     fun sha256(data: ByteArray): ByteArray {
         // Creates a new buffer every time
-        return nip01.sha256(data)
+        return sha256Hash(data)
     }
 
     fun decrypt(

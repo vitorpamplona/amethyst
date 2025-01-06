@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.crypto.nip01
 
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.nextBytes
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import fr.acinq.secp256k1.Secp256k1
-import java.security.MessageDigest
 import java.security.SecureRandom
 
 class Nip01(
@@ -54,10 +54,7 @@ class Nip01(
         pubKey: ByteArray,
     ): Boolean = secp256k1.verifySchnorr(signature, hash, pubKey)
 
-    fun sha256(data: ByteArray): ByteArray {
-        // Creates a new buffer every time
-        return MessageDigest.getInstance("SHA-256").digest(data)
-    }
+    fun sha256(data: ByteArray) = sha256Hash(data)
 
     fun signString(
         message: String,

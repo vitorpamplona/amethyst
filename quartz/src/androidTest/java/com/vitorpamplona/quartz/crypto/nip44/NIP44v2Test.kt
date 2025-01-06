@@ -25,6 +25,7 @@ import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.crypto.nip01.Nip01
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
@@ -34,7 +35,6 @@ import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.security.MessageDigest
 import java.security.SecureRandom
 
 @RunWith(AndroidJUnit4::class)
@@ -185,8 +185,5 @@ class NIP44v2Test {
         }
     }
 
-    private fun sha256Hex(data: ByteArray): String {
-        // Creates a new buffer every time
-        return MessageDigest.getInstance("SHA-256").digest(data).toHexKey()
-    }
+    private fun sha256Hex(data: ByteArray) = sha256Hash(data).toHexKey()
 }

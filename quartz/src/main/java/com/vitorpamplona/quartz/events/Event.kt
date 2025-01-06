@@ -35,10 +35,10 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.PoWRank
 import com.vitorpamplona.quartz.encoders.toHexKey
@@ -52,7 +52,6 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.remove
 import com.vitorpamplona.quartz.utils.startsWith
 import java.math.BigDecimal
-import java.security.MessageDigest
 
 @Immutable
 open class Event(
@@ -312,11 +311,6 @@ open class Event(
         return id.equals(generateId())
     }
 
-    fun hasCorrectIDHash2(): Boolean {
-        if (id.isEmpty()) return false
-        return id.equals(generateId2())
-    }
-
     fun hasVerifiedSignature(): Boolean {
         if (id.isEmpty() || sig.isEmpty()) return false
         return CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
@@ -349,13 +343,7 @@ open class Event(
 
     fun makeJsonForId(): String = makeJsonForId(pubKey, createdAt, kind, tags, content)
 
-    fun generateId(): String = CryptoUtils.sha256(makeJsonForId().toByteArray()).toHexKey()
-
-    fun generateId2(): String {
-        val sha256 = MessageDigest.getInstance("SHA-256")
-        Nip01Serializer().serializeEventInto(this, Nip01Serializer.BufferedDigestWriter(sha256))
-        return sha256.digest().toHexKey()
-    }
+    fun generateId(): String = sha256Hash(makeJsonForId().toByteArray()).toHexKey()
 
     private class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
         override fun deserialize(

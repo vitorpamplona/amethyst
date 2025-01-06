@@ -121,7 +121,7 @@ class Nip01SerializerTest {
     fun fastEventIdCheckTest() {
         val event = Event.fromJson(payload2)
 
-        assertEquals("98b574c3527f0ffb30b7271084e3f07480733c7289f8de424d29eae82e36c758", event.generateId2())
+        assertEquals("98b574c3527f0ffb30b7271084e3f07480733c7289f8de424d29eae82e36c758", event.generateId())
     }
 
     val payload3 = """
@@ -157,7 +157,7 @@ class Nip01SerializerTest {
     fun fastEventIdCheckTestPayload3() {
         val event = Event.fromJson(payload3)
 
-        assertEquals("6cccb576158965cf0f06fb4e476f85a02f0011ae783a4e905126a3db3871e43d", event.generateId2())
+        assertEquals("6cccb576158965cf0f06fb4e476f85a02f0011ae783a4e905126a3db3871e43d", event.generateId())
     }
 
     val payload4 = "{\"id\":\"5fd48fd3fb2890a00538067869306d788ff4331896360dc9c7e43d43e01b481b\",\"pubkey\":\"9770fb48aa3861dd393eb857e740f2df6f18e0ead43bad1d30c65e5c198200a6\",\"created_at\":1701673247,\"kind\":1,\"tags\":[[\"imeta\",\"url https://image.nostr.build/790b061d9661df88b06feb7448694cc421671da42217ca8381f02b4def63707f.jpg\",\"blurhash enF~?FRpNbkBjG.AkCbHfkafx_R+V^V_WVt9WBf6axoeoJf4bXWBaz\",\"dim 1536x2048\"],[\"imeta\",\"url https://video.nostr.build/3dd8562e8306c3128a72dee888c0fe587c2b24b8b643ae19b82010aaab95c37c.mp4\",\"blurhash e5A0~^S4R#W,j]~XR%s;o4j?s*M|t3t6ayxot9RiV[RjEH%3WBR%xb\",\"dim 720x1280\"],[\"imeta\",\"url https://image.nostr.build/9249f13cb8df68e00706f4f1434b8f0cd731b0515479df06353a0aef7a798619.jpg\",\"blurhash egFFpp\$LV?kCjs.TRiaej[fP9xIpoKf6fksls+WBbHj[xZn\$WWofjt\",\"dim 1920x3412\"],[\"t\",\"iceland\"],[\"r\",\"https://image.nostr.build/790b061d9661df88b06feb7448694cc421671da42217ca8381f02b4def63707f.jpg\"],[\"r\",\"https://video.nostr.build/3dd8562e8306c3128a72dee888c0fe587c2b24b8b643ae19b82010aaab95c37c.mp4\"],[\"r\",\"https://image.nostr.build/9249f13cb8df68e00706f4f1434b8f0cd731b0515479df06353a0aef7a798619.jpg\"]],\"content\":\"Icelandic calm to your heart \uD83D\uDC9A\uD83D\uDE0C\\n\\n(Memories from this summer)\\n\\n#Iceland , 2023 https://image.nostr.build/790b061d9661df88b06feb7448694cc421671da42217ca8381f02b4def63707f.jpg https://video.nostr.build/3dd8562e8306c3128a72dee888c0fe587c2b24b8b643ae19b82010aaab95c37c.mp4 https://image.nostr.build/9249f13cb8df68e00706f4f1434b8f0cd731b0515479df06353a0aef7a798619.jpg \",\"sig\":\"d6410be4b47bc97fca486eb619dd2507e7332bcd1049e405a047c90eedd2be46007c09d7702361b8442df78932e5da4055ee1c5fef08f938a4d39d828dc20957\"}"
@@ -180,7 +180,7 @@ class Nip01SerializerTest {
         val event = Event.fromJson(payload4)
 
         // assertEquals(event.generateId(), event.generateId2())
-        assertEquals("5fd48fd3fb2890a00538067869306d788ff4331896360dc9c7e43d43e01b481b", event.generateId2())
+        assertEquals("5fd48fd3fb2890a00538067869306d788ff4331896360dc9c7e43d43e01b481b", event.generateId())
     }
 
     val payload5 = "{\"id\":\"d1f097d3d9fcfb00df0c8ab5469be6484b14707d1e947c574ed636281d8dfd26\",\"pubkey\":\"dd664d5e4016433a8cd69f005ae1480804351789b59de5af06276de65633d319\",\"created_at\":1706435280,\"kind\":4550,\"tags\":[[\"a\",\"34550:026d8b7e7bcc2b417a84f10edb71b427fe76069905090b147b401a6cf60c3f27:Catholic\",\"wss://christpill.nostr1.com\"],[\"e\",\"0b8e4fade30fdb57f3887da224682fe9756ee79c408961e46393555bb0367022\"],[\"p\",\"026d8b7e7bcc2b417a84f10edb71b427fe76069905090b147b401a6cf60c3f27\"],[\"k\",\"1\"]],\"content\":\"{\\\"id\\\":\\\"0b8e4fade30fdb57f3887da224682fe9756ee79c408961e46393555bb0367022\\\",\\\"pubkey\\\":\\\"026d8b7e7bcc2b417a84f10edb71b427fe76069905090b147b401a6cf60c3f27\\\",\\\"created_at\\\":1698838786,\\\"kind\\\":1,\\\"tags\\\":[[\\\"a\\\",\\\"34550:026d8b7e7bcc2b417a84f10edb71b427fe76069905090b147b401a6cf60c3f27:Catholic\\\",\\\"\\\",\\\"reply\\\"],[\\\"t\\\",\\\"catholic\\\"],[\\\"t\\\",\\\"catholic\\\"]],\\\"content\\\":\\\"It's so funny at Mass, when you're a sacristan or something because everyone watches and emulates you, so if you forget to stand or kneel at the right moment, everyone remains seated.\\\\n\\\\nAnd when you're like, Oh woops! And stand up, there's a loud wave of people suddenly standing up, too. \uD83D\uDE02\\\\n\\\\n#catholic\\\",\\\"sig\\\":\\\"92c087e6364dd6c1fbf3bf5baddd66f0d86019fb3ba95e36135345d7c8b137f2147de8d628ec974eb493c2dbce2ca581c56c146d282f06a930280c7addc4d021\\\"}\",\"sig\":\"d67c067a08879138989275cb6f062f58e8a523b192bff5e65340becbac05060bb9c7ac6f75727c8fd2229f95a54fe404d18971950a72c1f17618535e7495e09d\"}"
@@ -203,6 +203,6 @@ class Nip01SerializerTest {
         val event = Event.fromJson(payload5)
 
         // assertEquals(event.generateId(), event.generateId2())
-        assertEquals("d1f097d3d9fcfb00df0c8ab5469be6484b14707d1e947c574ed636281d8dfd26", event.generateId2())
+        assertEquals("d1f097d3d9fcfb00df0c8ab5469be6484b14707d1e947c574ed636281d8dfd26", event.generateId())
     }
 }

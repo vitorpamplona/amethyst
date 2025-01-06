@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.crypto.nip06
 
 import com.vitorpamplona.quartz.crypto.nip49.PBKDF
-import java.security.MessageDigest
+import com.vitorpamplona.quartz.crypto.sha256Hash
 
 // CODE FROM: https://github.com/ACINQ/bitcoin-kmp/
 
@@ -35,11 +35,6 @@ object Bip39Mnemonics {
         val digits = loop(x.toInt() and 0xff)
         val zeroes = List(8 - digits.size) { false }
         return zeroes + digits
-    }
-
-    fun sha256(data: ByteArray): ByteArray {
-        // Creates a new buffer every time
-        return MessageDigest.getInstance("SHA-256").digest(data)
     }
 
     private fun toBinary(x: ByteArray): List<Boolean> = x.map(Bip39Mnemonics::toBinary).flatten()
@@ -84,7 +79,7 @@ object Bip39Mnemonics {
         val databits = bits.subList(0, bitlength)
         val checksumbits = bits.subList(bitlength, bits.size)
         val data = group(databits, 8).map { fromBinary(it) }.map { it.toByte() }.toByteArray()
-        val check = toBinary(sha256(data)).take(data.size / 4)
+        val check = toBinary(sha256Hash(data)).take(data.size / 4)
         require(check == checksumbits) { "invalid checksum" }
     }
 
@@ -111,7 +106,7 @@ object Bip39Mnemonics {
         wordlist: Array<String>,
     ): List<String> {
         require(wordlist.size == 2048) { "invalid word list (size should be 2048)" }
-        val digits = toBinary(entropy) + toBinary(sha256(entropy)).take(entropy.size / 4)
+        val digits = toBinary(entropy) + toBinary(sha256Hash(entropy)).take(entropy.size / 4)
 
         return group(digits, 11).map(Bip39Mnemonics::fromBinary).map { wordlist[it] }
     }

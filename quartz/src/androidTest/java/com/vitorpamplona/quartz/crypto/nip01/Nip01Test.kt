@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.crypto.nip01
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.encoders.hexToByteArray
 import com.vitorpamplona.quartz.encoders.toHexKey
 import fr.acinq.secp256k1.Secp256k1
@@ -66,7 +67,7 @@ class Nip01Test {
     fun testDeterministicSign() {
         assertEquals(
             "1484d0e0bd62165e822e31f1f4cc8e1ce8e20c30a060e24fb0ecd7baf7c624f661fb7a3e4f0ddb43018e5f0b4892c929af64d8b7a86021aa081ec8231e3dfa37",
-            nip01.signDeterministic(nip01.sha256("Test".toByteArray()), privateKey).toHexKey(),
+            nip01.signDeterministic(sha256Hash("Test".toByteArray()), privateKey).toHexKey(),
         )
     }
 
@@ -74,7 +75,7 @@ class Nip01Test {
     fun testSha256() {
         assertEquals(
             "532eaabd9574880dbf76b9b8cc00832c20a6ec113d682299550d7a6e0f345e25",
-            nip01.sha256("Test".toByteArray()).toHexKey(),
+            sha256Hash("Test".toByteArray()).toHexKey(),
         )
     }
 
@@ -83,7 +84,7 @@ class Nip01Test {
         assertTrue(
             nip01.verify(
                 "1484d0e0bd62165e822e31f1f4cc8e1ce8e20c30a060e24fb0ecd7baf7c624f661fb7a3e4f0ddb43018e5f0b4892c929af64d8b7a86021aa081ec8231e3dfa37".hexToByteArray(),
-                nip01.sha256("Test".toByteArray()),
+                sha256Hash("Test".toByteArray()),
                 nip01.pubkeyCreate(privateKey),
             ),
         )
@@ -93,17 +94,17 @@ class Nip01Test {
     fun testNonDeterministicSign() {
         assertNotEquals(
             "1484d0e0bd62165e822e31f1f4cc8e1ce8e20c30a060e24fb0ecd7baf7c624f661fb7a3e4f0ddb43018e5f0b4892c929af64d8b7a86021aa081ec8231e3dfa37",
-            nip01.sign(nip01.sha256("Test".toByteArray()), privateKey).toHexKey(),
+            nip01.sign(sha256Hash("Test".toByteArray()), privateKey).toHexKey(),
         )
     }
 
     @Test
     fun testNonDeterministicSignVerify() {
-        val signature = nip01.sign(nip01.sha256("Test".toByteArray()), privateKey)
+        val signature = nip01.sign(sha256Hash("Test".toByteArray()), privateKey)
         assertTrue(
             nip01.verify(
                 signature,
-                nip01.sha256("Test".toByteArray()),
+                sha256Hash("Test".toByteArray()),
                 nip01.pubkeyCreate(privateKey),
             ),
         )

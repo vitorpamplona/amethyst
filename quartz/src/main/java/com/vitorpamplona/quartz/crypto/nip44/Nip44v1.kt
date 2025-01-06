@@ -24,9 +24,9 @@ import android.util.Log
 import com.goterl.lazysodium.SodiumAndroid
 import com.goterl.lazysodium.utils.Key
 import com.vitorpamplona.quartz.crypto.SharedKeyCache
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.encoders.Hex
 import fr.acinq.secp256k1.Secp256k1
-import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 
@@ -126,14 +126,9 @@ class Nip44v1(
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): ByteArray =
-        sha256(
+        sha256Hash(
             secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33),
         )
-
-    fun sha256(data: ByteArray): ByteArray {
-        // Creates a new buffer every time
-        return MessageDigest.getInstance("SHA-256").digest(data)
-    }
 
     class EncryptedInfo(
         val ciphertext: ByteArray,

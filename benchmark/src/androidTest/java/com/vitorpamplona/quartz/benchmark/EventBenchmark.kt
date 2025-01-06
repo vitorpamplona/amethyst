@@ -24,7 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.encoders.Nip01Serializer
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
@@ -181,25 +181,16 @@ class EventBenchmark {
 
         benchmarkRule.measureRepeated {
             // Should pass
-            assertNotNull(CryptoUtils.sha256(byteArray))
+            assertNotNull(sha256Hash(byteArray))
         }
     }
 
     @Test
-    fun checkIDHashPayload2Slow() {
+    fun checkIDHashPayload2() {
         val event = Event.fromJson(payload2)
         benchmarkRule.measureRepeated {
             // Should pass
             assertTrue(event.hasCorrectIDHash())
-        }
-    }
-
-    @Test
-    fun checkIDHashPayload2Fast() {
-        val event = Event.fromJson(payload2)
-        benchmarkRule.measureRepeated {
-            // Should pass
-            assertTrue(event.hasCorrectIDHash2())
         }
     }
 
