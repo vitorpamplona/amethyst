@@ -72,7 +72,7 @@ class VideoFeedFilter(
         mimeType: String?,
     ): Boolean {
         // we don't have an youtube player
-        val urls = baseUrls.filter { !it.contains("youtu.be") }
+        val urls = baseUrls.filter { !it.contains("youtu.be") && !it.contains("youtube.com") }
 
         val isSupportedMimeType = mimeType?.let { SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it) } ?: false
 
