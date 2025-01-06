@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.signers
 import android.util.Log
 import com.goterl.lazysodium.BuildConfig
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
 import com.vitorpamplona.quartz.events.LnZapPrivateEvent
@@ -40,7 +39,7 @@ class NostrSignerExternal(
         content: String,
         onReady: (T) -> Unit,
     ) {
-        val id = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
+        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
 
         val event =
             Event(

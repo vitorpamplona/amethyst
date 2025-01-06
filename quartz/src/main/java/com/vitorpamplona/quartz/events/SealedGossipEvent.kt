@@ -24,7 +24,6 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -152,7 +151,7 @@ class Gossip(
         val newContent = content ?: ""
         val newID =
             id?.ifBlank { null }
-                ?: Event.generateId(newPubKey, newCreatedAt, newKind, newTags, newContent).toHexKey()
+                ?: Event.generateId(newPubKey, newCreatedAt, newKind, newTags, newContent)
         val sig = ""
 
         return EventFactory.create(newID, newPubKey, newCreatedAt, newKind, newTags, newContent, sig)

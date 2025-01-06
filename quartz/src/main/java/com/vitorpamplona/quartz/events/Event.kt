@@ -35,13 +35,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.sha256Hash
+import com.vitorpamplona.quartz.crypto.nip01.EventHasher
+import com.vitorpamplona.quartz.crypto.nip01.EventHasher.Companion.hashId
 import com.vitorpamplona.quartz.encoders.ATag
 import com.vitorpamplona.quartz.encoders.Hex
 import com.vitorpamplona.quartz.encoders.HexKey
 import com.vitorpamplona.quartz.encoders.Nip19Bech32
 import com.vitorpamplona.quartz.encoders.PoWRank
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.nip46.BunkerMessage
 import com.vitorpamplona.quartz.events.nip46.BunkerRequest
 import com.vitorpamplona.quartz.events.nip46.BunkerResponse
@@ -50,7 +50,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.remove
-import com.vitorpamplona.quartz.utils.startsWith
 import java.math.BigDecimal
 
 @Immutable
@@ -341,9 +340,7 @@ open class Event(
             false
         }
 
-    fun makeJsonForId(): String = makeJsonForId(pubKey, createdAt, kind, tags, content)
-
-    fun generateId(): String = sha256Hash(makeJsonForId().toByteArray()).toHexKey()
+    fun generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
 
     private class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
         override fun deserialize(
@@ -476,42 +473,21 @@ open class Event(
 
         fun toJson(event: Event): String = mapper.writeValueAsString(event)
 
-        fun makeJsonForId(
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-        ): String {
-            val factory = mapper.nodeFactory
-            val rawEvent =
-                factory.arrayNode(6).apply {
-                    add(0)
-                    add(pubKey)
-                    add(createdAt)
-                    add(kind)
-                    add(
-                        factory.arrayNode(tags.size).apply {
-                            tags.forEach { tag ->
-                                add(
-                                    factory.arrayNode(tag.size).apply { tag.forEach { add(it) } },
-                                )
-                            }
-                        },
-                    )
-                    add(content)
-                }
-
-            return mapper.writeValueAsString(rawEvent)
-        }
-
         fun generateId(
             pubKey: HexKey,
             createdAt: Long,
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): ByteArray = CryptoUtils.sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
+        ): HexKey = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
+
+        fun generateIdBytes(
+            pubKey: HexKey,
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): ByteArray = EventHasher.hashIdBytes(pubKey, createdAt, kind, tags, content)
 
         fun create(
             signer: NostrSigner,

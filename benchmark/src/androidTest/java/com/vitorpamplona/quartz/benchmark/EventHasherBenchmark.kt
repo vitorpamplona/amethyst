@@ -24,8 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventFactory
-import com.vitorpamplona.quartz.utils.TimeUtils
+import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -38,37 +37,32 @@ import org.junit.runner.RunWith
  * result. Modify your code to see how it affects performance.
  */
 @RunWith(AndroidJUnit4::class)
-class EventBenchmark {
+class EventHasherBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun parseREQString() {
-        benchmarkRule.measureRepeated { Event.mapper.readTree(reqResponseEvent) }
-    }
+    fun checkIDHashKind1WihtoutTags() {
+        val event = Event.fromJson(Event.mapper.readTree(reqResponseEvent))
 
-    @Test
-    fun parseEvent() {
-        val msg = Event.mapper.readTree(reqResponseEvent)
-
-        benchmarkRule.measureRepeated { Event.fromJson(msg[2]) }
-    }
-
-    @Test
-    fun checkSignature() {
-        val msg = Event.mapper.readTree(reqResponseEvent)
-        val event = Event.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue(event.hasValidSignature())
+            assertTrue(event.hasCorrectIDHash())
         }
     }
 
     @Test
-    fun eventFactoryPerformanceTest() {
-        val now = TimeUtils.now()
-        val tags = arrayOf(arrayOf(""))
+    fun checkIDHashKind1WithTags() {
+        val event = Event.fromJson(largeKind1Event)
         benchmarkRule.measureRepeated {
-            EventFactory.create("id", "pubkey", now, 1, tags, "content", "sig")
+            // Should pass
+            assertTrue(event.hasCorrectIDHash())
         }
+    }
+
+    @Test
+    fun toMakeJsonForID() {
+        val event = Event.fromJson(largeKind1Event)
+
+        benchmarkRule.measureRepeated { assertNotNull(event.generateId()) }
     }
 }

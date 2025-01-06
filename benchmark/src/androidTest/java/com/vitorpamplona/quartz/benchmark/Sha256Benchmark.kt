@@ -23,10 +23,10 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.nip01.EventHasher
+import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventFactory
-import com.vitorpamplona.quartz.utils.TimeUtils
-import junit.framework.TestCase.assertTrue
+import junit.framework.TestCase.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,37 +38,18 @@ import org.junit.runner.RunWith
  * result. Modify your code to see how it affects performance.
  */
 @RunWith(AndroidJUnit4::class)
-class EventBenchmark {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+class Sha256Benchmark {
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun parseREQString() {
-        benchmarkRule.measureRepeated { Event.mapper.readTree(reqResponseEvent) }
-    }
+    fun sha256() {
+        val event = Event.fromJson(largeKind1Event)
+        val byteArray = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content).toByteArray()
 
-    @Test
-    fun parseEvent() {
-        val msg = Event.mapper.readTree(reqResponseEvent)
-
-        benchmarkRule.measureRepeated { Event.fromJson(msg[2]) }
-    }
-
-    @Test
-    fun checkSignature() {
-        val msg = Event.mapper.readTree(reqResponseEvent)
-        val event = Event.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue(event.hasValidSignature())
-        }
-    }
-
-    @Test
-    fun eventFactoryPerformanceTest() {
-        val now = TimeUtils.now()
-        val tags = arrayOf(arrayOf(""))
-        benchmarkRule.measureRepeated {
-            EventFactory.create("id", "pubkey", now, 1, tags, "content", "sig")
+            assertNotNull(sha256Hash(byteArray))
         }
     }
 }

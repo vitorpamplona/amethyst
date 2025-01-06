@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.signers
 
 import com.vitorpamplona.quartz.crypto.nip04.Nip04
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.Event
 import com.vitorpamplona.quartz.events.EventFactory
 import com.vitorpamplona.quartz.events.LnZapPrivateEvent
@@ -87,7 +86,7 @@ abstract class NostrSigner(
         content: String,
         onReady: (T) -> Unit,
     ) {
-        val id = Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey()
+        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
 
         onReady(
             EventFactory.create(

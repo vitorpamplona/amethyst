@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.encoders
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.quartz.crypto.nip01.EventHasher
 import com.vitorpamplona.quartz.events.Event
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
@@ -107,14 +108,14 @@ class Nip01SerializerTest {
     @Test()
     fun fastEventSerializerTest() {
         val event = Event.fromJson(payload2)
-
         val mapper = Nip01Serializer.StringWriter()
 
         Nip01Serializer().serializeEventInto(event, mapper)
 
         val encoded = mapper.toString()
+        val eventJson = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
-        assertEquals(event.makeJsonForId(), encoded)
+        assertEquals(eventJson, encoded)
     }
 
     @Test()
@@ -149,8 +150,9 @@ class Nip01SerializerTest {
         Nip01Serializer().serializeEventInto(event, mapper)
 
         val encoded = mapper.toString()
+        val eventJson = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
-        assertEquals(event.makeJsonForId(), encoded)
+        assertEquals(eventJson, encoded)
     }
 
     @Test()
@@ -171,8 +173,9 @@ class Nip01SerializerTest {
         Nip01Serializer().serializeEventInto(event, mapper)
 
         val encoded = mapper.toString()
+        val eventJson = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
-        assertEquals(event.makeJsonForId(), encoded)
+        assertEquals(eventJson, encoded)
     }
 
     @Test()
@@ -194,15 +197,15 @@ class Nip01SerializerTest {
         Nip01Serializer().serializeEventInto(event, mapper)
 
         val encoded = mapper.toString()
+        val eventJson = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content)
 
-        assertEquals(event.makeJsonForId(), encoded)
+        assertEquals(eventJson, encoded)
     }
 
     @Test()
     fun fastEventIdCheckTestPayload5() {
         val event = Event.fromJson(payload5)
 
-        // assertEquals(event.generateId(), event.generateId2())
         assertEquals("d1f097d3d9fcfb00df0c8ab5469be6484b14707d1e947c574ed636281d8dfd26", event.generateId())
     }
 }

@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.events
 
 import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
 import com.vitorpamplona.quartz.events.nip46.NostrConnectEvent
 
 class EventFactory {
@@ -62,7 +61,7 @@ class EventFactory {
             ChatMessageEncryptedFileHeaderEvent.KIND -> {
                 if (id.isBlank()) {
                     ChatMessageEncryptedFileHeaderEvent(
-                        Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey(),
+                        Event.generateId(pubKey, createdAt, kind, tags, content),
                         pubKey,
                         createdAt,
                         tags,
@@ -76,7 +75,7 @@ class EventFactory {
             ChatMessageEvent.KIND -> {
                 if (id.isBlank()) {
                     ChatMessageEvent(
-                        Event.generateId(pubKey, createdAt, kind, tags, content).toHexKey(),
+                        Event.generateId(pubKey, createdAt, kind, tags, content),
                         pubKey,
                         createdAt,
                         tags,

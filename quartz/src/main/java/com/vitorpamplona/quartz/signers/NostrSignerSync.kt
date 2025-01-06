@@ -66,7 +66,7 @@ class NostrSignerSync(
     ): T? {
         if (keyPair.privKey == null) return null
 
-        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
+        val id = Event.generateIdBytes(pubKey, createdAt, kind, tags, content)
         val sig = CryptoUtils.sign(id, keyPair.privKey).toHexKey()
 
         return EventFactory.create(
