@@ -45,18 +45,14 @@ object CryptoUtils {
         nip44.clearCache()
     }
 
-    fun randomInt(bound: Int): Int = random.nextInt(bound)
-
-    fun random(size: Int): ByteArray {
-        val bytes = ByteArray(size)
-        random.nextBytes(bytes)
-        return bytes
-    }
-
     /** Provides a 32B "private key" aka random number */
     fun privkeyCreate() = nip01.privkeyCreate()
 
     fun pubkeyCreate(privKey: ByteArray) = nip01.pubkeyCreate(privKey)
+
+    fun randomInt(bound: Int) = random.nextInt(bound)
+
+    fun random(size: Int) = random.nextBytes(size)
 
     fun signString(
         message: String,

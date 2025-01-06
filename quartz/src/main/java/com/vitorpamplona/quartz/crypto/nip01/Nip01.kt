@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.crypto.nip01
 
 import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.CryptoUtils.random
+import com.vitorpamplona.quartz.crypto.nextBytes
 import fr.acinq.secp256k1.Secp256k1
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -31,7 +31,7 @@ class Nip01(
     val random: SecureRandom,
 ) {
     /** Provides a 32B "private key" aka random number */
-    fun privkeyCreate() = random(32)
+    fun privkeyCreate() = random.nextBytes(32)
 
     fun compressedPubkeyCreate(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey))
 
@@ -40,7 +40,7 @@ class Nip01(
     fun sign(
         data: ByteArray,
         privKey: ByteArray,
-        auxrand32: ByteArray? = random(32),
+        auxrand32: ByteArray? = random.nextBytes(32),
     ): ByteArray = secp256k1.signSchnorr(data, privKey, auxrand32)
 
     fun signDeterministic(
@@ -62,6 +62,6 @@ class Nip01(
     fun signString(
         message: String,
         privKey: ByteArray,
-        auxrand32: ByteArray = random(32),
+        auxrand32: ByteArray = random.nextBytes(32),
     ): ByteArray = sign(CryptoUtils.sha256(message.toByteArray()), privKey, auxrand32)
 }
