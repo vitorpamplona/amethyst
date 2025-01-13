@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.encoders
+package com.vitorpamplona.quartz.nip13Pow
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip13Pow.PoWRank
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

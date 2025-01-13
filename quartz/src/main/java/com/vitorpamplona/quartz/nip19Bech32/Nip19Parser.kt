@@ -41,13 +41,13 @@ import kotlinx.coroutines.CancellationException
 import java.util.regex.Pattern
 
 object Nip19Parser {
-    val nip19PlusNip46regex =
+    private val nip19PlusNip46regex: Pattern =
         Pattern.compile(
             "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1|nembed1|ncryptsec1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
             Pattern.CASE_INSENSITIVE,
         )
 
-    val nip19regex =
+    val nip19regex: Pattern =
         Pattern.compile(
             "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1|nembed1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
             Pattern.CASE_INSENSITIVE,
