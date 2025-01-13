@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.quartz.nip96FileStorage
 
-import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 
@@ -137,7 +136,7 @@ class Nip96Test {
 
     @Test()
     fun parseNostrBuild() {
-        val info = ServerInfoRetriever().parse("https://nostr.build", json)
+        val info = ServerInfoParser().parse("https://nostr.build", json)
 
         assertEquals("https://nostr.build/api/v2/nip96/upload", info.apiUrl)
         assertEquals("https://media.nostr.build", info.downloadUrl)
@@ -166,7 +165,7 @@ class Nip96Test {
 
     @Test()
     fun parseRelativeUrls() {
-        val info = ServerInfoRetriever().parse("https://test.com", relativeUrlTest)
+        val info = ServerInfoParser().parse("https://test.com", relativeUrlTest)
 
         assertEquals("https://test.com/n96", info.apiUrl)
         assertEquals("https://test.com/", info.downloadUrl)
