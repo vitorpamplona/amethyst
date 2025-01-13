@@ -13,7 +13,7 @@
     <string name="channel_image">Csatornakép</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
     <string name="could_not_decrypt_the_message">Nem sikerült visszafejteni az üzenetet</string>
-    <string name="group_picture">Csoportkép</string>
+    <string name="group_picture">Csoport profilképe</string>
     <string name="explicit_content">Szókimondó tartalom</string>
     <string name="spam">Kéretlen tartalom</string>
     <string name="spam_description">Az erről az átjátszóról érkező kéretlen tartalmú események száma</string>
@@ -347,6 +347,7 @@
     <string name="add_content">Hozzáadás az üzenethez</string>
     <string name="add_caption">Képaláírás hozzáadása</string>
     <string name="add_caption_example">Kedves barátom</string>
+    <string name="use_direct_url">Közvetlen webcím használata</string>
     <string name="content_description">Tartalmi leírás</string>
     <string name="content_description_example">Egy kék csónak a fehér homokos tengerparton naplementekor</string>
     <string name="zap_type">Zap-típus</string>
@@ -669,7 +670,7 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">A kedvezményezett lightning-szolgáltatása ennél: %1$s nem érhető el. A(z) „%2$s” lightning-cím lett kiszámítva. Hiba: %3$s. Ellenőrizze, hogy a kiszolgáló működik-e, és hogy a lightning-cím helyes-e</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nem sikerült megoldani a következőt: %1$s. Ellenőrizze, hogy kapcsolódik-e, vagy működik-e a kiszolgáló, és hogy a(z) %2$s lightning-cím helyes-e</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nem sikerült megoldani a következőt: %1$s. Ellenőrizze, hogy kapcsolódik-e, vagy működik-e a kiszolgáló, és hogy a(z) %2$s lightning-cím helyes-e.\n\nKivéve: %3$s</string>
-    <string name="could_not_fetch_invoice_from">Nem sikerült a számlát a következőtől lekérni: %1$s</string>
+    <string name="could_not_fetch_invoice_from">Nem sikerült lekérni a számlát a következőtől: %1$s</string>
     <string name="could_not_fetch_invoice_from_details">Nem sikerült lekérni a számlát a következőtől: %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Hiba a Lightning-címből származó JSON elemzésekor. Ellenőrizze a felhasználó Lightning-beállítását</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Hiba történt a(z) %1$s JSON elemzésekor. Ellenőrizze a felhasználó Lightning-beállítását</string>
