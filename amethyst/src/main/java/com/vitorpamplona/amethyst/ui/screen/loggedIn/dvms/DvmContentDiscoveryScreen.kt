@@ -93,12 +93,12 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
-import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.AppMetadata
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.events.NIP90StatusEvent
-import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppMetadata
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -200,7 +200,10 @@ fun ObserverContentDiscoveryResponse(
 
     val resultFlow =
         remember(dvmRequestId) {
-            accountViewModel.observeByETag<NIP90ContentDiscoveryResponseEvent>(NIP90ContentDiscoveryResponseEvent.KIND, dvmRequestId.idHex)
+            accountViewModel.observeByETag<NIP90ContentDiscoveryResponseEvent>(
+                NIP90ContentDiscoveryResponseEvent.KIND,
+                dvmRequestId.idHex,
+            )
         }
 
     val latestResponse by resultFlow.collectAsStateWithLifecycle()

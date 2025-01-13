@@ -23,20 +23,20 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.events.AudioHeaderEvent
-import com.vitorpamplona.quartz.events.AudioTrackEvent
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.RepostEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 class HomeNewThreadFeedFilter(
     val account: Account,
@@ -62,7 +62,7 @@ class HomeNewThreadFeedFilter(
         val notes =
             LocalCache.notes.filterIntoSet { _, note ->
                 // Avoids processing addressables twice.
-                (note.event?.kind() ?: 99999) < 10000 && acceptableEvent(note, gRelays, filterParams)
+                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, gRelays, filterParams)
             }
 
         val longFormNotes =

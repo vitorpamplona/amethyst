@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
 
 @Composable
 fun RenderChannelMessage(

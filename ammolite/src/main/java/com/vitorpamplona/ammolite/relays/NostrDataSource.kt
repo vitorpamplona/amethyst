@@ -22,7 +22,7 @@ package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi

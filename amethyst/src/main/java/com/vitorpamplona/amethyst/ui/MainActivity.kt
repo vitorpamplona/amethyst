@@ -47,14 +47,20 @@ import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -262,12 +268,12 @@ fun uriToRoute(uri: String?): String? =
         if (uri?.startsWith("hashtag?id=") == true || uri?.startsWith("nostr:hashtag?id=") == true) {
             Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:").removePrefix("hashtag?id="))
         } else {
-            val nip19 = Nip19Bech32.uriToRoute(uri)?.entity
+            val nip19 = Nip19Parser.uriToRoute(uri)?.entity
             when (nip19) {
-                is Nip19Bech32.NPub -> "User/${nip19.hex}"
-                is Nip19Bech32.NProfile -> "User/${nip19.hex}"
-                is Nip19Bech32.Note -> "Note/${nip19.hex}"
-                is Nip19Bech32.NEvent -> {
+                is NPub -> "User/${nip19.hex}"
+                is NProfile -> "User/${nip19.hex}"
+                is Note -> "Note/${nip19.hex}"
+                is NEvent -> {
                     if (nip19.kind == PrivateDmEvent.KIND) {
                         nip19.author?.let { "RoomByAuthor/$it" }
                     } else if (
@@ -281,17 +287,17 @@ fun uriToRoute(uri: String?): String? =
                     }
                 }
 
-                is Nip19Bech32.NAddress -> {
+                is NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        "Community/${nip19.atag}"
+                        "Community/${nip19.aTag()}"
                     } else if (nip19.kind == LiveActivitiesEvent.KIND) {
-                        "Channel/${nip19.atag}"
+                        "Channel/${nip19.aTag()}"
                     } else {
-                        "Event/${nip19.atag}"
+                        "Event/${nip19.aTag()}"
                     }
                 }
 
-                is Nip19Bech32.NEmbed -> {
+                is NEmbed -> {
                     if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
                         LocalCache.verifyAndConsume(nip19.event, null)
                     }

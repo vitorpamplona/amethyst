@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.ammolite.relays.filters
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 
 object FilterSerializer {
     fun toJsonObject(
@@ -34,7 +35,7 @@ object FilterSerializer {
         limit: Int? = null,
         search: String? = null,
     ): ObjectNode {
-        val factory = Event.mapper.nodeFactory
+        val factory = JsonNodeFactory.instance
         return factory.objectNode().apply {
             ids?.run {
                 replace(
@@ -79,7 +80,7 @@ object FilterSerializer {
         limit: Int? = null,
         search: String? = null,
     ): String =
-        Event.mapper.writeValueAsString(
+        EventMapper.mapper.writeValueAsString(
             toJsonObject(
                 ids,
                 authors,

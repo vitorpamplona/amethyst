@@ -24,12 +24,12 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
-import com.vitorpamplona.quartz.encoders.Nip54InlineMetadata
-import com.vitorpamplona.quartz.encoders.Nip92MediaAttachments
-import com.vitorpamplona.quartz.events.FileHeaderEvent
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -135,7 +135,7 @@ class RichTextParser {
         val imagesForPager =
             urlSet.mapNotNull { fullUrl -> createMediaContent(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
 
-        val emojiMap = Nip30CustomEmoji.createEmojiMap(tags)
+        val emojiMap = CustomEmoji.createEmojiMap(tags)
 
         val segments = findTextSegments(content, imagesForPager.keys, urlSet, emojiMap, tags)
 
@@ -238,7 +238,7 @@ class RichTextParser {
 
         if (urls.contains(word)) return LinkSegment(word)
 
-        if (Nip30CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
+        if (CustomEmoji.fastMightContainEmoji(word, emojis) && emojis.any { word.contains(it.key) }) return EmojiSegment(word)
 
         if (word.startsWith("lnbc", true)) return InvoiceSegment(word)
 

@@ -88,8 +88,8 @@ import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifierWithPadding
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
-import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
-import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
@@ -200,7 +200,7 @@ fun RenderLikeGallery(
                     val url = noStartColon.substringAfter(":")
 
                     val renderable =
-                        persistentListOf(Nip30CustomEmoji.ImageUrlType(url))
+                        persistentListOf(CustomEmoji.ImageUrlType(url))
 
                     InLineIconRenderer(
                         renderable,

@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.service.CachedGeoLocations
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.quartz.encoders.ATag
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -75,7 +75,7 @@ fun LoadDecryptedContentOrNull(
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
     val decryptedContent by
-        produceState(initialValue = accountViewModel.cachedDecrypt(note), key1 = note.event?.id()) {
+        produceState(initialValue = accountViewModel.cachedDecrypt(note), key1 = note.event?.id) {
             accountViewModel.decrypt(note) {
                 if (value != it) {
                     value = it
@@ -184,7 +184,7 @@ fun LoadOts(
     } ?: run {
         val pendingAttestations by accountViewModel.account.settings.pendingAttestations
             .collectAsStateWithLifecycle()
-        val id = note.event?.id() ?: note.idHex
+        val id = note.event?.id ?: note.idHex
 
         if (pendingAttestations[id] != null) {
             whenPending()

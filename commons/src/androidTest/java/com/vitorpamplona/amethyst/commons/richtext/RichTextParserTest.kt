@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import org.junit.Test
 import org.junit.runner.RunWith
 

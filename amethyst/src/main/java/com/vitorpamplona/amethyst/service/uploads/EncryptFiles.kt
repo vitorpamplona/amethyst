@@ -24,8 +24,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip17Dm.NostrCipher
 import java.io.File
 
 class EncryptFilesResult(

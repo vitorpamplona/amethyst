@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.tryAndWait
-import com.vitorpamplona.quartz.events.RelayAuthEvent
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

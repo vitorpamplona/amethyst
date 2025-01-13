@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 
 @Preview
 @Composable

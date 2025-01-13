@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 object Constants {
     val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)

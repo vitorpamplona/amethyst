@@ -46,10 +46,10 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.encoders.IMetaTag
-import com.vitorpamplona.quartz.encoders.IMetaTagBuilder
-import com.vitorpamplona.quartz.events.FileStorageEvent
-import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -103,7 +103,7 @@ open class EditPostViewModel : ViewModel() {
         canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
         multiOrchestrator = null
 
-        message = TextFieldValue(versionLookingAt?.event?.content() ?: edit.event?.content() ?: "")
+        message = TextFieldValue(versionLookingAt?.event?.content ?: edit.event?.content ?: "")
         urlPreview = findUrlInMessage()
 
         editedFromNote = edit

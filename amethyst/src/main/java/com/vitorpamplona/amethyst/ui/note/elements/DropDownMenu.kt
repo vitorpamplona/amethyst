@@ -55,7 +55,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
-import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -402,7 +403,7 @@ fun WatchBookmarksFollowsAndAccount(
                         isPrivateBookmarkNote = it,
                         isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
                         isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                        isSensitive = note.event?.isSensitive() ?: false,
+                        isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                         showSensitiveContent = showSensitiveContent,
                     )
 

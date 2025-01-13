@@ -21,7 +21,10 @@
 package com.vitorpamplona.quartz.crypto.nip06
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip06KeyDerivation.Bip32SeedDerivation
+import com.vitorpamplona.quartz.nip06KeyDerivation.Bip39Mnemonics
+import com.vitorpamplona.quartz.nip06KeyDerivation.KeyPath
 import fr.acinq.secp256k1.Secp256k1
 import junit.framework.TestCase.assertEquals
 import org.junit.Test

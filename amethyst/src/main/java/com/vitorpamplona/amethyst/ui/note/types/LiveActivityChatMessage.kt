@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
 
 @Composable
 fun RenderLiveActivityChatMessage(

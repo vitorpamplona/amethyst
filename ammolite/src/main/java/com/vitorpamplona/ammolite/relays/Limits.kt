@@ -22,7 +22,8 @@ package com.vitorpamplona.ammolite.relays
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.ammolite.relays.filters.Filter
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip13Pow.getPoWRank
 import com.vitorpamplona.quartz.utils.TimeUtils.now
 
 class Limits(

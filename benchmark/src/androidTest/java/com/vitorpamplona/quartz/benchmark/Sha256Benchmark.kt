@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.crypto.nip01.EventHasher
 import com.vitorpamplona.quartz.crypto.sha256Hash
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.EventHasher
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import junit.framework.TestCase.assertNotNull
 import org.junit.Rule
 import org.junit.Test

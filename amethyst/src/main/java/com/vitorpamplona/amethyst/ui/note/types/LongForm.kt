@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
 @Composable
 fun RenderLongFormContent(

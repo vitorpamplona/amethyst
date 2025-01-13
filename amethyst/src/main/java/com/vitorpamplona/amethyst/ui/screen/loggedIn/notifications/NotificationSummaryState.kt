@@ -34,12 +34,13 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.ReactionEvent
-import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -103,18 +104,18 @@ class NotificationSummaryState(
 
         LocalCache.notes.forEach { _, it ->
             val noteEvent = it.event
-            if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
+            if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
                 if (noteEvent is ReactionEvent) {
                     if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
                         val netDate = formatDate(noteEvent.createdAt)
                         reactions[netDate] = (reactions[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id())
+                        takenIntoAccount.add(noteEvent.id)
                     }
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
-                        val netDate = formatDate(noteEvent.createdAt())
+                    if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                        val netDate = formatDate(noteEvent.createdAt)
                         boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                        takenIntoAccount.add(noteEvent.id())
+                        takenIntoAccount.add(noteEvent.id)
                     }
                 } else if (noteEvent is LnZapEvent) {
                     if (
@@ -123,7 +124,7 @@ class NotificationSummaryState(
                         val netDate = formatDate(noteEvent.createdAt)
                         zaps[netDate] =
                             (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-                        takenIntoAccount.add(noteEvent.id())
+                        takenIntoAccount.add(noteEvent.id)
                     }
                 } else if (noteEvent is BaseTextNoteEvent) {
                     if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
@@ -138,7 +139,7 @@ class NotificationSummaryState(
                         } else {
                             replies[netDate] = (replies[netDate] ?: 0) + 1
                         }
-                        takenIntoAccount.add(noteEvent.id())
+                        takenIntoAccount.add(noteEvent.id)
                     }
                 }
             }
@@ -168,19 +169,19 @@ class NotificationSummaryState(
         newBlockNotes.forEach { newNotes ->
             newNotes.forEach {
                 val noteEvent = it.event
-                if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id())) {
+                if (noteEvent != null && !takenIntoAccount.contains(noteEvent.id)) {
                     if (noteEvent is ReactionEvent) {
                         if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
                             val netDate = formatDate(noteEvent.createdAt)
                             reactions[netDate] = (reactions[netDate] ?: 0) + 1
-                            takenIntoAccount.add(noteEvent.id())
+                            takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }
                     } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
-                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey() != currentUser) {
-                            val netDate = formatDate(noteEvent.createdAt())
+                        if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
+                            val netDate = formatDate(noteEvent.createdAt)
                             boosts[netDate] = (boosts[netDate] ?: 0) + 1
-                            takenIntoAccount.add(noteEvent.id())
+                            takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }
                     } else if (noteEvent is LnZapEvent) {
@@ -190,7 +191,7 @@ class NotificationSummaryState(
                             val netDate = formatDate(noteEvent.createdAt)
                             zaps[netDate] =
                                 (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
-                            takenIntoAccount.add(noteEvent.id())
+                            takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }
                     } else if (noteEvent is BaseTextNoteEvent) {
@@ -206,7 +207,7 @@ class NotificationSummaryState(
                             } else {
                                 replies[netDate] = (replies[netDate] ?: 0) + 1
                             }
-                            takenIntoAccount.add(noteEvent.id())
+                            takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }
                     }

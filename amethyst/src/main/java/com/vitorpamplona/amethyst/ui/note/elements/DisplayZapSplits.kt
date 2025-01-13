@@ -38,13 +38,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.ZapSplitSetup
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.zapSplitSetup
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayZapSplits(
-    noteEvent: EventInterface,
+    noteEvent: Event,
     useAuthorIfEmpty: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -55,7 +56,7 @@ fun DisplayZapSplits(
             if (list.isEmpty() && useAuthorIfEmpty) {
                 listOf<ZapSplitSetup>(
                     ZapSplitSetup(
-                        lnAddressOrPubKeyHex = noteEvent.pubKey(),
+                        lnAddressOrPubKeyHex = noteEvent.pubKey,
                         relay = null,
                         weight = 1.0,
                         isLnAddress = false,

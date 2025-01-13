@@ -37,20 +37,27 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.Hex
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.bechToBytes
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.encoders.toNpub
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.Contact
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
-import com.vitorpamplona.quartz.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip02FollowList.Contact
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32Entities.toNpub
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -97,17 +104,17 @@ class AccountStateViewModel : ViewModel() {
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
     ) = withContext(Dispatchers.IO) {
-        val parsed = Nip19Bech32.uriToRoute(key)?.entity
+        val parsed = Nip19Parser.uriToRoute(key)?.entity
         val pubKeyParsed =
             when (parsed) {
-                is Nip19Bech32.NSec -> null
-                is Nip19Bech32.NPub -> parsed.hex.hexToByteArray()
-                is Nip19Bech32.NProfile -> parsed.hex.hexToByteArray()
-                is Nip19Bech32.Note -> null
-                is Nip19Bech32.NEvent -> null
-                is Nip19Bech32.NEmbed -> null
-                is Nip19Bech32.NRelay -> null
-                is Nip19Bech32.NAddress -> null
+                is NSec -> null
+                is NPub -> parsed.hex.hexToByteArray()
+                is NProfile -> parsed.hex.hexToByteArray()
+                is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> null
+                is NEvent -> null
+                is NEmbed -> null
+                is NRelay -> null
+                is NAddress -> null
                 else ->
                     try {
                         if (loginWithExternalSigner) Hex.decode(key) else null

@@ -102,16 +102,16 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.nip05
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
-import com.vitorpamplona.quartz.events.Participant
-import com.vitorpamplona.quartz.events.Price
+import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_ENDED
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.Price
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -130,7 +130,7 @@ fun ChannelCardCompose(
     nav: INav,
 ) {
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
-        if (forceEventKind == null || baseNote.event?.kind() == forceEventKind) {
+        if (forceEventKind == null || baseNote.event?.kind == forceEventKind) {
             CheckHiddenFeedWatchBlockAndReport(
                 note = baseNote,
                 modifier = modifier,

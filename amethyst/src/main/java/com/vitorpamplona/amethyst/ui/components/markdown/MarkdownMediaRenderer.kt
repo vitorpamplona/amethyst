@@ -48,9 +48,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
 import kotlinx.coroutines.runBlocking
 
 class MarkdownMediaRenderer(
@@ -164,14 +170,14 @@ class MarkdownMediaRenderer(
             }
         } else if (loadedLink?.nip19 != null) {
             when (val entity = loadedLink.nip19.entity) {
-                is Nip19Bech32.NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
-                is Nip19Bech32.NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
-                is Nip19Bech32.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
-                is Nip19Bech32.NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
-                is Nip19Bech32.NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
-                is Nip19Bech32.NAddress -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
-                is Nip19Bech32.NRelay -> renderShortNostrURI(uri, richTextStringBuilder)
-                is Nip19Bech32.NSec -> renderShortNostrURI(uri, richTextStringBuilder)
+                is NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
+                is NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
+                is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is NAddress -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is NRelay -> renderShortNostrURI(uri, richTextStringBuilder)
+                is NSec -> renderShortNostrURI(uri, richTextStringBuilder)
                 else -> renderShortNostrURI(uri, richTextStringBuilder)
             }
         } else {

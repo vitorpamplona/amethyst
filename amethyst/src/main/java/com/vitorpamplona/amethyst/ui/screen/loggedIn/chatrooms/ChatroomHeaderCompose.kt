@@ -80,12 +80,12 @@ import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.DraftEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -194,7 +194,7 @@ private fun ChannelRoomCompose(
         } else if (noteEvent is ChannelMetadataEvent) {
             "${stringRes(R.string.channel_information_changed_to)} "
         } else {
-            noteEvent?.content()?.take(200)
+            noteEvent?.content?.take(200)
         }
 
     val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
@@ -205,7 +205,7 @@ private fun ChannelRoomCompose(
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, modifier) },
         channelLastTime = note.createdAt(),
         channelLastContent = "$authorName: $description",
-        hasNewMessages = (noteEvent?.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onClick = { nav.nav(route) },

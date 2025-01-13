@@ -28,12 +28,13 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toNEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.crypto.Hex
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
+import com.vitorpamplona.quartz.nip19Bech32Entities.toNAddr
+import com.vitorpamplona.quartz.nip19Bech32Entities.toNEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
 import kotlinx.coroutines.Dispatchers
 
 @Stable

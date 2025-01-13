@@ -35,9 +35,10 @@ import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.events.GitHubIdentity
-import com.vitorpamplona.quartz.events.MastodonIdentity
-import com.vitorpamplona.quartz.events.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException

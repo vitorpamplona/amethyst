@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
-import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job

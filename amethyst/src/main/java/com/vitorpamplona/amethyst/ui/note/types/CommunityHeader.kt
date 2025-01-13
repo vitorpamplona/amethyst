@@ -75,9 +75,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.Participant
+import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.nip01Core.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import java.util.Locale

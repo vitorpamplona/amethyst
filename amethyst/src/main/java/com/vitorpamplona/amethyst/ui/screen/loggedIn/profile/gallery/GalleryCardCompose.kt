@@ -36,9 +36,9 @@ import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 
 @Composable
 fun GalleryCardCompose(

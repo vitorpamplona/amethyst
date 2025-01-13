@@ -24,18 +24,18 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.DraftEvent
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.IsInPublicChatChannel
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
 import kotlinx.collections.immutable.persistentSetOf
 import java.net.URLEncoder
 
@@ -49,7 +49,7 @@ fun routeFor(
 }
 
 fun routeFor(
-    noteEvent: EventInterface,
+    noteEvent: Event,
     loggedIn: User,
 ): String? {
     if (noteEvent is DraftEvent) {
@@ -74,7 +74,7 @@ fun routeFor(
         } else if (innerEvent is AddressableEvent) {
             return "Note/${URLEncoder.encode(noteEvent.address().toTag(), "utf-8")}"
         } else {
-            return "Note/${URLEncoder.encode(noteEvent.id(), "utf-8")}"
+            return "Note/${URLEncoder.encode(noteEvent.id, "utf-8")}"
         }
     } else if (noteEvent is AppDefinitionEvent) {
         return "ContentDiscovery/${noteEvent.id}"
@@ -101,7 +101,7 @@ fun routeFor(
     } else if (noteEvent is AddressableEvent) {
         return "Note/${URLEncoder.encode(noteEvent.address().toTag(), "utf-8")}"
     } else {
-        return "Note/${URLEncoder.encode(noteEvent.id(), "utf-8")}"
+        return "Note/${URLEncoder.encode(noteEvent.id, "utf-8")}"
     }
 
     return null

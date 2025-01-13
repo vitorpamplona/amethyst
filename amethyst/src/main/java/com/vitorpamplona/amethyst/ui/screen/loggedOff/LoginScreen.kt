@@ -105,9 +105,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
-import com.vitorpamplona.quartz.signers.SignerType
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip55AndroidSigner.ExternalSignerLauncher
+import com.vitorpamplona.quartz.nip55AndroidSigner.SignerType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -699,7 +699,7 @@ private fun OpenURIIfNotLoggedIn(onNewNIP19: suspend (String) -> Unit) {
     currentIntentNextPage?.let { intentNextPage ->
         var nip19 by remember {
             mutableStateOf(
-                Nip19Bech32.tryParseAndClean(currentIntentNextPage),
+                Nip19Parser.tryParseAndClean(currentIntentNextPage),
             )
         }
 
@@ -731,7 +731,7 @@ private fun OpenURIIfNotLoggedIn(onNewNIP19: suspend (String) -> Unit) {
             Consumer<Intent> { intent ->
                 val uri = intent.data?.toString()
                 if (!uri.isNullOrBlank()) {
-                    val newNip19 = Nip19Bech32.tryParseAndClean(uri)
+                    val newNip19 = Nip19Parser.tryParseAndClean(uri)
                     if (newNip19 != null) {
                         scope.launch {
                             onNewNIP19(newNip19)

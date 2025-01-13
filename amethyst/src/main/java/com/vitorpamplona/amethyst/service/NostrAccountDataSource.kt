@@ -30,47 +30,46 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.AppSpecificDataEvent
-import com.vitorpamplona.quartz.events.BadgeAwardEvent
-import com.vitorpamplona.quartz.events.BadgeProfilesEvent
-import com.vitorpamplona.quartz.events.BlossomServersEvent
-import com.vitorpamplona.quartz.events.BookmarkListEvent
-import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.events.CalendarRSVPEvent
-import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.DraftEvent
-import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.FileServersEvent
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.GitIssueEvent
-import com.vitorpamplona.quartz.events.GitPatchEvent
-import com.vitorpamplona.quartz.events.GitReplyEvent
-import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.events.ReactionEvent
-import com.vitorpamplona.quartz.events.ReportEvent
-import com.vitorpamplona.quartz.events.RepostEvent
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
-import com.vitorpamplona.quartz.events.StatusEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.GitReplyEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip96FileStorage.FileServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 // TODO: Migrate this to a property of AccountVi
@@ -315,7 +314,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
             is PrivateOutboxRelayListEvent -> {
                 val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
                 val noteEvent = note?.event
-                if (noteEvent == null || event.createdAt > noteEvent.createdAt()) {
+                if (noteEvent == null || event.createdAt > noteEvent.createdAt) {
                     event.privateTags(account.signer) {
                         LocalCache.justConsume(event, relay)
                     }
@@ -329,7 +328,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                     val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
                     val noteEvent = note?.event
                     if (noteEvent != null) {
-                        if (event.createdAt > noteEvent.createdAt() || relay.brief !in note.relays) {
+                        if (event.createdAt > noteEvent.createdAt || relay.brief !in note.relays) {
                             LocalCache.consume(event, relay)
                         }
                     } else {
@@ -431,10 +430,10 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
     }
 
     private fun markInnerAsSeenOnRelay(
-        newNoteEvent: EventInterface,
+        newNoteEvent: Event,
         relay: Relay,
     ) {
-        markInnerAsSeenOnRelay(newNoteEvent.id(), relay)
+        markInnerAsSeenOnRelay(newNoteEvent.id, relay)
     }
 
     private fun markInnerAsSeenOnRelay(

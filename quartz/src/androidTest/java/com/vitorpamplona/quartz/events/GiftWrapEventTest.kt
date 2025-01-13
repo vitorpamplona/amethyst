@@ -21,11 +21,18 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.Hex
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.checkSignature
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull

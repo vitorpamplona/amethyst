@@ -24,10 +24,10 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.events.ChatMessageEvent
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test

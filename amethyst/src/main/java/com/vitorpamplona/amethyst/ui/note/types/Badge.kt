@@ -53,8 +53,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.quartz.events.BadgeAwardEvent
-import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 
 @Composable
 fun BadgeDisplay(baseNote: Note) {

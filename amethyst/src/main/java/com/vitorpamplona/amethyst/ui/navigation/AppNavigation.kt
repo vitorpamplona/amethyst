@@ -80,7 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URI
@@ -417,7 +417,7 @@ private fun NavigateIfIntentRequested(
                     }
                 } else if (intentNextPage.contains("ncryptsec1")) {
                     // login functions
-                    Nip19Bech32.tryParseAndClean(intentNextPage)?.let {
+                    Nip19Parser.tryParseAndClean(intentNextPage)?.let {
                         newAccount = it
                     }
 
@@ -472,7 +472,7 @@ private fun NavigateIfIntentRequested(
                                 }
                             } else if (uri.contains("ncryptsec")) {
                                 // login functions
-                                Nip19Bech32.tryParseAndClean(uri)?.let {
+                                Nip19Parser.tryParseAndClean(uri)?.let {
                                     newAccount = it
                                 }
                             } else {

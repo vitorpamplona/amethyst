@@ -96,8 +96,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||

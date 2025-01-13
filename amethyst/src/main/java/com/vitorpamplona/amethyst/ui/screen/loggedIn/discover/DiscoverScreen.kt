@@ -78,11 +78,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch

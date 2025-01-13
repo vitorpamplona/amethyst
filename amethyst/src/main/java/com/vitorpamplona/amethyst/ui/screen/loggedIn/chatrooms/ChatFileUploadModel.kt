@@ -39,8 +39,8 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.crypto.nip17.AESGCM
-import com.vitorpamplona.quartz.events.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.AESGCM
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

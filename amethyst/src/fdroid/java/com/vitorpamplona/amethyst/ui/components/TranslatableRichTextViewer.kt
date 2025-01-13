@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 @Composable
 fun TranslatableRichTextViewer(

@@ -182,7 +182,7 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList

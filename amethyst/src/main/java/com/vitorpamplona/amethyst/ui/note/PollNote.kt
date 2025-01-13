@@ -93,11 +93,11 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -297,7 +297,7 @@ private fun OptionNote(
     backgroundColor: MutableState<Color>,
     nav: INav,
 ) {
-    val tags = remember(baseNote) { baseNote.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+    val tags = remember(baseNote) { baseNote.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

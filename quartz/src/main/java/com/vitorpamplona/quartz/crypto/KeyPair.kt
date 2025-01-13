@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.crypto
 
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 
 class KeyPair(
     privKey: ByteArray? = null,

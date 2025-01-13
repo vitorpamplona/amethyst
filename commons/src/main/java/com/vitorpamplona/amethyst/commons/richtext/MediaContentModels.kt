@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.encoders.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import java.io.File
 
 @Immutable

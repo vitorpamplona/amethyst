@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable

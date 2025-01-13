@@ -24,10 +24,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.crypto.nip01.Nip01
 import com.vitorpamplona.quartz.crypto.sha256Hash
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.Nip01
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
 import fr.acinq.secp256k1.Secp256k1
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull

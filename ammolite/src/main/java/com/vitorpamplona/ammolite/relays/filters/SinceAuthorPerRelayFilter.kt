@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.ammolite.relays.filters
 
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.Event
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 
 /**
  * This is a nostr filter with per-relay authors list and since parameters
@@ -49,7 +51,7 @@ class SinceAuthorPerRelayFilter(
     ) = FilterMatcher.match(event, ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until)
 
     override fun toDebugJson(): String {
-        val factory = Event.mapper.nodeFactory
+        val factory = JsonNodeFactory.instance
         val obj = FilterSerializer.toJsonObject(ids, null, kinds, tags, null, until, limit, search)
         authors?.run {
             if (isNotEmpty()) {
@@ -70,6 +72,6 @@ class SinceAuthorPerRelayFilter(
                 obj.put("since", jsonObjectSince)
             }
         }
-        return Event.mapper.writeValueAsString(obj)
+        return EventMapper.mapper.writeValueAsString(obj)
     }
 }

@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.CoroutineScope

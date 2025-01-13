@@ -21,11 +21,15 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.Hex
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.LnZapRequestEvent.Companion.createEncryptionPrivateKey
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEncryption.Companion.createEncryptionPrivateKey
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
 import org.junit.Test
@@ -36,7 +40,7 @@ class PrivateZapTests {
     @Test
     fun testPollZap() {
         val poll =
-            Event.fromJson(
+            EventMapper.fromJson(
                 """{
   "content": "New poll \n\n #zappoll",
   "created_at": 1682440713,
@@ -81,7 +85,9 @@ class PrivateZapTests {
 
         val loggedIn =
             NostrSignerInternal(
-                KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
+                KeyPair(
+                    Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598"),
+                ),
             )
 
         var resultPrivateZap: Event? = null

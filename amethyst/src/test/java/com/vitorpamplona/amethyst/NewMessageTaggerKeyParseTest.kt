@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,9 +39,13 @@ class NewMessageTaggerKeyParseTest {
         object : Dao {
             override suspend fun getOrCreateUser(hex: String): User = User(hex)
 
-            override suspend fun getOrCreateNote(hex: String): Note = Note(hex)
+            override suspend fun getOrCreateNote(hex: String) =
+                com.vitorpamplona.amethyst.model
+                    .Note(hex)
 
-            override suspend fun checkGetOrCreateAddressableNote(hex: String): Note? = Note(hex)
+            override suspend fun checkGetOrCreateAddressableNote(hex: String) =
+                com.vitorpamplona.amethyst.model
+                    .Note(hex)
         }
 
     @Test
@@ -49,10 +53,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn")
-        assertTrue(result?.key?.entity is Nip19Bech32.Note)
+        assertTrue(result?.key?.entity is Note)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Nip19Bech32.Note)?.hex,
+            (result?.key?.entity as? Note)?.hex,
         )
         assertEquals(null, result?.restOfWord)
     }
@@ -62,10 +66,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z")
-        assertTrue(result?.key?.entity is Nip19Bech32.NPub)
+        assertTrue(result?.key?.entity is NPub)
         assertEquals(
             "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-            (result?.key?.entity as? Nip19Bech32.NPub)?.hex,
+            (result?.key?.entity as? NPub)?.hex,
         )
         assertEquals(null, result?.restOfWord)
     }
@@ -75,10 +79,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,")
-        assertTrue(result?.key?.entity is Nip19Bech32.Note)
+        assertTrue(result?.key?.entity is Note)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Nip19Bech32.Note)?.hex,
+            (result?.key?.entity as? Note)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -88,10 +92,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z,")
-        assertTrue(result?.key?.entity is Nip19Bech32.NPub)
+        assertTrue(result?.key?.entity is NPub)
         assertEquals(
             "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-            (result?.key?.entity as? Nip19Bech32.NPub)?.hex,
+            (result?.key?.entity as? NPub)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -101,10 +105,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("@note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,")
-        assertTrue(result?.key?.entity is Nip19Bech32.Note)
+        assertTrue(result?.key?.entity is Note)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Nip19Bech32.Note)?.hex,
+            (result?.key?.entity as? Note)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -114,10 +118,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("@npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z,")
-        assertTrue(result?.key?.entity is Nip19Bech32.NPub)
+        assertTrue(result?.key?.entity is NPub)
         assertEquals(
             "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-            (result?.key?.entity as? Nip19Bech32.NPub)?.hex,
+            (result?.key?.entity as? NPub)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -129,10 +133,10 @@ class NewMessageTaggerKeyParseTest {
                 .parseDirtyWordForKey(
                     "nostr:note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,",
                 )
-        assertTrue(result?.key?.entity is Nip19Bech32.Note)
+        assertTrue(result?.key?.entity is Note)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Nip19Bech32.Note)?.hex,
+            (result?.key?.entity as? Note)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -144,10 +148,10 @@ class NewMessageTaggerKeyParseTest {
                 .parseDirtyWordForKey(
                     "nostr:npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z,",
                 )
-        assertTrue(result?.key?.entity is Nip19Bech32.NPub)
+        assertTrue(result?.key?.entity is NPub)
         assertEquals(
             "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-            (result?.key?.entity as? Nip19Bech32.NPub)?.hex,
+            (result?.key?.entity as? NPub)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -159,10 +163,10 @@ class NewMessageTaggerKeyParseTest {
                 .parseDirtyWordForKey(
                     "Nostr:note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,",
                 )
-        assertTrue(result?.key?.entity is Nip19Bech32.Note)
+        assertTrue(result?.key?.entity is Note)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Nip19Bech32.Note)?.hex,
+            (result?.key?.entity as? Note)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -174,10 +178,10 @@ class NewMessageTaggerKeyParseTest {
                 .parseDirtyWordForKey(
                     "nOstr:npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z,",
                 )
-        assertTrue(result?.key?.entity is Nip19Bech32.NPub)
+        assertTrue(result?.key?.entity is NPub)
         assertEquals(
             "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
-            (result?.key?.entity as? Nip19Bech32.NPub)?.hex,
+            (result?.key?.entity as? NPub)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }

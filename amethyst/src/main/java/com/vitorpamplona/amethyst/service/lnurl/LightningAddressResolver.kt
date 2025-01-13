@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
-import com.vitorpamplona.quartz.encoders.Lud06
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.lightning.Lud06
 import okhttp3.Request
 import okhttp3.Response
 import java.math.BigDecimal

@@ -165,11 +165,14 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.quartz.events.Participant
-import com.vitorpamplona.quartz.events.findURLs
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.nip01Core.events.isTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -913,7 +916,7 @@ fun LongChannelHeader(
                 val tags =
                     remember(channelState) {
                         if (baseChannel is LiveActivitiesChannel) {
-                            baseChannel.info?.tags()?.toImmutableListOfLists() ?: EmptyTagList
+                            baseChannel.info?.tags?.toImmutableListOfLists() ?: EmptyTagList
                         } else {
                             EmptyTagList
                         }

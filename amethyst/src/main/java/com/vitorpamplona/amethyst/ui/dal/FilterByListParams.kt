@@ -23,13 +23,15 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.addressables.isTaggedAddressableNotes
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.geohash.isTaggedGeoHashes
+import com.vitorpamplona.quartz.nip01Core.hashtags.isTaggedHashes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class FilterByListParams(
@@ -71,11 +73,6 @@ class FilterByListParams(
 
         return aTag.pubKeyHex in followLists.authors
     }
-
-    fun match(
-        noteEvent: EventInterface?,
-        isGlobalRelay: Boolean = true,
-    ) = if (noteEvent is Event) match(noteEvent, isGlobalRelay) else false
 
     fun match(
         noteEvent: Event,

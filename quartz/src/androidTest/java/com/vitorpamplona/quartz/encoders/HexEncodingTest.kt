@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.encoders
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.crypto.Hex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -74,16 +75,16 @@ class HexEncodingTest {
 
     @Test
     fun testIsHex() {
-        assertFalse("/0", HexValidator.isHex("/0"))
-        assertFalse("/.", HexValidator.isHex("/."))
-        assertFalse("!!", HexValidator.isHex("!!"))
-        assertFalse("::", HexValidator.isHex("::"))
-        assertFalse("@@", HexValidator.isHex("@@"))
-        assertFalse("GG", HexValidator.isHex("GG"))
-        assertFalse("FG", HexValidator.isHex("FG"))
-        assertFalse("`a", HexValidator.isHex("`a"))
-        assertFalse("gg", HexValidator.isHex("gg"))
-        assertFalse("fg", HexValidator.isHex("fg"))
+        assertFalse("/0", Hex.isHex("/0"))
+        assertFalse("/.", Hex.isHex("/."))
+        assertFalse("::", Hex.isHex("::"))
+        assertFalse("!!", Hex.isHex("!!"))
+        assertFalse("@@", Hex.isHex("@@"))
+        assertFalse("GG", Hex.isHex("GG"))
+        assertFalse("FG", Hex.isHex("FG"))
+        assertFalse("`a", Hex.isHex("`a"))
+        assertFalse("gg", Hex.isHex("gg"))
+        assertFalse("fg", Hex.isHex("fg"))
     }
 
     @OptIn(ExperimentalStdlibApi::class)
@@ -92,9 +93,9 @@ class HexEncodingTest {
         for (i in 0..10000) {
             val bytes = CryptoUtils.privkeyCreate()
             val hex = bytes.toHexString(HexFormat.Default)
-            assertTrue(hex, HexValidator.isHex(hex))
+            assertTrue(hex, Hex.isHex(hex))
             val hexUpper = bytes.toHexString(HexFormat.UpperCase)
-            assertTrue(hexUpper, HexValidator.isHex(hexUpper))
+            assertTrue(hexUpper, Hex.isHex(hexUpper))
         }
     }
 

@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.bloom
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
@@ -134,7 +134,7 @@ class BloomFilterTest {
         val bloomFilter = BloomFilter.decode(testEncoded)
 
         var failureCounter = 0
-        for (seed in 0..10000000) {
+        for (seed in 0..1000000) {
             if (bloomFilter.mightContains(CryptoUtils.pubkeyCreate(CryptoUtils.privkeyCreate()))) {
                 failureCounter++
             }

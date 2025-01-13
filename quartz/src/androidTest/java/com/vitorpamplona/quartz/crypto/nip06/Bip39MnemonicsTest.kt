@@ -24,8 +24,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.crypto.Hex
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip06KeyDerivation.Bip39Mnemonics
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.fail

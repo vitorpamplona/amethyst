@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call

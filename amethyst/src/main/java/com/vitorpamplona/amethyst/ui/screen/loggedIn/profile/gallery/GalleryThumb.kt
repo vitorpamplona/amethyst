@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.components.GetMediaItem
 import com.vitorpamplona.amethyst.ui.components.GetVideoController
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.UrlImageView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
@@ -69,9 +68,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.events.VideoEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 @Composable
 fun GalleryThumbnail(

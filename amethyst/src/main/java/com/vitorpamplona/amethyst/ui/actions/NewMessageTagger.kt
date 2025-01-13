@@ -24,11 +24,18 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.Bech32
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.bechToBytes
-import com.vitorpamplona.quartz.encoders.toNpub
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.Bech32
+import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32Entities.toNpub
 import kotlinx.coroutines.CancellationException
 
 class NewMessageTagger(
@@ -63,22 +70,22 @@ class NewMessageTagger(
                 val results = parseDirtyWordForKey(word)
 
                 when (val entity = results?.key?.entity) {
-                    is Nip19Bech32.NPub -> addUserToMentions(dao.getOrCreateUser(entity.hex))
-                    is Nip19Bech32.NProfile -> addUserToMentions(dao.getOrCreateUser(entity.hex))
+                    is NPub -> addUserToMentions(dao.getOrCreateUser(entity.hex))
+                    is NProfile -> addUserToMentions(dao.getOrCreateUser(entity.hex))
 
-                    is Nip19Bech32.Note -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
-                    is Nip19Bech32.NEvent -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
-                    is Nip19Bech32.NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
+                    is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    is NEvent -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    is NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
 
-                    is Nip19Bech32.NAddress -> {
-                        val note = dao.checkGetOrCreateAddressableNote(entity.atag)
+                    is NAddress -> {
+                        val note = dao.checkGetOrCreateAddressableNote(entity.aTag())
                         if (note != null) {
                             addNoteToReplyTos(note)
                         }
                     }
 
-                    is Nip19Bech32.NSec -> {}
-                    is Nip19Bech32.NRelay -> {}
+                    is NSec -> {}
+                    is NRelay -> {}
                 }
             }
         }
@@ -93,22 +100,22 @@ class NewMessageTagger(
                         .map { word: String ->
                             val results = parseDirtyWordForKey(word)
                             when (val entity = results?.key?.entity) {
-                                is Nip19Bech32.NPub -> {
+                                is NPub -> {
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
-                                is Nip19Bech32.NProfile -> {
+                                is NProfile -> {
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
 
-                                is Nip19Bech32.Note -> {
+                                is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }
-                                is Nip19Bech32.NEvent -> {
+                                is NEvent -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }
 
-                                is Nip19Bech32.NAddress -> {
-                                    val note = dao.checkGetOrCreateAddressableNote(entity.atag)
+                                is NAddress -> {
+                                    val note = dao.checkGetOrCreateAddressableNote(entity.aTag())
                                     if (note != null) {
                                         getNostrAddress(note.idNote(), results.restOfWord)
                                     } else {
@@ -116,15 +123,15 @@ class NewMessageTagger(
                                     }
                                 }
 
-                                is Nip19Bech32.NEmbed -> {
+                                is NEmbed -> {
                                     word
                                 }
 
-                                is Nip19Bech32.NSec -> {
+                                is NSec -> {
                                     word
                                 }
 
-                                is Nip19Bech32.NRelay -> {
+                                is NRelay -> {
                                     word
                                 }
 
@@ -151,7 +158,7 @@ class NewMessageTagger(
         }
 
     @Immutable data class DirtyKeyInfo(
-        val key: Nip19Bech32.ParseReturn,
+        val key: Nip19Parser.ParseReturn,
         val restOfWord: String?,
     )
 
@@ -173,7 +180,7 @@ class NewMessageTagger(
                 val restOfWord = key.substring(63)
                 // Converts to npub
                 val pubkey =
-                    Nip19Bech32.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
+                    Nip19Parser.uriToRoute(KeyPair(privKey = keyB32.bechToBytes()).pubKey.toNpub()) ?: return null
 
                 return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
             } else if (key.startsWith("npub1", true)) {
@@ -184,7 +191,7 @@ class NewMessageTagger(
                 val keyB32 = key.substring(0, 63)
                 val restOfWord = key.substring(63)
 
-                val pubkey = Nip19Bech32.uriToRoute(keyB32) ?: return null
+                val pubkey = Nip19Parser.uriToRoute(keyB32) ?: return null
 
                 return DirtyKeyInfo(pubkey, restOfWord.ifEmpty { null })
             } else if (key.startsWith("note1", true)) {
@@ -195,19 +202,19 @@ class NewMessageTagger(
                 val keyB32 = key.substring(0, 63)
                 val restOfWord = key.substring(63)
 
-                val noteId = Nip19Bech32.uriToRoute(keyB32) ?: return null
+                val noteId = Nip19Parser.uriToRoute(keyB32) ?: return null
 
                 return DirtyKeyInfo(noteId, restOfWord.ifEmpty { null })
             } else if (key.startsWith("nprofile", true)) {
-                val pubkeyRelay = Nip19Bech32.uriToRoute(key) ?: return null
+                val pubkeyRelay = Nip19Parser.uriToRoute(key) ?: return null
 
                 return DirtyKeyInfo(pubkeyRelay, pubkeyRelay.additionalChars)
             } else if (key.startsWith("nevent1", true)) {
-                val noteRelayId = Nip19Bech32.uriToRoute(key) ?: return null
+                val noteRelayId = Nip19Parser.uriToRoute(key) ?: return null
 
                 return DirtyKeyInfo(noteRelayId, noteRelayId.additionalChars)
             } else if (key.startsWith("naddr1", true)) {
-                val address = Nip19Bech32.uriToRoute(key) ?: return null
+                val address = Nip19Parser.uriToRoute(key) ?: return null
 
                 return DirtyKeyInfo(
                     address,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.encoders
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith

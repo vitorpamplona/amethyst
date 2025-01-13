@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule

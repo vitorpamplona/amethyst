@@ -23,11 +23,12 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
+import com.vitorpamplona.quartz.nip19Bech32Entities.parseAtagUnckecked
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
 
 open class DiscoverCommunityFeedFilter(
     val account: Account,

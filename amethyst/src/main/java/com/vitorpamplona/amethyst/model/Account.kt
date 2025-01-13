@@ -50,87 +50,94 @@ import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelaySetupInfoToConnect
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.encoders.ETag
-import com.vitorpamplona.quartz.encoders.EventHint
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.IMetaTag
-import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
-import com.vitorpamplona.quartz.encoders.PTag
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.AppSpecificDataEvent
-import com.vitorpamplona.quartz.events.BlossomAuthorizationEvent
-import com.vitorpamplona.quartz.events.BlossomServersEvent
-import com.vitorpamplona.quartz.events.BookmarkListEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.Contact
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.DraftEvent
-import com.vitorpamplona.quartz.events.EmojiPackEvent
-import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.events.EmojiUrl
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.FileHeaderEvent
-import com.vitorpamplona.quartz.events.FileServersEvent
-import com.vitorpamplona.quartz.events.FileStorageEvent
-import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.GeneralListEvent
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.GitReplyEvent
-import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryBaseEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
-import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.NIP17Factory
-import com.vitorpamplona.quartz.events.NIP17Group
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.events.OtsEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.PictureMeta
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.Price
-import com.vitorpamplona.quartz.events.PrivateDmEvent
-import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.events.ReactionEvent
-import com.vitorpamplona.quartz.events.RelayAuthEvent
-import com.vitorpamplona.quartz.events.ReportEvent
-import com.vitorpamplona.quartz.events.RepostEvent
-import com.vitorpamplona.quartz.events.Response
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
-import com.vitorpamplona.quartz.events.StatusEvent
-import com.vitorpamplona.quartz.events.StoryOption
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.TextNoteModificationEvent
-import com.vitorpamplona.quartz.events.TorrentCommentEvent
-import com.vitorpamplona.quartz.events.VideoHorizontalEvent
-import com.vitorpamplona.quartz.events.VideoVerticalEvent
-import com.vitorpamplona.quartz.events.WrappedEvent
-import com.vitorpamplona.quartz.events.ZapSplitSetup
-import com.vitorpamplona.quartz.signers.NostrSigner
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.StoryOption
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.EventHint
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.geohash.geohashes
+import com.vitorpamplona.quartz.nip01Core.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.people.hasAnyTaggedUser
+import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip02FollowList.Contact
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip10Notes.ETag
+import com.vitorpamplona.quartz.nip10Notes.PTag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.NIP17Group
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
+import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
+import com.vitorpamplona.quartz.nip34Git.GitReplyEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip47WalletConnect.Response
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip96FileStorage.FileServersEvent
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.Price
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -501,7 +508,7 @@ class Account(
                     ?.toSet() ?: emptySet(),
             geotags =
                 latestContactList
-                    ?.unverifiedFollowGeohashSet()
+                    ?.geohashes()
                     ?.toSet() ?: emptySet(),
             addresses =
                 latestContactList
@@ -1230,7 +1237,7 @@ class Account(
     }
 
     private fun sendNewAppSpecificData(toInternal: AccountSyncedSettingsInternal) {
-        signer.nip44Encrypt(Event.mapper.writeValueAsString(toInternal), signer.pubKey) { encrypted ->
+        signer.nip44Encrypt(EventMapper.mapper.writeValueAsString(toInternal), signer.pubKey) { encrypted ->
             AppSpecificDataEvent.create(
                 dTag = APP_SPECIFIC_DATA_D_TAG,
                 description = encrypted,
@@ -1650,7 +1657,7 @@ class Account(
         }
 
         note.event?.let {
-            if (it.kind() == 1) {
+            if (it.kind == 1) {
                 RepostEvent.create(it, signer) {
                     Amethyst.instance.client.send(it)
                     LocalCache.justConsume(it, null)
@@ -1709,7 +1716,7 @@ class Account(
     }
 
     fun hasPendingAttestations(note: Note): Boolean {
-        val id = note.event?.id() ?: note.idHex
+        val id = note.event?.id ?: note.idHex
         return settings.pendingAttestations.value[id] != null
     }
 
@@ -1717,7 +1724,7 @@ class Account(
         if (!isWriteable()) return
         if (note.isDraft()) return
 
-        val id = note.event?.id() ?: note.idHex
+        val id = note.event?.id ?: note.idHex
 
         settings.addPendingAttestation(id, OtsEvent.stamp(id))
     }
@@ -2834,7 +2841,7 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        val idHex = originalNote.event?.id() ?: return
+        val idHex = originalNote.event?.id ?: return
 
         TextNoteModificationEvent.create(
             content = message,
@@ -3746,7 +3753,7 @@ class Account(
 
     fun cachedDecryptContent(note: Note): String? = cachedDecryptContent(note.event)
 
-    fun cachedDecryptContent(event: EventInterface?): String? {
+    fun cachedDecryptContent(event: Event?): String? {
         if (event == null) return null
 
         return if (event is PrivateDmEvent && isWriteable()) {
@@ -3754,7 +3761,7 @@ class Account(
         } else if (event is LnZapRequestEvent && event.isPrivateZap() && isWriteable()) {
             event.cachedPrivateZap()?.content
         } else {
-            event.content()
+            event.content
         }
     }
 
@@ -3772,7 +3779,7 @@ class Account(
                 onReady(it.content)
             }
         } else {
-            event?.content()?.let { onReady(it) }
+            event?.content?.let { onReady(it) }
         }
     }
 
@@ -4315,7 +4322,7 @@ class Account(
                 LocalCache.verifyAndConsume(event, null)
                 signer.decrypt(event.content, event.pubKey) { decrypted ->
                     try {
-                        val syncedSettings = Event.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                        val syncedSettings = EventMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
                         settings.syncedSettings.updateFrom(syncedSettings)
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e
@@ -4408,7 +4415,7 @@ class Account(
                     signer.decrypt(it.content, it.pubKey) { decrypted ->
                         val syncedSettings =
                             try {
-                                Event.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                                EventMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
                             } catch (e: Throwable) {
                                 if (e is CancellationException) throw e
                                 Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)

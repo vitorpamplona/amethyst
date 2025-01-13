@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.events
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,7 +96,7 @@ class CitationTests {
 
     @Test
     fun parseEvent() {
-        val event = Event.fromJson(json) as TextNoteEvent
+        val event = EventMapper.fromJson(json) as TextNoteEvent
 
         val expectedCitations =
             setOf(

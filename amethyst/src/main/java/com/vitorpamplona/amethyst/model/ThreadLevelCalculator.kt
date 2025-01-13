@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import java.lang.Long.min
 import java.time.Instant
 import java.time.ZoneId

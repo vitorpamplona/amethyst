@@ -24,7 +24,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,7 +50,9 @@ class PokeyReceiver : BroadcastReceiver() {
 
             scope.launch(Dispatchers.IO) {
                 try {
-                    EventNotificationConsumer(context.applicationContext).findAccountAndConsume(Event.fromJson(eventStr))
+                    EventNotificationConsumer(context.applicationContext).findAccountAndConsume(
+                        Event.fromJson(eventStr),
+                    )
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse Pokey Event", e)
                 }

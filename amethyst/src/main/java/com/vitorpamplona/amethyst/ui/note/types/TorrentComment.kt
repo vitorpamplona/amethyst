@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.events.TorrentCommentEvent
-import com.vitorpamplona.quartz.events.TorrentEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext

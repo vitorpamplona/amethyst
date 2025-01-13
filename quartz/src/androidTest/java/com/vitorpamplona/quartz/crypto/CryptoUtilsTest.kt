@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.crypto
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

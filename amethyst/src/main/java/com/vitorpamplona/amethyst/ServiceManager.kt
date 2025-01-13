@@ -57,11 +57,11 @@ import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.quartz.encoders.bechToBytes
-import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.OtsEvent
-import com.vitorpamplona.quartz.ots.OpenTimestamps
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
+import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32Entities.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,7 +116,11 @@ class ServiceManager(
                     OkHttpCalendarBuilder(myAccount::shouldUseTorForMoneyOperations),
                 )
         } else {
-            OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer { false }, OkHttpCalendarBuilder { false })
+            OtsEvent.otsInstance =
+                OpenTimestamps(
+                    OkHttpBlockstreamExplorer { false },
+                    OkHttpCalendarBuilder { false },
+                )
 
             HttpClientManager.setDefaultProxy(null)
         }

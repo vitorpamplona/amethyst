@@ -35,8 +35,8 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody

@@ -24,10 +24,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.OtsEvent
-import com.vitorpamplona.quartz.ots.OpenTimestamps
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import junit.framework.TestCase.assertEquals
 import org.junit.Assert
 import org.junit.Before
@@ -51,21 +51,21 @@ class OkHttpOtsTest {
 
     @Test
     fun verifyNostrEvent() {
-        val ots = Event.fromJson(otsEvent) as OtsEvent
+        val ots = EventMapper.fromJson(otsEvent) as OtsEvent
         println(ots.info())
         assertEquals(1707688818L, ots.verify())
     }
 
     @Test
     fun verifyNostrEvent2() {
-        val ots = Event.fromJson(otsEvent2) as OtsEvent
+        val ots = EventMapper.fromJson(otsEvent2) as OtsEvent
         println(ots.info())
         assertEquals(1706322179L, ots.verify())
     }
 
     @Test
     fun verifyNostrPendingEvent() {
-        val ots = Event.fromJson(otsPendingEvent) as OtsEvent
+        val ots = EventMapper.fromJson(otsPendingEvent) as OtsEvent
         println(ots.info())
         assertEquals(null, ots.verify())
     }

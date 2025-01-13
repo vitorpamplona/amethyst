@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
 
 @Composable

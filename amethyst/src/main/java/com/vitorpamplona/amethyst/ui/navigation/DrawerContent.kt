@@ -112,9 +112,9 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.ammolite.relays.RelayPoolStatus
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 @Composable
 fun DrawerContent(

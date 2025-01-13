@@ -79,7 +79,6 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Chatroom
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -119,9 +118,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.NIP17Group
-import com.vitorpamplona.quartz.events.findURLs
+import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.NIP17Group
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList

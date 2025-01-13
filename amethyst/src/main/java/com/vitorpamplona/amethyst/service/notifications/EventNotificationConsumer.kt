@@ -34,18 +34,21 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendDM
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendZapNotification
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.encoders.toNpub
-import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
-import com.vitorpamplona.quartz.events.DraftEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.PrivateDmEvent
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.signers.NostrSigner
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.people.taggedUsers
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.toNpub
+import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
@@ -223,7 +226,7 @@ class EventNotificationConsumer(
                 )
 
             if (isKnownRoom) {
-                val content = chatNote.event?.content() ?: ""
+                val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
                 val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
@@ -268,7 +271,7 @@ class EventNotificationConsumer(
                 )
 
             if (isKnownRoom) {
-                val content = chatNote.event?.content() ?: ""
+                val content = chatNote.event?.content ?: ""
                 val user = chatNote.author?.toBestDisplayName() ?: ""
                 val userPicture = chatNote.author?.profilePicture()
                 val noteUri = chatNote.toNEvent() + "?account=" + acc.keyPair.pubKey.toNpub()
@@ -350,7 +353,7 @@ class EventNotificationConsumer(
                 onReady(it.content)
             }
         } else {
-            event?.content()?.let { onReady(it) }
+            event?.content?.let { onReady(it) }
         }
     }
 
@@ -391,7 +394,7 @@ class EventNotificationConsumer(
                     val author = LocalCache.getOrCreateUser(it.pubKey)
                     val senderInfo = Pair(author, it.content.ifBlank { null })
 
-                    if (noteZapped.event?.content() != null) {
+                    if (noteZapped.event?.content != null) {
                         decryptContent(noteZapped, signer) {
                             Log.d(TAG, "Notify Decrypted if Private Note")
 

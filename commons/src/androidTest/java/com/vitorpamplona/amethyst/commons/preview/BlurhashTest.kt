@@ -95,8 +95,8 @@ class BlurhashTest {
 
     @Test
     fun testLorikeet() {
-        println("${load("/lorikeet.jpg").toBlurhash()}")
-        assertEquals("rFDcT@_LNs#p%Mt*nNM}E2VrIVX6VuV@WUo{xtjv9]RRw[OXS}rrWFX9w{OZxaxWNHX4n\$M}NGaK%0RkM}w{xto|jFs,Sh-Tj]bcwJnjXSxZs.NI", load("/lorikeet.jpg").toBlurhash())
+        val blurhash = load("/lorikeet.jpg").toBlurhash()
+        assertEquals("rFDcT@_LNs#p%Mt*nNM}E2VrIVX6VuV@WUo{xtjv9]RRw[OXS}rrWFX9w{OZxaxWNHX4n\$M}NGaK%0RkM}w{xto|jFs,Sh-Tj]bcwJnjXSxZs.NI", blurhash)
     }
 
     private fun load(filename: String): Bitmap =

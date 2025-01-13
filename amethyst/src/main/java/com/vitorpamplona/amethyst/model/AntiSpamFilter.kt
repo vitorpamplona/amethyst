@@ -26,9 +26,10 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayStats
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 
 data class Spammer(
@@ -60,7 +61,7 @@ class AntiSpamFilter {
         // really long, make it ok.
         // The idea here is to avoid considering repeated "@Bot, command" messages spam, while still
         // blocking repeated "lnbc..." invoices or fishing urls
-        if (event.content.length < 180 && Nip19Bech32.nip19regex.matcher(event.content).find()) return false
+        if (event.content.length < 180 && Nip19Parser.nip19regex.matcher(event.content).find()) return false
 
         // double list strategy:
         // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
@@ -80,7 +81,7 @@ class AntiSpamFilter {
             logOffender(hash, event)
 
             if (relay != null) {
-                RelayStats.newSpam(relay.url, njumpLink(Nip19Bech32.createNEvent(event.id, event.pubKey, event.kind, relay.url)))
+                RelayStats.newSpam(relay.url, njumpLink(NEvent.create(event.id, event.pubKey, event.kind, relay.url)))
             }
 
             flowSpam.tryEmit(AntiSpamState(this))

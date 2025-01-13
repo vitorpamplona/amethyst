@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.LruCache
-import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.NostrCipher
 
 /**
  * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via

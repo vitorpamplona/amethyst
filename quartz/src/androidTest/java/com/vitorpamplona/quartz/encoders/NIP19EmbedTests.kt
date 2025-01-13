@@ -21,11 +21,17 @@
 package com.vitorpamplona.quartz.encoders
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.crypto.Hex
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.FhirResourceEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32Entities.decodePrivateKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
@@ -57,11 +63,11 @@ class NIP19EmbedTests {
 
         assertNotNull(textNote)
 
-        val bech32 = Nip19Bech32.createNEmbed(textNote!!)
+        val bech32 = NEmbed.create(textNote!!)
 
         println(bech32)
 
-        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
+        val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.hasValidSignature())
 
@@ -88,12 +94,12 @@ class NIP19EmbedTests {
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = Nip19Bech32.createNEmbed(eyeglassesPrescriptionEvent!!)
+        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent!!)
 
         println(eyeglassesPrescriptionEvent!!.toJson())
         println(bech32)
 
-        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
+        val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.hasValidSignature())
 
@@ -120,12 +126,12 @@ class NIP19EmbedTests {
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = Nip19Bech32.createNEmbed(eyeglassesPrescriptionEvent!!)
+        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent!!)
 
         println(eyeglassesPrescriptionEvent!!.toJson())
         println(bech32)
 
-        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
+        val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.hasValidSignature())
 
@@ -152,12 +158,12 @@ class NIP19EmbedTests {
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = Nip19Bech32.createNEmbed(eyeglassesPrescriptionEvent!!)
+        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent!!)
 
         println(eyeglassesPrescriptionEvent!!.toJson())
         println(bech32)
 
-        val decodedNote = (Nip19Bech32.uriToRoute(bech32)?.entity as Nip19Bech32.NEmbed).event
+        val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.hasValidSignature())
 

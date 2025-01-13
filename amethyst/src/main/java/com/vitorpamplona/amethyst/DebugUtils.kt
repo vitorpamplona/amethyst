@@ -157,15 +157,15 @@ fun debugState(context: Context) {
             " MB",
     )
 
-    val qttNotes = LocalCache.notes.countByGroup { _, it -> it.event?.kind() }
-    val qttAddressables = LocalCache.addressables.countByGroup { _, it -> it.event?.kind() }
+    val qttNotes = LocalCache.notes.countByGroup { _, it -> it.event?.kind }
+    val qttAddressables = LocalCache.addressables.countByGroup { _, it -> it.event?.kind }
 
     val bytesNotes =
         LocalCache.notes
-            .sumByGroup(groupMap = { _, it -> it.event?.kind() }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
+            .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
     val bytesAddressables =
         LocalCache.addressables
-            .sumByGroup(groupMap = { _, it -> it.event?.kind() }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
+            .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
 
     qttNotes.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
         Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes.get(kind)?.div((1024 * 1024))}MB ")

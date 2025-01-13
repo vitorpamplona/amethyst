@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.data
 
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 
 class DeletionIndex {
     data class DeletionRequest(

@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.events.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppRecommendationEvent
 
 class UserProfileAppRecommendationsFeedFilter(
     val user: User,

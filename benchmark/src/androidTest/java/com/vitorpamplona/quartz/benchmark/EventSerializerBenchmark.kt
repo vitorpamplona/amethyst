@@ -24,8 +24,8 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.encoders.Nip01Serializer
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.experimental.Nip01Serializer
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -24,12 +24,12 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.TorrentCommentEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
 
 class UserProfileConversationsFeedFilter(
     val user: User,

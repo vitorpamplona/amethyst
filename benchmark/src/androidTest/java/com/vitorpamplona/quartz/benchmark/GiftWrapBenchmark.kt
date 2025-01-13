@@ -25,11 +25,12 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.NIP17Factory
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.checkSignature
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import junit.framework.TestCase
 import org.junit.Assert
 import org.junit.Assert.assertTrue

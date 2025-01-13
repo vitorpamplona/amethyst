@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 
 @Composable
 fun RenderWikiContent(

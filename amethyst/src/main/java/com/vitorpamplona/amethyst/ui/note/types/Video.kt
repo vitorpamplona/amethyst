@@ -58,9 +58,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.VideoEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 @Composable
 fun VideoDisplay(
@@ -79,7 +80,7 @@ fun VideoDisplay(
     val summary = event.content.ifBlank { null }?.takeIf { title != it }
     val image = imeta.image.firstOrNull()
     val isYouTube = imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be")
-    val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+    val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     val content by
         remember(note) {

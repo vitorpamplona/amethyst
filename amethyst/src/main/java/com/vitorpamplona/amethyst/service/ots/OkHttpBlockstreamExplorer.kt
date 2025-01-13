@@ -25,9 +25,9 @@ import android.util.LruCache
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.ots.BitcoinExplorer
-import com.vitorpamplona.quartz.ots.BlockHeader
-import com.vitorpamplona.quartz.ots.exceptions.UrlException
+import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
+import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
+import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
 import okhttp3.Request
 
 class OkHttpBlockstreamExplorer(
@@ -65,7 +65,8 @@ class OkHttpBlockstreamExplorer(
             if (it.isSuccessful) {
                 val jsonObject = jacksonObjectMapper().readTree(it.body.string())
 
-                val blockHeader = BlockHeader()
+                val blockHeader =
+                    BlockHeader()
                 blockHeader.merkleroot = jsonObject["merkle_root"].asText()
                 blockHeader.setTime(jsonObject["timestamp"].asInt().toString())
                 blockHeader.blockHash = hash
@@ -75,7 +76,9 @@ class OkHttpBlockstreamExplorer(
 
                 return blockHeader
             } else {
-                throw UrlException("Couldn't open $url: " + it.message + " " + it.code)
+                throw UrlException(
+                    "Couldn't open $url: " + it.message + " " + it.code,
+                )
             }
         }
     }
@@ -114,7 +117,9 @@ class OkHttpBlockstreamExplorer(
                 cacheHeights.put(height, blockHash)
                 return blockHash
             } else {
-                throw UrlException("Couldn't open $url: " + it.message + " " + it.code)
+                throw UrlException(
+                    "Couldn't open $url: " + it.message + " " + it.code,
+                )
             }
         }
     }

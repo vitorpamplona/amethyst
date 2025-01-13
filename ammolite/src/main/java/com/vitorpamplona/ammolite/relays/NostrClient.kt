@@ -23,8 +23,7 @@ package com.vitorpamplona.ammolite.relays
 import android.util.Log
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -144,7 +143,7 @@ class NostrClient(
 
     @OptIn(DelicateCoroutinesApi::class)
     suspend fun sendAndWaitForResponse(
-        signedEvent: EventInterface,
+        signedEvent: Event,
         relay: String? = null,
         forceProxy: Boolean = false,
         feedTypes: Set<FeedType>? = null,
@@ -196,7 +195,7 @@ class NostrClient(
                     message: String,
                     relay: Relay,
                 ) {
-                    if (eventId == signedEvent.id()) {
+                    if (eventId == signedEvent.id) {
                         if (success) {
                             result = true
                         }
@@ -243,7 +242,7 @@ class NostrClient(
     }
 
     fun sendIfExists(
-        signedEvent: EventInterface,
+        signedEvent: Event,
         connectedRelay: Relay,
     ) {
         checkNotInMainThread()
@@ -254,7 +253,7 @@ class NostrClient(
     }
 
     fun sendSingle(
-        signedEvent: EventInterface,
+        signedEvent: Event,
         relayTemplate: RelaySetupInfoToConnect,
         onDone: (() -> Unit),
     ) {
@@ -265,13 +264,13 @@ class NostrClient(
         }
     }
 
-    fun send(signedEvent: EventInterface) {
+    fun send(signedEvent: Event) {
         checkNotInMainThread()
         relayPool.send(signedEvent)
     }
 
     fun send(
-        signedEvent: EventInterface,
+        signedEvent: Event,
         relayList: List<RelaySetupInfo>,
     ) {
         checkNotInMainThread()
@@ -280,7 +279,7 @@ class NostrClient(
     }
 
     fun sendPrivately(
-        signedEvent: EventInterface,
+        signedEvent: Event,
         relayList: List<RelaySetupInfoToConnect>,
     ) {
         checkNotInMainThread()
@@ -375,7 +374,7 @@ class NostrClient(
     @OptIn(DelicateCoroutinesApi::class)
     override fun onBeforeSend(
         relay: Relay,
-        event: EventInterface,
+        event: Event,
     ) {
         GlobalScope.launch(Dispatchers.Default) {
             listeners.forEach { it.onBeforeSend(relay, event) }
@@ -453,7 +452,7 @@ class NostrClient(
 
         open fun onBeforeSend(
             relay: Relay,
-            event: EventInterface,
+            event: Event,
         ) = Unit
 
         open fun onError(

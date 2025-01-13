@@ -31,7 +31,7 @@ import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.events.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope

@@ -32,9 +32,10 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 
 @Composable
 fun RenderNIP90ContentDiscoveryResponse(
@@ -55,7 +56,7 @@ fun RenderNIP90ContentDiscoveryResponse(
     ) {
         val modifier = remember(note) { Modifier.fillMaxWidth() }
         val tags =
-            remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+            remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
         TranslatableRichTextViewer(
             content = noteEvent.content,

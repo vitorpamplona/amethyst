@@ -24,12 +24,12 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_PLANNED
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_ENDED
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_PLANNED
 
 open class DiscoverLiveFeedFilter(
     val account: Account,
@@ -62,7 +62,10 @@ open class DiscoverLiveFeedFilter(
                 hiddenUsers = account.flowHiddenUsers.value,
             )
 
-        return collection.filterTo(HashSet()) { it.event is LiveActivitiesEvent && filterParams.match(it.event) }
+        return collection.filterTo(HashSet()) {
+            val noteEvent = it.event
+            noteEvent is LiveActivitiesEvent && filterParams.match(noteEvent)
+        }
     }
 
     override fun sort(collection: Set<Note>): List<Note> {

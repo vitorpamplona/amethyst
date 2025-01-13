@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.lnurl
 
 import android.util.LruCache
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import kotlinx.coroutines.CancellationException
 import java.text.NumberFormat
 

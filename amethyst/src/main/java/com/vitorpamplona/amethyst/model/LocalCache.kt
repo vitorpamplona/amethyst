@@ -31,106 +31,120 @@ import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.decodeEventIdAsHexOrNull
-import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.AppRecommendationEvent
-import com.vitorpamplona.quartz.events.AppSpecificDataEvent
-import com.vitorpamplona.quartz.events.AudioHeaderEvent
-import com.vitorpamplona.quartz.events.AudioTrackEvent
-import com.vitorpamplona.quartz.events.BadgeAwardEvent
-import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.events.BadgeProfilesEvent
-import com.vitorpamplona.quartz.events.BaseAddressableEvent
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.BlossomServersEvent
-import com.vitorpamplona.quartz.events.BookmarkListEvent
-import com.vitorpamplona.quartz.events.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.events.CalendarEvent
-import com.vitorpamplona.quartz.events.CalendarRSVPEvent
-import com.vitorpamplona.quartz.events.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelHideMessageEvent
-import com.vitorpamplona.quartz.events.ChannelListEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChannelMuteUserEvent
-import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.events.ChatMessageEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.CommunityListEvent
-import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.DeletionEvent
-import com.vitorpamplona.quartz.events.DraftEvent
-import com.vitorpamplona.quartz.events.EmojiPackEvent
-import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.FhirResourceEvent
-import com.vitorpamplona.quartz.events.FileHeaderEvent
-import com.vitorpamplona.quartz.events.FileServersEvent
-import com.vitorpamplona.quartz.events.FileStorageEvent
-import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.GitIssueEvent
-import com.vitorpamplona.quartz.events.GitPatchEvent
-import com.vitorpamplona.quartz.events.GitReplyEvent
-import com.vitorpamplona.quartz.events.GitRepositoryEvent
-import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryReadingStateEvent
-import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.events.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.events.NIP90StatusEvent
-import com.vitorpamplona.quartz.events.NIP90UserDiscoveryRequestEvent
-import com.vitorpamplona.quartz.events.NIP90UserDiscoveryResponseEvent
-import com.vitorpamplona.quartz.events.NNSEvent
-import com.vitorpamplona.quartz.events.OtsEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.PinListEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.PrivateDmEvent
-import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.events.ReactionEvent
-import com.vitorpamplona.quartz.events.RecommendRelayEvent
-import com.vitorpamplona.quartz.events.RelationshipStatusEvent
-import com.vitorpamplona.quartz.events.RelaySetEvent
-import com.vitorpamplona.quartz.events.ReportEvent
-import com.vitorpamplona.quartz.events.RepostEvent
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
-import com.vitorpamplona.quartz.events.StatusEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.TextNoteModificationEvent
-import com.vitorpamplona.quartz.events.TorrentCommentEvent
-import com.vitorpamplona.quartz.events.TorrentEvent
-import com.vitorpamplona.quartz.events.VerificationState
-import com.vitorpamplona.quartz.events.VideoHorizontalEvent
-import com.vitorpamplona.quartz.events.VideoVerticalEvent
-import com.vitorpamplona.quartz.events.WikiNoteEvent
-import com.vitorpamplona.quartz.events.WrappedEvent
+import com.vitorpamplona.quartz.blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.crypto.Hex
+import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.mapTaggedAddress
+import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.checkSignature
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.matchTag1With
+import com.vitorpamplona.quartz.nip01Core.events.forEachTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.events.isTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.events.mapTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.people.isTaggedUsers
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
+import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32Entities.decodeEventIdAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32Entities.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32Entities.isATag
+import com.vitorpamplona.quartz.nip19Bech32Entities.parse
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelHideMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
+import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
+import com.vitorpamplona.quartz.nip52Calendar.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip96FileStorage.FileServersEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
@@ -289,7 +303,7 @@ object LocalCache {
                 // upgrade to the latest
                 val newNote = checkGetOrCreateAddressableNote(noteEvent.address().toTag())
 
-                if (newNote != null && noteEvent is Event && newNote.event == null) {
+                if (newNote != null && newNote.event == null) {
                     val author = note.author ?: getOrCreateUser(noteEvent.pubKey)
                     newNote.loadEvent(noteEvent as Event, author, emptyList())
                     note.moveAllReferencesTo(newNote)
@@ -352,7 +366,7 @@ object LocalCache {
         if (key.isBlank()) return false
         if (key.contains(":")) return false
 
-        return HexValidator.isHex(key)
+        return Hex.isHex(key)
     }
 
     fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
@@ -567,7 +581,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event?.id() == event.id()) return
+        if (note.event?.id == event.id) return
 
         if (antiSpam.isSpam(event, relay)) {
             return
@@ -601,7 +615,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event?.id() == event.id()) return
+        if (note.event?.id == event.id) return
 
         if (antiSpam.isSpam(event, relay)) {
             return
@@ -691,7 +705,7 @@ object LocalCache {
             version.moveAllReferencesTo(note)
         }
 
-        if (note.event?.id() == event.id()) return
+        if (note.event?.id == event.id) return
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
@@ -862,7 +876,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event?.id() == event.id()) return
+        if (note.event?.id == event.id) return
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
@@ -888,7 +902,7 @@ object LocalCache {
         val author = getOrCreateUser(event.pubKey)
 
         // Already processed this event.
-        if (version.event?.id() == event.id()) return
+        if (version.event?.id == event.id) return
 
         // makes sure the OTS has a valid certificate
         if (event.cacheVerify() is VerificationState.Error) return // no valid OTS
@@ -919,7 +933,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event?.id() == event.id()) return
+        if (note.event?.id == event.id) return
 
         val replyTo = computeReplyTo(event)
 
@@ -998,7 +1012,7 @@ object LocalCache {
         }
 
         // Already processed this event.
-        if (note.event?.id() == event.id()) return
+        if (note.event?.id == event.id) return
 
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, replyTos)
@@ -1019,11 +1033,6 @@ object LocalCache {
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
-    }
-
-    @Suppress("UNUSED_PARAMETER")
-    fun consume(event: RecommendRelayEvent) {
-        //        // Log.d("RR", event.toJson())
     }
 
     fun consume(
@@ -1109,7 +1118,7 @@ object LocalCache {
             notes.forEach { key, note ->
                 val noteEvent = note.event
                 if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
-                    if (noteEvent.pubKey() == event.pubKey && noteEvent.createdAt() <= event.createdAt) {
+                    if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
                         deleteNote(note)
                         deletedAtLeastOne = true
                     }
@@ -1129,7 +1138,7 @@ object LocalCache {
 
         val mentions =
             deleteNote.event
-                ?.tags()
+                ?.tags
                 ?.filter { it.firstOrNull() == "p" }
                 ?.mapNotNull { it.getOrNull(1) }
                 ?.mapNotNull { checkGetOrCreateUser(it) }
@@ -1404,7 +1413,7 @@ object LocalCache {
 
         note.loadEvent(event, author, replyTo)
 
-        // Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content()}
+        // Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content}
         // ${formattedDateTime(event.createdAt)}")
 
         // Counts the replies
@@ -1777,9 +1786,7 @@ object LocalCache {
 
         requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-        if (responseCallback != null) {
-            responseCallback(event)
-        }
+        responseCallback(event)
     }
 
     fun findUsersStartingWith(
@@ -1843,7 +1850,7 @@ object LocalCache {
                 return@filter false
             }
 
-            if (note.event?.matchTag1With(text) == true ||
+            if (note.event?.tags?.matchTag1With(text) == true ||
                 note.idHex.startsWith(text, true)
             ) {
                 if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
@@ -1855,7 +1862,7 @@ object LocalCache {
 
             if (note.event?.isContentEncoded() == false) {
                 if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
-                    return@filter note.event?.content()?.contains(text, true) ?: false
+                    return@filter note.event?.content?.contains(text, true) ?: false
                 } else {
                     return@filter false
                 }
@@ -1874,7 +1881,7 @@ object LocalCache {
                     return@filter false
                 }
 
-                if (addressable.event?.matchTag1With(text) == true ||
+                if (addressable.event?.tags?.matchTag1With(text) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
                     if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {
@@ -1886,7 +1893,7 @@ object LocalCache {
 
                 if (addressable.event?.isContentEncoded() == false) {
                     if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {
-                        return@filter addressable.event?.content()?.contains(text, true) ?: false
+                        return@filter addressable.event?.content?.contains(text, true) ?: false
                     } else {
                         return@filter false
                     }
@@ -1923,7 +1930,7 @@ object LocalCache {
                         !noteEvent.isExpired() &&
                         noteEvent.content.isNotBlank()
                 )
-            }.sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt() }, { it.idHex }))
+            }.sortedWith(compareBy({ it.event?.expiration() ?: it.event?.createdAt }, { it.idHex }))
             .reversed()
             .toImmutableList()
     }
@@ -2073,8 +2080,8 @@ object LocalCache {
             notes.filter { _, note ->
                 val noteEvent = note.event
                 if (noteEvent is AddressableEvent) {
-                    noteEvent.createdAt() <
-                        (addressables.get(noteEvent.address().toTag())?.event?.createdAt() ?: 0)
+                    noteEvent.createdAt <
+                        (addressables.get(noteEvent.address().toTag())?.event?.createdAt ?: 0)
                 } else {
                     false
                 }
@@ -2215,7 +2222,7 @@ object LocalCache {
             account.liveHiddenUsers.value
                 ?.hiddenUsers
                 ?.map { userHex ->
-                    (notes.filter { _, it -> it.event?.pubKey() == userHex } + addressables.filter { _, it -> it.event?.pubKey() == userHex }).toSet()
+                    (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
                 }?.flatten()
                 ?: emptyList()
 
@@ -2451,7 +2458,7 @@ object LocalCache {
             // updates relay with a new event.
             getAddressableNoteIfExists(event.addressTag())?.let {
                 it.event?.let { existingEvent ->
-                    if (existingEvent.createdAt() > event.createdAt) {
+                    if (existingEvent.createdAt > event.createdAt) {
                         Log.d("LocalCache", "Updating ${relay.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
                         relay.send(existingEvent)
                     }
@@ -2548,7 +2555,6 @@ object LocalCache {
                 is PeopleListEvent -> consume(event, relay)
                 is PollNoteEvent -> consume(event, relay)
                 is ReactionEvent -> consume(event)
-                is RecommendRelayEvent -> consume(event)
                 is RelationshipStatusEvent -> consume(event, relay)
                 is RelaySetEvent -> consume(event, relay)
                 is ReportEvent -> consume(event, relay)
@@ -2580,7 +2586,7 @@ object LocalCache {
         if (notificationEvent is AddressableEvent) {
             val note = addressables.get(notificationEvent.addressTag())
             val noteEvent = note?.event
-            noteEvent != null && notificationEvent.createdAt <= noteEvent.createdAt()
+            noteEvent != null && notificationEvent.createdAt <= noteEvent.createdAt
         } else {
             val note = notes.get(notificationEvent.id)
             note?.event != null

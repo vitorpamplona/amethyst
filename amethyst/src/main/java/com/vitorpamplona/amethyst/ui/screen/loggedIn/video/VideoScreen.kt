@@ -103,10 +103,10 @@ import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.FileHeaderEvent
-import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.VideoEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
 @Composable
 fun VideoScreen(

@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 object ShowFullTextCache {
     val cache = LruCache<String, Boolean>(10)

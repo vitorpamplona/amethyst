@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
-import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import java.util.Locale
 
 val DefaultReactions =

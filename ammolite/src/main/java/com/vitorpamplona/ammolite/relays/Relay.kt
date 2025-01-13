@@ -26,10 +26,10 @@ import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.sockets.WebSocket
 import com.vitorpamplona.ammolite.sockets.WebSocketListener
 import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.RelayAuthEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import kotlinx.coroutines.CancellationException
@@ -80,7 +80,7 @@ class Relay(
 
     private val authResponse = mutableMapOf<HexKey, Boolean>()
     private val authChallengesSent = mutableSetOf<String>()
-    private val outboxCache = mutableMapOf<HexKey, EventInterface>()
+    private val outboxCache = mutableMapOf<HexKey, Event>()
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -257,12 +257,12 @@ class Relay(
     }
 
     fun processNewRelayMessage(newMessage: String) {
-        val msgArray = Event.mapper.readTree(newMessage)
+        val msgArray = EventMapper.mapper.readTree(newMessage)
 
         when (val type = msgArray.get(0).asText()) {
             "EVENT" -> {
                 val subscriptionId = msgArray.get(1).asText()
-                val event = Event.fromJson(msgArray.get(2))
+                val event = EventMapper.fromJson(msgArray.get(2))
 
                 // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
 
@@ -452,7 +452,7 @@ class Relay(
     }
 
     // This function sends the event regardless of the relay being write or not.
-    fun sendOverride(signedEvent: EventInterface) {
+    fun sendOverride(signedEvent: Event) {
         checkNotInMainThread()
 
         listeners.forEach { listener ->
@@ -466,7 +466,7 @@ class Relay(
         }
     }
 
-    fun send(signedEvent: EventInterface) {
+    fun send(signedEvent: Event) {
         checkNotInMainThread()
 
         listeners.forEach { listener ->
@@ -498,9 +498,9 @@ class Relay(
         }
     }
 
-    private fun sendEvent(signedEvent: EventInterface) {
+    private fun sendEvent(signedEvent: Event) {
         synchronized(outboxCache) {
-            outboxCache.put(signedEvent.id(), signedEvent)
+            outboxCache.put(signedEvent.id, signedEvent)
         }
 
         if (isConnected()) {
@@ -618,7 +618,7 @@ class Relay(
 
         fun onBeforeSend(
             relay: Relay,
-            event: EventInterface,
+            event: Event,
         )
     }
 }

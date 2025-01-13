@@ -23,8 +23,9 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventFactory
+import com.vitorpamplona.quartz.nip01Core.EventFactory
+import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -43,20 +44,20 @@ class EventBenchmark {
 
     @Test
     fun parseREQString() {
-        benchmarkRule.measureRepeated { Event.mapper.readTree(reqResponseEvent) }
+        benchmarkRule.measureRepeated { EventMapper.mapper.readTree(reqResponseEvent) }
     }
 
     @Test
     fun parseEvent() {
-        val msg = Event.mapper.readTree(reqResponseEvent)
+        val msg = EventMapper.mapper.readTree(reqResponseEvent)
 
-        benchmarkRule.measureRepeated { Event.fromJson(msg[2]) }
+        benchmarkRule.measureRepeated { EventMapper.fromJson(msg[2]) }
     }
 
     @Test
     fun checkSignature() {
-        val msg = Event.mapper.readTree(reqResponseEvent)
-        val event = Event.fromJson(msg[2])
+        val msg = EventMapper.mapper.readTree(reqResponseEvent)
+        val event = EventMapper.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
             assertTrue(event.hasValidSignature())

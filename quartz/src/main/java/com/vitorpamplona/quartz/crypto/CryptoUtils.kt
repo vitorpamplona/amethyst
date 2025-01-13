@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.crypto
 
-import com.vitorpamplona.quartz.crypto.nip01.Nip01
-import com.vitorpamplona.quartz.crypto.nip04.Nip04
-import com.vitorpamplona.quartz.crypto.nip06.Nip06
-import com.vitorpamplona.quartz.crypto.nip44.Nip44
-import com.vitorpamplona.quartz.crypto.nip44.Nip44v2
-import com.vitorpamplona.quartz.crypto.nip49.Nip49
-import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.Nip01
+import com.vitorpamplona.quartz.nip04Dm.Nip04
+import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
+import com.vitorpamplona.quartz.nip44Encryption.Nip44
+import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
+import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 
@@ -34,11 +34,11 @@ object CryptoUtils {
     private val secp256k1 = Secp256k1.get()
     private val random = SecureRandom()
 
-    public val nip01 = Nip01(secp256k1, random)
-    public val nip06 = Nip06(secp256k1)
-    public val nip04 = Nip04(secp256k1, random)
-    public val nip44 = Nip44(secp256k1, random, nip04)
-    public val nip49 = Nip49(secp256k1, random)
+    val nip01 = Nip01(secp256k1, random)
+    val nip06 = Nip06(secp256k1)
+    val nip04 = Nip04(secp256k1, random)
+    val nip44 = Nip44(secp256k1, random, nip04)
+    val nip49 = Nip49(secp256k1, random)
 
     fun clearCache() {
         nip04.clearCache()

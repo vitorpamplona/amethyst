@@ -55,7 +55,8 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
-import com.vitorpamplona.quartz.events.DraftEvent
+import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 
 @Composable
 fun RefreshingChatroomFeedView(
@@ -178,8 +179,8 @@ fun NewDateSubject(
     val never = stringRes(R.string.never)
     val today = stringRes(R.string.today)
 
-    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt(), never, today) }
-    val date = remember(note) { dateFormatter(note.event?.createdAt(), never, today) }
+    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
+    val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }
 
     val subject = remember(note) { note.event?.subject() }
 

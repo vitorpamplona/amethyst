@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Card
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 val DefaultFeedOrder: Comparator<Note> =
     compareByDescending<Note>

@@ -23,18 +23,18 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.events.AudioHeaderEvent
-import com.vitorpamplona.quartz.events.AudioTrackEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 object NostrHashtagDataSource : AmethystNostrDataSource("SingleHashtagFeed") {
     private var hashtagToWatch: String? = null

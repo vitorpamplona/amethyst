@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.content.MediaType.Companion.Text
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.OpenInFull
@@ -55,7 +53,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageVie
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 

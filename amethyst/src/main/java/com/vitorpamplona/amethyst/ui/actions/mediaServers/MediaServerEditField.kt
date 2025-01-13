@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.HttpUrlFormatter
+import com.vitorpamplona.quartz.nip96FileStorage.HttpUrlFormatter
 
 @Composable
 fun MediaServerEditField(
