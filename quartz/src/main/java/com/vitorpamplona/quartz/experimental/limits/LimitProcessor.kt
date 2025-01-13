@@ -18,48 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays
+package com.vitorpamplona.quartz.experimental.limits
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.ammolite.relays.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip13Pow.getPoWRank
-import com.vitorpamplona.quartz.utils.TimeUtils.now
-
-class Limits(
-    @JsonProperty("can_write")
-    val canWrite: Boolean?,
-    @JsonProperty("can_read")
-    val canRead: Boolean?,
-    @JsonProperty("accepted_event_kinds")
-    val acceptedEventKinds: Set<Int>?,
-    @JsonProperty("blocked_event_kinds")
-    val blockedEventKinds: Set<Int>?,
-    @JsonProperty("min_pow_difficulty")
-    val minPoW: Int?,
-    @JsonProperty("max_message_length")
-    val maxMessageLength: Int?,
-    @JsonProperty("max_subscriptions")
-    val maxSubscriptions: Int?,
-    @JsonProperty("max_filters")
-    val maxFilters: Int?,
-    @JsonProperty("max_limit")
-    val maxLimit: Int?,
-    @JsonProperty("max_event_tags")
-    val maxEventTags: Int?,
-    @JsonProperty("max_content_length")
-    val maxContentLength: Int?,
-    @JsonProperty("created_at_msecs_ago")
-    val createdAtMillisecsAgo: Long?,
-    @JsonProperty("created_at_msecs_ahead")
-    val createdAtMillisecsAhead: Long?,
-    @JsonProperty("filter_rate_limit")
-    val filterRateLimit: Long?,
-    @JsonProperty("publishing_rate_limit")
-    val publishingRateLimit: Long?,
-    @JsonProperty("required_tags")
-    val requiredTags: Array<Array<String>>?,
-)
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 class LimitProcessor {
     fun wrapFilterToLimits(
@@ -117,8 +81,8 @@ class LimitProcessor {
         if (limits.maxEventTags != null && ev.tags.size > limits.maxEventTags) return false
         if (limits.maxContentLength != null && ev.content.length > limits.maxContentLength) return false
 
-        if (limits.createdAtMillisecsAgo != null && ev.createdAt < now() - limits.createdAtMillisecsAgo) return false
-        if (limits.createdAtMillisecsAhead != null && ev.createdAt > now() + limits.createdAtMillisecsAhead) return false
+        if (limits.createdAtMillisecsAgo != null && ev.createdAt < TimeUtils.now() - limits.createdAtMillisecsAgo) return false
+        if (limits.createdAtMillisecsAhead != null && ev.createdAt > TimeUtils.now() + limits.createdAtMillisecsAhead) return false
 
         if (limits.requiredTags != null && !matchAll(ev, limits.requiredTags)) return false
 
