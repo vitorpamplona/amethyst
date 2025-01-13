@@ -347,6 +347,7 @@
     <string name="add_content">संदेश में जोड दें</string>
     <string name="add_caption">शीर्षक जोडें</string>
     <string name="add_caption_example">मेरे प्रिय मित्र</string>
+    <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <string name="content_description">विषयवस्तु का विवरण</string>
     <string name="content_description_example">एक नीला नाव श्वेत रेतीला तट पर सूर्यास्त पर</string>
     <string name="zap_type">ज्साप प्रकार</string>

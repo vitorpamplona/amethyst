@@ -49,6 +49,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
@@ -113,6 +114,7 @@ fun AppNavigation(
             composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
             composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
             composable(Route.Notification.route) { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+            composable(Route.EditProfile.route) { NewUserMetadataScreen(nav, accountViewModel) }
 
             composable(Route.Search.route) { SearchScreen(accountViewModel, nav) }
 
