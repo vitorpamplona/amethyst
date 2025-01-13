@@ -347,6 +347,7 @@
     <string name="add_content">Voeg toe aan bericht</string>
     <string name="add_caption">Onderschrift toevoegen</string>
     <string name="add_caption_example">Mijn goede vriend</string>
+    <string name="use_direct_url">Directe URL gebruiken</string>
     <string name="content_description">Beschrijving van de inhoud</string>
     <string name="content_description_example">Een blauwe boot in een wit zandstrand bij zonsondergang</string>
     <string name="zap_type">Zap type</string>
