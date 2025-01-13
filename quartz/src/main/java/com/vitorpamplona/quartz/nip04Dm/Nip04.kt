@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip04Dm
 
 import android.util.Log
-import com.vitorpamplona.quartz.crypto.Hex
 import com.vitorpamplona.quartz.nip44Encryption.SharedKeyCache
+import com.vitorpamplona.quartz.utils.Hex
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 import java.util.Base64

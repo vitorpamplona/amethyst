@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.isTaggedAddressableNotes
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.geohash.isTaggedGeoHashes
-import com.vitorpamplona.quartz.nip01Core.hashtags.isTaggedHashes
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNotes
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent

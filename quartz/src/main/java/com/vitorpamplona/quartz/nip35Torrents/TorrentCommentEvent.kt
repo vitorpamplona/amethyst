@@ -22,11 +22,11 @@ package com.vitorpamplona.quartz.nip35Torrents
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.findURLs

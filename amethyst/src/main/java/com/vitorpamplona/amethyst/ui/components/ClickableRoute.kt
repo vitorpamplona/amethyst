@@ -68,15 +68,15 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
-import com.vitorpamplona.quartz.nip19Bech32Entities.toNIP19
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.toNIP19
 import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
@@ -92,7 +92,7 @@ fun ClickableRoute(
     when (val entity = nip19.entity) {
         is NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is NProfile -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> DisplayEvent(entity.hex, null, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> DisplayEvent(entity.hex, null, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is NEmbed -> LoadAndDisplayEvent(entity.event, nip19.additionalChars, accountViewModel, nav)
         is NAddress -> DisplayAddress(entity, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)

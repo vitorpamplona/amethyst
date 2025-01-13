@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip72ModCommunities
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 

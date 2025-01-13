@@ -1,6 +1,6 @@
 package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
-import com.vitorpamplona.quartz.crypto.Hex;
+import com.vitorpamplona.quartz.utils.Hex;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpCrypto;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpKECCAK256;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpRIPEMD160;

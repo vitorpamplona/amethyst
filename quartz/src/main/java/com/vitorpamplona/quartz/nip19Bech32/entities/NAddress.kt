@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32Entities.entities
+package com.vitorpamplona.quartz.nip19Bech32.entities
 
 import addHex
 import addInt
@@ -26,12 +26,12 @@ import addString
 import addStringIfNotNull
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip19Bech32Entities.TlvTypes
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
-import com.vitorpamplona.quartz.nip19Bech32Entities.tlv.Tlv
-import com.vitorpamplona.quartz.nip19Bech32Entities.tlv.TlvBuilder
-import com.vitorpamplona.quartz.nip19Bech32Entities.toNAddress
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.tlv.Tlv
+import com.vitorpamplona.quartz.nip19Bech32.tlv.TlvBuilder
+import com.vitorpamplona.quartz.nip19Bech32.toNAddress
 
 @Immutable
 data class NAddress(

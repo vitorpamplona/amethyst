@@ -30,7 +30,7 @@ import android.os.Build
 import android.util.Log
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.Blurhash
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import kotlinx.coroutines.CancellationException

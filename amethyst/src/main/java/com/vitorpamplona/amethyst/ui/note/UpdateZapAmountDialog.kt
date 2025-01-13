@@ -99,8 +99,8 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.decodePrivateKeyAsHexOrNull
-import com.vitorpamplona.quartz.nip19Bech32Entities.decodePublicKey
+import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter

@@ -2,7 +2,7 @@ package com.vitorpamplona.quartz.nip03Timestamp.ots.op;
 
 import android.util.Log;
 
-import com.vitorpamplona.quartz.crypto.Hex;
+import com.vitorpamplona.quartz.utils.Hex;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamSerializationContext;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Utils;

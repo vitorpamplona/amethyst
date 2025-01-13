@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.ots
 
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.crypto.Hex
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendar
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
@@ -30,6 +29,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.CommitmentNotFound
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.DeserializationException
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.ExceededSizeException
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
+import com.vitorpamplona.quartz.utils.Hex
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 

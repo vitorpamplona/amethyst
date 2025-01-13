@@ -72,30 +72,30 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxi
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -1677,7 +1677,7 @@ class AccountViewModel(
                         is NSec -> {}
                         is NPub -> {}
                         is NProfile -> {}
-                        is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> {
+                        is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }

@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.utils.sha256Hash
 
 class EventHasher {
     companion object {

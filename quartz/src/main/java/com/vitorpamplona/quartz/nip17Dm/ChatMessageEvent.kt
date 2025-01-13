@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip17Dm
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent

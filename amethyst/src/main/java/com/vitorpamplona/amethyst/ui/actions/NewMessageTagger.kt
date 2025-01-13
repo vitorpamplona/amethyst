@@ -23,19 +23,19 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.Bech32
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
-import com.vitorpamplona.quartz.nip19Bech32Entities.toNpub
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.CancellationException
 
 class NewMessageTagger(
@@ -73,7 +73,7 @@ class NewMessageTagger(
                     is NPub -> addUserToMentions(dao.getOrCreateUser(entity.hex))
                     is NProfile -> addUserToMentions(dao.getOrCreateUser(entity.hex))
 
-                    is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
                     is NEvent -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
                     is NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
 
@@ -107,7 +107,7 @@ class NewMessageTagger(
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
 
-                                is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> {
+                                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }
                                 is NEvent -> {

@@ -52,7 +52,6 @@ import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.blossom.BlossomServersEvent
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -64,21 +63,22 @@ import com.vitorpamplona.quartz.experimental.nip95.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.EventHint
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.events.taggedEvents
-import com.vitorpamplona.quartz.nip01Core.geohash.geohashes
-import com.vitorpamplona.quartz.nip01Core.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip01Core.people.hasAnyTaggedUser
-import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.Contact
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -2455,7 +2455,7 @@ class Account(
         if (replyingTo.event is CommentEvent) {
             CommentEvent.replyComment(
                 msg = message,
-                replyingTo = EventHint(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+                replyingTo = EventHintBundle(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
@@ -2488,7 +2488,7 @@ class Account(
         } else {
             CommentEvent.firstReplyToEvent(
                 msg = message,
-                replyingTo = EventHint(replyingTo.event as Event, replyingTo.relayHintUrl()),
+                replyingTo = EventHintBundle(replyingTo.event as Event, replyingTo.relayHintUrl()),
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,
@@ -2566,7 +2566,7 @@ class Account(
         if (replyingTo != null) {
             CommentEvent.replyComment(
                 msg = message,
-                replyingTo = EventHint<CommentEvent>(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
+                replyingTo = EventHintBundle<CommentEvent>(replyingTo.event as CommentEvent, replyingTo.relayHintUrl()),
                 usersMentioned = usersMentioned,
                 addressesMentioned = addressesMentioned,
                 eventsMentioned = eventsMentioned,

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent

@@ -19,8 +19,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.TlvTypes
-import com.vitorpamplona.quartz.nip19Bech32Entities.tlv.TlvBuilder
+import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
+import com.vitorpamplona.quartz.nip19Bech32.tlv.TlvBuilder
 
 fun TlvBuilder.addString(
     type: TlvTypes,

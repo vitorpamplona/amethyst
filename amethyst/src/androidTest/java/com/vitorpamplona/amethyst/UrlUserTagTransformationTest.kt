@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.buildAnnotatedStringWithUrlHighlighting
 import com.vitorpamplona.quartz.nip01Core.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.decodePublicKey
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

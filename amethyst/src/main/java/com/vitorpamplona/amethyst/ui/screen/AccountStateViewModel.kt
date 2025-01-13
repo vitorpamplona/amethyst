@@ -36,9 +36,8 @@ import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.Hex
-import com.vitorpamplona.quartz.crypto.KeyPair
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -46,18 +45,19 @@ import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip02FollowList.Contact
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
-import com.vitorpamplona.quartz.nip19Bech32Entities.toNpub
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -110,7 +110,7 @@ class AccountStateViewModel : ViewModel() {
                 is NSec -> null
                 is NPub -> parsed.hex.hexToByteArray()
                 is NProfile -> parsed.hex.hexToByteArray()
-                is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> null
+                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> null
                 is NEvent -> null
                 is NEmbed -> null
                 is NRelay -> null

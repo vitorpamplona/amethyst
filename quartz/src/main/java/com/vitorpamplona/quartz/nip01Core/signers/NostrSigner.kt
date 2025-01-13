@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
-import com.vitorpamplona.quartz.nip01Core.EventFactory
+import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.Nip04

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core
 
-import com.vitorpamplona.quartz.crypto.Hex
+import com.vitorpamplona.quartz.utils.Hex
 
 /** Makes the distinction between String and Hex * */
 typealias HexKey = String

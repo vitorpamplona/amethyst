@@ -22,10 +22,10 @@ package com.vitorpamplona.quartz.nip58Badges
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 
 @Immutable
 class BadgeProfilesEvent(

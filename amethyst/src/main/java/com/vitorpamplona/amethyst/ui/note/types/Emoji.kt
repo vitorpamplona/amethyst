@@ -56,8 +56,8 @@ import com.vitorpamplona.amethyst.ui.note.elements.RemoveButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl

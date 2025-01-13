@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32Entities
+package com.vitorpamplona.quartz.nip19Bech32
 
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

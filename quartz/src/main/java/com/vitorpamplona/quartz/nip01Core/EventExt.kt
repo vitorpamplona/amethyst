@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import android.util.Log
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.Hex
+import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.utils.Hex
 
 fun Event.generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
 

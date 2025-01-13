@@ -21,19 +21,19 @@
 package com.vitorpamplona.quartz.nip22Comments
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.EventHint
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.ETag
 import com.vitorpamplona.quartz.nip10Notes.PTag
 import com.vitorpamplona.quartz.nip10Notes.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.findURLs
-import com.vitorpamplona.quartz.nip19Bech32Entities.parseAtag
+import com.vitorpamplona.quartz.nip19Bech32.parseAtag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
@@ -102,7 +102,7 @@ class CommentEvent(
 
         fun firstReplyToEvent(
             msg: String,
-            replyingTo: EventHint<Event>,
+            replyingTo: EventHintBundle<Event>,
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),
@@ -135,7 +135,7 @@ class CommentEvent(
 
         fun replyComment(
             msg: String,
-            replyingTo: EventHint<CommentEvent>,
+            replyingTo: EventHintBundle<CommentEvent>,
             usersMentioned: Set<PTag> = emptySet(),
             addressesMentioned: Set<ATag> = emptySet(),
             eventsMentioned: Set<ETag> = emptySet(),

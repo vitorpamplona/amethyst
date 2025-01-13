@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32Entities
+package com.vitorpamplona.quartz.nip19Bech32
 
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.Bech32
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 
 fun ByteArray.toNsec() = Bech32.encodeBytes(hrp = "nsec", this, Bech32.Encoding.Bech32)
 

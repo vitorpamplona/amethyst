@@ -18,17 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32Entities.entities
+package com.vitorpamplona.quartz.nip19Bech32.entities
 
 import addHex
 import addStringIfNotNull
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip19Bech32Entities.TlvTypes
-import com.vitorpamplona.quartz.nip19Bech32Entities.asStringList
-import com.vitorpamplona.quartz.nip19Bech32Entities.firstAsHex
-import com.vitorpamplona.quartz.nip19Bech32Entities.tlv.Tlv
-import com.vitorpamplona.quartz.nip19Bech32Entities.tlv.TlvBuilder
-import com.vitorpamplona.quartz.nip19Bech32Entities.toNProfile
+import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
+import com.vitorpamplona.quartz.nip19Bech32.asStringList
+import com.vitorpamplona.quartz.nip19Bech32.firstAsHex
+import com.vitorpamplona.quartz.nip19Bech32.tlv.Tlv
+import com.vitorpamplona.quartz.nip19Bech32.tlv.TlvBuilder
+import com.vitorpamplona.quartz.nip19Bech32.toNProfile
 
 @Immutable
 data class NProfile(

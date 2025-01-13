@@ -50,13 +50,13 @@ import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NRelay
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import kotlinx.coroutines.runBlocking
 
 class MarkdownMediaRenderer(
@@ -172,7 +172,7 @@ class MarkdownMediaRenderer(
             when (val entity = loadedLink.nip19.entity) {
                 is NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
                 is NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
-                is com.vitorpamplona.quartz.nip19Bech32Entities.entities.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NAddress -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)

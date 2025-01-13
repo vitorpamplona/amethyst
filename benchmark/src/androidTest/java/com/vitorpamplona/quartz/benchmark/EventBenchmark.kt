@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.EventFactory
+import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.hasValidSignature
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.utils.TimeUtils

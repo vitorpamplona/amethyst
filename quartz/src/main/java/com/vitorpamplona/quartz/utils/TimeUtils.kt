@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.CryptoUtils
 
 object TimeUtils {
     const val ONE_MINUTE = 60

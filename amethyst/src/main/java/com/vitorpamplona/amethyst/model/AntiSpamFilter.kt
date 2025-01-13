@@ -28,8 +28,8 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 
 data class Spammer(

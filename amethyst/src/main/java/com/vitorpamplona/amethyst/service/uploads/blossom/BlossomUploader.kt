@@ -35,8 +35,8 @@ import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
-import com.vitorpamplona.quartz.crypto.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import okhttp3.MediaType.Companion.toMediaType

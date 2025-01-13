@@ -26,8 +26,8 @@ import com.goterl.lazysodium.SodiumAndroid
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.Bech32
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 import java.text.Normalizer

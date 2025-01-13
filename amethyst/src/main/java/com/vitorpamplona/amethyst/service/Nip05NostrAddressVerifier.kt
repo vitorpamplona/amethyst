@@ -20,28 +20,15 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 
 class Nip05NostrAddressVerifier {
-    fun assembleUrl(nip05address: String): String? {
-        val parts = nip05address.trim().split("@")
-
-        if (parts.size == 2) {
-            return "https://${parts[1]}/.well-known/nostr.json?name=${parts[0]}"
-        }
-        if (parts.size == 1) {
-            return "https://${parts[0]}/.well-known/nostr.json?name=_"
-        }
-
-        return null
-    }
-
     suspend fun fetchNip05Json(
         nip05: String,
         forceProxy: (String) -> Boolean,
@@ -50,7 +37,7 @@ class Nip05NostrAddressVerifier {
     ) = withContext(Dispatchers.IO) {
         checkNotInMainThread()
 
-        val url = assembleUrl(nip05)
+        val url = Nip05().assembleUrl(nip05)
 
         if (url == null) {
             onError("Could not assemble url from Nip05: \"${nip05}\". Check the user's setup")
@@ -98,41 +85,24 @@ class Nip05NostrAddressVerifier {
         // check fails on tests
         checkNotInMainThread()
 
-        val mapper = jacksonObjectMapper()
-
         fetchNip05Json(
             nip05,
             forceProxy,
             onSuccess = {
                 checkNotInMainThread()
 
-                // NIP05 usernames are case insensitive, but JSON properties are not
-                // converts the json to lowercase and then tries to access the username via a
-                // lowercase version of the username.
-                val nip05url =
-                    try {
-                        mapper.readTree(it.lowercase())
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        onError("Error Parsing JSON from Lightning Address. Check the user's lightning setup")
-                        null
-                    }
-
-                val parts = nip05.split("@")
-                val user =
-                    if (parts.size == 2) {
-                        parts[0].lowercase()
-                    } else {
-                        "_"
-                    }
-
-                val hexKey = nip05url?.get("names")?.get(user)?.asText()
-
-                if (hexKey == null) {
-                    onError("Username not found in the NIP05 JSON [$nip05]")
-                } else {
-                    onSuccess(hexKey)
-                }
+                Nip05().parseHexKeyFor(nip05, it.lowercase()).fold(
+                    onSuccess = { hexKey ->
+                        if (hexKey == null) {
+                            onError("Username not found in the NIP05 JSON [$nip05]")
+                        } else {
+                            onSuccess(hexKey)
+                        }
+                    },
+                    onFailure = {
+                        onError("Error Parsing JSON from NIP-05 address: $nip05." + (it.message ?: it.localizedMessage ?: it.javaClass.simpleName))
+                    },
+                )
             },
             onError = onError,
         )

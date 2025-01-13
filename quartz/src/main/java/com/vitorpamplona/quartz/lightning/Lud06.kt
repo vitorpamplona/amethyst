@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.lightning
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.Bech32
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import java.util.regex.Pattern
 
 class Lud06 {

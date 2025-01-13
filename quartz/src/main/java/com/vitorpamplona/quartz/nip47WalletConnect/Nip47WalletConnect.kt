@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.decodePublicKey
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import kotlinx.coroutines.CancellationException
 
 // Rename to the corect nip number when ready.

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.vitorpamplona.quartz.nip01Core.EventFactory
+import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 class EventManualDeserializer {

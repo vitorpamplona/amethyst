@@ -105,7 +105,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.quartz.nip19Bech32Entities.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip55AndroidSigner.ExternalSignerLauncher
 import com.vitorpamplona.quartz.nip55AndroidSigner.SignerType
 import kotlinx.coroutines.CancellationException

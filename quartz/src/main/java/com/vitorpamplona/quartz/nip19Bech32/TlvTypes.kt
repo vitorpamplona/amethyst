@@ -18,9 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32Entities
+package com.vitorpamplona.quartz.nip19Bech32
 
-import com.vitorpamplona.quartz.nip19Bech32Entities.tlv.Tlv
+import com.vitorpamplona.quartz.nip19Bech32.tlv.Tlv
 
 enum class TlvTypes(
     val id: Byte,

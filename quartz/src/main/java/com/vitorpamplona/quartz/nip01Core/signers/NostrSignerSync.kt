@@ -21,16 +21,16 @@
 package com.vitorpamplona.quartz.nip01Core.signers
 
 import android.util.Log
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.EventFactory
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEncryption
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
 
 class NostrSignerSync(
     val keyPair: KeyPair,
@@ -46,7 +46,7 @@ class NostrSignerSync(
 
         return if (isUnsignedPrivateZapEvent(kind, tags)) {
             // this is a private zap
-            signPrivateZap(createdAt, kind, tags, content)
+            PrivateZapRequestBuilder().signPrivateZapRequest(createdAt, kind, tags, content, this)
         } else {
             signNormal(createdAt, kind, tags, content)
         }
@@ -139,104 +139,5 @@ class NostrSignerSync(
             )
     }
 
-    private fun <T> signPrivateZap(
-        createdAt: Long,
-        kind: Int,
-        tags: Array<Array<String>>,
-        content: String,
-    ): T? {
-        if (keyPair.privKey == null) return null
-
-        val zappedEvent = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.let { it[1] }
-        val userHex = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.let { it[1] } ?: return null
-
-        // if it is a Zap for an Event, use event.id if not, use the user's pubkey
-        val idToGeneratePrivateKey = zappedEvent ?: userHex
-
-        val encryptionPrivateKey =
-            PrivateZapEncryption.createEncryptionPrivateKey(
-                keyPair.privKey.toHexKey(),
-                idToGeneratePrivateKey,
-                createdAt,
-            )
-
-        val fullTagsNoAnon = tags.filter { t -> t.getOrNull(0) != "anon" }.toTypedArray()
-
-        val privateEvent = LnZapPrivateEvent.create(this, fullTagsNoAnon, content) ?: return null
-
-        val noteJson = privateEvent.toJson()
-        val encryptedContent =
-            PrivateZapEncryption.encryptPrivateZapMessage(
-                noteJson,
-                encryptionPrivateKey,
-                userHex.hexToByteArray(),
-            )
-
-        val newTags =
-            tags.filter { t -> t.getOrNull(0) != "anon" } + listOf(arrayOf("anon", encryptedContent))
-        val newContent = ""
-
-        return NostrSignerSync(KeyPair(encryptionPrivateKey)).signNormal(createdAt, kind, newTags.toTypedArray(), newContent)
-    }
-
-    fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent? {
-        if (keyPair.privKey == null) return null
-
-        val recipientPK = event.zappedAuthor().firstOrNull()
-        val recipientPost = event.zappedPost().firstOrNull()
-        val privateEvent =
-            if (recipientPK == pubKey) {
-                // if the receiver is logged in, these are the params.
-                val privateKeyToUse = keyPair.privKey
-                val pubkeyToUse = event.pubKey
-
-                event.getPrivateZapEvent(privateKeyToUse, pubkeyToUse)
-            } else {
-                // if the sender is logged in, these are the params
-                val altPubkeyToUse = recipientPK
-                val altPrivateKeyToUse =
-                    if (recipientPost != null) {
-                        PrivateZapEncryption.createEncryptionPrivateKey(
-                            keyPair.privKey.toHexKey(),
-                            recipientPost,
-                            event.createdAt,
-                        )
-                    } else if (recipientPK != null) {
-                        PrivateZapEncryption.createEncryptionPrivateKey(
-                            keyPair.privKey.toHexKey(),
-                            recipientPK,
-                            event.createdAt,
-                        )
-                    } else {
-                        null
-                    }
-
-                try {
-                    if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                        val altPubKeyFromPrivate = CryptoUtils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
-
-                        if (altPubKeyFromPrivate == event.pubKey) {
-                            val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
-
-                            if (result == null) {
-                                Log.w(
-                                    "Private ZAP Decrypt",
-                                    "Fail to decrypt Zap from ${event.id}",
-                                )
-                            }
-                            result
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    Log.e("Account", "Failed to create pubkey for ZapRequest ${event.id}", e)
-                    null
-                }
-            }
-
-        return privateEvent
-    }
+    fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent? = PrivateZapRequestBuilder().decryptZapEvent(event, this)
 }

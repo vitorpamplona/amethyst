@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip57Zaps
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.crypto.KeyPair
 import com.vitorpamplona.quartz.experimental.zapPolls.POLL_OPTION
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.mapValues
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray

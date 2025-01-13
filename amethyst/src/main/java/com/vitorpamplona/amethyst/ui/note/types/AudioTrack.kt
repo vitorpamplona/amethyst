@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.audio.Participant
-import com.vitorpamplona.quartz.nip01Core.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip14Subject.subject
 import kotlinx.collections.immutable.toImmutableList

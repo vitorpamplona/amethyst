@@ -25,20 +25,20 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.addressables.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.events.isTaggedEvent
-import com.vitorpamplona.quartz.nip01Core.geohash.isTaggedGeoHash
-import com.vitorpamplona.quartz.nip01Core.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip01Core.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.decodePublicKey
-import com.vitorpamplona.quartz.nip19Bech32Entities.parse
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
+import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable data class Contact(

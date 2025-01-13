@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32Entities
+package com.vitorpamplona.quartz.nip19Bech32
 
 import android.util.Log
-import com.vitorpamplona.quartz.crypto.Hex
-import com.vitorpamplona.quartz.nip01Core.addressables.ATag
-import com.vitorpamplona.quartz.nip19Bech32Entities.entities.NAddress
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.utils.Hex
 
 fun ATag.Companion.isATag(key: String): Boolean = key.startsWith("naddr1") || key.contains(":")
 

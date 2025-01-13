@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.nip44Encryption
 import android.util.Log
 import com.goterl.lazysodium.SodiumAndroid
 import com.goterl.lazysodium.utils.Key
-import com.vitorpamplona.quartz.crypto.Hex
-import com.vitorpamplona.quartz.crypto.sha256Hash
 import com.vitorpamplona.quartz.nip44Encryption.crypto.cryptoStreamXChaCha20Xor
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.sha256Hash
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 import java.util.Base64

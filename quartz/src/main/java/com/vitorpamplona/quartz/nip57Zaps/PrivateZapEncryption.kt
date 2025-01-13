@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps
 
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.nip19Bech32Entities.bech32.Bech32
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import java.nio.charset.Charset
 import java.security.SecureRandom
 import javax.crypto.BadPaddingException

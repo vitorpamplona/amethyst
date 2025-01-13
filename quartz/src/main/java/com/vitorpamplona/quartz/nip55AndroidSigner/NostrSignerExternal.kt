@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner
 
 import android.util.Log
 import com.goterl.lazysodium.BuildConfig
-import com.vitorpamplona.quartz.nip01Core.EventFactory
+import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

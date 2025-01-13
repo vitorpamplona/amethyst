@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core
 
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.nextBytes
-import com.vitorpamplona.quartz.crypto.sha256Hash
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.utils.nextBytes
+import com.vitorpamplona.quartz.utils.sha256Hash
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 

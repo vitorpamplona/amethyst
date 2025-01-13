@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip98HttpAuth
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

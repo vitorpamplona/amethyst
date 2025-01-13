@@ -1,6 +1,6 @@
 package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
-import com.vitorpamplona.quartz.crypto.Hex;
+import com.vitorpamplona.quartz.utils.Hex;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.BitcoinBlockHeaderAttestation;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.TimeAttestation;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.DeserializationException;

@@ -22,12 +22,12 @@ package com.vitorpamplona.quartz.nip84Highlights
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.addressables.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
-import com.vitorpamplona.quartz.nip01Core.events.firstTaggedEvent
-import com.vitorpamplona.quartz.nip01Core.people.firstTaggedUser
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedAddress
+import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 

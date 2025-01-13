@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageVie
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow

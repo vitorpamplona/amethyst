@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 
 class UserProfileBookmarksFeedFilter(
     val user: User,
