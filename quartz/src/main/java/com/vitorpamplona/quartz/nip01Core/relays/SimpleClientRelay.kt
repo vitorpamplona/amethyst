@@ -247,7 +247,7 @@ class SimpleClientRelay(
 
                 // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
                 if (authResponseWatcher.containsKey(msg.eventId)) {
-                    val wasAlreadyAuthenticated = authResponseWatcher.get(msg.eventId)
+                    val wasAlreadyAuthenticated = authResponseWatcher[msg.eventId]
                     authResponseWatcher.put(msg.eventId, msg.success)
                     if (wasAlreadyAuthenticated != true && msg.success) {
                         sendEverything()
@@ -375,15 +375,10 @@ class SimpleClientRelay(
     }
 
     fun sendAuth(signedEvent: RelayAuthEvent) {
-        val challenge = signedEvent.challenge() ?: ""
+        val challenge = signedEvent.challenge()
 
         // only send replies to new challenges to avoid infinite loop:
-        // 1. Auth is sent
-        // 2. auth is rejected
-        // 3. auth is requested
-        // 4. auth is sent
-        // ...
-        if (!authChallengesSent.contains(challenge)) {
+        if (challenge != null && challenge !in authChallengesSent) {
             authResponseWatcher[signedEvent.id] = false
             authChallengesSent.add(challenge)
             writeToSocket(AuthCmd.toJson(signedEvent))
