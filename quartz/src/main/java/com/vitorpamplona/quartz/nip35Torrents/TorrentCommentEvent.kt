@@ -27,9 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.positionalMarkedTags
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
@@ -62,7 +64,6 @@ class TorrentCommentEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             addresses: List<ATag>? = null,
-            extraTags: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -116,18 +117,13 @@ class TorrentCommentEvent(
                         ),
                     )
                 }
-            findHashtags(message).forEach {
-                val lowercaseTag = it.lowercase()
-                tags.add(arrayOf("t", it))
-                if (it != lowercaseTag) {
-                    tags.add(arrayOf("t", it.lowercase()))
-                }
-            }
-            extraTags?.forEach { tags.add(arrayOf("t", it)) }
+            tags.addAll(buildHashtagTags(findHashtags(message)))
+            tags.addAll(buildUrlRefs(findURLs(message)))
+
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
-            findURLs(message).forEach { tags.add(arrayOf("r", it)) }
+
             if (markAsSensitive) {
                 tags.add(arrayOf("content-warning", ""))
             }

@@ -18,14 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.geohash
+package com.vitorpamplona.quartz.nip10Notes.content
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.linkedin.urls.detection.UrlDetector
+import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.quartz.nip96FileStorage.HttpUrlFormatter
 
-fun geohashMipMap(geohash: String): TagArray =
-    geohash.indices
-        .asSequence()
-        .map { arrayOf("g", geohash.substring(0, it + 1)) }
-        .toList()
-        .reversed()
-        .toTypedArray()
+fun findURLs(text: String): List<String> = UrlDetector(text, UrlDetectorOptions.Default).detect().map { it.originalUrl }
+
+fun buildUrlRefs(urls: List<String>): List<Array<String>> =
+    urls
+        .mapTo(HashSet()) { url ->
+            HttpUrlFormatter.normalize(url)
+        }.map {
+            arrayOf("r", it)
+        }

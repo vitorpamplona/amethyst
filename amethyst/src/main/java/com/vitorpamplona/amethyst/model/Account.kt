@@ -2275,7 +2275,6 @@ class Account(
             replyTos = repliesToHex,
             mentions = mentionsHex,
             addresses = addresses,
-            extraTags = null,
             zapReceiver = zapReceiver,
             markAsSensitive = wantsToMarkAsSensitive,
             zapRaiserAmount = zapRaiserAmount,

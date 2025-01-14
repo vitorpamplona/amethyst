@@ -20,12 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip10Notes
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
@@ -52,21 +49,4 @@ data class ETag(
     fun toETagArray() = removeTrailingNullsAndEmptyOthers("e", eventId, relay, authorPubKeyHex)
 
     fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", eventId, relay, authorPubKeyHex)
-
-    companion object {
-        fun parseNIP19(nevent: String): ETag? {
-            try {
-                val parsed = Nip19Parser.uriToRoute(nevent)?.entity
-
-                return when (parsed) {
-                    is Note -> ETag(parsed.hex)
-                    is NEvent -> ETag(parsed.hex, parsed.author, parsed.relay.firstOrNull())
-                    else -> null
-                }
-            } catch (e: Throwable) {
-                Log.w("PTag", "Issue trying to Decode NIP19 $this: ${e.message}")
-                return null
-            }
-        }
-    }
 }

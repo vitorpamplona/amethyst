@@ -26,8 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
-import com.vitorpamplona.quartz.nip10Notes.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
@@ -169,11 +170,7 @@ class ClassifiedsEvent(
             location?.let { tags.add(arrayOf("location", it)) }
             publishedAt?.let { tags.add(arrayOf("publishedAt", it.toString())) }
             condition?.let { tags.add(arrayOf("condition", it.value)) }
-
-            findHashtags(message).forEach {
-                tags.add(arrayOf("t", it))
-                tags.add(arrayOf("t", it.lowercase()))
-            }
+            tags.addAll(buildHashtagTags(findHashtags(message)))
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }

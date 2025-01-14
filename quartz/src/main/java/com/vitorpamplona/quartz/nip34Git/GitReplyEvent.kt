@@ -27,9 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.positionalMarkedTags
 import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
@@ -93,7 +95,6 @@ class GitReplyEvent(
             replyTos: List<String>? = null,
             mentions: List<String>? = null,
             addresses: List<ATag>? = null,
-            extraTags: List<String>? = null,
             zapReceiver: List<ZapSplitSetup>? = null,
             markAsSensitive: Boolean = false,
             zapRaiserAmount: Long? = null,
@@ -146,15 +147,11 @@ class GitReplyEvent(
                         ),
                     )
                 }
-            findHashtags(msg).forEach {
-                tags.add(arrayOf("t", it))
-                tags.add(arrayOf("t", it.lowercase()))
-            }
-            extraTags?.forEach { tags.add(arrayOf("t", it)) }
+            tags.addAll(buildHashtagTags(findHashtags(msg)))
+            tags.addAll(buildUrlRefs(findURLs(msg)))
             zapReceiver?.forEach {
                 tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
             }
-            findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
             if (markAsSensitive) {
                 tags.add(arrayOf("content-warning", ""))
             }

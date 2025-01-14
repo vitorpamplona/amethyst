@@ -18,14 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.geohash
+package com.vitorpamplona.quartz.nip10Notes.content
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import java.util.regex.Pattern
 
-fun geohashMipMap(geohash: String): TagArray =
-    geohash.indices
-        .asSequence()
-        .map { arrayOf("g", geohash.substring(0, it + 1)) }
-        .toList()
-        .reversed()
-        .toTypedArray()
+val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)")
+
+fun findHashtags(
+    content: String,
+    output: MutableSet<String> = mutableSetOf(),
+): List<String> {
+    val matcher = hashtagSearch.matcher(content)
+    while (matcher.find()) {
+        try {
+            val tag = matcher.group(1)
+            if (tag != null && tag.isNotBlank()) {
+                output.add(tag)
+            }
+        } catch (e: Exception) {
+        }
+    }
+    return output.toList()
+}

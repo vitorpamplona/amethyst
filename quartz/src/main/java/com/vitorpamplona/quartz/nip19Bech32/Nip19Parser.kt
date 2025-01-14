@@ -129,6 +129,25 @@ object Nip19Parser {
             Log.w("NIP19 Parser", "Issue trying to Decode NIP19 $key: ${e.message}", e)
             null
         }
+
+    fun parseAll(content: String): List<Entity> {
+        val matcher2 = nip19regex.matcher(content)
+        val returningList = mutableListOf<Entity>()
+        while (matcher2.find()) {
+            val type = matcher2.group(2) // npub1
+            val key = matcher2.group(3) // bech32
+            val additionalChars = matcher2.group(4) // additional chars
+
+            if (type != null) {
+                val parsed = Nip19Parser.parseComponents(type, key, additionalChars)?.entity
+
+                if (parsed != null) {
+                    returningList.add(parsed)
+                }
+            }
+        }
+        return returningList
+    }
 }
 
 fun decodePublicKey(key: String): ByteArray =

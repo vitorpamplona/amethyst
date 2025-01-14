@@ -28,11 +28,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.ETag
 import com.vitorpamplona.quartz.nip10Notes.PTag
-import com.vitorpamplona.quartz.nip10Notes.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip19Bech32.parseAtag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
@@ -205,15 +207,8 @@ class CommentEvent(
             addressesMentioned.forEach { tags.add(it.toQTagArray()) }
             eventsMentioned.forEach { tags.add(it.toQTagArray()) }
 
-            findHashtags(msg).forEach {
-                val lowercaseTag = it.lowercase()
-                tags.add(arrayOf("t", it))
-                if (it != lowercaseTag) {
-                    tags.add(arrayOf("t", it.lowercase()))
-                }
-            }
-
-            findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
+            tags.addAll(buildHashtagTags(findHashtags(msg)))
+            tags.addAll(buildUrlRefs(findURLs(msg)))
 
             emojis?.forEach { tags.add(it.toTagArray()) }
 

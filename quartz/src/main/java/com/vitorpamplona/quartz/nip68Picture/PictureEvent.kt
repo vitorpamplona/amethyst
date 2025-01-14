@@ -26,10 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
 import com.vitorpamplona.quartz.nip10Notes.ETag
 import com.vitorpamplona.quartz.nip10Notes.PTag
-import com.vitorpamplona.quartz.nip10Notes.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments.Companion.IMETA
@@ -182,15 +184,8 @@ class PictureEvent(
             eventsMentioned.forEach { tags.add(it.toQTagArray()) }
 
             if (msg != null) {
-                findHashtags(msg).forEach {
-                    val lowercaseTag = it.lowercase()
-                    tags.add(arrayOf("t", it))
-                    if (it != lowercaseTag) {
-                        tags.add(arrayOf("t", it.lowercase()))
-                    }
-                }
-
-                findURLs(msg).forEach { tags.add(arrayOf("r", it)) }
+                tags.addAll(buildHashtagTags(findHashtags(msg)))
+                tags.addAll(buildUrlRefs(findURLs(msg)))
             }
 
             zapReceiver?.forEach {

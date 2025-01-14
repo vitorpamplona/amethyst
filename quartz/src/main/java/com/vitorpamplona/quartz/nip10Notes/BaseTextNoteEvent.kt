@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip10Notes
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithEventsOrAddresses
+import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithPeople
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser.nip19regex
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -39,10 +39,6 @@ import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip19Bech32.parseAtag
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
-import java.util.regex.Pattern
-
-val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
-val hashtagSearch = Pattern.compile("(?:\\s|\\A)#([^\\s!@#\$%^&*()=+./,\\[{\\]};:'\"?><]+)")
 
 @Immutable
 open class BaseTextNoteEvent(
@@ -111,44 +107,19 @@ open class BaseTextNoteEvent(
             return it
         }
 
-        val matcher = tagSearch.matcher(content)
-        val returningList = mutableSetOf<String>()
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { tags[it.toInt()] }
-                if (tag != null && tag.size > 1 && tag[0] == "p") {
-                    returningList.add(tag[1])
-                }
-            } catch (e: Exception) {
+        val citedUsers = mutableSetOf<String>()
+
+        findIndexTagsWithPeople(content, tags, citedUsers)
+
+        Nip19Parser.parseAll(content).forEach { parsed ->
+            when (parsed) {
+                is NProfile -> citedUsers.add(parsed.hex)
+                is NPub -> citedUsers.add(parsed.hex)
             }
         }
 
-        val matcher2 = nip19regex.matcher(content)
-        while (matcher2.find()) {
-            val type = matcher2.group(2) // npub1
-            val key = matcher2.group(3) // bech32
-            val additionalChars = matcher2.group(4) // additional chars
-
-            try {
-                if (type != null) {
-                    val parsed = Nip19Parser.parseComponents(type, key, additionalChars)?.entity
-
-                    if (parsed != null) {
-                        if (parsed is NProfile) {
-                            returningList.add(parsed.hex)
-                        }
-                        if (parsed is NPub) {
-                            returningList.add(parsed.hex)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w("Unable to parse cited users that matched a NIP19 regex", e)
-            }
-        }
-
-        citedUsersCache = returningList
-        return returningList
+        citedUsersCache = citedUsers
+        return citedUsers
     }
 
     fun findCitations(): Set<HexKey> {
@@ -156,39 +127,16 @@ open class BaseTextNoteEvent(
             return it
         }
 
-        val citations = mutableSetOf<HexKey>()
-        // Removes citations from replies:
-        val matcher = tagSearch.matcher(content)
-        while (matcher.find()) {
-            try {
-                val tag = matcher.group(1)?.let { tags[it.toInt()] }
-                if (tag != null && tag.size > 1 && tag[0] == "e") {
-                    citations.add(tag[1])
-                }
-                if (tag != null && tag.size > 1 && tag[0] == "a") {
-                    citations.add(tag[1])
-                }
-            } catch (e: Exception) {
-            }
-        }
+        val citations = mutableSetOf<String>()
 
-        val matcher2 = nip19regex.matcher(content)
-        while (matcher2.find()) {
-            val type = matcher2.group(2) // npub1
-            val key = matcher2.group(3) // bech32
-            val additionalChars = matcher2.group(4) // additional chars
+        findIndexTagsWithEventsOrAddresses(content, tags, citations).toMutableSet()
 
-            if (type != null) {
-                val parsed = Nip19Parser.parseComponents(type, key, additionalChars)?.entity
-
-                if (parsed != null) {
-                    when (parsed) {
-                        is NEvent -> citations.add(parsed.hex)
-                        is NAddress -> citations.add(parsed.aTag())
-                        is Note -> citations.add(parsed.hex)
-                        is NEmbed -> citations.add(parsed.event.id)
-                    }
-                }
+        Nip19Parser.parseAll(content).forEach { entity ->
+            when (entity) {
+                is NEvent -> citations.add(entity.hex)
+                is NAddress -> citations.add(entity.aTag())
+                is Note -> citations.add(entity.hex)
+                is NEmbed -> citations.add(entity.event.id)
             }
         }
 
@@ -226,19 +174,4 @@ open class BaseTextNoteEvent(
             }
         }
     }
-}
-
-fun findHashtags(content: String): List<String> {
-    val matcher = hashtagSearch.matcher(content)
-    val returningList = mutableSetOf<String>()
-    while (matcher.find()) {
-        try {
-            val tag = matcher.group(1)
-            if (tag != null && tag.isNotBlank()) {
-                returningList.add(tag)
-            }
-        } catch (e: Exception) {
-        }
-    }
-    return returningList.toList()
 }

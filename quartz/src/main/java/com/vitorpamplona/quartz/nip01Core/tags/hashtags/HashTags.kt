@@ -18,14 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.geohash
+package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
+fun buildHashtagTags(tags: List<String>): List<Array<String>> {
+    val uniqueTags = mutableSetOf<String>()
 
-fun geohashMipMap(geohash: String): TagArray =
-    geohash.indices
-        .asSequence()
-        .map { arrayOf("g", geohash.substring(0, it + 1)) }
-        .toList()
-        .reversed()
-        .toTypedArray()
+    tags.forEach { tag ->
+        uniqueTags.add(tag)
+        val lowercaseTag = tag.lowercase()
+        if (tag != lowercaseTag) {
+            uniqueTags.add(lowercaseTag)
+        }
+    }
+
+    return uniqueTags.map {
+        arrayOf("t", it)
+    }
+}
