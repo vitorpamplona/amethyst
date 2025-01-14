@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -39,7 +40,7 @@ class LongTextNoteEvent(
     sig: HexKey,
 ) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressableEvent {
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
+    override fun dTag() = tags.dTag()
 
     override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 

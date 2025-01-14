@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import com.vitorpamplona.ammolite.sockets.WebSocket
-import com.vitorpamplona.ammolite.sockets.WebSocketListener
-import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
+import com.vitorpamplona.ammolite.relays.relays.sockets.WebSocket
+import com.vitorpamplona.ammolite.relays.relays.sockets.WebSocketListener
+import com.vitorpamplona.ammolite.relays.relays.sockets.WebsocketBuilder
+import com.vitorpamplona.ammolite.relays.relays.sockets.WebsocketBuilderFactory
 import okhttp3.Request
 import okhttp3.Response
 
@@ -73,12 +74,17 @@ class OkHttpWebSocket(
         ) = out.onFailure(t, response?.message)
     }
 
-    class Builder : WebsocketBuilder {
+    class Builder(
+        val forceProxy: Boolean,
+    ) : WebsocketBuilder {
         override fun build(
             url: String,
-            forceProxy: Boolean,
             out: WebSocketListener,
         ) = OkHttpWebSocket(url, forceProxy, out)
+    }
+
+    class BuilderFactory : WebsocketBuilderFactory {
+        override fun build(forceProxy: Boolean) = Builder(forceProxy)
     }
 
     override fun cancel() {

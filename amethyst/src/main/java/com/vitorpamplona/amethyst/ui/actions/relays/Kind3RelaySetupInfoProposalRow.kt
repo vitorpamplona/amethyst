@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.RelayStat
+import com.vitorpamplona.ammolite.relays.relays.RelayStat
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

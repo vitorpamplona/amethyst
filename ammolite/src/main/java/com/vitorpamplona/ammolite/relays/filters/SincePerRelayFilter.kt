@@ -23,6 +23,7 @@ package com.vitorpamplona.ammolite.relays.filters
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.relays.Filter
 import com.vitorpamplona.quartz.nip01Core.relays.FilterMatcher
 import com.vitorpamplona.quartz.nip01Core.relays.FilterSerializer
 
@@ -40,6 +41,8 @@ class SincePerRelayFilter(
     val search: String? = null,
 ) : IPerRelayFilter {
     override fun isValidFor(url: String) = true
+
+    override fun toRelay(forRelay: String) = Filter(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 
     override fun toJson(forRelay: String) = FilterSerializer.toJson(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 

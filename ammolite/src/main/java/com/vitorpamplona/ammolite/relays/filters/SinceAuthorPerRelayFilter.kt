@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.relays.Filter
 import com.vitorpamplona.quartz.nip01Core.relays.FilterMatcher
 import com.vitorpamplona.quartz.nip01Core.relays.FilterSerializer
 
@@ -44,6 +45,8 @@ class SinceAuthorPerRelayFilter(
     // So, if there is an author list, but no list for the specific relay or if the list is empty
     // don't send it.
     override fun isValidFor(forRelay: String) = authors == null || !authors[forRelay].isNullOrEmpty()
+
+    override fun toRelay(forRelay: String) = Filter(ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 
     override fun toJson(forRelay: String): String = FilterSerializer.toJson(ids, authors?.get(forRelay), kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 

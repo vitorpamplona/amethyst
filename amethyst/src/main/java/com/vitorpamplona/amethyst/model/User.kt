@@ -307,9 +307,9 @@ class User(
         relay: Relay,
         eventTime: Long,
     ) {
-        val here = relaysBeingUsed[relay.url]
+        val here = relaysBeingUsed[relay.brief.url]
         if (here == null) {
-            relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))
+            relaysBeingUsed = relaysBeingUsed + Pair(relay.brief.url, RelayInfo(relay.brief.url, eventTime, 1))
         } else {
             if (eventTime > here.lastEvent) {
                 here.lastEvent = eventTime

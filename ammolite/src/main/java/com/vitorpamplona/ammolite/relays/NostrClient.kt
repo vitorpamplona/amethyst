@@ -21,8 +21,9 @@
 package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
+import com.vitorpamplona.ammolite.relays.relays.RelayState
+import com.vitorpamplona.ammolite.relays.relays.sockets.WebsocketBuilderFactory
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
-import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ import java.util.concurrent.TimeUnit
  * published through multiple relays. Events are stored with their respective persona.
  */
 class NostrClient(
-    private val websocketBuilder: WebsocketBuilder,
+    private val websocketBuilder: WebsocketBuilderFactory,
 ) : RelayPool.Listener {
     private val relayPool: RelayPool = RelayPool()
     private val subscriptions: MutableSubscriptionManager = MutableSubscriptionManager()
@@ -174,17 +175,24 @@ class NostrClient(
                     Log.d("sendAndWaitForResponse", "onError Error from relay ${relay.url} count: ${latch.count} error: $error")
                 }
 
-                override fun onRelayStateChange(
-                    type: Relay.StateType,
+                override fun onEOSE(
                     relay: Relay,
-                    subscriptionId: String?,
+                    subscriptionId: String,
                 ) {
-                    if (type == Relay.StateType.DISCONNECT || type == Relay.StateType.EOSE) {
+                    latch.countDown()
+                    Log.d("sendAndWaitForResponse", "onEOSE relay ${relay.url} count: ${latch.count}")
+                }
+
+                override fun onRelayStateChange(
+                    type: RelayState,
+                    relay: Relay,
+                ) {
+                    if (type == RelayState.DISCONNECTED) {
                         latch.countDown()
                     }
-                    if (type == Relay.StateType.CONNECT) {
+                    if (type == RelayState.CONNECTED) {
                         Log.d("sendAndWaitForResponse", "${type.name} Sending event to relay ${relay.url} count: ${latch.count}")
-                        relay.sendOverride(signedEvent)
+                        relay.send(signedEvent)
                     }
                     Log.d("sendAndWaitForResponse", "onRelayStateChange ${type.name} from relay ${relay.url} count: ${latch.count}")
                 }
@@ -312,16 +320,18 @@ class NostrClient(
         }
     }
 
-    override fun onRelayStateChange(
-        type: Relay.StateType,
+    override fun onEOSE(
         relay: Relay,
-        channel: String?,
+        subscriptionId: String,
     ) {
-        // Releases the Web thread for the new payload.
-        // May need to add a processing queue if processing new events become too costly.
-        // GlobalScope.launch(Dispatchers.Default) {
-        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
-        // }
+        listeners.forEach { it.onEOSE(relay, subscriptionId) }
+    }
+
+    override fun onRelayStateChange(
+        type: RelayState,
+        relay: Relay,
+    ) {
+        listeners.forEach { it.onRelayStateChange(type, relay) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -420,10 +430,15 @@ class NostrClient(
         ) = Unit
 
         /** Connected to or disconnected from a relay */
-        open fun onRelayStateChange(
-            type: Relay.StateType,
+        open fun onEOSE(
             relay: Relay,
-            subscriptionId: String?,
+            subscriptionId: String,
+        ) = Unit
+
+        /** Connected to or disconnected from a relay */
+        open fun onRelayStateChange(
+            type: RelayState,
+            relay: Relay,
         ) = Unit
 
         /** When an relay saves or rejects a new event. */

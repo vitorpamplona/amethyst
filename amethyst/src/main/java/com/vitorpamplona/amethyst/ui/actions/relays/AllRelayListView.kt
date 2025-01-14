@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.ammolite.relays.Constants
-import com.vitorpamplona.ammolite.relays.RelayStat
+import com.vitorpamplona.ammolite.relays.relays.RelayStat
 
 @Composable
 fun AllRelayListView(

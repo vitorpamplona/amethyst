@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import androidx.collection.LruCache
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.ammolite.relays.relays.RelayStat
 
 object RelayStats {
     private val innerCache = mutableMapOf<String, RelayStat>()
@@ -69,68 +68,4 @@ object RelayStats {
     ) {
         get(url).newSpam(explanation)
     }
-}
-
-class RelayStat(
-    var receivedBytes: Long = 0L,
-    var sentBytes: Long = 0L,
-    var spamCounter: Long = 0L,
-    var errorCounter: Long = 0L,
-    var pingInMs: Long = 0L,
-) {
-    val messages = LruCache<RelayDebugMessage, RelayDebugMessage>(100)
-
-    fun newNotice(notice: String?) {
-        val debugMessage =
-            RelayDebugMessage(
-                type = RelayDebugMessageType.NOTICE,
-                message = notice ?: "No error message provided",
-            )
-
-        messages.put(debugMessage, debugMessage)
-    }
-
-    fun newError(error: String?) {
-        errorCounter++
-
-        val debugMessage =
-            RelayDebugMessage(
-                type = RelayDebugMessageType.ERROR,
-                message = error ?: "No error message provided",
-            )
-
-        messages.put(debugMessage, debugMessage)
-    }
-
-    fun addBytesReceived(bytesUsedInMemory: Long) {
-        receivedBytes += bytesUsedInMemory
-    }
-
-    fun addBytesSent(bytesUsedInMemory: Long) {
-        sentBytes += bytesUsedInMemory
-    }
-
-    fun newSpam(spamDescriptor: String) {
-        spamCounter++
-
-        val debugMessage =
-            RelayDebugMessage(
-                type = RelayDebugMessageType.SPAM,
-                message = spamDescriptor,
-            )
-
-        messages.put(debugMessage, debugMessage)
-    }
-}
-
-class RelayDebugMessage(
-    val type: RelayDebugMessageType,
-    val message: String,
-    val time: Long = TimeUtils.now(),
-)
-
-enum class RelayDebugMessageType {
-    SPAM,
-    NOTICE,
-    ERROR,
 }

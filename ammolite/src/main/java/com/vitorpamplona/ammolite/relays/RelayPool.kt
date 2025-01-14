@@ -21,6 +21,7 @@
 package com.vitorpamplona.ammolite.relays
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.ammolite.relays.relays.RelayState
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.Dispatchers
@@ -173,10 +174,14 @@ class RelayPool : Relay.Listener {
             afterEOSE: Boolean,
         )
 
-        fun onRelayStateChange(
-            type: Relay.StateType,
+        fun onEOSE(
             relay: Relay,
-            channel: String?,
+            subscriptionId: String,
+        )
+
+        fun onRelayStateChange(
+            type: RelayState,
+            relay: Relay,
         )
 
         fun onSendResponse(
@@ -232,15 +237,19 @@ class RelayPool : Relay.Listener {
         updateStatus()
     }
 
+    override fun onEOSE(
+        relay: Relay,
+        subscriptionId: String,
+    ) {
+        listeners.forEach { it.onEOSE(relay, subscriptionId) }
+        updateStatus()
+    }
+
     override fun onRelayStateChange(
         relay: Relay,
-        type: Relay.StateType,
-        channel: String?,
+        type: RelayState,
     ) {
-        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
-        if (type != Relay.StateType.EOSE) {
-            updateStatus()
-        }
+        listeners.forEach { it.onRelayStateChange(type, relay) }
     }
 
     override fun onSendResponse(

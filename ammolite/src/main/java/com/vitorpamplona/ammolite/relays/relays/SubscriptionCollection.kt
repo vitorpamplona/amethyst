@@ -18,12 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.sockets
+package com.vitorpamplona.ammolite.relays.relays
 
-interface WebsocketBuilder {
-    fun build(
-        url: String,
-        forceProxy: Boolean,
-        out: WebSocketListener,
-    ): WebSocket
+interface SubscriptionCollection {
+    fun allSubscriptions(): List<Subscription>
 }

@@ -18,23 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.Filter
-
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
-
-    fun toJson(forRelay: String): String
-
-    fun match(
-        event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+fun <T> Iterable<T>.joinToStringLimited(
+    separator: CharSequence,
+    prefix: CharSequence,
+    postfix: CharSequence,
+    limit: Int,
+    transform: ((T) -> CharSequence)?,
+): String {
+    val buffer = StringBuilder()
+    buffer.append(prefix)
+    var count = 0
+    for (element in this) {
+        if (limit < 0 || count <= limit) {
+            if (++count > 1) buffer.append(separator)
+            when {
+                transform != null -> buffer.append(transform(element))
+                element is CharSequence? -> buffer.append(element)
+                element is Char -> buffer.append(element)
+                else -> buffer.append(element.toString())
+            }
+        } else {
+            break
+        }
+    }
+    buffer.append(postfix)
+    return buffer.toString()
 }

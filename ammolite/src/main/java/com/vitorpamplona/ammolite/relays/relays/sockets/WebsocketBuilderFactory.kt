@@ -18,23 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.ammolite.relays.relays.sockets
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.Filter
-
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
-
-    fun toJson(forRelay: String): String
-
-    fun match(
-        event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+interface WebsocketBuilderFactory {
+    fun build(forceProxy: Boolean): WebsocketBuilder
 }

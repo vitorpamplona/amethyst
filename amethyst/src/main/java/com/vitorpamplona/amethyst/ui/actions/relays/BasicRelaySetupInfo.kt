@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.actions.relays
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStat
+import com.vitorpamplona.ammolite.relays.relays.RelayStat
 import com.vitorpamplona.quartz.nip01Core.HexKey
 
 @Immutable

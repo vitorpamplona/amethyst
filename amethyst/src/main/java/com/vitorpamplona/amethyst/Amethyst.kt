@@ -55,7 +55,7 @@ import kotlin.time.measureTimedValue
 class Amethyst : Application() {
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    val client: NostrClient = NostrClient(OkHttpWebSocket.Builder())
+    val client: NostrClient = NostrClient(OkHttpWebSocket.BuilderFactory())
 
     // Service Manager is only active when the activity is active.
     val serviceManager = ServiceManager(client, applicationIOScope)

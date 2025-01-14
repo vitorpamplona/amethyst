@@ -2456,9 +2456,9 @@ object LocalCache {
 
         if (event is AddressableEvent && relay != null) {
             // updates relay with a new event.
-            getAddressableNoteIfExists(event.addressTag())?.let {
-                it.event?.let { existingEvent ->
-                    if (existingEvent.createdAt > event.createdAt) {
+            getAddressableNoteIfExists(event.addressTag())?.let { note ->
+                note.event?.let { existingEvent ->
+                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay)) {
                         Log.d("LocalCache", "Updating ${relay.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
                         relay.send(existingEvent)
                     }

@@ -433,6 +433,8 @@ open class Note(
         }
     }
 
+    fun hasRelay(relay: Relay) = relay.brief !in relays
+
     fun addRelay(relay: Relay) {
         if (relay.brief !in relays) {
             addRelaySync(relay.brief)

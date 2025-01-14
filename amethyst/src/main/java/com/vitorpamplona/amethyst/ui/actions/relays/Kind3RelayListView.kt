@@ -94,7 +94,7 @@ import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.Constants.activeTypesGlobalChats
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStat
+import com.vitorpamplona.ammolite.relays.relays.RelayStat
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.coroutines.launch
 

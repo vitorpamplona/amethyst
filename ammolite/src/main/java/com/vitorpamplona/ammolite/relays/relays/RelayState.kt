@@ -18,12 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.sockets
+package com.vitorpamplona.ammolite.relays.relays
 
-interface WebSocket {
-    fun connect()
+enum class RelayState {
+    // Websocket connected
+    CONNECTED,
 
-    fun cancel()
+    // Websocket disconnecting
+    DISCONNECTING,
 
-    fun send(msg: String): Boolean
+    // Websocket disconnected
+    DISCONNECTED,
 }
