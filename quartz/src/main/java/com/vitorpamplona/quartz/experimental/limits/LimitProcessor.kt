@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.experimental.limits
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.Filter
+import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
 import com.vitorpamplona.quartz.nip13Pow.getPoWRank
 import com.vitorpamplona.quartz.utils.TimeUtils
 

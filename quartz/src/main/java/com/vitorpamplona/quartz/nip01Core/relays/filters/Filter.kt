@@ -18,23 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.quartz.nip01Core.relays.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
 
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
+class Filter(
+    val ids: List<String>? = null,
+    val authors: List<String>? = null,
+    val kinds: List<Int>? = null,
+    val tags: Map<String, List<String>>? = null,
+    val since: Long? = null,
+    val until: Long? = null,
+    val limit: Int? = null,
+    val search: String? = null,
+) {
+    fun toJson() = FilterSerializer.toJson(ids, authors, kinds, tags, since, until, limit, search)
 
-    fun toJson(forRelay: String): String
+    fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, since, until)
 
-    fun match(
-        event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+    fun copy(
+        ids: List<String>? = this.ids,
+        authors: List<String>? = this.authors,
+        kinds: List<Int>? = this.kinds,
+        tags: Map<String, List<String>>? = this.tags,
+        since: Long? = this.since,
+        until: Long? = this.until,
+        limit: Int? = this.limit,
+        search: String? = this.search,
+    ) = Filter(ids, authors, kinds, tags, since, until, limit, search)
 }

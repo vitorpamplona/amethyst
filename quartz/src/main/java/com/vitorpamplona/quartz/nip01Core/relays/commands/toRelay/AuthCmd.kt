@@ -18,23 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.quartz.nip01Core.relays.commands.toRelay
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.fasterxml.jackson.databind.JsonNode
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
+class AuthCmd(
+    val event: RelayAuthEvent,
+) : Command {
+    companion object {
+        const val LABEL = "AUTH"
 
-    fun toJson(forRelay: String): String
+        @JvmStatic
+        fun toJson(authEvent: RelayAuthEvent): String = """["AUTH",${authEvent.toJson()}]"""
 
-    fun match(
-        event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+        @JvmStatic
+        fun parse(msgArray: JsonNode): AuthCmd =
+            AuthCmd(
+                EventMapper.fromJson(msgArray.get(1)) as RelayAuthEvent,
+            )
+    }
 }

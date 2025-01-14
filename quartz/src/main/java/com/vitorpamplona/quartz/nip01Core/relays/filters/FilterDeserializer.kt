@@ -18,23 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.quartz.nip01Core.relays.filters
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.fasterxml.jackson.databind.node.ObjectNode
 
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
+class FilterDeserializer {
+    companion object {
+        fun fromJson(jsonObject: ObjectNode): Filter {
+            val tags = mutableListOf<String>()
+            jsonObject.fieldNames().forEach {
+                if (it.startsWith("#")) {
+                    tags.add(it.substring(1))
+                }
+            }
 
-    fun toJson(forRelay: String): String
-
-    fun match(
-        event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+            return Filter(
+                ids = jsonObject.get("ids").map { it.asText() },
+                authors = jsonObject.get("authors").map { it.asText() },
+                kinds = jsonObject.get("kinds").map { it.asInt() },
+                tags = tags.associateWith { jsonObject.get(it).map { it.asText() } },
+                since = jsonObject.get("since").asLong(),
+                until = jsonObject.get("until").asLong(),
+                limit = jsonObject.get("limit").asInt(),
+                search = jsonObject.get("search").asText(),
+            )
+        }
+    }
 }

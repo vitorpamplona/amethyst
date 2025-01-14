@@ -18,23 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.quartz.nip01Core.relays.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
 
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
-
-    fun toJson(forRelay: String): String
-
+object FilterMatcher {
     fun match(
         event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+        ids: List<String>? = null,
+        authors: List<String>? = null,
+        kinds: List<Int>? = null,
+        tags: Map<String, List<String>>? = null,
+        since: Long? = null,
+        until: Long? = null,
+    ): Boolean {
+        if (ids?.contains(event.id) == false) return false
+        if (kinds?.contains(event.kind) == false) return false
+        if (authors?.contains(event.pubKey) == false) return false
+        tags?.forEach { tag ->
+            if (!event.tags.any { it.first() == tag.key && it[1] in tag.value }) return false
+        }
+        if (event.createdAt !in (since ?: Long.MIN_VALUE)..(until ?: Long.MAX_VALUE)) {
+            return false
+        }
+        return true
+    }
 }

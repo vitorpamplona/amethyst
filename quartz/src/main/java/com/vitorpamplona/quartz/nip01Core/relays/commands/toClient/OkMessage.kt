@@ -18,44 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions.relays
+package com.vitorpamplona.quartz.nip01Core.relays.commands.toClient
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relays.RelayStat
 
-@Immutable
-data class BasicRelaySetupInfo(
-    val url: String,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
+class OkMessage(
+    val eventId: HexKey,
+    val success: Boolean,
+    val message: String,
+) : Message {
+    companion object {
+        const val LABEL = "OK"
 
-@Immutable
-data class Kind3BasicRelaySetupInfo(
-    val url: String,
-    val read: Boolean,
-    val write: Boolean,
-    val feedTypes: Set<FeedType>,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
-
-@Immutable
-data class Kind3RelayProposalSetupInfo(
-    val url: String,
-    val read: Boolean,
-    val write: Boolean,
-    val feedTypes: Set<FeedType>,
-    val relayStat: RelayStat,
-    val paidRelay: Boolean = false,
-    val users: List<HexKey>,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
+        @JvmStatic
+        fun parse(msgArray: JsonNode): OkMessage =
+            OkMessage(
+                msgArray[1].asText(),
+                msgArray[2].asBoolean(),
+                if (msgArray.size() > 2) msgArray[3].asText() else "",
+            )
+    }
 }

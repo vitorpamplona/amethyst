@@ -18,23 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.filters
+package com.vitorpamplona.quartz.nip01Core.relays.commands.toClient
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.fasterxml.jackson.databind.JsonNode
 
-interface IPerRelayFilter {
-    fun toRelay(forRelay: String): Filter
+class NotifyMessage(
+    val message: String,
+) : Message {
+    companion object {
+        const val LABEL = "NOTIFY"
 
-    fun toJson(forRelay: String): String
-
-    fun match(
-        event: Event,
-        forRelay: String,
-    ): Boolean
-
-    fun toDebugJson(): String
-
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(url: String): Boolean
+        @JvmStatic
+        fun parse(msgArray: JsonNode): NotifyMessage =
+            NotifyMessage(
+                msgArray.get(1).asText(),
+            )
+    }
 }

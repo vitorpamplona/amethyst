@@ -20,13 +20,12 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import com.vitorpamplona.ammolite.relays.relays.RelayState
-import com.vitorpamplona.ammolite.relays.relays.SimpleClientRelay
-import com.vitorpamplona.ammolite.relays.relays.Subscription
-import com.vitorpamplona.ammolite.relays.relays.SubscriptionCollection
-import com.vitorpamplona.ammolite.relays.relays.sockets.WebsocketBuilderFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.Filter
+import com.vitorpamplona.quartz.nip01Core.relays.RelayState
+import com.vitorpamplona.quartz.nip01Core.relays.SimpleClientRelay
+import com.vitorpamplona.quartz.nip01Core.relays.SubscriptionCollection
+import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebsocketBuilderFactory
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 enum class FeedType {
@@ -63,11 +62,12 @@ class RelaySubFilter(
 
     override fun getFilters(subscriptionId: String) = filter(subs.getSubscriptionFilters(subscriptionId))
 
-    override fun allSubscriptions(): List<Subscription> =
+    override fun allSubscriptions(): List<com.vitorpamplona.quartz.nip01Core.relays.Subscription> =
         subs.allSubscriptions().mapNotNull { filter ->
             val filters = filter(filter.value)
             if (filters.isNotEmpty()) {
-                Subscription(filter.key, filters)
+                com.vitorpamplona.quartz.nip01Core.relays
+                    .Subscription(filter.key, filters)
             } else {
                 null
             }
