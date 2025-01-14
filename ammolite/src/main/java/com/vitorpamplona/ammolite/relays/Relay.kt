@@ -52,6 +52,17 @@ class RelaySubFilter(
     val activeTypes: Set<FeedType>,
     val subs: SubscriptionManager,
 ) : SubscriptionCollection {
+    fun isMatch(filter: TypedFilter) = activeTypes.any { it in filter.types } && filter.filter.isValidFor(url)
+
+    fun match(filters: List<TypedFilter>): Boolean =
+        filters.any { filter ->
+            isMatch(filter)
+        }
+
+    override fun isActive(subscriptionId: String): Boolean = subs.isActive(subscriptionId) && match(subs.getSubscriptionFilters(subscriptionId))
+
+    override fun getFilters(subscriptionId: String) = filter(subs.getSubscriptionFilters(subscriptionId))
+
     override fun allSubscriptions(): List<Subscription> =
         subs.allSubscriptions().mapNotNull { filter ->
             val filters = filter(filter.value)
@@ -62,9 +73,14 @@ class RelaySubFilter(
             }
         }
 
+    override fun match(
+        subscriptionId: String,
+        event: Event,
+    ): Boolean = subs.getSubscriptionFilters(subscriptionId).any { it.filter.match(event, url) }
+
     fun filter(filters: List<TypedFilter>): List<Filter> =
         filters.mapNotNull { filter ->
-            if (activeTypes.any { it in filter.types } && filter.filter.isValidFor(url)) {
+            if (isMatch(filter)) {
                 filter.filter.toRelay(url)
             } else {
                 null

@@ -20,6 +20,18 @@
  */
 package com.vitorpamplona.ammolite.relays.relays
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relays.Filter
+
 interface SubscriptionCollection {
+    fun isActive(subscriptionId: String): Boolean
+
+    fun getFilters(subscriptionId: String): List<Filter>
+
     fun allSubscriptions(): List<Subscription>
+
+    fun match(
+        subscriptionId: String,
+        event: Event,
+    ): Boolean
 }

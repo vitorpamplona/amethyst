@@ -238,13 +238,28 @@ class SimpleRelay(
 
                 // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
 
-                listeners.forEach {
-                    it.onEvent(
-                        this@SimpleRelay,
-                        subscriptionId,
-                        event,
-                        afterEOSEPerSubscription[subscriptionId] == true,
-                    )
+                // filter results: subs.isActive(subscriptionId) && subs.match(subscriptionId, event)
+                if (true) {
+                    listeners.forEach {
+                        it.onEvent(
+                            this@SimpleRelay,
+                            subscriptionId,
+                            event,
+                            afterEOSEPerSubscription[subscriptionId] == true,
+                        )
+                    }
+                } else {
+                    val filter =
+                        subs.getFilters(subscriptionId).joinToStringLimited(
+                            separator = ",",
+                            limit = 19,
+                            prefix = """["REQ","$subscriptionId",""",
+                            postfix = "]",
+                        ) {
+                            it.toJson()
+                        }
+
+                    Log.w("Relay", "Subscription $filter is not active or the filter does not match the event ${msgArray.get(2)}")
                 }
             }
             "EOSE" ->
