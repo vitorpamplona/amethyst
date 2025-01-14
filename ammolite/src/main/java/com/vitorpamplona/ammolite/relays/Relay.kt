@@ -21,7 +21,7 @@
 package com.vitorpamplona.ammolite.relays
 
 import com.vitorpamplona.ammolite.relays.relays.RelayState
-import com.vitorpamplona.ammolite.relays.relays.SimpleRelay
+import com.vitorpamplona.ammolite.relays.relays.SimpleClientRelay
 import com.vitorpamplona.ammolite.relays.relays.Subscription
 import com.vitorpamplona.ammolite.relays.relays.SubscriptionCollection
 import com.vitorpamplona.ammolite.relays.relays.sockets.WebsocketBuilderFactory
@@ -96,14 +96,12 @@ class Relay(
     val activeTypes: Set<FeedType>,
     socketBuilderFactory: WebsocketBuilderFactory,
     subs: SubscriptionManager,
-) : SimpleRelay.Listener {
+) : SimpleClientRelay.Listener {
     private var listeners = setOf<Listener>()
 
     val relaySubFilter = RelaySubFilter(url, activeTypes, subs)
     val inner =
-        SimpleRelay(url, socketBuilderFactory.build(forceProxy), relaySubFilter, RelayStats.get(url)).apply {
-            register(this@Relay)
-        }
+        SimpleClientRelay(url, socketBuilderFactory.build(forceProxy), relaySubFilter, this@Relay, RelayStats.get(url))
 
     val brief = RelayBriefInfoCache.get(url)
 
@@ -119,11 +117,11 @@ class Relay(
 
     fun connect() = inner.connect()
 
-    fun connectAndRun(onConnected: () -> Unit) {
+    fun connectAndRunAfterSync(onConnected: () -> Unit) {
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
-        inner.connectAndRun(onConnected)
+        inner.connectAndRunAfterSync(onConnected)
     }
 
     fun sendOutbox() = inner.sendOutbox()
@@ -135,13 +133,13 @@ class Relay(
         filters: List<TypedFilter>,
     ) {
         if (read) {
-            inner.sendFilter(requestId, relaySubFilter.filter(filters))
+            inner.sendRequest(requestId, relaySubFilter.filter(filters))
         }
     }
 
     fun connectAndSendFiltersIfDisconnected() = inner.connectAndSendFiltersIfDisconnected()
 
-    fun renewFilters() = inner.renewFilters()
+    fun renewFilters() = inner.renewSubscriptions()
 
     fun sendOverride(signedEvent: Event) = inner.send(signedEvent)
 
@@ -161,53 +159,59 @@ class Relay(
             activeTypes == other.feedTypes
 
     override fun onEvent(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         subscriptionId: String,
         event: Event,
         afterEOSE: Boolean,
     ) = listeners.forEach { it.onEvent(this, subscriptionId, event, afterEOSE) }
 
     override fun onError(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         subscriptionId: String,
         error: Error,
     ) = listeners.forEach { it.onError(this, subscriptionId, error) }
 
     override fun onEOSE(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         subscriptionId: String,
     ) = listeners.forEach { it.onEOSE(this, subscriptionId) }
 
     override fun onRelayStateChange(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         type: RelayState,
     ) = listeners.forEach { it.onRelayStateChange(this, type) }
 
     override fun onSendResponse(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         eventId: String,
         success: Boolean,
         message: String,
     ) = listeners.forEach { it.onSendResponse(this, eventId, success, message) }
 
     override fun onAuth(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         challenge: String,
     ) = listeners.forEach { it.onAuth(this, challenge) }
 
     override fun onNotify(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         description: String,
     ) = listeners.forEach { it.onNotify(this, description) }
 
+    override fun onClosed(
+        relay: SimpleClientRelay,
+        subscriptionId: String,
+        message: String,
+    ) { }
+
     override fun onSend(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         msg: String,
         success: Boolean,
     ) = listeners.forEach { it.onSend(this, msg, success) }
 
     override fun onBeforeSend(
-        relay: SimpleRelay,
+        relay: SimpleClientRelay,
         event: Event,
     ) = listeners.forEach { it.onBeforeSend(this, event) }
 

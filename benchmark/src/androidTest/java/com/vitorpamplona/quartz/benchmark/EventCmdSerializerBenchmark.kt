@@ -38,7 +38,7 @@ import java.security.MessageDigest
  * result. Modify your code to see how it affects performance.
  */
 @RunWith(AndroidJUnit4::class)
-class EventSerializerBenchmark {
+class EventCmdSerializerBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test

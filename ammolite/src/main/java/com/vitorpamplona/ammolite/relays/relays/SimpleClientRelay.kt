@@ -21,25 +21,36 @@
 package com.vitorpamplona.ammolite.relays.relays
 
 import android.util.Log
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.AuthMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.ClosedMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.EoseMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.EventMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.NoticeMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.NotifyMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.OkMessage
+import com.vitorpamplona.ammolite.relays.relays.commands.toClient.ToClientParser
+import com.vitorpamplona.ammolite.relays.relays.commands.toRelay.AuthCmd
+import com.vitorpamplona.ammolite.relays.relays.commands.toRelay.CloseCmd
+import com.vitorpamplona.ammolite.relays.relays.commands.toRelay.CountCmd
+import com.vitorpamplona.ammolite.relays.relays.commands.toRelay.EventCmd
+import com.vitorpamplona.ammolite.relays.relays.commands.toRelay.ReqCmd
 import com.vitorpamplona.ammolite.relays.relays.sockets.WebSocket
 import com.vitorpamplona.ammolite.relays.relays.sockets.WebSocketListener
 import com.vitorpamplona.ammolite.relays.relays.sockets.WebsocketBuilder
-import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.relays.Filter
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.joinToStringLimited
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 
-class SimpleRelay(
+class SimpleClientRelay(
     val url: String,
     val socketBuilder: WebsocketBuilder,
     val subs: SubscriptionCollection,
+    val listener: Listener,
     val stats: RelayStat = RelayStat(),
 ) {
     companion object {
@@ -47,7 +58,6 @@ class SimpleRelay(
         const val RECONNECTING_IN_SECONDS = 60 * 3
     }
 
-    private var listeners = setOf<Listener>()
     private var socket: WebSocket? = null
     private var isReady: Boolean = false
     private var usingCompression: Boolean = false
@@ -56,30 +66,28 @@ class SimpleRelay(
 
     private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
-    private val authResponse = mutableMapOf<HexKey, Boolean>()
+    private val authResponseWatcher = mutableMapOf<HexKey, Boolean>()
     private val authChallengesSent = mutableSetOf<String>()
+
+    /**
+     * Auth procedures require us to keep track of the outgoing events
+     * to make sure the relay waits for the auth to finish and send them.
+     */
     private val outboxCache = mutableMapOf<HexKey, Event>()
 
     private var connectingMutex = AtomicBoolean()
 
-    fun register(listener: Listener) {
-        listeners = listeners.plus(listener)
-    }
+    private val parser = ToClientParser()
 
-    fun unregister(listener: Listener) {
-        listeners = listeners.minus(listener)
-    }
+    fun isConnectionStarted(): Boolean = socket != null
 
-    fun isConnected(): Boolean = socket != null
+    fun isConnected(): Boolean = socket != null && isReady
 
-    fun connect() {
-        connectAndRun {
-            checkNotInMainThread()
+    fun connect() = connectAndRunOverride(::sendEverything)
 
-            // Sends everything.
-            renewFilters()
-            sendOutbox()
-        }
+    fun sendEverything() {
+        renewSubscriptions()
+        sendOutbox()
     }
 
     fun sendOutbox() {
@@ -90,7 +98,14 @@ class SimpleRelay(
         }
     }
 
-    fun connectAndRun(onConnected: () -> Unit) {
+    fun connectAndRunAfterSync(onConnected: () -> Unit) {
+        connectAndRunOverride {
+            sendEverything()
+            onConnected()
+        }
+    }
+
+    fun connectAndRunOverride(onConnected: () -> Unit) {
         Log.d("Relay", "Relay.connect $url isAlreadyConnecting: ${connectingMutex.get()}")
 
         // If there is a connection, don't wait.
@@ -99,8 +114,6 @@ class SimpleRelay(
         }
 
         try {
-            checkNotInMainThread()
-
             if (socket != null) {
                 connectingMutex.set(false)
                 return
@@ -129,7 +142,6 @@ class SimpleRelay(
             pingMillis: Long,
             compression: Boolean,
         ) {
-            checkNotInMainThread()
             Log.d("Relay", "Connect onOpen $url $socket")
 
             markConnectionAsReady(pingMillis, compression)
@@ -137,22 +149,19 @@ class SimpleRelay(
             // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
             onConnected()
 
-            listeners.forEach { it.onRelayStateChange(this@SimpleRelay, RelayState.CONNECTED) }
+            listener.onRelayStateChange(this@SimpleClientRelay, RelayState.CONNECTED)
         }
 
         override fun onMessage(text: String) {
-            checkNotInMainThread()
-
             stats.addBytesReceived(text.bytesUsedInMemory())
 
             try {
                 processNewRelayMessage(text)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
-                e.printStackTrace()
-                text.chunked(2000) { chunked ->
-                    listeners.forEach { it.onError(this@SimpleRelay, "", Error("Problem with $chunked")) }
-                }
+                stats.newError("Error processing: $text")
+                Log.e("Relay", "Error processing: $text")
+                listener.onError(this@SimpleClientRelay, "", Error("Error processing $text"))
             }
         }
 
@@ -160,53 +169,43 @@ class SimpleRelay(
             code: Int,
             reason: String,
         ) {
-            checkNotInMainThread()
-
             Log.w("Relay", "Relay onClosing $url: $reason")
 
-            listeners.forEach {
-                it.onRelayStateChange(this@SimpleRelay, RelayState.DISCONNECTING)
-            }
+            listener.onRelayStateChange(this@SimpleClientRelay, RelayState.DISCONNECTING)
         }
 
         override fun onClosed(
             code: Int,
             reason: String,
         ) {
-            checkNotInMainThread()
-
             markConnectionAsClosed()
 
             Log.w("Relay", "Relay onClosed $url: $reason")
 
-            listeners.forEach { it.onRelayStateChange(this@SimpleRelay, RelayState.DISCONNECTED) }
+            listener.onRelayStateChange(this@SimpleClientRelay, RelayState.DISCONNECTED)
         }
 
         override fun onFailure(
             t: Throwable,
-            responseMessage: String?,
+            response: String?,
         ) {
-            checkNotInMainThread()
-
             socket?.cancel() // 1000, "Normal close"
 
             // checks if this is an actual failure. Closing the socket generates an onFailure as well.
             if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
-                stats.newError(responseMessage ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
+                stats.newError(response ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
             }
 
             // Failures disconnect the relay.
             markConnectionAsClosed()
 
-            Log.w("Relay", "Relay onFailure $url, $responseMessage $responseMessage ${t.message} $socket")
+            Log.w("Relay", "Relay onFailure $url, $response $response ${t.message} $socket")
             t.printStackTrace()
-            listeners.forEach {
-                it.onError(
-                    this@SimpleRelay,
-                    "",
-                    Error("WebSocket Failure. Response: $responseMessage. Exception: ${t.message}", t),
-                )
-            }
+            listener.onError(
+                this@SimpleClientRelay,
+                "",
+                Error("WebSocket Failure. Response: $response. Exception: ${t.message}", t),
+            )
         }
     }
 
@@ -229,115 +228,69 @@ class SimpleRelay(
     }
 
     fun processNewRelayMessage(newMessage: String) {
-        val msgArray = EventMapper.mapper.readTree(newMessage)
-
-        when (val type = msgArray.get(0).asText()) {
-            "EVENT" -> {
-                val subscriptionId = msgArray.get(1).asText()
-                val event = EventMapper.fromJson(msgArray.get(2))
-
-                // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
-
-                // filter results: subs.isActive(subscriptionId) && subs.match(subscriptionId, event)
-                if (true) {
-                    listeners.forEach {
-                        it.onEvent(
-                            this@SimpleRelay,
-                            subscriptionId,
-                            event,
-                            afterEOSEPerSubscription[subscriptionId] == true,
-                        )
-                    }
-                } else {
-                    val filter =
-                        subs.getFilters(subscriptionId).joinToStringLimited(
-                            separator = ",",
-                            limit = 19,
-                            prefix = """["REQ","$subscriptionId",""",
-                            postfix = "]",
-                        ) {
-                            it.toJson()
-                        }
-
-                    Log.w("Relay", "Subscription $filter is not active or the filter does not match the event ${msgArray.get(2)}")
-                }
+        when (val msg = parser.parse(newMessage)) {
+            is EventMessage -> {
+                // Log.w("Relay", "Relay onEVENT $url $newMessage")
+                listener.onEvent(this, msg.subId, msg.event, afterEOSEPerSubscription[msg.subId] == true)
             }
-            "EOSE" ->
-                listeners.forEach {
-                    val subscriptionId = msgArray.get(1).asText()
+            is EoseMessage -> {
+                // Log.w("Relay", "Relay onEOSE $url $newMessage")
+                afterEOSEPerSubscription[msg.subId] = true
+                listener.onEOSE(this@SimpleClientRelay, msg.subId)
+            }
+            is NoticeMessage -> {
+                // Log.w("Relay", "Relay onNotice $url, $newMessage")
+                stats.newNotice(msg.message)
+                listener.onError(this@SimpleClientRelay, msg.message, Error("Relay sent notice: $msg.message"))
+            }
+            is OkMessage -> {
+                Log.w("Relay", "Relay on OK $url, $newMessage")
 
-                    afterEOSEPerSubscription[subscriptionId] = true
-                    // Log.w("Relay", "Relay onEOSE $url $subscriptionId")
-                    it.onEOSE(this@SimpleRelay, subscriptionId)
-                }
-            "NOTICE" ->
-                listeners.forEach {
-                    val message = msgArray.get(1).asText()
-                    Log.w("Relay", "Relay onNotice $url, $message")
-
-                    stats.newNotice(message)
-
-                    it.onError(this@SimpleRelay, message, Error("Relay sent notice: $message"))
-                }
-            "OK" ->
-                listeners.forEach {
-                    val eventId = msgArray[1].asText()
-                    val success = msgArray[2].asBoolean()
-                    val message = if (msgArray.size() > 2) msgArray[3].asText() else ""
-
-                    Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
-
-                    if (authResponse.containsKey(eventId)) {
-                        val wasAlreadyAuthenticated = authResponse.get(eventId)
-                        authResponse.put(eventId, success)
-                        if (wasAlreadyAuthenticated != true && success) {
-                            renewFilters()
-                            sendOutbox()
-                        }
+                // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
+                if (authResponseWatcher.containsKey(msg.eventId)) {
+                    val wasAlreadyAuthenticated = authResponseWatcher.get(msg.eventId)
+                    authResponseWatcher.put(msg.eventId, msg.success)
+                    if (wasAlreadyAuthenticated != true && msg.success) {
+                        sendEverything()
                     }
+                }
 
-                    if (outboxCache.contains(eventId) && !message.startsWith("auth-required")) {
-                        synchronized(outboxCache) {
-                            outboxCache.remove(eventId)
-                        }
+                // remove from cache for any error that is not an auth required error.
+                // for auth required, we will do the auth and try to send again.
+                if (outboxCache.contains(msg.eventId) && !msg.message.startsWith("auth-required")) {
+                    synchronized(outboxCache) {
+                        outboxCache.remove(msg.eventId)
                     }
+                }
 
-                    if (!success) {
-                        stats.newNotice("Failed to receive $eventId: $message")
-                    }
+                if (!msg.success) {
+                    stats.newNotice("Rejected event $msg.eventId: $msg.message")
+                }
 
-                    it.onSendResponse(this@SimpleRelay, eventId, success, message)
-                }
-            "AUTH" ->
-                listeners.forEach {
-                    Log.w("Relay", "Relay onAuth $url, ${ msgArray[1].asText()}")
-                    it.onAuth(this@SimpleRelay, msgArray[1].asText())
-                }
-            "NOTIFY" ->
-                listeners.forEach {
-                    // Log.w("Relay", "Relay onNotify $url, ${msg[1].asString}")
-                    it.onNotify(this@SimpleRelay, msgArray[1].asText())
-                }
-            "CLOSED" -> listeners.forEach { Log.w("Relay", "Relay Closed Subscription $url, $newMessage") }
+                listener.onSendResponse(this@SimpleClientRelay, msg.eventId, msg.success, msg.message)
+            }
+            is AuthMessage -> {
+                // Log.d("Relay", "Relay onAuth $url, $newMessage")
+                listener.onAuth(this@SimpleClientRelay, msg.challenge)
+            }
+            is NotifyMessage -> {
+                // Log.w("Relay", "Relay onNotify $url, $newMessage")
+                listener.onNotify(this@SimpleClientRelay, msg.message)
+            }
+            is ClosedMessage -> {
+                // Log.w("Relay", "Relay Closed Subscription $url, $newMessage")
+                listener.onClosed(this@SimpleClientRelay, msg.subscriptionId, msg.message)
+            }
             else -> {
                 stats.newError("Unsupported message: $newMessage")
-
-                listeners.forEach {
-                    Log.w("Relay", "Unsupported message: $newMessage")
-                    it.onError(
-                        this@SimpleRelay,
-                        "",
-                        Error("Unknown type $type on channel. Msg was $newMessage"),
-                    )
-                }
+                Log.w("Relay", "Unsupported message: $newMessage")
+                listener.onError(this, "", Error("Unsupported message: $newMessage"))
             }
         }
     }
 
     fun disconnect() {
         Log.d("Relay", "Relay.disconnect $url")
-        checkNotInMainThread()
-
         lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
         socket?.cancel()
         socket = null
@@ -349,30 +302,38 @@ class SimpleRelay(
     fun resetEOSEStatuses() {
         afterEOSEPerSubscription = LinkedHashMap(afterEOSEPerSubscription.size)
 
-        authResponse.clear()
+        authResponseWatcher.clear()
         authChallengesSent.clear()
     }
 
-    fun sendFilter(
+    fun sendRequest(
         requestId: String,
         filters: List<Filter>,
     ) {
-        checkNotInMainThread()
-
-        if (isConnected()) {
+        if (isConnectionStarted()) {
             if (isReady) {
                 if (filters.isNotEmpty()) {
-                    writeToSocket(
-                        filters.joinToStringLimited(
-                            separator = ",",
-                            limit = 19,
-                            prefix = """["REQ","$requestId",""",
-                            postfix = "]",
-                        ) {
-                            it.toJson()
-                        },
-                    )
+                    writeToSocket(ReqCmd.toJson(requestId, filters))
+                    afterEOSEPerSubscription[requestId] = false
+                }
+            }
+        } else {
+            // waits 60 seconds to reconnect after disconnected.
+            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
+                // sends all filters after connection is successful.
+                connect()
+            }
+        }
+    }
 
+    fun sendCount(
+        requestId: String,
+        filters: List<Filter>,
+    ) {
+        if (isConnectionStarted()) {
+            if (isReady) {
+                if (filters.isNotEmpty()) {
+                    writeToSocket(CountCmd.toJson(requestId, filters))
                     afterEOSEPerSubscription[requestId] = false
                 }
             }
@@ -386,30 +347,23 @@ class SimpleRelay(
     }
 
     fun connectAndSendFiltersIfDisconnected() {
-        checkNotInMainThread()
-
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
             if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
-                // println("sendfilter Only if Disconnected ${url} ")
                 connect()
             }
         }
     }
 
-    fun renewFilters() {
+    fun renewSubscriptions() {
         // Force update all filters after AUTH.
         subs.allSubscriptions().forEach {
-            sendFilter(requestId = it.id, it.filters)
+            sendRequest(requestId = it.id, it.filters)
         }
     }
 
     fun send(signedEvent: Event) {
-        checkNotInMainThread()
-
-        listeners.forEach { listener ->
-            listener.onBeforeSend(this@SimpleRelay, signedEvent)
-        }
+        listener.onBeforeSend(this@SimpleClientRelay, signedEvent)
 
         if (signedEvent is RelayAuthEvent) {
             sendAuth(signedEvent)
@@ -428,9 +382,9 @@ class SimpleRelay(
         // 4. auth is sent
         // ...
         if (!authChallengesSent.contains(challenge)) {
-            authResponse.put(signedEvent.id, false)
+            authResponseWatcher[signedEvent.id] = false
             authChallengesSent.add(challenge)
-            writeToSocket("""["AUTH",${signedEvent.toJson()}]""")
+            writeToSocket(AuthCmd.toJson(signedEvent))
         }
     }
 
@@ -439,36 +393,27 @@ class SimpleRelay(
             outboxCache.put(signedEvent.id, signedEvent)
         }
 
-        if (isConnected()) {
+        if (isConnectionStarted()) {
             if (isReady) {
-                writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
+                writeToSocket(EventCmd.toJson(signedEvent))
             }
         } else {
-            // sends all filters after connection is successful.
-            connectAndRun {
-                // Sends everything.
-                renewFilters()
-                sendOutbox()
-            }
+            // automatically sends all filters after connection is successful.
+            connect()
         }
     }
 
     private fun writeToSocket(str: String) {
         if (socket == null) {
-            listeners.forEach { listener ->
-                listener.onError(
-                    this@SimpleRelay,
-                    "",
-                    Error("Failed to send $str. Relay is not connected."),
-                )
-            }
+            listener.onError(
+                this@SimpleClientRelay,
+                "",
+                Error("Failed to send $str. Relay is not connected."),
+            )
         }
         socket?.let {
-            checkNotInMainThread()
             val result = it.send(str)
-            listeners.forEach { listener ->
-                listener.onSend(this@SimpleRelay, str, result)
-            }
+            listener.onSend(this@SimpleClientRelay, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())
 
             Log.d("Relay", "Relay send $url (${str.length} chars) $str")
@@ -476,60 +421,65 @@ class SimpleRelay(
     }
 
     fun close(subscriptionId: String) {
-        writeToSocket("""["CLOSE","$subscriptionId"]""")
+        writeToSocket(CloseCmd.toJson(subscriptionId))
     }
 
     interface Listener {
         fun onEvent(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             subscriptionId: String,
             event: Event,
             afterEOSE: Boolean,
         )
 
         fun onEOSE(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             subscriptionId: String,
         )
 
         fun onError(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             subscriptionId: String,
             error: Error,
         )
 
-        fun onSendResponse(
-            relay: SimpleRelay,
-            eventId: String,
-            success: Boolean,
-            message: String,
-        )
-
         fun onAuth(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             challenge: String,
         )
 
         fun onRelayStateChange(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             type: RelayState,
         )
 
-        /** Relay sent a notification */
         fun onNotify(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             description: String,
         )
 
+        fun onClosed(
+            relay: SimpleClientRelay,
+            subscriptionId: String,
+            message: String,
+        )
+
         fun onBeforeSend(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             event: Event,
         )
 
         fun onSend(
-            relay: SimpleRelay,
+            relay: SimpleClientRelay,
             msg: String,
             success: Boolean,
+        )
+
+        fun onSendResponse(
+            relay: SimpleClientRelay,
+            eventId: String,
+            success: Boolean,
+            message: String,
         )
     }
 }

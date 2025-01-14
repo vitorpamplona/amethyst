@@ -40,7 +40,7 @@ import org.junit.runner.RunWith
  * result. Modify your code to see how it affects performance.
  */
 @RunWith(AndroidJUnit4::class)
-class EventHasherBenchmark {
+class EventCmdHasherBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test

@@ -69,10 +69,7 @@ class RelayPool : Relay.Listener {
             } else {
                 addRelay(relay)
 
-                relay.connectAndRun {
-                    relay.renewFilters()
-                    relay.sendOutbox()
-
+                relay.connectAndRunAfterSync {
                     whenConnected(relay)
 
                     GlobalScope.launch(Dispatchers.IO) {
