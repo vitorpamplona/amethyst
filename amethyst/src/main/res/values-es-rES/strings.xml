@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">Dirección LN (antigua)</string>
     <string name="save_to_gallery">Guardar en la galería</string>
     <string name="image_saved_to_the_gallery">Imagen guardada en la galería</string>
+    <string name="video_download_has_started_toast">La descarga del vídeo ha comenzado…</string>
+    <string name="media_download_has_started_toast">La descarga del contenido multimedia ha comenzado…</string>
     <string name="failed_to_save_the_image">Error al guardar la imagen</string>
     <string name="video_saved_to_the_gallery">Video guardado en la galería de videos del teléfono</string>
     <string name="failed_to_save_the_video">Error al guardar el video</string>
@@ -345,6 +347,7 @@
     <string name="add_content">Añadir al mensaje</string>
     <string name="add_caption">Añadir un título</string>
     <string name="add_caption_example">Mi amigo encantador</string>
+    <string name="use_direct_url">Usar URL directa</string>
     <string name="content_description">Descripción del contenido</string>
     <string name="content_description_example">Un bote azul en una playa de arena blanca al atardecer</string>
     <string name="zap_type">Tipo de zap</string>
@@ -598,6 +601,8 @@
     <string name="copy_url_to_clipboard">Copiar URL al portapapeles</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID de la nota al portapapeles</string>
     <string name="add_media_to_gallery">Agregar contenido multimedia a la galería</string>
+    <string name="media_added">Contenido multimedia añadido</string>
+    <string name="media_added_to_profile_gallery">Contenido multimedia añadido a la galería del perfil</string>
     <string name="created_at">Creado</string>
     <string name="rules">Reglas</string>
     <string name="login_with_external_signer">Iniciar sesión con Amber</string>
@@ -606,6 +611,7 @@
     <string name="poll_zap_value_min_max_explainer">Los votos se calculan según la cantidad de zaps. Puedes establecer una cantidad mínima para evitar spammers y una máxima para que los zappers grandes no puedan dominar la encuesta. Usa la misma cantidad en ambos campos para asegurarte de que cada voto tenga el mismo valor. Déjalos vacíos para aceptar cualquier cantidad.</string>
     <string name="error_dialog_zap_error">No se pudo enviar el zap</string>
     <string name="error_dialog_talk_to_user">Mensaje para el usuario</string>
+    <string name="error_dialog_talk_to_user_name">Mensaje %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">No se pudo llegar a %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Error al ensamblar la url NIP-11 para %1$s: %2$s</string>
@@ -665,6 +671,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">No se pudo resolver %1$s. Comprueba si tienes conexión, si el servidor está activo y si la dirección de Lightning \"%2$s\" es correcta.</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">No se pudo resolver %1$s. Comprueba si tienes conexión, si el servidor está activo y si la dirección de Lightning \"%2$s\" es correcta..\n\nLa excepción fue: %3$s</string>
     <string name="could_not_fetch_invoice_from">No se pudo obtener la factura de %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">No se ha podido obtener la factura de %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Error al analizar JSON desde la dirección de Lightning. Comprueba la configuración de Lightning del usuario.</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Error al analizar JSON desde %1$s. Comprueba la configuración de Lightning del usuario.</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">No se encontró la URL de devolución de llamada en la configuración del servidor de la dirección de Lightning del usuario.</string>
@@ -734,6 +741,7 @@
     <string name="could_not_download_from_the_server">No se pudo descargar el contenido cargado desde el servidor</string>
     <string name="could_not_check_downloaded_file">No se pudo comprobar el archivo descargado después de cargar: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">No se pudo preparar el archivo local para cargar: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Error al cargar a %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Error al subir: %1$s</string>
     <string name="failed_to_delete_with_message">Error al eliminar: %1$s</string>
     <string name="media_too_big_for_nip95">El contenido multimedia es demasiado grande para NIP-95</string>
@@ -803,6 +811,7 @@
     <string name="search_relays_not_found_description">La creación de una lista de relés específicamente diseñada para la búsqueda y el etiquetado de usuarios mejorará estos resultados.</string>
     <string name="search_relays_not_found_editing">Inserta entre 1 y 3 relés para usarlos al buscar contenido o etiquetar usuarios. Asegúrate de que los relés que elijas implementen NIP-50.</string>
     <string name="search_relays_not_found_examples">Algunas buenas opciones son: \n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">Carga de mensaje directo</string>
     <string name="relay_settings">Configuración de relés</string>
     <string name="public_home_section">Relés de inicio públicos</string>
     <string name="public_home_section_explainer">Este tipo de relé almacena todo tu contenido. Amethyst enviará tus publicaciones aquí y otros usarán estos relés para encontrar tu contenido. Inserta entre 1 y 3 relés. Pueden ser personales, de pago o públicos.</string>
