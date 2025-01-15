@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.signers
 import android.util.Log
 import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.EventFactory
+import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -67,7 +68,7 @@ class NostrSignerSync(
     ): T? {
         if (keyPair.privKey == null) return null
 
-        val id = Event.generateIdBytes(pubKey, createdAt, kind, tags, content)
+        val id = EventHasher.hashIdBytes(pubKey, createdAt, kind, tags, content)
         val sig = CryptoUtils.sign(id, keyPair.privKey).toHexKey()
 
         return EventFactory.create(

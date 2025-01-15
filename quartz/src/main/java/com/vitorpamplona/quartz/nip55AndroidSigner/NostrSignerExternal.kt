@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner
 import android.util.Log
 import com.goterl.lazysodium.BuildConfig
 import com.vitorpamplona.quartz.EventFactory
+import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -40,11 +41,9 @@ class NostrSignerExternal(
         content: String,
         onReady: (T) -> Unit,
     ) {
-        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
-
         val event =
             Event(
-                id = id,
+                id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
                 pubKey = pubKey,
                 createdAt = createdAt,
                 kind = kind,

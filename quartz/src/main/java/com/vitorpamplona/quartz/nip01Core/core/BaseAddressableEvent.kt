@@ -31,7 +31,7 @@ open class BaseAddressableEvent(
     pubKey: HexKey,
     createdAt: Long,
     kind: Int,
-    tags: Array<Array<String>>,
+    tags: TagArray,
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, kind, tags, content, sig),

@@ -25,6 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -88,7 +89,7 @@ class PrivateOutboxRelayListEvent(
         try {
             signer.nip44Decrypt(content, pubKey) {
                 try {
-                    privateTagsCache = EventMapper.mapper.readValue<Array<Array<String>>>(it)
+                    privateTagsCache = EventMapper.mapper.readValue<TagArray>(it)
                     privateTagsCache?.let { onReady(it) }
                 } catch (e: Throwable) {
                     Log.w("PrivateOutboxRelayListEvent", "Error parsing the JSON: ${e.message}. Json `$it` from event `${toNostrUri()}`")

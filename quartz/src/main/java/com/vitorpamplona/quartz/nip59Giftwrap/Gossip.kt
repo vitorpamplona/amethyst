@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip59Giftwrap
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.EventFactory
+import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
@@ -40,7 +41,7 @@ class Gossip(
         val newKind = kind ?: -1
         val newTags = (tags ?: emptyArray()).plus(event.tags)
         val newContent = content ?: ""
-        val newID = id?.ifBlank { null } ?: Event.generateId(newPubKey, newCreatedAt, newKind, newTags, newContent)
+        val newID = id?.ifBlank { null } ?: EventHasher.hashId(newPubKey, newCreatedAt, newKind, newTags, newContent)
         val sig = ""
 
         return EventFactory.create(newID, newPubKey, newCreatedAt, newKind, newTags, newContent, sig)

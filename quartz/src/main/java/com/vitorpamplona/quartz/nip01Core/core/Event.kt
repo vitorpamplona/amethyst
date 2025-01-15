@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
@@ -56,24 +55,6 @@ open class Event(
 
     companion object {
         fun fromJson(json: String): Event = EventMapper.fromJson(json)
-
-        fun toJson(event: Event): String = EventMapper.toJson(event)
-
-        fun generateId(
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-        ): HexKey = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
-
-        fun generateIdBytes(
-            pubKey: HexKey,
-            createdAt: Long,
-            kind: Int,
-            tags: Array<Array<String>>,
-            content: String,
-        ): ByteArray = EventHasher.hashIdBytes(pubKey, createdAt, kind, tags, content)
 
         fun create(
             signer: NostrSigner,

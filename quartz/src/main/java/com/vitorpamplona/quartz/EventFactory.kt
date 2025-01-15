@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -155,7 +156,7 @@ class EventFactory {
                 ChatMessageEncryptedFileHeaderEvent.KIND -> {
                     if (id.isBlank()) {
                         ChatMessageEncryptedFileHeaderEvent(
-                            Event.generateId(pubKey, createdAt, kind, tags, content),
+                            EventHasher.hashId(pubKey, createdAt, kind, tags, content),
                             pubKey,
                             createdAt,
                             tags,
@@ -169,7 +170,7 @@ class EventFactory {
                 ChatMessageEvent.KIND -> {
                     if (id.isBlank()) {
                         ChatMessageEvent(
-                            Event.generateId(pubKey, createdAt, kind, tags, content),
+                            EventHasher.hashId(pubKey, createdAt, kind, tags, content),
                             pubKey,
                             createdAt,
                             tags,

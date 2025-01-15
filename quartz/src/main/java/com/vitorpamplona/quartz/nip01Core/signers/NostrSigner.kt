@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.signers
 
 import com.vitorpamplona.quartz.EventFactory
+import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip04Dm.Nip04
@@ -86,11 +87,9 @@ abstract class NostrSigner(
         content: String,
         onReady: (T) -> Unit,
     ) {
-        val id = Event.generateId(pubKey, createdAt, kind, tags, content)
-
         onReady(
             EventFactory.create(
-                id = id,
+                id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
                 pubKey = pubKey,
                 createdAt = createdAt,
                 kind = kind,
