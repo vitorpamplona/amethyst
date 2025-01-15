@@ -2,7 +2,6 @@ package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
 import android.util.Log;
 
-import com.vitorpamplona.quartz.utils.Hex;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.BitcoinBlockHeaderAttestation;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.EthereumBlockHeaderAttestation;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.LitecoinBlockHeaderAttestation;
@@ -12,6 +11,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.VerificationExcept
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpAppend;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpCrypto;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA256;
+import com.vitorpamplona.quartz.utils.Hex;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -34,8 +34,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.zapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -49,7 +51,7 @@ class ZapPaymentHandler(
 ) {
     @Immutable
     data class Payable(
-        val info: ZapSplitSetup,
+        val info: BaseZapSplitSetup,
         val user: User?,
         val amountMilliSats: Long,
         val invoice: String,
@@ -75,11 +77,11 @@ class ZapPaymentHandler(
             if (!zapSplitSetup.isNullOrEmpty()) {
                 zapSplitSetup
             } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
-                noteEvent.hosts().map { ZapSplitSetup(it, null, weight = 1.0, false) }
+                noteEvent.hosts().map { ZapSplitSetup(it.pubKeyHex, it.relay, weight = 1.0) }
             } else if (noteEvent is AppDefinitionEvent) {
                 val appLud16 = noteEvent.appMetaData()?.lnAddress()
                 if (appLud16 != null) {
-                    listOf(ZapSplitSetup(appLud16, null, weight = 1.0, true))
+                    listOf(ZapSplitSetupLnAddress(appLud16, weight = 1.0))
                 } else {
                     val lud16 = note.author?.info?.lnAddress()
 
@@ -97,7 +99,7 @@ class ZapPaymentHandler(
                         return@withContext
                     }
 
-                    listOf(ZapSplitSetup(lud16, null, weight = 1.0, true))
+                    listOf(ZapSplitSetupLnAddress(lud16, weight = 1.0))
                 }
             } else {
                 val lud16 = note.author?.info?.lnAddress()
@@ -116,7 +118,7 @@ class ZapPaymentHandler(
                     return@withContext
                 }
 
-                listOf(ZapSplitSetup(lud16, null, weight = 1.0, true))
+                listOf(ZapSplitSetupLnAddress(lud16, weight = 1.0))
             }
 
         onProgress(0.02f)
@@ -166,7 +168,7 @@ class ZapPaymentHandler(
     }
 
     class ZapRequestReady(
-        val inputSetup: ZapSplitSetup,
+        val inputSetup: BaseZapSplitSetup,
         val zapRequestJson: String?,
         val user: User? = null,
     )
@@ -176,7 +178,7 @@ class ZapPaymentHandler(
         pollOption: Int?,
         message: String,
         zapType: LnZapEvent.ZapType,
-        zapsToSend: List<ZapSplitSetup>,
+        zapsToSend: List<BaseZapSplitSetup>,
         onAllDone: suspend (List<ZapRequestReady>) -> Unit,
     ) {
         val authorRelayList =
@@ -191,23 +193,23 @@ class ZapPaymentHandler(
                     )?.readRelays()
                 }?.toSet()
 
-        collectSuccessfulOperations<ZapSplitSetup, ZapRequestReady>(
+        collectSuccessfulOperations<BaseZapSplitSetup, ZapRequestReady>(
             items = zapsToSend,
-            runRequestFor = { next: ZapSplitSetup, onReady ->
-                if (next.isLnAddress) {
+            runRequestFor = { next: BaseZapSplitSetup, onReady ->
+                if (next is ZapSplitSetupLnAddress) {
                     prepareZapRequestIfNeeded(note, pollOption, message, zapType) { zapRequestJson ->
                         if (zapRequestJson != null) {
                             onReady(ZapRequestReady(next, zapRequestJson))
                         }
                     }
-                } else {
-                    val user = LocalCache.getUserIfExists(next.lnAddressOrPubKeyHex)
+                } else if (next is ZapSplitSetup) {
+                    val user = LocalCache.getUserIfExists(next.pubKeyHex)
                     val userRelayList =
                         (
                             (
                                 LocalCache
                                     .getAddressableNoteIfExists(
-                                        AdvertisedRelayListEvent.createAddressTag(next.lnAddressOrPubKeyHex),
+                                        AdvertisedRelayListEvent.createAddressTag(next.pubKeyHex),
                                     )?.event as? AdvertisedRelayListEvent?
                             )?.readRelays()?.toSet() ?: emptySet()
                         ) + (authorRelayList ?: emptySet())
@@ -311,7 +313,7 @@ class ZapPaymentHandler(
     }
 
     private fun assembleInvoice(
-        splitSetup: ZapSplitSetup,
+        splitSetup: BaseZapSplitSetup,
         nostrZapRequest: String?,
         toUser: User?,
         zapValue: Long,
@@ -326,8 +328,8 @@ class ZapPaymentHandler(
         var progressThisPayment = 0.00f
 
         val lud16 =
-            if (splitSetup.isLnAddress) {
-                splitSetup.lnAddressOrPubKeyHex
+            if (splitSetup is ZapSplitSetupLnAddress) {
+                splitSetup.lnAddress
             } else {
                 toUser?.info?.lnAddress()
             }
@@ -371,7 +373,7 @@ class ZapPaymentHandler(
                     stringRes(
                         context,
                         R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                        user?.toBestDisplayName() ?: splitSetup.lnAddressOrPubKeyHex,
+                        user?.toBestDisplayName() ?: splitSetup.mainId(),
                     ),
                     null,
                 )

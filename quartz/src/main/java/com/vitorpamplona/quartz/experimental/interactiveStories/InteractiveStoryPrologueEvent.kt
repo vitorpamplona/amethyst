@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 

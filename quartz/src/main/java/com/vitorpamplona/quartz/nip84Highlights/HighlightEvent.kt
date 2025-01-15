@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -62,7 +63,7 @@ class HighlightEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (HighlightEvent) -> Unit,
         ) {
-            signer.sign(createdAt, KIND, arrayOf(arrayOf("alt", ALT)), msg, onReady)
+            signer.sign(createdAt, KIND, arrayOf(AltTagSerializer.toTagArray(ALT)), msg, onReady)
         }
     }
 }

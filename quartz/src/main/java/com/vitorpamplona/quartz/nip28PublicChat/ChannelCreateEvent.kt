@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -87,7 +88,7 @@ class ChannelCreateEvent(
 
             val tags =
                 arrayOf(
-                    arrayOf("alt", "Public chat creation event ${channelInfo?.name?.let { "about $it" }}"),
+                    AltTagSerializer.toTagArray("Public chat creation event ${channelInfo?.name?.let { "about $it" }}"),
                 )
 
             signer.sign(createdAt, KIND, tags, content, onReady)

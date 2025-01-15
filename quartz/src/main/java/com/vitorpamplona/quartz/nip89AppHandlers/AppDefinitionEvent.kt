@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.io.ByteArrayInputStream
 
@@ -85,7 +86,7 @@ class AppDefinitionEvent(
         ) {
             val tags =
                 arrayOf(
-                    arrayOf("alt", "App definition event for ${details.name}"),
+                    AltTagSerializer.toTagArray("App definition event for ${details.name}"),
                 )
             signer.sign(createdAt, KIND, tags, "", onReady)
         }

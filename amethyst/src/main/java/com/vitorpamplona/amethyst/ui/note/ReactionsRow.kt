@@ -149,7 +149,7 @@ import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip57Zaps.zapraiserAmount
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf

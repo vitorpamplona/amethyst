@@ -49,4 +49,11 @@ data class PTag(
     fun toNPub(): String = pubKeyHex.hexToByteArray().toNpub()
 
     fun toPTagArray() = removeTrailingNullsAndEmptyOthers("p", pubKeyHex, relay)
+
+    companion object {
+        fun parse(tags: Array<String>): PTag {
+            require(tags[0] == "p")
+            return PTag(tags[1], tags.getOrNull(2))
+        }
+    }
 }

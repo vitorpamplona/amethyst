@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -57,7 +58,7 @@ class ChannelHideMessageEvent(
                 (
                     messagesToHide?.map { arrayOf("e", it) }?.toTypedArray()
                         ?: emptyArray()
-                ) + arrayOf(arrayOf("alt", ALT))
+                ) + arrayOf(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags, reason, onReady)
         }

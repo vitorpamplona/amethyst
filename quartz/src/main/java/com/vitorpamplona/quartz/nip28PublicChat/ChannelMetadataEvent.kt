@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -91,7 +92,7 @@ class ChannelMetadataEvent(
             val tags =
                 listOf(
                     arrayOf("e", originalChannelIdHex, "", "root"),
-                    arrayOf("alt", "Public chat update to ${newChannelInfo?.name}"),
+                    AltTagSerializer.toTagArray("Public chat update to ${newChannelInfo?.name}"),
                 )
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }

@@ -64,7 +64,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.NIP17Group
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -75,11 +75,13 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.zapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.zapraiserAmount
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
@@ -316,11 +318,11 @@ open class NewPostViewModel : ViewModel() {
                 }
 
                 it.event?.zapSplitSetup()?.let {
-                    val totalWeight = it.sumOf { if (it.isLnAddress) 0.0 else it.weight }
+                    val totalWeight = it.sumOf { if (it is ZapSplitSetupLnAddress) 0.0 else it.weight }
 
                     it.forEach {
-                        if (!it.isLnAddress) {
-                            forwardZapTo.addItem(LocalCache.getOrCreateUser(it.lnAddressOrPubKeyHex), (it.weight / totalWeight).toFloat())
+                        if (it is ZapSplitSetup) {
+                            forwardZapTo.addItem(LocalCache.getOrCreateUser(it.pubKeyHex), (it.weight / totalWeight).toFloat())
                         }
                     }
                 }
@@ -378,7 +380,7 @@ open class NewPostViewModel : ViewModel() {
         forwardZapToEditting = TextFieldValue("")
         wantsForwardZapTo = localfowardZapTo.isNotEmpty()
 
-        wantsToMarkAsSensitive = draftEvent.tags.any { it.size > 1 && it[0] == "content-warning" }
+        wantsToMarkAsSensitive = draftEvent.isSensitive()
 
         val geohash = draftEvent.getGeoHash()
         wantsToAddGeoHash = geohash != null
@@ -386,11 +388,11 @@ open class NewPostViewModel : ViewModel() {
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
 
-        val zapraiser = draftEvent.tags.filter { it.size > 1 && it[0] == "zapraiser" }
-        wantsZapraiser = zapraiser.isNotEmpty()
+        val zapraiser = draftEvent.zapraiserAmount()
+        wantsZapraiser = zapraiser != null
         zapRaiserAmount = null
-        if (wantsZapraiser) {
-            zapRaiserAmount = zapraiser.first()[1].toLongOrNull() ?: 0
+        if (zapraiser != null) {
+            zapRaiserAmount = zapraiser
         }
 
         eTags =
@@ -566,10 +568,9 @@ open class NewPostViewModel : ViewModel() {
                                     .firstOrNull { !it.contains("localhost") }
 
                         ZapSplitSetup(
-                            lnAddressOrPubKeyHex = split.key.pubkeyHex,
+                            pubKeyHex = split.key.pubkeyHex,
                             relay = homeRelay,
                             weight = round(split.percentage.toDouble() * 10000) / 10000,
-                            isLnAddress = false,
                         )
                     } else {
                         null

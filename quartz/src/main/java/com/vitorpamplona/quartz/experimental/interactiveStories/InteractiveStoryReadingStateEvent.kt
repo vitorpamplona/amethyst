@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.parse
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
@@ -120,7 +121,7 @@ class InteractiveStoryReadingStateEvent(
             val tags =
                 listOfNotNull(
                     arrayOf("d", rootTag),
-                    arrayOf("alt", root.title()?.let { ALT2 + it } ?: ALT1),
+                    AltTagSerializer.toTagArray(root.title()?.let { ALT2 + it } ?: ALT1),
                     root.title()?.let { arrayOf("title", it) },
                     root.summary()?.let { arrayOf("summary", it) },
                     root.image()?.let { arrayOf("image", it) },

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.mapValues
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
@@ -114,7 +115,7 @@ class LnZapRequestEvent(
                     arrayOf("e", originalNote.id),
                     arrayOf("p", toUserPubHex ?: originalNote.pubKey),
                     arrayOf("relays") + relays,
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 )
             if (originalNote is AddressableEvent) {
                 tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))

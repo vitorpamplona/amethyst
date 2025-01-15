@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -150,7 +151,7 @@ class ChatMessageEncryptedFileHeaderEvent(
                         blurhash?.let { arrayOf(BLUR_HASH, it) },
                         sensitiveContent?.let {
                             if (it) {
-                                arrayOf("content-warning", "")
+                                ContentWarningSerializer.toTagArray()
                             } else {
                                 null
                             }

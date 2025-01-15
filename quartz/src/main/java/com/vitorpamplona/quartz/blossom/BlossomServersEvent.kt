@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -60,7 +61,7 @@ class BlossomServersEvent(
             servers
                 .map {
                     arrayOf("server", it)
-                }.plusElement(arrayOf("alt", ALT))
+                }.plusElement(AltTagSerializer.toTagArray(ALT))
                 .toTypedArray()
 
         fun updateRelayList(

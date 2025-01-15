@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments.Companion.IMETA
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -150,7 +151,7 @@ abstract class VideoEvent(
             tags.add(arrayOf("d", dTag))
             tags.add(arrayOf(ALT, altDescription))
             if (sensitiveContent == true) {
-                tags.add(arrayOf("content-warning", ""))
+                tags.add(ContentWarningSerializer.toTagArray())
             }
             duration?.let { tags.add(arrayOf(DURATION, "duration")) }
 

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.parse
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -73,7 +74,7 @@ class GitIssueEvent(
                     arrayOf<String>(),
                 )
 
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }

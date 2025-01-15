@@ -2,11 +2,11 @@ package com.vitorpamplona.quartz.nip03Timestamp.ots.op;
 
 import android.util.Log;
 
-import com.vitorpamplona.quartz.utils.Hex;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamSerializationContext;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Utils;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.DeserializationException;
+import com.vitorpamplona.quartz.utils.Hex;
 
 import java.util.Arrays;
 

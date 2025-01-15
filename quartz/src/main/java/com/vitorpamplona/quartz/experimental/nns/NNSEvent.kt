@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -50,7 +51,7 @@ class NNSEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (NNSEvent) -> Unit,
         ) {
-            val tags = arrayOf(arrayOf("alt", ALT))
+            val tags = arrayOf(AltTagSerializer.toTagArray(ALT))
             signer.sign(createdAt, KIND, tags, "", onReady)
         }
     }

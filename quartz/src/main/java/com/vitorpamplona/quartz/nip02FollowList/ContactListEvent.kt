@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip19Bech32.parse
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable data class Contact(
@@ -143,7 +144,7 @@ class ContactListEvent(
                 }
 
             val tags =
-                listOf(arrayOf("alt", ALT)) +
+                listOf(AltTagSerializer.toTagArray(ALT)) +
                     followUsers.map {
                         listOfNotNull("p", it.pubKeyHex, it.relayUri).toTypedArray()
                     } +
@@ -413,7 +414,7 @@ class ContactListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + arrayOf("alt", ALT)
+                    tags + AltTagSerializer.toTagArray(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)

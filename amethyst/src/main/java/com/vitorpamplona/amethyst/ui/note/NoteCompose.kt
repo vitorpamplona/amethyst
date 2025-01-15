@@ -189,7 +189,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEve
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip57Zaps.hasZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent

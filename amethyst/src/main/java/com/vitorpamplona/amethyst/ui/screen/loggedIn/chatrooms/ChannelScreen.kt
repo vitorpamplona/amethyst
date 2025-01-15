@@ -170,7 +170,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
 import kotlinx.collections.immutable.ImmutableList

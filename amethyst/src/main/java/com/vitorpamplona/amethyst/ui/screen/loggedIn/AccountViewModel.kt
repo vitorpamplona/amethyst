@@ -102,7 +102,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip57Zaps.zapraiserAmount
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent

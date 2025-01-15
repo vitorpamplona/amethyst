@@ -18,11 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip57Zaps
+package com.vitorpamplona.quartz.nip57Zaps.zapraiser
 
-data class ZapSplitSetup(
-    val lnAddressOrPubKeyHex: String,
-    val relay: String?,
-    val weight: Double,
-    val isLnAddress: Boolean,
-)
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
+
+fun Event.zapraiserAmount() = tags.firstTagValueAsLong("zapraiser")

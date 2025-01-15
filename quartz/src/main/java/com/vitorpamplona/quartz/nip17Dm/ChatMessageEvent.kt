@@ -24,8 +24,12 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
+import com.vitorpamplona.quartz.nip14Subject.SubjectTagSerializer
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
@@ -95,20 +99,19 @@ class ChatMessageEvent(
             to?.forEach { tags.add(arrayOf("p", it)) }
             replyTos?.forEach { tags.add(arrayOf("e", it, "", "reply")) }
             mentions?.forEach { tags.add(arrayOf("p", it, "", "mention")) }
-            zapReceiver?.forEach {
-                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-            }
+            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
+            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
+
             if (markAsSensitive) {
-                tags.add(arrayOf("content-warning", ""))
+                tags.add(ContentWarningSerializer.toTagArray())
             }
-            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            subject?.let { tags.add(arrayOf("subject", it)) }
+            subject?.let { tags.add(SubjectTagSerializer.toTagArray(it)) }
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
             emojis?.forEach { tags.add(it.toTagArray()) }
-            // tags.add(arrayOf("alt", alt))
+            // tags.add(AltTagSerializer.toTagArray(ALT))
 
             if (isDraft) {
                 signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)

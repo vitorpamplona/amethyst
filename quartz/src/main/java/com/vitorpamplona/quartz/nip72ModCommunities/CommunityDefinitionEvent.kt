@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -54,7 +55,7 @@ class CommunityDefinitionEvent(
             onReady: (CommunityDefinitionEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
             signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
         }
     }

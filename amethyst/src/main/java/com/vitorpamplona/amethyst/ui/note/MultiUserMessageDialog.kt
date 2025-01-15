@@ -54,7 +54,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage

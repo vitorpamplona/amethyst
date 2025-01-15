@@ -32,7 +32,11 @@ import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -50,6 +54,12 @@ class TextNoteEvent(
 
     companion object {
         const val KIND = 1
+        const val ALT = "A short note: "
+
+        fun shortedMessageForAlt(msg: String): String {
+            if (msg.length < 50) return ALT + msg
+            return ALT + msg.take(50) + "..."
+        }
 
         fun create(
             msg: String,
@@ -73,6 +83,7 @@ class TextNoteEvent(
             onReady: (TextNoteEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
+            tags.add(AltTagSerializer.toTagArray(shortedMessageForAlt(msg)))
             replyTos?.let {
                 tags.addAll(
                     it.positionalMarkedTags(
@@ -116,13 +127,13 @@ class TextNoteEvent(
                 }
             tags.addAll(buildHashtagTags(findHashtags(msg) + (extraTags ?: emptyList())))
             tags.addAll(buildUrlRefs(findURLs(msg)))
-            zapReceiver?.forEach {
-                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-            }
+            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
+            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
+
             if (markAsSensitive) {
-                tags.add(arrayOf("content-warning", ""))
+                tags.add(ContentWarningSerializer.toTagArray())
             }
-            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
+
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             imetas?.forEach { tags.add(Nip92MediaAttachments.createTag(it)) }
             emojis?.forEach { tags.add(it.toTagArray()) }

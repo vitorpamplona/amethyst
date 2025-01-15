@@ -72,7 +72,7 @@ object Nip19Parser {
             val type = matcher.group(2) // npub1
             val key = matcher.group(3) // bech32
 
-            return type + key
+            return type!! + key
         } catch (e: Throwable) {
             Log.e("NIP19 Parser", "Issue trying to Decode NIP19 $uri: ${e.message}", e)
         }

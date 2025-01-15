@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import com.vitorpamplona.quartz.nip96FileStorage.AuthToken
 import com.vitorpamplona.quartz.nip96FileStorage.Nip96Result
@@ -152,7 +153,7 @@ class Nip96Uploader {
                 .addFormDataPart("size", length.toString())
                 .also { body ->
                     alt?.ifBlank { null }?.let { body.addFormDataPart("alt", it) }
-                    sensitiveContent?.let { body.addFormDataPart("content-warning", it) }
+                    sensitiveContent?.let { body.addFormDataPart(CONTENT_WARNING, it) }
                     contentType?.let { body.addFormDataPart("content_type", it) }
                 }.addFormDataPart(
                     "file",

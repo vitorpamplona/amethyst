@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -63,7 +64,7 @@ class GoalEvent(
                 mutableListOf(
                     arrayOf(AMOUNT, amount.toString()),
                     arrayOf("relays") + relays,
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 )
 
             if (linkedEvent is AddressableEvent) {

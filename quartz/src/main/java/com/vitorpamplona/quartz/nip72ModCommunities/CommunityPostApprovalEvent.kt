@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.parse
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -89,7 +90,7 @@ class CommunityPostApprovalEvent(
             val replyToPost = arrayOf("e", approvedPost.id)
             val replyToAuthor = arrayOf("p", approvedPost.pubKey)
             val innerKind = arrayOf("k", "${approvedPost.kind}")
-            val alt = arrayOf("alt", ALT)
+            val alt = AltTagSerializer.toTagArray(ALT)
 
             val tags: Array<Array<String>> =
                 arrayOf(communities, replyToPost, replyToAuthor, innerKind, alt)

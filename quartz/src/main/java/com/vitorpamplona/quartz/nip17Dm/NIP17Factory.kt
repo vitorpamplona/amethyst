@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag

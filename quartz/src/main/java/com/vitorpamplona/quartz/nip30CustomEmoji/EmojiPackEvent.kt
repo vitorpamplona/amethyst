@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip30CustomEmoji
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -49,7 +50,7 @@ class EmojiPackEvent(
 
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("d", name))
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip89AppHandlers.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -47,7 +48,7 @@ class NIP90UserDiscoveryRequestEvent(
         ) {
             val tags =
                 arrayOf(
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 )
             signer.sign(createdAt, KIND, tags, "", onReady)
         }

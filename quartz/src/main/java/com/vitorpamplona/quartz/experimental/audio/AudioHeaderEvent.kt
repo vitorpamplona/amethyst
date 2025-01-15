@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -72,12 +74,12 @@ class AudioHeaderEvent(
                     wavefront?.let { arrayOf(WAVEFORM, it) },
                     sensitiveContent?.let {
                         if (it) {
-                            arrayOf("content-warning", "")
+                            ContentWarningSerializer.toTagArray()
                         } else {
                             null
                         }
                     },
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 ).toTypedArray()
 
             signer.sign(createdAt, KIND, tags, description, onReady)

@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -93,7 +95,7 @@ class FileHeaderEvent(
                 arrayOf(URL, url),
                 magnetUri?.let { arrayOf(MAGNET_URI, it) },
                 mimeType?.let { arrayOf(MIME_TYPE, it) },
-                alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: arrayOf("alt", ALT_DESCRIPTION),
+                alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: AltTagSerializer.toTagArray(ALT_DESCRIPTION),
                 hash?.let { arrayOf(HASH, it) },
                 size?.let { arrayOf(FILE_SIZE, it) },
                 dimensions?.let { arrayOf(DIMENSION, it.toString()) },
@@ -103,7 +105,7 @@ class FileHeaderEvent(
                 torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
                 sensitiveContent?.let {
                     if (it) {
-                        arrayOf("content-warning", "")
+                        ContentWarningSerializer.toTagArray()
                     } else {
                         null
                     }

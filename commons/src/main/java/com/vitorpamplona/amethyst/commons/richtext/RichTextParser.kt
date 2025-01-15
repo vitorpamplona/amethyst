@@ -27,6 +27,7 @@ import com.linkedin.urls.detection.UrlDetectorOptions
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -76,7 +77,7 @@ class RichTextParser {
                 hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
                 blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
                 dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
-                contentWarning = frags["content-warning"] ?: tags["content-warning"],
+                contentWarning = frags[CONTENT_WARNING] ?: tags[CONTENT_WARNING],
                 uri = callbackUri,
                 mimeType = contentType,
             )
@@ -87,7 +88,7 @@ class RichTextParser {
                 hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
                 blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
                 dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
-                contentWarning = frags["content-warning"] ?: tags["content-warning"],
+                contentWarning = frags[CONTENT_WARNING] ?: tags[CONTENT_WARNING],
                 uri = callbackUri,
                 mimeType = contentType,
             )

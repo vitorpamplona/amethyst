@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable data class ReportedKey(
@@ -102,7 +103,7 @@ class ReportEvent(
                 tags += listOf(arrayOf("a", reportedPost.address().toTag()))
             }
 
-            tags += listOf(arrayOf("alt", "Report for ${type.name}"))
+            tags += listOf(AltTagSerializer.toTagArray("Report for ${type.name}"))
 
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
@@ -117,7 +118,7 @@ class ReportEvent(
             val content = ""
 
             val reportAuthorTag = arrayOf("p", reportedUser, type.name.lowercase())
-            val alt = arrayOf("alt", "Report for ${type.name}")
+            val alt = AltTagSerializer.toTagArray("Report for ${type.name}")
 
             val tags: Array<Array<String>> = arrayOf(reportAuthorTag, alt)
             signer.sign(createdAt, KIND, tags, content, onReady)

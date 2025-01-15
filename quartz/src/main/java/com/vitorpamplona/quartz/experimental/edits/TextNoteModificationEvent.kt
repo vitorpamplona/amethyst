@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -63,7 +64,7 @@ class TextNoteModificationEvent(
                 tags.add(arrayOf("summary", it))
             }
 
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -199,7 +200,7 @@ class BookmarkListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + arrayOf("alt", ALT)
+                    tags + AltTagSerializer.toTagArray(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)
@@ -223,7 +224,7 @@ class BookmarkListEvent(
             events?.forEach { tags.add(arrayOf("e", it)) }
             users?.forEach { tags.add(arrayOf("p", it)) }
             addresses?.forEach { tags.add(arrayOf("a", it.toTag())) }
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             createPrivateTags(privEvents, privUsers, privAddresses, signer) { content ->
                 signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)

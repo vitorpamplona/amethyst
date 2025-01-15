@@ -119,7 +119,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEve
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent

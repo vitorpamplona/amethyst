@@ -39,8 +39,9 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.zapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -56,10 +57,9 @@ fun DisplayZapSplits(
             if (list.isEmpty() && useAuthorIfEmpty) {
                 listOf<ZapSplitSetup>(
                     ZapSplitSetup(
-                        lnAddressOrPubKeyHex = noteEvent.pubKey,
+                        pubKeyHex = noteEvent.pubKey,
                         relay = null,
                         weight = 1.0,
-                        isLnAddress = false,
                     ),
                 )
             } else {
@@ -75,19 +75,20 @@ fun DisplayZapSplits(
 
         FlowRow {
             list.forEach {
-                if (it.isLnAddress) {
-                    ClickableText(
-                        text = AnnotatedString(it.lnAddressOrPubKeyHex),
-                        onClick = {},
-                        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                    )
-                } else {
-                    UserPicture(
-                        userHex = it.lnAddressOrPubKeyHex,
-                        size = Size25dp,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                when (it) {
+                    is ZapSplitSetupLnAddress ->
+                        ClickableText(
+                            text = AnnotatedString(it.lnAddress),
+                            onClick = {},
+                            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
+                        )
+                    is ZapSplitSetup ->
+                        UserPicture(
+                            userHex = it.pubKeyHex,
+                            size = Size25dp,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
                 }
             }
         }

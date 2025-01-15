@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -77,7 +78,7 @@ class LongTextNoteEvent(
             replyTos?.forEach { tags.add(arrayOf("e", it)) }
             mentions?.forEach { tags.add(arrayOf("p", it)) }
             title?.let { tags.add(arrayOf("title", it)) }
-            tags.add(arrayOf("alt", "Blog post: $title"))
+            tags.add(AltTagSerializer.toTagArray("Blog post: $title"))
             signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
         }
     }

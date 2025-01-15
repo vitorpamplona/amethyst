@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -37,16 +38,8 @@ class NostrConnectEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(
-        id,
-        pubKey,
-        createdAt,
-        com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent.Companion.KIND,
-        tags,
-        content,
-        sig,
-    ) {
-    @Transient private var decryptedContent: Map<HexKey, com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage> = mapOf()
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @Transient private var decryptedContent: Map<HexKey, BunkerMessage> = mapOf()
 
     override fun countMemory(): Long =
         super.countMemory() +
@@ -71,7 +64,7 @@ class NostrConnectEvent(
 
     fun plainContent(
         signer: NostrSigner,
-        onReady: (com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage) -> Unit,
+        onReady: (BunkerMessage) -> Unit,
     ) {
         decryptedContent[signer.pubKey]?.let {
             onReady(it)
@@ -80,7 +73,7 @@ class NostrConnectEvent(
 
         // decrypts using NIP-04 or NIP-44
         signer.decrypt(content, talkingWith(signer.pubKey)) { retVal ->
-            val content = EventMapper.mapper.readValue(retVal, com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage::class.java)
+            val content = EventMapper.mapper.readValue(retVal, BunkerMessage::class.java)
 
             decryptedContent = decryptedContent + Pair(signer.pubKey, content)
 
@@ -93,35 +86,22 @@ class NostrConnectEvent(
         const val ALT = "Nostr Connect Event"
 
         fun create(
-            message: com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage,
+            message: BunkerMessage,
             remoteKey: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent) -> Unit,
+            onReady: (NostrConnectEvent) -> Unit,
         ) {
             val tags =
                 arrayOf(
-                    arrayOf("alt", com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent.Companion.ALT),
+                    AltTagSerializer.toTagArray(ALT),
                     arrayOf("p", remoteKey),
                 )
-            signer.sign(
-                createdAt,
-                com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent.Companion.KIND,
-                tags,
-                "",
-                onReady,
-            )
 
             val encrypted = EventMapper.mapper.writeValueAsString(message)
 
             signer.nip44Encrypt(encrypted, remoteKey) { content ->
-                signer.sign(
-                    createdAt,
-                    com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent.Companion.KIND,
-                    tags,
-                    content,
-                    onReady,
-                )
+                signer.sign(createdAt, KIND, tags, content, onReady)
             }
         }
     }

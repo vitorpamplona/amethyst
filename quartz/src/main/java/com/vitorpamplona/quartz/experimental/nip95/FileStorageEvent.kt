@@ -25,6 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.Base64
 
@@ -68,7 +69,7 @@ class FileStorageEvent(
             val tags =
                 listOfNotNull(
                     arrayOf(TYPE, mimeType),
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 )
 
             val content = encode(data)

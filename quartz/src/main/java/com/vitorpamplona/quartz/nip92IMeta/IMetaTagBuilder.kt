@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip92IMeta
 
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.ALT
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.BLUR_HASH
@@ -63,7 +64,7 @@ class IMetaTagBuilder(
 
     fun torrent(uri: String) = add(TORRENT_INFOHASH, uri)
 
-    fun sensitiveContent(reason: String) = add("content-warning", reason)
+    fun sensitiveContent(reason: String) = add(CONTENT_WARNING, reason)
 
     fun build() = IMetaTag(url, properties)
 }

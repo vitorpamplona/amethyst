@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import com.vitorpamplona.quartz.nip03Timestamp.ots.VerifyResult
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA256
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.coroutines.CancellationException
@@ -178,7 +179,7 @@ class OtsEvent(
             val tags =
                 arrayOf(
                     arrayOf("e", eventId),
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 )
             signer.sign(createdAt, KIND, tags, otsFileBase64, onReady)
         }

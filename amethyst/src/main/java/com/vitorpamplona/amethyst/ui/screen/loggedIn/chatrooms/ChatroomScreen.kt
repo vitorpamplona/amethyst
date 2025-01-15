@@ -118,7 +118,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip10Notes.findURLs
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.NIP17Group
 import kotlinx.collections.immutable.ImmutableList

@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip10Notes.PTag
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -60,7 +62,7 @@ class LiveActivitiesEvent(
 
     fun host() = tags.firstOrNull { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }?.get(1)
 
-    fun hosts() = tags.filter { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }.map { it[1] }
+    fun hosts() = tags.filter { it.size > 3 && it[0] == "p" && it[3].equals("Host", true) }.map { PTag(it[1], it.getOrNull(2)) }
 
     fun checkStatus(eventStatus: String?): String? =
         if (eventStatus == STATUS_LIVE && createdAt < TimeUtils.eightHoursAgo()) {
@@ -84,7 +86,7 @@ class LiveActivitiesEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (LiveActivitiesEvent) -> Unit,
         ) {
-            val tags = arrayOf(arrayOf("alt", ALT))
+            val tags = arrayOf(AltTagSerializer.toTagArray(ALT))
             signer.sign(createdAt, KIND, tags, "", onReady)
         }
     }

@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.mapValues
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -96,10 +98,10 @@ class TorrentEvent(
                     arrayOf("title", title),
                     arrayOf("btih", btih),
                     x?.let { arrayOf("x", it) },
-                    alt?.let { arrayOf("alt", it) } ?: arrayOf("alt", ALT_DESCRIPTION),
+                    alt?.let { arrayOf("alt", it) } ?: AltTagSerializer.toTagArray(ALT_DESCRIPTION),
                     sensitiveContent?.let {
                         if (it) {
-                            arrayOf("content-warning", "")
+                            ContentWarningSerializer.toTagArray()
                         } else {
                             null
                         }

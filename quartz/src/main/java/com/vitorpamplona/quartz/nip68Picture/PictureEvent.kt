@@ -33,7 +33,11 @@ import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments.Companion.IMETA
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -159,7 +163,7 @@ class PictureEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (PictureEvent) -> Unit,
         ) {
-            val tags = mutableListOf(arrayOf<String>("alt", ALT_DESCRIPTION))
+            val tags = mutableListOf(AltTagSerializer.toTagArray(ALT_DESCRIPTION))
 
             images.forEach {
                 tags.add(it.toIMetaArray())
@@ -187,14 +191,13 @@ class PictureEvent(
                 tags.addAll(buildHashtagTags(findHashtags(msg)))
                 tags.addAll(buildUrlRefs(findURLs(msg)))
             }
+            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
+            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
 
-            zapReceiver?.forEach {
-                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-            }
             if (markAsSensitive) {
-                tags.add(arrayOf("content-warning", ""))
+                tags.add(ContentWarningSerializer.toTagArray())
             }
-            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
+
             geohash?.let { tags.addAll(geohashMipMap(it)) }
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), msg ?: "", onReady)

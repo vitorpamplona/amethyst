@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip89AppHandlers.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -83,7 +84,7 @@ class NIP90ContentDiscoveryResponseEvent(
         ) {
             val tags =
                 arrayOf(
-                    arrayOf("alt", ALT),
+                    AltTagSerializer.toTagArray(ALT),
                 )
             signer.sign(createdAt, KIND, tags, "", onReady)
         }

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.experimental.relationshipStatus
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -53,7 +54,7 @@ class RelationshipStatusEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + arrayOf("alt", ALT)
+                    tags + AltTagSerializer.toTagArray(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)
@@ -69,7 +70,7 @@ class RelationshipStatusEvent(
         ) {
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("d", targetUser))
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             val privateTags = mutableListOf<Array<String>>()
             petname?.let { privateTags.add(arrayOf(PETNAME, it)) }

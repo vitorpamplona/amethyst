@@ -22,10 +22,12 @@ package com.vitorpamplona.quartz.nip36SensitiveContent
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-fun Event.isSensitive() = tags.any { (it.size > 0 && it[0] == "content-warning") }
+const val CONTENT_WARNING = "content-warning"
+
+fun Event.isSensitive() = tags.any { (it.size > 0 && it[0] == CONTENT_WARNING) }
 
 fun Event.isSensitiveOrNSFW() =
     tags.any {
-        (it.size > 0 && it[0] == "content-warning") ||
+        (it.size > 0 && it[0] == CONTENT_WARNING) ||
             (it.size > 1 && it[0] == "t" && (it[1].equals("nsfw", true) || it[1].equals("nude", true)))
     }

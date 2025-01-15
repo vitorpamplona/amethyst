@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -70,7 +71,7 @@ class EmojiPackSelectionEvent(
 
             listOfEmojiPacks?.forEach { tags.add(arrayOf("a", it.toTag())) }
 
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
         }

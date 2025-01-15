@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip39ExtIdentities.updateClaims
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.io.ByteArrayInputStream
@@ -68,7 +69,7 @@ class MetadataEvent(
             val tags = mutableListOf<Array<String>>()
 
             tags.add(
-                arrayOf("alt", "User profile for ${name ?: currentJson.get("name").asText() ?: ""}"),
+                AltTagSerializer.toTagArray("User profile for ${name ?: currentJson.get("name").asText() ?: ""}"),
             )
 
             return signer.sign(createdAt, KIND, tags.toTypedArray(), writer.buffer.toString())
@@ -118,7 +119,7 @@ class MetadataEvent(
             ObjectMapper().writeValue(writer, currentJson)
 
             val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("alt", "User profile for ${name ?: currentJson.get("name").asText() ?: ""}"))
+            tags.add(AltTagSerializer.toTagArray("User profile for ${name ?: currentJson.get("name").asText() ?: ""}"))
 
             latest?.updateClaims(twitter, github, mastodon)?.forEach {
                 tags.add(it)

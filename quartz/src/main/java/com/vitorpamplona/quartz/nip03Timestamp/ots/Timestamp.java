@@ -1,11 +1,11 @@
 package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
-import com.vitorpamplona.quartz.utils.Hex;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.BitcoinBlockHeaderAttestation;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.TimeAttestation;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.DeserializationException;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.Op;
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpBinary;
+import com.vitorpamplona.quartz.utils.Hex;
 
 import java.util.ArrayList;
 import java.util.Arrays;

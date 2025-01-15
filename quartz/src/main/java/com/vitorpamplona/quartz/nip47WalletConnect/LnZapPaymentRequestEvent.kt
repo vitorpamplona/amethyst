@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -85,7 +86,7 @@ class LnZapPaymentRequestEvent(
         ) {
             val serializedRequest = EventMapper.mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
 
-            val tags = arrayOf(arrayOf("p", walletServicePubkey), arrayOf("alt", ALT))
+            val tags = arrayOf(arrayOf("p", walletServicePubkey), AltTagSerializer.toTagArray(ALT))
 
             signer.nip04Encrypt(
                 serializedRequest,

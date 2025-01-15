@@ -35,7 +35,11 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.positionalMarkedTags
 import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip57Zaps.ZapSplitSetup
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -85,7 +89,7 @@ class GitReplyEvent(
                     arrayOf<String>(),
                 )
 
-            tags.add(arrayOf("alt", ALT))
+            tags.add(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }
@@ -149,19 +153,17 @@ class GitReplyEvent(
                 }
             tags.addAll(buildHashtagTags(findHashtags(msg)))
             tags.addAll(buildUrlRefs(findURLs(msg)))
-            zapReceiver?.forEach {
-                tags.add(arrayOf("zap", it.lnAddressOrPubKeyHex, it.relay ?: "", it.weight.toString()))
-            }
+            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
+            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
             if (markAsSensitive) {
-                tags.add(arrayOf("content-warning", ""))
+                tags.add(ContentWarningSerializer.toTagArray())
             }
-            zapRaiserAmount?.let { tags.add(arrayOf("zapraiser", "$it")) }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
             emojis?.forEach { tags.add(it.toTagArray()) }
-            tags.add(arrayOf("alt", "a git issue reply"))
+            tags.add(AltTagSerializer.toTagArray("a git issue reply"))
 
             if (isDraft) {
                 signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)

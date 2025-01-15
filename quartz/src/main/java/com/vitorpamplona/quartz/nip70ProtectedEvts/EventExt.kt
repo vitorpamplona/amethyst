@@ -18,30 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip57Zaps
+package com.vitorpamplona.quartz.nip70ProtectedEvts
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 
-fun Event.hasZapSplitSetup() = tags.hasTagWithContent("zap")
+const val PROTECTED_TAG = "-"
 
-fun Event.zapSplitSetup(): List<ZapSplitSetup> =
-    tags.mapTagged("zap") {
-        val isLnAddress = it[0].contains("@") || it[0].startsWith("LNURL", true)
-        val weight = if (isLnAddress) 1.0 else (it.getOrNull(3)?.toDoubleOrNull() ?: 0.0)
-
-        if (weight > 0) {
-            ZapSplitSetup(
-                it[1],
-                it.getOrNull(2),
-                weight,
-                isLnAddress,
-            )
-        } else {
-            null
-        }
-    }
-
-fun Event.zapraiserAmount() = tags.firstTagValueAsLong("zapraiser")
+fun Event.isProtected() = tags.any { (it.size > 0 && it[0] == PROTECTED_TAG) }

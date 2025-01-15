@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -70,7 +71,7 @@ class RepostEvent(
                 tags += listOf(arrayOf("a", boostedPost.address().toTag()))
             }
 
-            tags += listOf(arrayOf("alt", ALT))
+            tags += listOf(AltTagSerializer.toTagArray(ALT))
 
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
