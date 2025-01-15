@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.tags.geohash
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.anyTagWithValueStartingWithIgnoreCase
+import com.vitorpamplona.quartz.nip01Core.core.anyTagWithValueStartingWith
 import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
 import com.vitorpamplona.quartz.nip01Core.core.isAnyTagged
 import com.vitorpamplona.quartz.nip01Core.core.mapValues
@@ -30,7 +30,7 @@ fun TagArray.hasGeohashes() = this.hasTagWithContent("g")
 
 fun TagArray.isTaggedGeoHashes(hashtags: Set<String>) = this.isAnyTagged("g", hashtags)
 
-fun TagArray.isTaggedGeoHash(hashtag: String) = this.anyTagWithValueStartingWithIgnoreCase("g", hashtag)
+fun TagArray.isTaggedGeoHash(hashtag: String) = this.anyTagWithValueStartingWith("g", hashtag)
 
 fun TagArray.geohashes() = this.mapValues("g")
 

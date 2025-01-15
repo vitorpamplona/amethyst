@@ -249,7 +249,7 @@ fun DisplayEntryForNote(
 
     val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return
 
-    val description = noteEvent.tags.firstTagValueFor("title", "subject", "alt")
+    val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
 
     Text("-", maxLines = 1)
 

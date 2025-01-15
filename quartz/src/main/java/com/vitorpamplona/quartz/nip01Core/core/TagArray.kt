@@ -24,46 +24,64 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 
 typealias TagArray = Array<Array<String>>
 
+/**
+ * Performs the given [action] on each tag that matches the given [tagName].
+ */
 fun TagArray.forEachTagged(
     tagName: String,
-    onEach: (eventId: HexKey) -> Unit,
+    action: (eventId: HexKey) -> Unit,
 ) = this.forEach {
     if (it.size > 1 && it[0] == tagName) {
-        onEach(it[1])
+        action(it[1])
     }
 }
 
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and the action.
+ */
 fun TagArray.anyTagged(
     tagName: String,
-    onEach: (tagValue: String) -> Boolean,
-) = this.any {
-    if (it.size > 1 && it[0] == tagName) {
-        onEach(it[1])
-    } else {
-        false
-    }
-}
+    predicate: (tagValue: String) -> Boolean,
+) = this.any { it.size > 1 && it[0] == tagName && predicate(it[1]) }
 
+/**
+ * Returns `true` if at least one tag matches the given [tagName].
+ */
 fun TagArray.anyTagged(tagName: String) = this.any { it.size > 0 && it[0] == tagName }
 
-fun TagArray.anyTagWithValueStartingWithIgnoreCase(
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and its value starts with a prefix
+ */
+fun TagArray.anyTagWithValueStartingWith(
     tagName: String,
     valuePrefix: String,
-): Boolean = this.any { it.size > 1 && it[0] == tagName && it[1].startsWith(valuePrefix, true) }
+    ignoreCase: Boolean = true,
+): Boolean = this.any { it.size > 1 && it[0] == tagName && it[1].startsWith(valuePrefix, ignoreCase) }
 
+/**
+ * Returns `true` if at least one tag matches the given name and has a value
+ */
 fun TagArray.hasTagWithContent(tagName: String) = this.any { it.size > 1 && it[0] == tagName }
 
+/**
+ * Returns a list containing only the non-null results of applying the tag value to the given [transform] function
+ * to each tag that matches the [tagName]
+ */
 fun <R> TagArray.mapValueTagged(
     tagName: String,
-    map: (tagValue: String) -> R,
+    transform: (tagValue: String) -> R,
 ) = this.mapNotNull {
     if (it.size > 1 && it[0] == tagName) {
-        map(it[1])
+        transform(it[1])
     } else {
         null
     }
 }
 
+/**
+ * Returns a list containing only the non-null results of applying the tag array to the given [transform] function
+ * to each tag that matches the [tagName]
+ */
 fun <R> TagArray.mapTagged(
     tagName: String,
     map: (tagValue: Array<String>) -> R,
@@ -75,6 +93,9 @@ fun <R> TagArray.mapTagged(
     }
 }
 
+/**
+ * Returns a list containing only the non-null tag values that match the [tagName]
+ */
 fun TagArray.mapValues(tagName: String) =
     this.mapNotNull {
         if (it.size > 1 && it[0] == tagName) {
@@ -84,39 +105,76 @@ fun TagArray.mapValues(tagName: String) =
         }
     }
 
+/**
+ * Returns the first non-null value produced by [transform] function being applied to all tags
+ * that match the [tagName]
+ */
 fun <R> TagArray.firstMapTagged(
     tagName: String,
-    map: (tagValue: Array<String>) -> R,
+    transform: (tagValue: Array<String>) -> R,
 ) = this.firstNotNullOfOrNull {
     if (it.size > 1 && it[0] == tagName) {
-        map(it)
+        transform(it)
     } else {
         null
     }
 }
 
+/**
+ * Returns a list of tags that match the given [tagName].
+ */
 fun TagArray.filterByTag(tagName: String) = this.filter { it.size > 0 && it[0] == tagName }
 
+/**
+ * Returns a list of tags that match the given [tagName] and have a tag value.
+ */
 fun TagArray.filterByTagWithValue(tagName: String) = this.filter { it.size > 1 && it[0] == tagName }
 
+/**
+ * Returns the first tag that match the given [tagName] and have a tag value.
+ */
 fun TagArray.firstTag(key: String) = this.firstOrNull { it.size > 1 && it[0] == key }
 
+/**
+ * Returns the first tag value that match the given [tagName] and have a tag value.
+ */
 fun TagArray.firstTagValue(key: String) = this.firstOrNull { it.size > 1 && it[0] == key }?.let { it[1] }
 
+/**
+ * Returns the first tag value that match the given [tagName] and have a tag value as integer
+ */
 fun TagArray.firstTagValueAsInt(key: String) = this.firstOrNull { it.size > 1 && it[0] == key }?.let { it[1].toIntOrNull() }
 
+/**
+ * Returns the first tag value that match the given [tagName] and have a tag value as long
+ */
 fun TagArray.firstTagValueAsLong(key: String) = this.firstOrNull { it.size > 1 && it[0] == key }?.let { it[1].toLongOrNull() }
 
-fun TagArray.firstTagValueFor(vararg key: String) = this.firstOrNull { it.size > 1 && it[0] in key }?.let { it[1] }
+/**
+ * Returns the first tag value that match any of the given [tagNames] and have a tag value
+ */
+fun TagArray.firstTagValueFor(vararg tagNames: String) = this.firstOrNull { it.size > 1 && it[0] in tagNames }?.let { it[1] }
 
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and [tagValue]
+ */
 fun TagArray.isTagged(
-    key: String,
-    tag: String,
-) = this.any { it.size > 1 && it[0] == key && it[1] == tag }
+    tagName: String,
+    tagValue: String,
+) = this.any { it.size > 1 && it[0] == tagName && it[1] == tagValue }
 
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and is in [tagValues]
+ */
 fun TagArray.isAnyTagged(
-    key: String,
-    tags: Set<String>,
-) = this.any { it.size > 1 && it[0] == key && it[1] in tags }
+    tagName: String,
+    tagValues: Set<String>,
+) = this.any { it.size > 1 && it[0] == tagName && it[1] in tagValues }
 
-fun TagArray.matchTag1With(text: String) = this.any { it.size > 1 && it[1].contains(text, true) }
+/**
+ * Returns `true` if at least one tag has value that contains [text]
+ */
+fun TagArray.tagValueContains(
+    text: String,
+    ignoreCase: Boolean = false,
+) = this.any { it.size > 1 && it[1].contains(text, ignoreCase) }

@@ -52,7 +52,7 @@ import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.matchTag1With
+import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.hasValidSignature
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.mapTaggedAddress
@@ -1850,7 +1850,7 @@ object LocalCache {
                 return@filter false
             }
 
-            if (note.event?.tags?.matchTag1With(text) == true ||
+            if (note.event?.tags?.tagValueContains(text, true) == true ||
                 note.idHex.startsWith(text, true)
             ) {
                 if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
@@ -1881,7 +1881,7 @@ object LocalCache {
                     return@filter false
                 }
 
-                if (addressable.event?.tags?.matchTag1With(text) == true ||
+                if (addressable.event?.tags?.tagValueContains(text, true) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
                     if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {

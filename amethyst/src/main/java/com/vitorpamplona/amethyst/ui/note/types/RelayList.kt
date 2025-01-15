@@ -75,15 +75,20 @@ fun DisplayRelaySet(
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
     val relays by
-        remember(baseNote) {
+        remember(noteEvent) {
             mutableStateOf(
                 noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
             )
         }
 
+    val relayListName =
+        remember(noteEvent) {
+            noteEvent.tags.firstTagValueFor("title", "name") ?: "#${noteEvent.dTag()}"
+        }
+
     DisplayRelaySet(
         relays,
-        noteEvent.tags.firstTagValueFor("title", "name") ?: "#${noteEvent.dTag()}",
+        relayListName,
         noteEvent.description(),
         backgroundColor,
         accountViewModel,
