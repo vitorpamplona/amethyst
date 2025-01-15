@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 
 class PoWRankProcessor {
     companion object {
+        @JvmStatic
         fun compute(
             id: HexKey,
             commitedPoW: Int?,
@@ -41,6 +42,7 @@ class PoWRankProcessor {
             }
         }
 
+        @JvmStatic
         fun calculatePowRankOf(id: HexKey): Int {
             var rank = 0
             for (i in 0..id.length) {
