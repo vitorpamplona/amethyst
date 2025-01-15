@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 
-class Gossip(
+class Rumor(
     val id: HexKey?,
     @JsonProperty("pubkey") val pubKey: HexKey?,
     @JsonProperty("created_at") val createdAt: Long?,
@@ -35,7 +35,7 @@ class Gossip(
     val tags: Array<Array<String>>?,
     val content: String?,
 ) {
-    fun mergeWith(event: SealedGossipEvent): Event {
+    fun mergeWith(event: SealedRumorEvent): Event {
         val newPubKey = event.pubKey // forces to be the pubkey of the seal to make sure impersonators don't impersonate
         val newCreatedAt = if (createdAt != null && createdAt > 1000) createdAt else event.createdAt
         val newKind = kind ?: -1
@@ -48,10 +48,10 @@ class Gossip(
     }
 
     companion object {
-        fun fromJson(json: String): Gossip = EventMapper.mapper.readValue(json, Gossip::class.java)
+        fun fromJson(json: String): Rumor = EventMapper.mapper.readValue(json, Rumor::class.java)
 
-        fun toJson(event: Gossip): String = EventMapper.mapper.writeValueAsString(event)
+        fun toJson(event: Rumor): String = EventMapper.mapper.writeValueAsString(event)
 
-        fun create(event: Event): Gossip = Gossip(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
+        fun create(event: Event): Rumor = Rumor(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
     }
 }

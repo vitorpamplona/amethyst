@@ -121,7 +121,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
@@ -3205,9 +3205,9 @@ class Account(
 
         mine.forEach { giftWrap ->
             giftWrap.unwrap(signer) { gift ->
-                if (gift is SealedGossipEvent) {
-                    gift.unseal(signer) { gossip ->
-                        LocalCache.justConsume(gossip, null)
+                if (gift is SealedRumorEvent) {
+                    gift.unseal(signer) { rumor ->
+                        LocalCache.justConsume(rumor, null)
                     }
                 }
 
@@ -3742,7 +3742,7 @@ class Account(
     }
 
     fun unseal(
-        event: SealedGossipEvent,
+        event: SealedRumorEvent,
         onReady: (Event) -> Unit,
     ) {
         if (!isWriteable()) return

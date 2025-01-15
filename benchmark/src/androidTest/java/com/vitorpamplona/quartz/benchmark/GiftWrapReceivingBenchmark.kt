@@ -33,8 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.Gossip
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -73,7 +73,7 @@ class GiftWrapReceivingBenchmark {
             isDraft = true,
             signer = sender,
         ) {
-            SealedGossipEvent.create(
+            SealedRumorEvent.create(
                 event = it,
                 encryptTo = receiver.pubKey,
                 signer = sender,
@@ -96,9 +96,9 @@ class GiftWrapReceivingBenchmark {
     fun createSeal(
         sender: NostrSigner,
         receiver: NostrSigner,
-    ): SealedGossipEvent {
+    ): SealedRumorEvent {
         val countDownLatch = CountDownLatch(1)
-        var seal: SealedGossipEvent? = null
+        var seal: SealedRumorEvent? = null
 
         ChatMessageEvent.create(
             msg = "Hi there! This is a test message",
@@ -113,7 +113,7 @@ class GiftWrapReceivingBenchmark {
             isDraft = true,
             signer = sender,
         ) {
-            SealedGossipEvent.create(
+            SealedRumorEvent.create(
                 event = it,
                 encryptTo = receiver.pubKey,
                 signer = sender,
@@ -225,6 +225,6 @@ class GiftWrapReceivingBenchmark {
                 seal.pubKey.hexToByteArray(),
             )
 
-        benchmarkRule.measureRepeated { assertNotNull(innerJson?.let { Gossip.fromJson(it) }) }
+        benchmarkRule.measureRepeated { assertNotNull(innerJson?.let { Rumor.fromJson(it) }) }
     }
 }

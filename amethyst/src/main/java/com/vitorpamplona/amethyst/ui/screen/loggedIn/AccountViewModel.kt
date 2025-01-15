@@ -104,7 +104,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
@@ -958,7 +958,7 @@ class AccountViewModel(
     }
 
     fun unseal(
-        event: SealedGossipEvent,
+        event: SealedRumorEvent,
         onReady: (Event) -> Unit,
     ) {
         account.unseal(event, onReady)
@@ -1456,7 +1456,7 @@ class AccountViewModel(
                     }
                 }
             }
-            is SealedGossipEvent -> {
+            is SealedRumorEvent -> {
                 event.innerEventId?.let {
                     val existingNote = LocalCache.getNoteIfExists(it)
                     if (existingNote != null) {

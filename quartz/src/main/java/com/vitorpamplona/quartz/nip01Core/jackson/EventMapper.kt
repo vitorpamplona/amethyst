@@ -35,9 +35,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.RequestDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.ResponseDeserializer
-import com.vitorpamplona.quartz.nip59Giftwrap.Gossip
-import com.vitorpamplona.quartz.nip59Giftwrap.GossipDeserializer
-import com.vitorpamplona.quartz.nip59Giftwrap.GossipSerializer
+import com.vitorpamplona.quartz.nip59Giftwrap.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.RumorDeserializer
+import com.vitorpamplona.quartz.nip59Giftwrap.RumorSerializer
 
 class EventMapper {
     companion object {
@@ -49,8 +49,8 @@ class EventMapper {
                     SimpleModule()
                         .addSerializer(Event::class.java, EventSerializer())
                         .addDeserializer(Event::class.java, EventDeserializer())
-                        .addSerializer(Gossip::class.java, GossipSerializer())
-                        .addDeserializer(Gossip::class.java, GossipDeserializer())
+                        .addSerializer(Rumor::class.java, RumorSerializer())
+                        .addDeserializer(Rumor::class.java, RumorDeserializer())
                         .addDeserializer(Response::class.java, ResponseDeserializer())
                         .addDeserializer(Request::class.java, RequestDeserializer())
                         .addDeserializer(BunkerMessage::class.java, BunkerMessage.BunkerMessageDeserializer())

@@ -26,13 +26,13 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.jackson.toTypedArray
 
-class GossipDeserializer : StdDeserializer<Gossip>(Gossip::class.java) {
+class RumorDeserializer : StdDeserializer<Rumor>(Rumor::class.java) {
     override fun deserialize(
         jp: JsonParser,
         ctxt: DeserializationContext,
-    ): Gossip {
+    ): Rumor {
         val jsonObject: JsonNode = jp.codec.readTree(jp)
-        return Gossip(
+        return Rumor(
             id = jsonObject.get("id")?.asText()?.intern(),
             pubKey = jsonObject.get("pubkey")?.asText()?.intern(),
             createdAt = jsonObject.get("created_at")?.asLong(),

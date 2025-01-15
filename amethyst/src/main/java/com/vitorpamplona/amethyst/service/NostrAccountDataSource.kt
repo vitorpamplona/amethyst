@@ -65,7 +65,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -368,10 +368,10 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                 }
             }
 
-            is SealedGossipEvent -> {
+            is SealedRumorEvent -> {
                 // Avoid decrypting over and over again if the event already exist.
                 val note = LocalCache.getNoteIfExists(event.id)
-                val noteEvent = note?.event as? SealedGossipEvent
+                val noteEvent = note?.event as? SealedRumorEvent
                 if (noteEvent != null) {
                     if (relay.brief !in note.relays) {
                         LocalCache.justConsume(noteEvent, relay)
@@ -450,7 +450,7 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
                 noteEvent.innerEventId?.let {
                     markInnerAsSeenOnRelay(it, relay)
                 }
-            } else if (noteEvent is SealedGossipEvent) {
+            } else if (noteEvent is SealedRumorEvent) {
                 noteEvent.innerEventId?.let {
                     markInnerAsSeenOnRelay(it, relay)
                 }

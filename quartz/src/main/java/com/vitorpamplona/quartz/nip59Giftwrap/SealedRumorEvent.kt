@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
-class SealedGossipEvent(
+class SealedRumorEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -44,9 +44,9 @@ class SealedGossipEvent(
         super.countMemory() +
             pointerSizeInBytes + (innerEventId?.bytesUsedInMemory() ?: 0)
 
-    fun copyNoContent(): SealedGossipEvent {
+    fun copyNoContent(): SealedRumorEvent {
         val copy =
-            SealedGossipEvent(
+            SealedRumorEvent(
                 id,
                 pubKey,
                 createdAt,
@@ -67,7 +67,7 @@ class SealedGossipEvent(
         message = "Heavy caching was removed from this class due to high memory use. Cache it separatedly",
         replaceWith = ReplaceWith("unseal"),
     )
-    fun cachedGossip(
+    fun cachedRumor(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
     ) = unseal(signer, onReady)
@@ -79,8 +79,8 @@ class SealedGossipEvent(
         try {
             plainContent(signer) {
                 try {
-                    val gossip = Gossip.fromJson(it)
-                    val event = gossip.mergeWith(this)
+                    val rumor = Rumor.fromJson(it)
+                    val event = rumor.mergeWith(this)
                     if (event is WrappedEvent) {
                         event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
                     }
@@ -88,11 +88,11 @@ class SealedGossipEvent(
 
                     onReady(event)
                 } catch (e: Exception) {
-                    Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
+                    Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
                 }
             }
         } catch (e: Exception) {
-            Log.w("GossipEvent", "Fail to decrypt or parse Gossip", e)
+            Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
         }
     }
 
@@ -113,20 +113,20 @@ class SealedGossipEvent(
             encryptTo: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (SealedGossipEvent) -> Unit,
+            onReady: (SealedRumorEvent) -> Unit,
         ) {
-            val gossip = Gossip.create(event)
-            create(gossip, encryptTo, signer, createdAt, onReady)
+            val rumor = Rumor.create(event)
+            create(rumor, encryptTo, signer, createdAt, onReady)
         }
 
         fun create(
-            gossip: Gossip,
+            rumor: Rumor,
             encryptTo: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
-            onReady: (SealedGossipEvent) -> Unit,
+            onReady: (SealedRumorEvent) -> Unit,
         ) {
-            val msg = Gossip.toJson(gossip)
+            val msg = Rumor.toJson(rumor)
 
             signer.nip44Encrypt(msg, encryptTo) { content ->
                 signer.sign(createdAt, KIND, emptyArray(), content, onReady)

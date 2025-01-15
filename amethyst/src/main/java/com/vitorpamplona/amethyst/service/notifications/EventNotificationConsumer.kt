@@ -48,7 +48,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.math.BigDecimal
 import kotlin.coroutines.cancellation.CancellationException
@@ -184,7 +184,7 @@ class EventNotificationConsumer(
                     LocalCache.justConsume(event, null)
                 }
             }
-            is SealedGossipEvent -> {
+            is SealedRumorEvent -> {
                 event.unseal(signer) {
                     if (!LocalCache.hasConsumed(it)) {
                         // this is not verifiable

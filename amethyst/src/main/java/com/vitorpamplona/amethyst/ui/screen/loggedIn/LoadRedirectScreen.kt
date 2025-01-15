@@ -52,7 +52,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -149,7 +149,7 @@ fun redirect(
         } ?: run {
             accountViewModel.unwrap(event) { redirect(it, accountViewModel, nav) }
         }
-    } else if (event is SealedGossipEvent) {
+    } else if (event is SealedRumorEvent) {
         event.innerEventId?.let {
             redirect(it, accountViewModel, nav)
         } ?: run {

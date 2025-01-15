@@ -24,9 +24,9 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 
-class GossipSerializer : StdSerializer<Gossip>(Gossip::class.java) {
+class RumorSerializer : StdSerializer<Rumor>(Rumor::class.java) {
     override fun serialize(
-        event: Gossip,
+        event: Rumor,
         gen: JsonGenerator,
         provider: SerializerProvider,
     ) {

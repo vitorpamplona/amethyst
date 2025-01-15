@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 
@@ -51,7 +51,7 @@ class NIP17Factory {
 
         val next = remainingTos.first()
 
-        SealedGossipEvent.create(
+        SealedRumorEvent.create(
             event = event,
             encryptTo = next,
             signer = signer,

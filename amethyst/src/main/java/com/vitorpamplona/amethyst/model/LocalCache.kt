@@ -123,7 +123,7 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedGossipEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -1705,7 +1705,7 @@ object LocalCache {
     }
 
     fun consume(
-        event: SealedGossipEvent,
+        event: SealedRumorEvent,
         relay: Relay?,
     ) {
         val note = getOrCreateNote(event.id)
@@ -2562,7 +2562,7 @@ object LocalCache {
                     event.containedPost()?.let { verifyAndConsume(it, relay) }
                     consume(event)
                 }
-                is SealedGossipEvent -> consume(event, relay)
+                is SealedRumorEvent -> consume(event, relay)
                 is SearchRelayListEvent -> consume(event, relay)
                 is StatusEvent -> consume(event, relay)
                 is TextNoteEvent -> consume(event, relay)
