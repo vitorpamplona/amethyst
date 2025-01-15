@@ -20,44 +20,31 @@
  */
 package com.vitorpamplona.quartz.nip13Pow
 
-class PoWRank {
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+
+class PoWTag(
+    val nonce: String,
+    val commitment: String?,
+) {
+    fun countMemory(): Long = 2 * pointerSizeInBytes + nonce.bytesUsedInMemory() + (commitment?.bytesUsedInMemory() ?: 0)
+
+    fun toTagArray() = assemble(nonce, commitment)
+
     companion object {
-        fun getCommited(
-            id: String,
-            commitedPoW: Int?,
-        ): Int {
-            val actualRank = get(id)
+        val TAG_NAME = "nonce"
 
-            return if (commitedPoW == null) {
-                actualRank
-            } else {
-                if (actualRank >= commitedPoW) {
-                    commitedPoW
-                } else {
-                    actualRank
-                }
-            }
+        @JvmStatic
+        fun parse(tags: Array<String>): PoWTag {
+            require(tags[0] == TAG_NAME)
+            return PoWTag(tags[1], tags.getOrNull(2))
         }
 
-        fun get(id: String): Int {
-            var rank = 0
-            for (i in 0..id.length) {
-                if (id[i] == '0') {
-                    rank += 4
-                } else if (id[i] in '4'..'7') {
-                    rank += 1
-                    break
-                } else if (id[i] in '2'..'3') {
-                    rank += 2
-                    break
-                } else if (id[i] == '1') {
-                    rank += 3
-                    break
-                } else {
-                    break
-                }
-            }
-            return rank
-        }
+        @JvmStatic
+        fun assemble(
+            nonce: String,
+            commitment: String?,
+        ) = arrayOfNotNull(TAG_NAME, nonce, commitment)
     }
 }

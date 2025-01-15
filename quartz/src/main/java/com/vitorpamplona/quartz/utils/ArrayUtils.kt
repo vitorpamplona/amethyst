@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils
 
+public fun arrayOfNotNull(vararg elements: String?) = removeTrailingNullsAndEmptyOthers(*elements)
+
 public fun removeTrailingNullsAndEmptyOthers(vararg elements: String?): Array<String> {
     val lastNonNullIndex = elements.indexOfLast { it != null }
 

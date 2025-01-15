@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.experimental.limits
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
-import com.vitorpamplona.quartz.nip13Pow.getPoWRank
+import com.vitorpamplona.quartz.nip13Pow.pow
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class LimitProcessor {
@@ -77,7 +77,7 @@ class LimitProcessor {
         if (!limits.acceptedEventKinds.isNullOrEmpty() && ev.kind !in limits.acceptedEventKinds) return false
         if (!limits.blockedEventKinds.isNullOrEmpty() && ev.kind in limits.blockedEventKinds) return false
 
-        if (limits.minPoW != null && ev.getPoWRank() < limits.minPoW) return false
+        if (limits.minPoW != null && ev.pow() < limits.minPoW) return false
         if (limits.maxEventTags != null && ev.tags.size > limits.maxEventTags) return false
         if (limits.maxContentLength != null && ev.content.length > limits.maxContentLength) return false
 

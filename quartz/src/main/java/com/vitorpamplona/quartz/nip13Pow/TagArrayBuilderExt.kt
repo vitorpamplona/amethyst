@@ -18,32 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.quartz.nip13Pow
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-@Composable
-@Preview
-fun DisplayPoWPreview() {
-    ThemeComparisonColumn(
-        toPreview = { DisplayPoW(pow = 24) },
-    )
-}
+fun TagArrayBuilder.pow(
+    nonce: String,
+    commitment: Int,
+) = add(PoWTag.assemble(nonce, commitment.toString()))
 
-@Composable
-fun DisplayPoW(pow: Int) {
-    Text(
-        "PoW-$pow",
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-    )
-}
+fun TagArrayBuilder.pow(
+    nonce: String,
+    commitment: String,
+) = add(PoWTag.assemble(nonce, commitment))
+
+fun TagArrayBuilder.pow(tag: PoWTag) = add(tag.toTagArray())

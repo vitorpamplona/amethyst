@@ -175,7 +175,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip13Pow.getPoWRank
+import com.vitorpamplona.quartz.nip13Pow.pow
+import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -478,8 +479,8 @@ private fun FullBleedNoteCompose(
                         DisplayReward(baseReward, baseNote, accountViewModel, nav)
                     }
 
-                    val pow = remember { noteEvent.getPoWRank() }
-                    if (pow > 20) {
+                    val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }
+                    if (pow != null) {
                         DisplayPoW(pow)
                     }
 

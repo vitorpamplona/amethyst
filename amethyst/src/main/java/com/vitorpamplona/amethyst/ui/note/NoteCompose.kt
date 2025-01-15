@@ -162,7 +162,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip13Pow.getPoWRank
+import com.vitorpamplona.quartz.nip13Pow.pow
+import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
@@ -980,8 +981,8 @@ fun SecondUserInfoRow(
             DisplayReward(baseReward, note, accountViewModel, nav)
         }
 
-        val pow = remember(noteEvent) { noteEvent.getPoWRank() }
-        if (pow > 20) {
+        val pow = remember(noteEvent) { noteEvent.strongPoWOrNull() }
+        if (pow != null) {
             Spacer(StdHorzSpacer)
             DisplayPoW(pow)
         }

@@ -22,7 +22,22 @@ package com.vitorpamplona.quartz.nip13Pow
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-fun Event.getPoWRank(): Int {
-    val commitedPoW = tags.firstOrNull { it.size > 2 && it[0] == "nonce" }?.get(2)?.toIntOrNull()
-    return PoWRank.getCommited(id, commitedPoW)
+fun Event.pow() = PoWRankProcessor.compute(id, tags.commitedPoW())
+
+fun Event.hasPoWTag() = tags.hasPoW()
+
+/**
+ * Returns the Proof Or Work rank when commited if it is equal or stronger than the minimum.
+ *
+ * Performance-conscious method
+ */
+fun Event.strongPoWOrNull(min: Int = 20): Int? {
+    val commitment = tags.commitedPoW()
+    if (commitment != null) {
+        val pow = PoWRankProcessor.compute(id, commitment)
+        if (pow >= min) {
+            return pow
+        }
+    }
+    return null
 }

@@ -18,32 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.elements
+package com.vitorpamplona.quartz.nip13Pow
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
 
-@Composable
-@Preview
-fun DisplayPoWPreview() {
-    ThemeComparisonColumn(
-        toPreview = { DisplayPoW(pow = 24) },
-    )
-}
+@RunWith(AndroidJUnit4::class)
+class PoWRankProcessorTest {
+    @Test
+    fun setPoW() {
+        assertEquals(26, PoWRankProcessor.calculatePowRankOf("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e"))
+    }
 
-@Composable
-fun DisplayPoW(pow: Int) {
-    Text(
-        "PoW-$pow",
-        color = MaterialTheme.colorScheme.lessImportantLink,
-        fontSize = Font14SP,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-    )
+    @Test
+    fun setPoWIfCommited25() {
+        assertEquals(25, PoWRankProcessor.compute("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e", 25))
+    }
+
+    @Test
+    fun setPoWIfCommited26() {
+        assertEquals(26, PoWRankProcessor.compute("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e", 26))
+    }
+
+    @Test
+    fun setPoWIfCommited27() {
+        assertEquals(26, PoWRankProcessor.compute("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e", 27))
+    }
 }
