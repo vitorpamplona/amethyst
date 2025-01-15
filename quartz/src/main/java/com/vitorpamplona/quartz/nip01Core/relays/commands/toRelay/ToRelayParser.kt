@@ -31,9 +31,7 @@ class ToRelayParser {
             CloseCmd.LABEL -> CloseCmd.parse(msgArray)
             CountCmd.LABEL -> CountCmd.parse(msgArray)
             EventCmd.LABEL -> EventCmd.parse(msgArray)
-            com.vitorpamplona.quartz.nip01Core.relays.commands.toRelay.ReqCmd.LABEL ->
-                com.vitorpamplona.quartz.nip01Core.relays.commands.toRelay.ReqCmd
-                    .parse(msgArray)
+            ReqCmd.LABEL -> ReqCmd.parse(msgArray)
             else -> null
         }
     }

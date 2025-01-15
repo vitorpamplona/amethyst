@@ -38,10 +38,11 @@ class CountCmd(
         fun toJson(
             requestId: String,
             filters: List<Filter>,
+            limit: Int = 19,
         ): String =
             filters.joinToStringLimited(
                 separator = ",",
-                limit = 19,
+                limit = limit,
                 prefix = """["COUNT","$requestId",""",
                 postfix = "]",
             ) {
