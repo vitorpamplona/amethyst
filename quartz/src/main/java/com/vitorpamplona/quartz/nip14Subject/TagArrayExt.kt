@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip14Subject
 
-class SubjectTagSerializer {
-    companion object {
-        @JvmStatic
-        fun toTagArray(subject: String = "") = arrayOf(SUBJECT_TAG, subject)
-    }
-}
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
+import com.vitorpamplona.quartz.nip01Core.core.mapValues
+
+fun TagArray.subject() = this.firstTagValue(SubjectTag.TAG_NAME)
+
+fun TagArray.subjects() = this.mapValues(SubjectTag.TAG_NAME)
+
+fun TagArray.hasSubject() = this.hasTagWithContent(SubjectTag.TAG_NAME)

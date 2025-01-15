@@ -18,25 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip14Subject
 
-class TagArrayBuilder {
-    val tagList = mutableListOf<Array<String>>()
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
-    fun add(tag: Array<String>): TagArrayBuilder {
-        tagList.add(tag)
-        return this
+class SubjectTag(
+    val subject: String,
+) {
+    fun countMemory(): Long = 1 * pointerSizeInBytes + subject.bytesUsedInMemory()
+
+    fun toTagArray() = assemble(subject)
+
+    companion object {
+        val TAG_NAME = "subject"
+
+        @JvmStatic
+        fun parse(tags: Array<String>): SubjectTag {
+            require(tags[0] == TAG_NAME)
+            return SubjectTag(tags[1])
+        }
+
+        @JvmStatic
+        fun assemble(subject: String) = arrayOf(TAG_NAME, subject)
     }
-
-    fun addAll(tag: List<Array<String>>): TagArrayBuilder {
-        tagList.addAll(tag)
-        return this
-    }
-
-    fun addAll(tag: Array<Array<String>>): TagArrayBuilder {
-        tagList.addAll(tag)
-        return this
-    }
-
-    fun build() = tagList.toTypedArray()
 }

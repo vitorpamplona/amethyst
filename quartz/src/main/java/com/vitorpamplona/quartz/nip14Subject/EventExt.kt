@@ -21,8 +21,5 @@
 package com.vitorpamplona.quartz.nip14Subject
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 
-val SUBJECT_TAG = "subject"
-
-fun Event.subject() = tags.firstTagValue(SUBJECT_TAG)
+fun Event.subject() = tags.subject()

@@ -22,9 +22,10 @@ package com.vitorpamplona.quartz.nip17Dm
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
-import com.vitorpamplona.quartz.nip14Subject.SubjectTagSerializer
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -95,7 +96,7 @@ class ChatMessageEvent(
             isDraft: Boolean,
             onReady: (ChatMessageEvent) -> Unit,
         ) {
-            val tags = mutableListOf<Array<String>>()
+            val tags = TagArrayBuilder()
             to?.forEach { tags.add(arrayOf("p", it)) }
             replyTos?.forEach { tags.add(arrayOf("e", it, "", "reply")) }
             mentions?.forEach { tags.add(arrayOf("p", it, "", "mention")) }
@@ -106,7 +107,7 @@ class ChatMessageEvent(
                 tags.add(ContentWarningSerializer.toTagArray())
             }
             geohash?.let { tags.addAll(geohashMipMap(it)) }
-            subject?.let { tags.add(SubjectTagSerializer.toTagArray(it)) }
+            subject?.let { tags.subject(subject) }
             imetas?.forEach {
                 tags.add(Nip92MediaAttachments.createTag(it))
             }
@@ -114,9 +115,9 @@ class ChatMessageEvent(
             // tags.add(AltTagSerializer.toTagArray(ALT))
 
             if (isDraft) {
-                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+                signer.assembleRumor(createdAt, KIND, tags.build(), msg, onReady)
             } else {
-                signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+                signer.sign(createdAt, KIND, tags.build(), msg, onReady)
             }
         }
     }
