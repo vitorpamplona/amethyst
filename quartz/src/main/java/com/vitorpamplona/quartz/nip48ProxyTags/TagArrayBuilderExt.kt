@@ -31,3 +31,5 @@ fun TagArrayBuilder.proxy(
     id: String,
     pt: String,
 ) = add(ProxyTag.assemble(id, pt))
+
+fun TagArrayBuilder.proxy(tag: ProxyTag) = add(tag.toTagArray())

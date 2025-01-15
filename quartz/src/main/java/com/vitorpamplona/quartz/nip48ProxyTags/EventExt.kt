@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip48ProxyTags
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-fun Event.taggedProxies() = tags.taggedProxies()
+fun Event.taggedProxies() = tags.proxies()
 
-fun Event.firstTaggedProxy() = tags.firstTaggedProxy()
+fun Event.firstTaggedProxy() = tags.firstProxy()
 
-fun Event.hasAnyTaggedProxy() = tags.hasAnyTaggedProxy()
+fun Event.hasTaggedProxy() = tags.hasProxy()
