@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
 import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer

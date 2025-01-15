@@ -25,9 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
-import com.vitorpamplona.quartz.nip10Notes.ETag
 import com.vitorpamplona.quartz.nip10Notes.PTag
 import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags

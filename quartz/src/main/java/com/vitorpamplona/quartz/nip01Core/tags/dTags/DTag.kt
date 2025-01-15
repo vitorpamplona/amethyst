@@ -18,26 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.events
+package com.vitorpamplona.quartz.nip01Core.tags.dTags
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstMapTagged
-import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
-import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
-import com.vitorpamplona.quartz.nip19Bech32.parse
+import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
-fun TagArray.forEachTaggedEventId(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(ETag.TAG_NAME, onEach)
+class DTag(
+    val dId: String,
+) {
+    fun countMemory(): Long = 1 * pointerSizeInBytes + dId.bytesUsedInMemory()
 
-fun <R> TagArray.mapTaggedEventId(map: (eventId: HexKey) -> R) = this.mapValueTagged(ETag.TAG_NAME, map)
+    fun toTagArray() = assemble(dId)
 
-fun TagArray.taggedEvents() = this.mapTagged(ETag.TAG_NAME) { ETag.parse(it) }
+    companion object {
+        const val TAG_NAME = "d"
 
-fun TagArray.taggedEventIds() = this.mapValues(ETag.TAG_NAME)
+        @JvmStatic
+        fun parse(tags: Array<String>): DTag {
+            require(tags[0] == TAG_NAME)
+            return DTag(tags[1])
+        }
 
-fun TagArray.firstTaggedEvent() = this.firstMapTagged(ETag.TAG_NAME) { ETag.parse(it) }
-
-fun TagArray.isTaggedEvent(idHex: String) = this.isTagged(ETag.TAG_NAME, idHex)
+        @JvmStatic
+        fun assemble(dId: String) = arrayOf(TAG_NAME, dId)
+    }
+}

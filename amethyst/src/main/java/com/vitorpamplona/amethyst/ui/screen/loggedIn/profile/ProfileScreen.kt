@@ -177,6 +177,7 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
@@ -1383,7 +1384,7 @@ private fun WatchAndRenderBadgeList(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun RenderBadgeList(
-    list: ImmutableList<String>,
+    list: ImmutableList<ETag>,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     nav: INav,
@@ -1398,17 +1399,17 @@ private fun RenderBadgeList(
 
 @Composable
 private fun LoadAndRenderBadge(
-    badgeAwardEventHex: String,
+    badgeAwardEvent: ETag,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     nav: INav,
 ) {
-    var baseNote by remember(badgeAwardEventHex) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
+    var baseNote by remember(badgeAwardEvent) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEvent)) }
 
-    LaunchedEffect(key1 = badgeAwardEventHex) {
+    LaunchedEffect(key1 = badgeAwardEvent) {
         if (baseNote == null) {
             withContext(Dispatchers.IO) {
-                baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEventHex)
+                baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEvent)
             }
         }
     }

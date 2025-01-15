@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip96FileStorage
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
@@ -36,9 +36,7 @@ class FileServersEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    override fun dTag() = FIXED_D_TAG
-
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun servers(): List<String> =
         tags.mapNotNull {
             if (it.size > 1 && it[0] == "server") {
@@ -50,12 +48,11 @@ class FileServersEvent(
 
     companion object {
         const val KIND = 10096
-        const val FIXED_D_TAG = ""
         const val ALT = "File servers used by the author"
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATagId(KIND, pubKey, FIXED_D_TAG)
 
         fun createTagArray(servers: List<String>): Array<Array<String>> =
             servers

@@ -40,7 +40,7 @@ data class NAddress(
     val dTag: String,
     val relay: List<String>,
 ) : Entity {
-    fun aTag(): String = ATag.assembleATag(kind, author, dTag)
+    fun aTag(): String = ATag.assembleATagId(kind, author, dTag)
 
     companion object {
         fun parse(naddr: String): NAddress? {

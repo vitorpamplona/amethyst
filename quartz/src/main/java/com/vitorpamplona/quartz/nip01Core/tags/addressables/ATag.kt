@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.addressables
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
@@ -35,7 +39,7 @@ data class ATag(
 
     constructor(
         kind: Int,
-        pubKeyHex: String,
+        pubKeyHex: HexKey,
         dTag: String,
         relayHint: String?,
     ) : this(kind, pubKeyHex, dTag) {
@@ -49,17 +53,56 @@ data class ATag(
             dTag.bytesUsedInMemory() +
             (relay?.bytesUsedInMemory() ?: 0)
 
-    fun toTag() = assembleATag(kind, pubKeyHex, dTag)
+    fun toTag() = assembleATagId(kind, pubKeyHex, dTag)
 
-    fun toATagArray() = removeTrailingNullsAndEmptyOthers("a", toTag(), relay)
+    fun toATagArray() = removeTrailingNullsAndEmptyOthers(TAG_NAME, toTag(), relay)
 
     fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", toTag(), relay)
 
     companion object {
-        fun assembleATag(
+        const val TAG_NAME = "a"
+
+        fun assembleATagId(
+            kind: Int,
+            pubKeyHex: HexKey,
+            dTag: String,
+        ) = "$kind:$pubKeyHex:$dTag"
+
+        fun parse(
+            aTagId: String,
+            relay: String?,
+        ): ATag? =
+            try {
+                val parts = aTagId.split(":", limit = 3)
+                if (Hex.isHex(parts[1])) {
+                    ATag(parts[0].toInt(), parts[1], parts[2], relay)
+                } else {
+                    Log.w("ATag", "Error parsing A Tag. Pubkey is not hex: $aTagId")
+                    null
+                }
+            } catch (t: Throwable) {
+                Log.w("ATag", "Error parsing A Tag: $aTagId: ${t.message}")
+                null
+            }
+
+        @JvmStatic
+        fun parse(tags: Array<String>): ATag? {
+            require(tags[0] == TAG_NAME)
+            return parse(tags[1], tags.getOrNull(2))
+        }
+
+        @JvmStatic
+        fun assemble(
+            aTagId: HexKey,
+            relay: String?,
+        ) = arrayOfNotNull(TAG_NAME, aTagId, relay)
+
+        @JvmStatic
+        fun assemble(
             kind: Int,
             pubKeyHex: String,
             dTag: String,
-        ) = "$kind:$pubKeyHex:$dTag"
+            relay: String?,
+        ) = arrayOfNotNull(TAG_NAME, assembleATagId(kind, pubKeyHex, dTag), relay)
     }
 }

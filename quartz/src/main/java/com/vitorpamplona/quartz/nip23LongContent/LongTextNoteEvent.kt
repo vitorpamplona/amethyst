@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
@@ -45,7 +45,7 @@ class LongTextNoteEvent(
 
     override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 
-    override fun addressTag() = ATag.assembleATag(kind, pubKey, dTag())
+    override fun addressTag() = ATag.assembleATagId(kind, pubKey, dTag())
 
     fun topics() = hashtags()
 

@@ -23,11 +23,13 @@ package com.vitorpamplona.quartz.nip01Core.tags.events
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-fun Event.forEachTaggedEvent(onEach: (eventId: HexKey) -> Unit) = tags.forEachTaggedEvent(onEach)
+fun Event.forEachTaggedEventId(onEach: (eventId: HexKey) -> Unit) = tags.forEachTaggedEventId(onEach)
 
-fun <R> Event.mapTaggedEvent(map: (eventId: HexKey) -> R) = tags.mapTaggedEvent(map)
+fun <R> Event.mapTaggedEventId(map: (eventId: HexKey) -> R) = tags.mapTaggedEventId(map)
 
 fun Event.taggedEvents() = tags.taggedEvents()
+
+fun Event.taggedEventIds() = tags.taggedEventIds()
 
 fun Event.firstTaggedEvent() = tags.firstTaggedEvent()
 

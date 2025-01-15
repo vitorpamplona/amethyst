@@ -74,17 +74,18 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.Contact
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip10Notes.ETag
 import com.vitorpamplona.quartz.nip10Notes.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
@@ -954,7 +955,7 @@ class Account(
         onReady: (LiveFollowList) -> Unit,
     ) {
         listEvent.privateTags(signer) { privateTagList ->
-            val users = (listEvent.bookmarkedPeople() + listEvent.filterUsers(privateTagList)).toSet()
+            val users = (listEvent.taggedUsers() + listEvent.filterUsers(privateTagList)).toSet()
             onReady(
                 LiveFollowList(
                     authors = users,
@@ -969,6 +970,11 @@ class Account(
             )
         }
     }
+
+    fun decryptPeopleList(
+        event: GeneralListEvent,
+        onReady: (Array<Array<String>>) -> Unit,
+    ) = event.privateTags(signer, onReady)
 
     suspend fun waitToDecrypt(peopleListFollows: GeneralListEvent): LiveFollowList? =
         tryAndWait { continuation ->
@@ -2445,7 +2451,7 @@ class Account(
             directMentionsNotes
                 .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
                     if (note !is AddressableNote) {
-                        ETag(note.idHex, note.author?.pubkeyHex, note.relayHintUrl())
+                        ETag(note.idHex, note.relayHintUrl(), note.author?.pubkeyHex)
                     } else {
                         null
                     }
@@ -2556,7 +2562,7 @@ class Account(
             directMentionsNotes
                 .mapNotNullTo(HashSet(directMentionsNotes.size)) { note ->
                     if (note !is AddressableNote) {
-                        ETag(note.idHex, note.author?.pubkeyHex, note.relayHintUrl())
+                        ETag(note.idHex, note.relayHintUrl(), note.author?.pubkeyHex)
                     } else {
                         null
                     }
@@ -3520,7 +3526,7 @@ class Account(
         if (note is AddressableNote) {
             return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true
         } else {
-            return userProfile().latestBookmarkList?.taggedEvents()?.contains(note.idHex) == true
+            return userProfile().latestBookmarkList?.taggedEventIds()?.contains(note.idHex) == true
         }
     }
 
@@ -3675,7 +3681,7 @@ class Account(
 
     fun selectedChatsFollowList(): Set<String> {
         val contactList = userProfile().latestContactList
-        return contactList?.taggedEvents()?.toSet() ?: DefaultChannels
+        return contactList?.taggedEventIds()?.toSet() ?: DefaultChannels
     }
 
     fun sendChangeChannel(

@@ -44,7 +44,7 @@ class WikiNoteEvent(
 
     override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 
-    override fun addressTag() = ATag.assembleATag(kind, pubKey, dTag())
+    override fun addressTag() = ATag.assembleATagId(kind, pubKey, dTag())
 
     fun topics() = hashtags()
 

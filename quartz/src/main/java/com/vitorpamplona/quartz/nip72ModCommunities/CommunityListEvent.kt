@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip72ModCommunities
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent.Companion.FIXED_D_TAG
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.parseAtag
@@ -72,7 +73,6 @@ class CommunityListEvent(
 
     companion object {
         const val KIND = 10004
-        const val FIXED_D_TAG = ""
         const val ALT = "Community List"
 
         fun blockListFor(pubKeyHex: HexKey): String = "$KIND:$pubKeyHex:"

@@ -18,33 +18,53 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip13Pow
+package com.vitorpamplona.quartz.nip01Core.tags.events
 
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
-class PoWTag(
-    val nonce: String,
-    val commitment: String?,
+@Immutable
+data class ETag(
+    val eventId: HexKey,
 ) {
-    fun countMemory(): Long = 2 * pointerSizeInBytes + nonce.bytesUsedInMemory() + (commitment?.bytesUsedInMemory() ?: 0)
+    var relay: String? = null
+    var authorPubKeyHex: HexKey? = null
 
-    fun toTagArray() = assemble(nonce, commitment)
+    constructor(eventId: HexKey, relayHint: String? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
+        this.relay = relayHint
+        this.authorPubKeyHex = authorPubKeyHex
+    }
+
+    fun countMemory(): Long =
+        3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
+            eventId.bytesUsedInMemory() +
+            (relay?.bytesUsedInMemory() ?: 0) +
+            (authorPubKeyHex?.bytesUsedInMemory() ?: 0)
+
+    fun toNEvent(): String = NEvent.create(eventId, authorPubKeyHex, null, relay)
+
+    fun toETagArray() = arrayOfNotNull(TAG_NAME, eventId, relay, authorPubKeyHex)
+
+    fun toQTagArray() = arrayOfNotNull("q", eventId, relay, authorPubKeyHex)
 
     companion object {
-        const val TAG_NAME = "nonce"
+        const val TAG_NAME = "e"
 
         @JvmStatic
-        fun parse(tags: Array<String>): PoWTag {
+        fun parse(tags: Array<String>): ETag {
             require(tags[0] == TAG_NAME)
-            return PoWTag(tags[1], tags.getOrNull(2))
+            return ETag(tags[1], tags.getOrNull(2), tags.getOrNull(3))
         }
 
         @JvmStatic
         fun assemble(
-            nonce: String,
-            commitment: String?,
-        ) = arrayOfNotNull(TAG_NAME, nonce, commitment)
+            eventId: HexKey,
+            relay: String?,
+            author: HexKey?,
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay, author)
     }
 }

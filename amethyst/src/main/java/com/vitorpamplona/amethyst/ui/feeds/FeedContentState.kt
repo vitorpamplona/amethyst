@@ -120,7 +120,7 @@ class FeedContentState(
                     if (deletionEvents.isEmpty()) {
                         oldNotesState.feed.value.list
                     } else {
-                        val deletedEventIds = deletionEvents.flatMapTo(HashSet()) { it.deleteEvents() }
+                        val deletedEventIds = deletionEvents.flatMapTo(HashSet()) { it.deleteEventIds() }
                         val deletedEventAddresses = deletionEvents.flatMapTo(HashSet()) { it.deleteAddresses() }
                         oldNotesState.feed.value.list
                             .filter { !it.wasOrShouldBeDeletedBy(deletedEventIds, deletedEventAddresses) }

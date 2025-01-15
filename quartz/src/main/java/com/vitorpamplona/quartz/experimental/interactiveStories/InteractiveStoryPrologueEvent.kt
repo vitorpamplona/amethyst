@@ -49,7 +49,7 @@ class InteractiveStoryPrologueEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dtag: String,
-        ): String = ATag.assembleATag(KIND, pubKey, dtag)
+        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
 
         fun create(
             baseId: String,

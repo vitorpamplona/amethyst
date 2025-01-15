@@ -125,7 +125,7 @@ class DraftEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dTag: String,
-        ): String = ATag.assembleATag(KIND, pubKey, dTag)
+        ): String = ATag.assembleATagId(KIND, pubKey, dTag)
 
         fun create(
             dTag: String,

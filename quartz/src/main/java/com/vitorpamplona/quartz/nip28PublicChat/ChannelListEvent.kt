@@ -45,8 +45,6 @@ class ChannelListEvent(
         super.countMemory() +
             32 + (publicAndPrivateEventCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0L) // rough calculation
 
-    override fun dTag() = FIXED_D_TAG
-
     fun publicAndPrivateEvents(
         signer: NostrSigner,
         onReady: (ImmutableSet<HexKey>) -> Unit,
@@ -67,7 +65,6 @@ class ChannelListEvent(
 
     companion object {
         const val KIND = 10005
-        const val FIXED_D_TAG = ""
         const val ALT = "Public Chat List"
 
         fun blockListFor(pubKeyHex: HexKey): String = "$KIND:$pubKeyHex:"

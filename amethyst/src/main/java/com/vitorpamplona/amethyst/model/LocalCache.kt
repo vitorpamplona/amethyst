@@ -57,9 +57,10 @@ import com.vitorpamplona.quartz.nip01Core.hasValidSignature
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.mapTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.tags.events.forEachTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.forEachTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
-import com.vitorpamplona.quartz.nip01Core.tags.events.mapTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.events.mapTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -78,7 +79,6 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.isATag
-import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -239,7 +239,7 @@ object LocalCache {
 
     private fun updateObservables(event: Event) {
         observablesByKindAndETag[event.kind]?.let { observablesOfKind ->
-            event.forEachTaggedEvent {
+            event.forEachTaggedEventId {
                 observablesOfKind[it]?.updateIfMatches(event)
             }
         }
@@ -274,6 +274,8 @@ object LocalCache {
 
     fun getNoteIfExists(key: String): Note? = addressables.get(key) ?: notes.get(key)
 
+    fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
+
     fun getChannelIfExists(key: String): Channel? = channels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
@@ -289,6 +291,15 @@ object LocalCache {
         } else {
             getOrCreateNote(event.id)
         }
+
+    fun checkGetOrCreateNote(etag: ETag): Note? {
+        checkNotInMainThread()
+
+        if (isValidHex(etag.eventId)) {
+            return getOrCreateNote(etag)
+        }
+        return null
+    }
 
     fun checkGetOrCreateNote(key: String): Note? {
         checkNotInMainThread()
@@ -397,6 +408,16 @@ object LocalCache {
         // Loads the user outside a Syncronized block to avoid blocking
         if (note.author == null) {
             note.author = checkGetOrCreateUser(key.pubKeyHex)
+        }
+        return note
+    }
+
+    fun getOrCreateNote(key: ETag): Note {
+        val note = getOrCreateNote(key.eventId)
+        // Loads the user outside a Syncronized block to avoid blocking
+        val possibleAuthor = key.authorPubKeyHex
+        if (note.author == null && possibleAuthor != null) {
+            note.author = checkGetOrCreateUser(possibleAuthor)
         }
         return note
     }
@@ -681,7 +702,7 @@ object LocalCache {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
             is DraftEvent -> {
-                event.mapTaggedEvent { checkGetOrCreateNote(it) } + event.mapTaggedAddress { checkGetOrCreateAddressableNote(it) }
+                event.mapTaggedEventId { checkGetOrCreateNote(it) } + event.mapTaggedAddress { checkGetOrCreateAddressableNote(it) }
             }
 
             else -> emptyList<Note>()
@@ -1562,7 +1583,7 @@ object LocalCache {
         note.loadEvent(event, author, emptyList())
 
         event.editedNote()?.let {
-            checkGetOrCreateNote(it)?.let { editedNote ->
+            checkGetOrCreateNote(it.eventId)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
                 // must update list of Notes to quickly update the user.
                 editedNote.liveSet?.innerModifications?.invalidateData()

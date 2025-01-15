@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip50Search
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -37,9 +37,7 @@ class SearchRelayListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    override fun dTag() = FIXED_D_TAG
-
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun relays(): List<String> =
         tags.mapNotNull {
             if (it.size > 1 && it[0] == "relay") {
@@ -51,11 +49,10 @@ class SearchRelayListEvent(
 
     companion object {
         const val KIND = 10007
-        const val FIXED_D_TAG = ""
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATagId(KIND, pubKey, FIXED_D_TAG)
 
         fun createTagArray(relays: List<String>): Array<Array<String>> =
             relays

@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedAddress
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -264,7 +265,7 @@ fun DisplayStatus(
         event.dTag(),
         event.firstTaggedUrl()?.ifBlank { null },
         event.firstTaggedAddress(),
-        event.firstTaggedEvent()?.ifBlank { null },
+        event.firstTaggedEvent(),
         accountViewModel,
         nav,
     )
@@ -276,7 +277,7 @@ fun DisplayStatusInner(
     type: String,
     url: String?,
     nostrATag: ATag?,
-    nostrHexID: String?,
+    nostrETag: ETag?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -335,8 +336,8 @@ fun DisplayStatusInner(
                 }
             }
         }
-    } else if (nostrHexID != null) {
-        LoadNote(baseNoteHex = nostrHexID, accountViewModel) {
+    } else if (nostrETag != null) {
+        LoadNote(baseNoteHex = nostrETag.eventId, accountViewModel) {
             if (it != null) {
                 Spacer(modifier = StdHorzSpacer)
                 IconButton(

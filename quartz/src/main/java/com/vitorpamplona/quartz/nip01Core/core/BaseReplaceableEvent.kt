@@ -18,35 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip10Notes
+package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 
 @Immutable
-data class ETag(
-    val eventId: HexKey,
-) {
-    var relay: String? = null
-    var authorPubKeyHex: HexKey? = null
+open class BaseReplaceableEvent(
+    id: HexKey,
+    pubKey: HexKey,
+    createdAt: Long,
+    kind: Int,
+    tags: TagArray,
+    content: String,
+    sig: HexKey,
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+    override fun dTag() = FIXED_D_TAG
 
-    constructor(eventId: HexKey, relayHint: String? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
-        this.relay = relayHint
-        this.authorPubKeyHex = authorPubKeyHex
+    override fun address(relayHint: String?) = ATag(kind, pubKey, FIXED_D_TAG, relayHint)
+
+    /**
+     * Creates the tag in a memory efficient way (without creating the ATag class
+     */
+    override fun addressTag() = ATag.assembleATagId(kind, pubKey, FIXED_D_TAG)
+
+    companion object {
+        const val FIXED_D_TAG = ""
     }
-
-    fun countMemory(): Long =
-        2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
-            eventId.bytesUsedInMemory() +
-            (relay?.bytesUsedInMemory() ?: 0)
-
-    fun toNEvent(): String = NEvent.create(eventId, authorPubKeyHex, null, relay)
-
-    fun toETagArray() = removeTrailingNullsAndEmptyOthers("e", eventId, relay, authorPubKeyHex)
-
-    fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", eventId, relay, authorPubKeyHex)
 }

@@ -82,6 +82,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
@@ -99,6 +100,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -1071,7 +1073,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { runOnIO() }
     }
 
-    suspend fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
+    fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
     override suspend fun getOrCreateUser(key: HexKey): User = LocalCache.getOrCreateUser(key)
 
@@ -1201,7 +1203,7 @@ class AccountViewModel(
         hexList: List<String>,
         onReady: (ImmutableList<User>) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             onReady(
                 hexList
                     .mapNotNull { hex -> checkGetOrCreateUser(hex) }
@@ -1209,6 +1211,24 @@ class AccountViewModel(
                     .reversed()
                     .toImmutableList(),
             )
+        }
+    }
+
+    fun loadUsers(
+        event: GeneralListEvent,
+        onReady: (ImmutableList<User>) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.Default) {
+            account.decryptPeopleList(event) { privateTagList ->
+                onReady(
+                    (event.taggedUsers() + event.filterUsers(privateTagList))
+                        .toSet()
+                        .mapNotNull { hex -> checkGetOrCreateUser(hex) }
+                        .sortedBy { account.isFollowing(it) }
+                        .reversed()
+                        .toImmutableList(),
+                )
+            }
         }
     }
 

@@ -140,7 +140,7 @@ class FollowListState(
                             (
                                 noteEvent is DeletionEvent &&
                                     (
-                                        noteEvent.deleteEvents().any {
+                                        noteEvent.deleteEventIds().any {
                                             LocalCache.getNoteIfExists(it)?.event is PeopleListEvent
                                         } ||
                                             noteEvent.deleteAddresses().any {

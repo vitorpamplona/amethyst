@@ -24,7 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -43,14 +43,12 @@ class PrivateOutboxRelayListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var privateTagsCache: Array<Array<String>>? = null
 
     override fun countMemory(): Long =
         super.countMemory() +
             pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
-
-    override fun dTag() = FIXED_D_TAG
 
     fun relays(): List<String>? =
         tags
@@ -102,12 +100,11 @@ class PrivateOutboxRelayListEvent(
 
     companion object {
         const val KIND = 10013
-        const val FIXED_D_TAG = ""
         val TAGS = arrayOf(AltTagSerializer.toTagArray("Relay list to store private content from this author"))
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATag(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATagId(KIND, pubKey, FIXED_D_TAG)
 
         fun encryptTags(
             privateTags: Array<Array<String>>? = null,

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTag
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
@@ -66,7 +65,7 @@ class InteractiveStoryReadingStateEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dtag: String,
-        ): String = ATag.assembleATag(KIND, pubKey, dtag)
+        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
 
         fun update(
             base: InteractiveStoryReadingStateEvent,
