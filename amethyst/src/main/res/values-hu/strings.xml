@@ -10,7 +10,7 @@
     <string name="post_was_flagged_as_inappropriate_by">A hozzászólás el lett némítva vagy be lett jelentve általa:</string>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
-    <string name="channel_image">Csatornakép</string>
+    <string name="channel_image">Csatorna profilképe</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
     <string name="could_not_decrypt_the_message">Nem sikerült visszafejteni az üzenetet</string>
     <string name="group_picture">Csoport profilképe</string>
