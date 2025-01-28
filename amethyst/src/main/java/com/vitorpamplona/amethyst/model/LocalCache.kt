@@ -1855,7 +1855,17 @@ object LocalCache {
 
         if (key != null) {
             val note = getNoteIfExists(key)
-            if (note != null) {
+            if ((note != null) &&
+                !(
+                    note.event is GenericRepostEvent ||
+                        note.event is RepostEvent ||
+                        note.event is CommunityPostApprovalEvent ||
+                        note.event is ReactionEvent ||
+                        note.event is LnZapEvent ||
+                        note.event is LnZapRequestEvent ||
+                        note.event is FileHeaderEvent
+                )
+            ) {
                 return listOfNotNull(note)
             }
         }
@@ -1866,7 +1876,8 @@ object LocalCache {
                 note.event is CommunityPostApprovalEvent ||
                 note.event is ReactionEvent ||
                 note.event is LnZapEvent ||
-                note.event is LnZapRequestEvent
+                note.event is LnZapRequestEvent ||
+                note.event is FileHeaderEvent
             ) {
                 return@filter false
             }
@@ -1897,7 +1908,8 @@ object LocalCache {
                     addressable.event is CommunityPostApprovalEvent ||
                     addressable.event is ReactionEvent ||
                     addressable.event is LnZapEvent ||
-                    addressable.event is LnZapRequestEvent
+                    addressable.event is LnZapRequestEvent ||
+                    addressable.event is FileHeaderEvent
                 ) {
                     return@filter false
                 }
