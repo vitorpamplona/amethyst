@@ -22,14 +22,14 @@ package com.vitorpamplona.amethyst.service.ots
 
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.ots.ICalendar
-import com.vitorpamplona.quartz.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.ots.Timestamp
-import com.vitorpamplona.quartz.ots.exceptions.CommitmentNotFoundException
-import com.vitorpamplona.quartz.ots.exceptions.DeserializationException
-import com.vitorpamplona.quartz.ots.exceptions.ExceededSizeException
-import com.vitorpamplona.quartz.ots.exceptions.UrlException
+import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendar
+import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
+import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
+import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.CommitmentNotFoundException
+import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.DeserializationException
+import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.ExceededSizeException
+import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
+import com.vitorpamplona.quartz.utils.Hex
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -70,10 +70,15 @@ class OkHttpCalendar(
 
             client.newCall(request).execute().use {
                 if (it.isSuccessful) {
-                    val ctx = StreamDeserializationContext(it.body.bytes())
+                    val ctx =
+                        StreamDeserializationContext(
+                            it.body.bytes(),
+                        )
                     return Timestamp.deserialize(ctx, digest)
                 } else {
-                    throw UrlException("Failed to open $url")
+                    throw UrlException(
+                        "Failed to open $url",
+                    )
                 }
             }
         } catch (e: ExceededSizeException) {
@@ -118,10 +123,15 @@ class OkHttpCalendar(
 
             client.newCall(request).execute().use {
                 if (it.isSuccessful) {
-                    val ctx = StreamDeserializationContext(it.body.bytes())
+                    val ctx =
+                        StreamDeserializationContext(
+                            it.body.bytes(),
+                        )
                     return Timestamp.deserialize(ctx, commitment)
                 } else {
-                    throw CommitmentNotFoundException("Calendar response a status code != 200: " + it.code)
+                    throw CommitmentNotFoundException(
+                        "Calendar response a status code != 200: " + it.code,
+                    )
                 }
             }
         } catch (e: DeserializationException) {

@@ -44,12 +44,15 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
 
 @Composable
 fun RenderTextEvent(
@@ -79,16 +82,16 @@ fun RenderTextEvent(
                     val replyingTo = noteEvent.replyingToAddressOrEvent()
                     if (replyingTo != null) {
                         val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind() != CommunityDefinitionEvent.KIND) {
+                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
                             newNote
                         } else {
-                            note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
+                            note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
                         }
                     } else {
-                        note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
+                        note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
                     }
                 } else {
-                    note.replyTo?.lastOrNull { it.event?.kind() != CommunityDefinitionEvent.KIND }
+                    note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
                 }
             }
         if (replyingDirectlyTo != null && unPackReply) {
@@ -109,7 +112,7 @@ fun RenderTextEvent(
                     ?.modificationToShow
                     ?.value
                     ?.event
-                    ?.content() ?: body
+                    ?.content ?: body
             } else {
                 body
             }
@@ -136,7 +139,7 @@ fun RenderTextEvent(
                 accountViewModel = accountViewModel,
             ) {
                 val tags =
-                    remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+                    remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
                 TranslatableRichTextViewer(
                     content = eventContent,

@@ -93,10 +93,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -676,7 +677,7 @@ fun ShareImageAction(
                 text = { Text(stringRes(R.string.add_media_to_gallery)) },
                 onClick = {
                     if (videoUri != null) {
-                        val n19 = Nip19Bech32.uriToRoute(postNostrUri)?.entity as? Nip19Bech32.NEvent
+                        val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                         if (n19 != null) {
                             accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0], blurhash, dim, hash, mimeType) // TODO Whole list or first?
                             accountViewModel.toast(R.string.media_added, R.string.media_added_to_profile_gallery)

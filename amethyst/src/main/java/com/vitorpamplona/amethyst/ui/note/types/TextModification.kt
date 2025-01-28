@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable
@@ -84,13 +84,13 @@ fun RenderTextModificationEvent(
     val isAuthorTheLoggedUser =
         remember {
             val authorOfTheOriginalNote =
-                noteEvent.editedNote()?.let { accountViewModel.getNoteIfExists(it)?.author }
+                noteEvent.editedNote()?.let { accountViewModel.getNoteIfExists(it.eventId)?.author?.pubkeyHex ?: it.authorPubKeyHex }
 
             mutableStateOf(accountViewModel.isLoggedUser(authorOfTheOriginalNote))
         }
 
     noteEvent.editedNote()?.let {
-        LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { baseOriginalNote ->
+        LoadNote(baseNoteHex = it.eventId, accountViewModel = accountViewModel) { baseOriginalNote ->
             baseOriginalNote?.let {
             }
         }
@@ -128,7 +128,7 @@ fun RenderTextModificationEvent(
             }
 
             noteEvent.editedNote()?.let {
-                LoadNote(baseNoteHex = it, accountViewModel = accountViewModel) { baseNote ->
+                LoadNote(baseNoteHex = it.eventId, accountViewModel = accountViewModel) { baseNote ->
                     baseNote?.let {
                         val noteState by baseNote.live().metadata.observeAsState()
 

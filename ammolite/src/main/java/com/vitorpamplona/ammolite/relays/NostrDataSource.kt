@@ -22,7 +22,8 @@ package com.vitorpamplona.ammolite.relays
 
 import android.util.Log
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relays.RelayState
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -93,24 +94,19 @@ abstract class NostrDataSource(
                 }
             }
 
-            override fun onRelayStateChange(
-                type: Relay.StateType,
+            override fun onEOSE(
                 relay: Relay,
-                subscriptionId: String?,
+                subscriptionId: String,
             ) {
-                // if (subscriptions.containsKey(subscriptionId)) {
-                //    Log.d(this@NostrDataSource.javaClass.simpleName, "Relay ${relay.url} ${subscriptionId}
-                // ${type.name}")
-                // }
-
-                if (
-                    type == Relay.StateType.EOSE &&
-                    subscriptionId != null &&
-                    subscriptions.containsKey(subscriptionId)
-                ) {
+                if (subscriptions.containsKey(subscriptionId)) {
                     markAsEOSE(subscriptionId, relay)
                 }
             }
+
+            override fun onRelayStateChange(
+                type: RelayState,
+                relay: Relay,
+            ) {}
 
             override fun onSendResponse(
                 eventId: String,

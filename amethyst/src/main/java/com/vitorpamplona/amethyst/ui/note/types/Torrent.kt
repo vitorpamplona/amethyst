@@ -64,8 +64,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.events.TorrentEvent
-import com.vitorpamplona.quartz.events.TorrentFile
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentFile
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -158,8 +158,8 @@ fun RenderTorrent(
     val size = " (" + countToHumanReadableBytes(noteEvent.totalSizeBytes()) + ")"
 
     val description =
-        if (noteEvent.content() != name) {
-            noteEvent.content()
+        if (noteEvent.content != name) {
+            noteEvent.content
         } else {
             null
         }

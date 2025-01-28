@@ -26,7 +26,6 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
@@ -35,8 +34,14 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.events.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip96FileStorage.AuthToken
+import com.vitorpamplona.quartz.nip96FileStorage.Nip96Result
+import com.vitorpamplona.quartz.nip96FileStorage.PartialEvent
+import com.vitorpamplona.quartz.nip96FileStorage.ResultParser
+import com.vitorpamplona.quartz.nip96FileStorage.ServerInfo
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -45,14 +50,13 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.source
 import java.io.InputStream
-import java.util.Base64
 
 val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
 class Nip96Uploader {
-    suspend fun uploadImage(
+    suspend fun upload(
         uri: Uri,
         contentType: String?,
         size: Long?,
@@ -63,7 +67,7 @@ class Nip96Uploader {
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
-    ) = uploadImage(
+    ) = upload(
         uri,
         contentType,
         size,
@@ -85,7 +89,7 @@ class Nip96Uploader {
 
     fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
 
-    suspend fun uploadImage(
+    suspend fun upload(
         uri: Uri,
         contentType: String?,
         size: Long?,
@@ -107,7 +111,7 @@ class Nip96Uploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return uploadImage(
+        return upload(
             imageInputStream,
             length,
             myContentType,
@@ -121,7 +125,7 @@ class Nip96Uploader {
         )
     }
 
-    suspend fun uploadImage(
+    suspend fun upload(
         inputStream: InputStream,
         length: Long,
         contentType: String?,
@@ -149,7 +153,7 @@ class Nip96Uploader {
                 .addFormDataPart("size", length.toString())
                 .also { body ->
                     alt?.ifBlank { null }?.let { body.addFormDataPart("alt", it) }
-                    sensitiveContent?.let { body.addFormDataPart("content-warning", it) }
+                    sensitiveContent?.let { body.addFormDataPart(CONTENT_WARNING, it) }
                     contentType?.let { body.addFormDataPart("content_type", it) }
                 }.addFormDataPart(
                     "file",
@@ -165,7 +169,7 @@ class Nip96Uploader {
                     },
                 ).build()
 
-        httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", encodeAuth(it)) }
+        httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", AuthToken().encodeAuth(it)) }
 
         requestBuilder
             .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
@@ -177,13 +181,16 @@ class Nip96Uploader {
         client.newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 response.body.use { body ->
-                    val str = body.string()
-                    val result = parseResults(str)
-
+                    val result = ResultParser().parseResults(body.string())
                     if (!result.processingUrl.isNullOrBlank()) {
                         return waitProcessing(result, server, forceProxy, onProgress)
-                    } else if (result.status == "success" && result.nip94Event != null) {
-                        return convertToMediaResult(result.nip94Event)
+                    } else if (result.status == "success") {
+                        val event = result.nip94Event
+                        if (event != null) {
+                            return convertToMediaResult(event)
+                        } else {
+                            throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
+                        }
                     } else {
                         throw RuntimeException(stringRes(context, R.string.failed_to_upload_to_server_with_message, server.apiUrl.displayUrl(), result.message))
                     }
@@ -253,11 +260,6 @@ class Nip96Uploader {
         )
     }
 
-    fun encodeAuth(event: HTTPAuthorizationEvent): String {
-        val encodedNIP98Event = Base64.getEncoder().encodeToString(event.toJson().toByteArray())
-        return "Nostr $encodedNIP98Event"
-    }
-
     suspend fun delete(
         hash: String,
         contentType: String?,
@@ -273,7 +275,7 @@ class Nip96Uploader {
 
         val requestBuilder = Request.Builder()
 
-        httpAuth(server.apiUrl, "DELETE", null)?.let { requestBuilder.addHeader("Authorization", encodeAuth(it)) }
+        httpAuth(server.apiUrl, "DELETE", null)?.let { requestBuilder.addHeader("Authorization", AuthToken().encodeAuth(it)) }
 
         val request =
             requestBuilder
@@ -285,8 +287,7 @@ class Nip96Uploader {
         client.newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 response.body.use { body ->
-                    val str = body.string()
-                    val result = parseDeleteResults(str)
+                    val result = ResultParser().parseDeleteResults(body.string())
                     return result.status == "success"
                 }
             } else {
@@ -308,20 +309,22 @@ class Nip96Uploader {
     ): MediaUploadResult {
         var currentResult = result
 
-        while (!result.processingUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
+        val procUrl = result.processingUrl
+
+        while (!procUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
             onProgress((currentResult.percentage ?: 100) / 100f)
 
             val request: Request =
                 Request
                     .Builder()
                     .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                    .url(result.processingUrl)
+                    .url(procUrl)
                     .build()
 
-            val client = HttpClientManager.getHttpClient(forceProxy(result.processingUrl))
+            val client = HttpClientManager.getHttpClient(forceProxy(procUrl))
             client.newCall(request).execute().use {
                 if (it.isSuccessful) {
-                    it.body.use { currentResult = parseResults(it.string()) }
+                    it.body.use { currentResult = ResultParser().parseResults(it.string()) }
                 }
             }
 
@@ -336,15 +339,5 @@ class Nip96Uploader {
         } else {
             throw RuntimeException("Error waiting for processing. Final result is unavailable")
         }
-    }
-
-    private fun parseDeleteResults(body: String): DeleteResult {
-        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        return mapper.readValue(body, DeleteResult::class.java)
-    }
-
-    private fun parseResults(body: String): Nip96Result {
-        val mapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        return mapper.readValue(body, Nip96Result::class.java)
     }
 }

@@ -52,8 +52,8 @@
     <string name="login_with_a_private_key_to_be_able_to_show_word">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby móc pokazać słowo lub zdanie</string>
     <string name="zaps">Zapy</string>
     <string name="view_count">Liczba wyświetleń</string>
-    <string name="boost">Repost</string>
-    <string name="boosted">reposted</string>
+    <string name="boost">Promuj</string>
+    <string name="boosted">promowany</string>
     <string name="edited">edytowano</string>
     <string name="edited_number">edytuj #%1$s</string>
     <string name="original">oryginalny</string>
@@ -76,8 +76,8 @@
     <string name="show_more">Pokaż Więcej</string>
     <string name="lightning_invoice">Faktura LN</string>
     <string name="pay">Zapłać</string>
-    <string name="lightning_tips">Lightning-wskazówki</string>
-    <string name="note_to_receiver">Notatka dla odbiorcy</string>
+    <string name="lightning_tips">Lightning transfer</string>
+    <string name="note_to_receiver">Wiadomość dla odbiorcy</string>
     <string name="thank_you_so_much">Dziękuję bardzo!</string>
     <string name="amount_in_sats">Kwota w Satsach</string>
     <string name="send_sats">Wyślij Satsy</string>
@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">Adres URL LN (nieaktualny)</string>
     <string name="save_to_gallery">Zapisz w galerii</string>
     <string name="image_saved_to_the_gallery">Zdjęcie zostało zapisane w galerii</string>
+    <string name="video_download_has_started_toast">Rozpoczęto pobieranie wideo…</string>
+    <string name="media_download_has_started_toast">Rozpoczęto pobieranie plików…</string>
     <string name="failed_to_save_the_image">Nie udało się zapisać zdjęcia</string>
     <string name="video_saved_to_the_gallery">Film zapisany w galerii filmów</string>
     <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
@@ -205,11 +207,11 @@
     <string name="translations_auto">Automatycznie</string>
     <string name="translations_translated_from">przetłumaczono z</string>
     <string name="translations_to">do</string>
-    <string name="translations_show_in_lang_first">Najpierw pokaż w %1$s</string>
+    <string name="translations_show_in_lang_first">Najpierw wyświetl język %1$s</string>
     <string name="chat_about_topic">Temat czatu: %1$s</string>
     <string name="community_about_topic">Temat dyskusji %1$s</string>
     <string name="translations_always_translate_to_lang">Zawsze tłumacz na %1$s</string>
-    <string name="translations_never_translate_from_lang">Nigdy nie tłumacz z %1$s</string>
+    <string name="translations_never_translate_from_lang">Język %1$s pokaż nietłumaczony</string>
     <string name="nip_05">Adres Nostr</string>
     <string name="never">nigdy</string>
     <string name="now">teraz</string>
@@ -218,7 +220,7 @@
     <string name="d">d</string>
     <string name="nudity">Nagość</string>
     <string name="profanity_hateful_speech">Wulgaryzmy / Mowa nienawiści</string>
-    <string name="report_hateful_speech">Zgłoś nienawistną mowę</string>
+    <string name="report_hateful_speech">Zgłoś mowę nienawiści</string>
     <string name="report_nudity_porn">Zgłoś Nagość / Pornografię</string>
     <string name="others">inne</string>
     <string name="mark_all_known_as_read">Oznacz wszystkie popularne jako przeczytane</string>
@@ -342,9 +344,10 @@
     <string name="content_description_add_image">Dodaj zdjęcie</string>
     <string name="content_description_add_video">Dodaj wideo</string>
     <string name="content_description_add_document">Dodaj dokument</string>
-    <string name="add_content">Dodaj do wiadomości</string>
+    <string name="add_content">Załącz</string>
     <string name="add_caption">Dodaj nagłówek</string>
     <string name="add_caption_example">Mój przyjacielu</string>
+    <string name="use_direct_url">Użyj bezpośredniego adresu URL</string>
     <string name="content_description">Opis zawartości</string>
     <string name="content_description_example">Błękitna łódź na białej piaszczystej plaży o zachodzie słońca</string>
     <string name="zap_type">Typ Zap-a</string>
@@ -535,7 +538,7 @@
     <string name="connectivity_type_never">Nigdy</string>
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
-    <string name="ui_feature_set_type_performance">Wydajność</string>
+    <string name="ui_feature_set_type_performance">Dynamiczny</string>
     <string name="system">Automatyczny</string>
     <string name="light">Jasny</string>
     <string name="dark">Ciemny</string>
@@ -597,7 +600,9 @@
     <string name="share_or_save">Udostępnij lub Zapisz</string>
     <string name="copy_url_to_clipboard">Kopiuj adres URL do schowka</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiuj ID wpisu do schowka</string>
-    <string name="add_media_to_gallery">Dodaj media do Galerii</string>
+    <string name="add_media_to_gallery">Dodaj pliki do Galerii</string>
+    <string name="media_added">Dodano pliki</string>
+    <string name="media_added_to_profile_gallery">Pliki dodane do Twojej galerii profilu</string>
     <string name="created_at">Utworzono</string>
     <string name="rules">Zasady</string>
     <string name="login_with_external_signer">Zaloguj się za pomocą Amber</string>
@@ -606,6 +611,7 @@
     <string name="poll_zap_value_min_max_explainer">Głosy są oceniane na podstawie ilości zapperów. Możesz ustawić minimalną kwotę, aby uniknąć spamerów i maksymalną kwotę, aby uniknąć przejęcia ankiety przez dużych zapperów. Użyj tej samej kwoty w obu polach, aby upewnić się, że każdy głos ma taką samą wartość. Pozostaw to pole puste, aby zaakceptować dowolną kwotę.</string>
     <string name="error_dialog_zap_error">Nie można wysłać zapa</string>
     <string name="error_dialog_talk_to_user">Wyślij wiadomość użytkownikowi</string>
+    <string name="error_dialog_talk_to_user_name">Wiadomość %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Nieudane połączenie z %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Nie udało się skompilować adresu URL NIP-11 dla %1$s: %2$s</string>
@@ -665,6 +671,7 @@
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nie można rozwiązać %1$s. Sprawdź, czy jesteś połączony, czy serwer jest gotowy i czy lightning adres %2$s jest poprawny</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nie można rozwiązać %1$s. Sprawdź, czy jesteś połączony, czy serwer jest gotowy i czy lightning adres %2$s jest poprawny.\n\nWyjątkiem było: %3$s</string>
     <string name="could_not_fetch_invoice_from">Nie można pobrać faktury z %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Nie można pobrać faktury od %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Błąd przetwarzania JSON z adresu lightning. Sprawdź konfigurację lightning użytkownika</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania JSON z %1$s. Sprawdź konfigurację lightning użytkownika</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">Adres zwrotny nie został znaleziony w konfiguracji serwera adresu lightning użytkownika</string>
@@ -737,7 +744,7 @@
     <string name="failed_to_upload_to_server_with_message">Nie udało się wgrać pliku do %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Nie udało się przesłać: %1$s</string>
     <string name="failed_to_delete_with_message">Nie udało się usunąć: %1$s</string>
-    <string name="media_too_big_for_nip95">Media są zbyt duże dla NIP-95</string>
+    <string name="media_too_big_for_nip95">Pliki są zbyt duże dla NIP-95</string>
     <string name="unable_to_load_thumbnail">Nie można załadować miniatury</string>
     <string name="could_not_prepare_header">Nie można przygotować informacji nagłówkowych: %1$s</string>
     <string name="compression_cancelled">Kompresja anulowana</string>
@@ -804,6 +811,7 @@
     <string name="search_relays_not_found_description">Stworzenie listy transmiterów specjalnie przeznaczonych do wyszukiwania i tagowania użytkowników poprawi te wyniki.</string>
     <string name="search_relays_not_found_editing">Wstaw od 1 do 3 transmiterów, które będą używane podczas wyszukiwania treści lub tagowania użytkowników. Upewnij się, że zaimplementowano NIP-50</string>
     <string name="search_relays_not_found_examples">Dobre opcje to:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">Wgrywanie DM</string>
     <string name="relay_settings">Ustawienia Transmiterów</string>
     <string name="public_home_section">Publiczne transmitery domowe</string>
     <string name="public_home_section_explainer">Ten typ transmitera przechowuje całą zawartość. Amethyst będzie wysyłać Twoje posty tutaj, a inni będą korzystać z tych transmiterów, aby znaleźć Twoje treści. Wstaw od 1 do 3 transmiterów. Mogą to być transmitery prywatne, płatne lub publiczne.</string>
@@ -854,7 +862,7 @@
     <string name="accessibility_scan_qr_code">Zeskanuj QR kod</string>
     <string name="accessibility_navigate_to_alby">Przejdź do Alby zewnętrznego dostawcy portfela</string>
     <string name="it_s_not_possible_to_reply_to_a_draft_note">Nie jest możliwa odpowiedź na szkic wpisu</string>
-    <string name="it_s_not_possible_to_quote_to_a_draft_note">Nie jest możliwe zacytowanie szkicu notatki</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">Nie jest możliwe zacytowanie szkicu wpisu</string>
     <string name="it_s_not_possible_to_react_to_a_draft_note">Nie jest możliwe reagowanie na szkic wpisu</string>
     <string name="it_s_not_possible_to_zap_to_a_draft_note">Nie jest możliwy zap dla szkicu wpisu</string>
     <string name="draft_note">Szkic wpisu</string>

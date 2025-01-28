@@ -18,6 +18,7 @@
     <string name="spam">محتوى عشوائي</string>
     <string name="impersonation">التمثيل</string>
     <string name="illegal_behavior">تصرف غير قانوني</string>
+    <string name="other">أخرى</string>
     <string name="unknown">غير معروف</string>
     <string name="relay_icon">أيقونة الخادم</string>
     <string name="unknown_author">كاتب غير معروف</string>
@@ -45,6 +46,7 @@
     <string name="boost">تعزيز</string>
     <string name="boosted">معزز</string>
     <string name="edited">تم تعديلها</string>
+    <string name="edited_number">تعديل #%1$s</string>
     <string name="original">الأصلية</string>
     <string name="quote">إقتباس</string>
     <string name="new_amount_in_sats">مبلغ جديد في Sats</string>

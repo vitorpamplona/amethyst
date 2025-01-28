@@ -157,10 +157,12 @@ import com.vitorpamplona.amethyst.ui.note.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
+import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -180,7 +182,7 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -209,6 +211,7 @@ fun NewPostScreen(
     nav: Nav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
+    postViewModel.account = accountViewModel.account
     postViewModel.wantsDirectMessage = enableMessageInterface
     postViewModel.wantsToAddGeoHash = enableGeolocation
 
@@ -277,6 +280,8 @@ fun NewPostScreen(
         activity.addOnNewIntentListener(consumer)
         onDispose { activity.removeOnNewIntentListener(consumer) }
     }
+
+    WatchAndLoadMyEmojiList(accountViewModel)
 
     Scaffold(
         topBar = {
@@ -569,7 +574,16 @@ fun NewPostScreen(
                 }
 
                 ShowUserSuggestionList(
-                    postViewModel,
+                    postViewModel.userSuggestions,
+                    postViewModel::autocompleteWithUser,
+                    accountViewModel,
+                    modifier = Modifier.heightIn(0.dp, 300.dp),
+                )
+
+                ShowEmojiSuggestionList(
+                    postViewModel.emojiSuggestions,
+                    postViewModel::autocompleteWithEmoji,
+                    postViewModel::autocompleteWithEmojiUrl,
                     accountViewModel,
                     modifier = Modifier.heightIn(0.dp, 300.dp),
                 )
@@ -578,21 +592,6 @@ fun NewPostScreen(
             }
         }
     }
-//    Dialog(
-//        onDismissRequest = {
-//            scope.launch {
-//                postViewModel.sendDraftSync(relayList = relayList)
-//                onClose()
-//            }
-//        },
-//        properties =
-//        DialogProperties(
-//            usePlatformDefaultWidth = false,
-//            dismissOnClickOutside = false,
-//            decorFitsSystemWindows = false,
-//        ),
-//    ) {
-//    }
 }
 
 @Composable

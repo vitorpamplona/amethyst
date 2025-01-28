@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ZapReqResponse
-import com.vitorpamplona.quartz.events.LnZapEventInterface
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 class UserProfileZapsFeedFilter(
     val user: User,
@@ -41,7 +41,7 @@ class UserProfileZapsFeedFilter(
             return (
                 zaps
                     .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEventInterface)?.amount() }
+                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
                     .reversed()
             )
         }

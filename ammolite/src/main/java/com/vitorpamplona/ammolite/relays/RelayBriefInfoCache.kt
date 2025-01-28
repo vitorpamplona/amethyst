@@ -22,7 +22,7 @@ package com.vitorpamplona.ammolite.relays
 
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 object RelayBriefInfoCache {
     val cache = LruCache<String, RelayBriefInfo?>(50)

@@ -83,6 +83,7 @@ open class NewMediaModel : ViewModel() {
     fun upload(
         context: Context,
         relayList: List<RelaySetupInfo>,
+        onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch {
@@ -171,27 +172,32 @@ open class NewMediaModel : ViewModel() {
                     }
 
                 val imageJobs =
-                    listOf(
-                        viewModelScope.launch(Dispatchers.IO) {
-                            withTimeoutOrNull(30000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    account?.sendAllAsOnePictureEvent(
-                                        imageUrls,
-                                        caption,
-                                        sensitiveContent,
-                                        relayList,
-                                    ) {
-                                        continuation.resume(true)
+                    if (imageUrls.isNotEmpty()) {
+                        listOf(
+                            viewModelScope.launch(Dispatchers.IO) {
+                                withTimeoutOrNull(30000) {
+                                    suspendCancellableCoroutine { continuation ->
+                                        account?.sendAllAsOnePictureEvent(
+                                            imageUrls,
+                                            caption,
+                                            sensitiveContent,
+                                            relayList,
+                                        ) {
+                                            continuation.resume(true)
+                                        }
                                     }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        )
+                    } else {
+                        emptyList()
+                    }
 
                 nip95jobs.joinAll()
                 videoJobs.joinAll()
                 imageJobs.joinAll()
 
+                onSucess()
                 onceUploaded()
                 cancelModel()
             } else {

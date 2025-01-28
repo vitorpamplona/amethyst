@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,10 +56,12 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.VideoEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 @Composable
 fun VideoDisplay(
@@ -77,7 +80,7 @@ fun VideoDisplay(
     val summary = event.content.ifBlank { null }?.takeIf { title != it }
     val image = imeta.image.firstOrNull()
     val isYouTube = imeta.url.contains("youtube.com") || imeta.url.contains("youtu.be")
-    val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+    val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     val content by
         remember(note) {
@@ -119,6 +122,7 @@ fun VideoDisplay(
                     .fillMaxWidth()
                     .padding(top = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = spacedBy(Size5dp),
         ) {
             if (isYouTube) {
                 val uri = LocalUriHandler.current
@@ -157,8 +161,7 @@ fun VideoDisplay(
                     overflow = TextOverflow.Ellipsis,
                     modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .padding(top = 5.dp),
+                            .fillMaxWidth(),
                 )
             }
 

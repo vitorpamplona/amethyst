@@ -24,6 +24,7 @@ import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.Stable
 import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -56,11 +57,11 @@ import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.quartz.encoders.bechToBytes
-import com.vitorpamplona.quartz.encoders.decodePublicKeyAsHexOrNull
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.OtsEvent
-import com.vitorpamplona.quartz.ots.OpenTimestamps
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,12 +89,13 @@ class ServiceManager(
         start()
     }
 
+    @OptIn(DelicateCoilApi::class)
     private fun start() {
         Log.d("ServiceManager", "Pre Starting Relay Services $isStarted $account")
         if (isStarted && account != null) {
             return
         }
-        Log.d("ServiceManager", "Starting Relay Services")
+        Log.d("ServiceManager", "Starting Relay Services Tor: ${account?.settings?.torSettings?.torType?.value}")
 
         val myAccount = account
 
@@ -114,7 +116,11 @@ class ServiceManager(
                     OkHttpCalendarBuilder(myAccount::shouldUseTorForMoneyOperations),
                 )
         } else {
-            OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer { false }, OkHttpCalendarBuilder { false })
+            OtsEvent.otsInstance =
+                OpenTimestamps(
+                    OkHttpBlockstreamExplorer { false },
+                    OkHttpCalendarBuilder { false },
+                )
 
             HttpClientManager.setDefaultProxy(null)
         }
@@ -126,7 +132,7 @@ class ServiceManager(
             ?.security
             ?.filterSpamFromStrangers ?: true
 
-        SingletonImageLoader.setSafe {
+        SingletonImageLoader.setUnsafe {
             Amethyst.instance
                 .imageLoaderBuilder()
                 .components {

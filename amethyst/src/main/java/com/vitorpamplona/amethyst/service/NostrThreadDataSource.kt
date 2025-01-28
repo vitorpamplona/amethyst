@@ -42,7 +42,7 @@ object NostrThreadDataSource : AmethystNostrDataSource("SingleThreadFeed") {
                 .ifEmpty { null }
 
         val address = if (branch.root is AddressableNote) branch.root.idHex else null
-        val event = if (branch.root !is AddressableNote) branch.root.idHex else branch.root.event?.id()
+        val event = if (branch.root !is AddressableNote) branch.root.idHex else branch.root.event?.id
 
         return listOfNotNull(
             eventsToLoad?.let {

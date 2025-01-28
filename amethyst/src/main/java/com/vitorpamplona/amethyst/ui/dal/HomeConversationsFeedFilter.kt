@@ -23,13 +23,14 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
@@ -69,18 +70,22 @@ class HomeConversationsFeedFilter(
     }
 
     fun acceptableEvent(
-        it: Note,
+        event: Event?,
         filterParams: FilterByListParams,
     ): Boolean =
         (
-            it.event is TextNoteEvent ||
-                it.event is PollNoteEvent ||
-                it.event is ChannelMessageEvent ||
-                it.event is CommentEvent ||
-                it.event is LiveActivitiesChatMessageEvent
+            event is TextNoteEvent ||
+                event is PollNoteEvent ||
+                event is ChannelMessageEvent ||
+                event is CommentEvent ||
+                event is LiveActivitiesChatMessageEvent
         ) &&
-            filterParams.match(it.event) &&
-            !it.isNewThread()
+            filterParams.match(event)
+
+    fun acceptableEvent(
+        note: Note,
+        filterParams: FilterByListParams,
+    ): Boolean = acceptableEvent(note.event, filterParams) && !note.isNewThread()
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

@@ -21,49 +21,25 @@
 package com.vitorpamplona.amethyst.service.uploads.nip96
 
 import android.util.Log
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.quartz.nip96FileStorage.ServerInfo
+import com.vitorpamplona.quartz.nip96FileStorage.ServerInfoParser
 import kotlinx.coroutines.CancellationException
 import okhttp3.Request
-import java.net.URI
-import java.net.URL
 
 class ServerInfoRetriever {
-    fun parse(
-        baseUrl: String,
-        body: String,
-    ): ServerInfo {
-        val mapper =
-            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        val serverInfo = mapper.readValue(body, ServerInfo::class.java)
-
-        return serverInfo.copy(
-            apiUrl = makeAbsoluteIfRelativeUrl(baseUrl, serverInfo.apiUrl),
-            downloadUrl = serverInfo.downloadUrl?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
-            delegatedToUrl = serverInfo.delegatedToUrl?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
-            tosUrl = serverInfo.tosUrl?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
-            plans =
-                serverInfo.plans.mapValues { u ->
-                    u.value.copy(
-                        url = u.value.url?.let { makeAbsoluteIfRelativeUrl(baseUrl, it) },
-                    )
-                },
-        )
-    }
+    val parser = ServerInfoParser()
 
     suspend fun loadInfo(
         baseUrl: String,
         forceProxy: Boolean,
     ): ServerInfo {
-        checkNotInMainThread()
-
         val request: Request =
             Request
                 .Builder()
                 .header("Accept", "application/nostr+json")
-                .url(baseUrl.removeSuffix("/") + "/.well-known/nostr/nip96.json")
+                .url(parser.assembleUrl(baseUrl))
                 .build()
 
         HttpClientManager.getHttpClient(forceProxy).newCall(request).execute().use { response ->
@@ -72,7 +48,7 @@ class ServerInfoRetriever {
                 val body = it.body.string()
                 try {
                     if (it.isSuccessful) {
-                        return parse(baseUrl, body)
+                        return parser.parse(baseUrl, body)
                     } else {
                         throw RuntimeException(
                             "Resulting Message from $baseUrl is an error: ${response.code} ${response.message}",
@@ -86,19 +62,4 @@ class ServerInfoRetriever {
             }
         }
     }
-
-    fun makeAbsoluteIfRelativeUrl(
-        baseUrl: String,
-        potentialyRelativeUrl: String,
-    ): String =
-        try {
-            val apiUrl = URI(potentialyRelativeUrl)
-            if (apiUrl.isAbsolute) {
-                potentialyRelativeUrl
-            } else {
-                URL(URL(baseUrl), potentialyRelativeUrl).toString()
-            }
-        } catch (e: Exception) {
-            potentialyRelativeUrl
-        }
 }

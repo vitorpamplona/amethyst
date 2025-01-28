@@ -25,7 +25,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.crypto.CryptoUtils
+import com.vitorpamplona.quartz.CryptoUtils
 import okhttp3.EventListener
 import okhttp3.Protocol
 import okhttp3.Request

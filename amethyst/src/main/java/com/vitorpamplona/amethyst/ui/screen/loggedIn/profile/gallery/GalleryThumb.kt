@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVi
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
@@ -67,9 +68,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.events.VideoEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 @Composable
 fun GalleryThumbnail(
@@ -82,35 +83,31 @@ fun GalleryThumbnail(
 
     val content =
         if (noteEvent is ProfileGalleryEntryEvent) {
-            val url = noteEvent.url()
-            if (url == null) {
-                null
-            } else if (isVideoUrl(url)) {
-                MediaUrlVideo(
-                    url = url,
-                    description = noteEvent.content,
-                    hash = null,
-                    blurhash = noteEvent.blurhash(),
-                    dim = noteEvent.dimensions(),
-                    uri = null,
-                    mimeType = noteEvent.mimeType(),
-                )
-            } else {
-                MediaUrlImage(
-                    url = url,
-                    description = noteEvent.content,
-                    hash = null, // We don't want to show the hash banner here
-                    blurhash = noteEvent.blurhash(),
-                    dim = noteEvent.dimensions(),
-                    uri = null,
-                    mimeType = noteEvent.mimeType(),
-                )
+            noteEvent.urls().map { url ->
+                if (isVideoUrl(url)) {
+                    MediaUrlVideo(
+                        url = url,
+                        description = noteEvent.content,
+                        hash = null,
+                        blurhash = noteEvent.blurhash(),
+                        dim = noteEvent.dimensions(),
+                        uri = null,
+                        mimeType = noteEvent.mimeType(),
+                    )
+                } else {
+                    MediaUrlImage(
+                        url = url,
+                        description = noteEvent.content,
+                        hash = null, // We don't want to show the hash banner here
+                        blurhash = noteEvent.blurhash(),
+                        dim = noteEvent.dimensions(),
+                        uri = null,
+                        mimeType = noteEvent.mimeType(),
+                    )
+                }
             }
         } else if (noteEvent is PictureEvent) {
-            val imeta = noteEvent.imetaTags().firstOrNull()
-            if (imeta?.url == null) {
-                null
-            } else {
+            noteEvent.imetaTags().map { imeta ->
                 MediaUrlImage(
                     url = imeta.url,
                     description = noteEvent.content,
@@ -122,11 +119,7 @@ fun GalleryThumbnail(
                 )
             }
         } else if (noteEvent is VideoEvent) {
-            val imeta = noteEvent.imetaTags().firstOrNull()
-
-            if (imeta?.url == null) {
-                null
-            } else {
+            noteEvent.imetaTags().map { imeta ->
                 MediaUrlVideo(
                     url = imeta.url,
                     description = noteEvent.content,
@@ -138,7 +131,7 @@ fun GalleryThumbnail(
                 )
             }
         } else {
-            null
+            emptyList()
         }
 
     InnerRenderGalleryThumb(content, baseNote, accountViewModel)
@@ -146,15 +139,12 @@ fun GalleryThumbnail(
 
 @Composable
 fun InnerRenderGalleryThumb(
-    content: MediaUrlContent?,
+    content: List<MediaUrlContent>,
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    if (content != null) {
-        GalleryContentView(
-            content = content,
-            accountViewModel = accountViewModel,
-        )
+    if (content.isNotEmpty()) {
+        GalleryContentView(content, accountViewModel)
     } else {
         DisplayGalleryAuthorBanner(note)
     }
@@ -170,18 +160,20 @@ fun DisplayGalleryAuthorBanner(note: Note) {
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun GalleryContentView(
-    content: MediaUrlContent,
+    contentList: List<MediaUrlContent>,
     accountViewModel: AccountViewModel,
 ) {
-    when (content) {
-        is MediaUrlImage ->
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                UrlImageView(content, accountViewModel)
-            }
-        is MediaUrlVideo ->
-            SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                UrlVideoView(content, accountViewModel)
-            }
+    AutoNonlazyGrid(contentList.size) { contentIndex ->
+        when (val content = contentList[contentIndex]) {
+            is MediaUrlImage ->
+                SensitivityWarning(content.contentWarning != null, accountViewModel) {
+                    UrlImageView(content, accountViewModel)
+                }
+            is MediaUrlVideo ->
+                SensitivityWarning(content.contentWarning != null, accountViewModel) {
+                    UrlVideoView(content, accountViewModel)
+                }
+        }
     }
 }
 

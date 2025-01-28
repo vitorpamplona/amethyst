@@ -25,7 +25,7 @@ import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.events.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 
 @Composable
 fun RenderNIP90Status(

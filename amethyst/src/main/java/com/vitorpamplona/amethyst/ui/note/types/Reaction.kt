@@ -52,7 +52,7 @@ fun RenderReaction(
     }
 
     // Reposts have trash in their contents.
-    val refactorReactionText = if (note.event?.content() == "+") "❤" else note.event?.content() ?: ""
+    val refactorReactionText = if (note.event?.content == "+") "❤" else note.event?.content ?: ""
 
     Text(
         text = refactorReactionText,

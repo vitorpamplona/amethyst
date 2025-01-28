@@ -184,7 +184,7 @@
     <string name="translations_show_in_lang_first">প্রথমে %1$s ভাষায় দেখান</string>
     <string name="translations_always_translate_to_lang">সবসময় %1$s ভাষায় অনুবাদ করুন</string>
     <string name="translations_never_translate_from_lang">কখনোই %1$s ভাষা থেকে অনুবাদ করবেন না</string>
-    <string name="nip_05">নস্টার ঠিকানা</string>
+    <string name="nip_05">Nostr Address</string>
     <string name="never">কখনো না</string>
     <string name="now">এখন</string>
     <string name="h">h</string>
@@ -323,6 +323,7 @@
     <string name="file_server">ফাইল সার্ভার</string>
     <string name="zap_forward_lnAddress">বিজলি-ঠিকানা বা @ব্যবহারকারী</string>
     <string name="use_default_servers">ডিফল্ট তালিকা ব্যবহার করুন</string>
+    <string name="uploading_state_ready">শুরু হয়নি</string>
     <string name="upload_server_relays_nip95">আপনার রিলেগুলি (NIP-95)</string>
     <string name="upload_server_relays_nip95_explainer">ফাইলগুলো আপনার রিলে দ্বারা গৃহীত হয়। নতুন NIP: তারা এটি সমর্থন করে কিনা দেখে নিন</string>
     <string name="connect_via_tor_short">Tor/Orbot সেটআপ করুন</string>
@@ -344,6 +345,7 @@
         \n৬. Orbot কে প্রক্সি হিসেবে ব্যবহার করতে Activate বোতামটি চাপুন
     </string>
     <string name="orbot_socks_port">Orbot এর Socks পোর্ট</string>
+    <string name="tor_custom">পছন্দমতন</string>
     <string name="invalid_port_number">পোর্ট নম্বরটি অকার্যকর</string>
     <string name="use_orbot">Orbot ব্যবহার করুন</string>
     <string name="disconnect_from_your_orbot_setup">Tor/Orbot থেকে সংযোগ বিচ্ছিন্ন করুন</string>
@@ -534,6 +536,7 @@
     <string name="route_search">অনুসন্ধান করুন</string>
     <string name="route_discover">আবিস্কার</string>
     <string name="route_messages">বার্তা</string>
+    <string name="route_notifications">অবহিতকরন</string>
     <string name="route_security_filters">নিরাপত্তা-ফিল্টার</string>
     <string name="new_post">নতুন পোস্ট</string>
     <string name="reply_description">উত্তর</string>
@@ -544,6 +547,7 @@
     <string name="poll">ভোট</string>
     <string name="disable_poll">পোল নিষ্ক্রিয় করুন</string>
     <string name="add_location">অবস্থান</string>
+    <string name="remove_location">অবস্থান সরান</string>
     <string name="invalid_nip19_uri">ঠিকানা সঠিক নয়</string>
     <string name="zap_the_devs_description">আপনার অনুদান আমাদের পার্থক্য গড়তে সাহায্য করে। প্রতিটি ইঞ্চি গুরুত্বপূর্ণ!</string>
     <string name="donate_now">এখনই দান করুন</string>

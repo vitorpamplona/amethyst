@@ -37,33 +37,36 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.LnInvoiceUtil
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.events.DraftEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.events.LnZapRequestEvent
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
-import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
-import com.vitorpamplona.quartz.events.RepostEvent
-import com.vitorpamplona.quartz.events.WrappedEvent
-import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.toNAddr
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CancellationException
@@ -91,7 +94,7 @@ class AddressableNote(
         if (event == null) return null
 
         val publishedAt = (event as? LongTextNoteEvent)?.publishedAt() ?: Long.MAX_VALUE
-        val lastCreatedAt = event?.createdAt() ?: Long.MAX_VALUE
+        val lastCreatedAt = event?.createdAt ?: Long.MAX_VALUE
 
         return minOf(publishedAt, lastCreatedAt)
     }
@@ -103,7 +106,7 @@ class AddressableNote(
         deletionAddressables: Set<ATag>,
     ): Boolean {
         val thisEvent = event
-        return deletionAddressables.contains(address) || (thisEvent != null && deletionEvents.contains(thisEvent.id()))
+        return deletionAddressables.contains(address) || (thisEvent != null && deletionEvents.contains(thisEvent.id))
     }
 }
 
@@ -113,7 +116,7 @@ open class Note(
 ) {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
-    var event: EventInterface? = null
+    var event: Event? = null
     var author: User? = null
     var replyTo: List<Note>? = null
 
@@ -152,17 +155,17 @@ open class Note(
         return if (myEvent is WrappedEvent) {
             val host = myEvent.host
             if (host != null) {
-                Nip19Bech32.createNEvent(
+                NEvent.create(
                     host.id,
                     host.pubKey,
                     host.kind,
                     relayHintUrl(),
                 )
             } else {
-                Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relayHintUrl())
+                NEvent.create(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
             }
         } else {
-            Nip19Bech32.createNEvent(idHex, author?.pubkeyHex, event?.kind(), relayHintUrl())
+            NEvent.create(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
         }
     }
 
@@ -203,7 +206,7 @@ open class Note(
 
     open fun address(): ATag? = null
 
-    open fun createdAt() = event?.createdAt()
+    open fun createdAt() = event?.createdAt
 
     fun isDraft() = event is DraftEvent
 
@@ -212,7 +215,7 @@ open class Note(
         author: User,
         replyTo: List<Note>,
     ) {
-        if (this.event?.id() != event.id()) {
+        if (this.event?.id != event.id) {
             this.event = event
             this.author = author
             this.replyTo = replyTo
@@ -282,8 +285,8 @@ open class Note(
     }
 
     fun removeReaction(note: Note) {
-        val tags = note.event?.tags() ?: emptyArray()
-        val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
+        val tags = note.event?.tags ?: emptyArray()
+        val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         if (reactions[reaction]?.contains(note) == true) {
             reactions[reaction]?.let {
@@ -396,8 +399,8 @@ open class Note(
     }
 
     fun addReaction(note: Note) {
-        val tags = note.event?.tags() ?: emptyArray()
-        val reaction = note.event?.content()?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
+        val tags = note.event?.tags ?: emptyArray()
+        val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
 
         val listOfAuthors = reactions[reaction]
         if (listOfAuthors == null) {
@@ -429,6 +432,8 @@ open class Note(
             relays = relays + briefInfo
         }
     }
+
+    fun hasRelay(relay: Relay) = relay.brief !in relays
 
     fun addRelay(relay: Relay) {
         if (relay.brief !in relays) {
@@ -701,7 +706,7 @@ open class Note(
             .any {
                 val pledgeValue =
                     try {
-                        BigDecimal(it.event?.content())
+                        BigDecimal(it.event?.content)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         null
@@ -716,7 +721,7 @@ open class Note(
             .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
             .mapNotNull {
                 try {
-                    BigDecimal(it.event?.content())
+                    BigDecimal(it.event?.content)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     null
@@ -808,7 +813,7 @@ open class Note(
 
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
         val thisEvent = event ?: return false
-        val hash = thisEvent.pubKey().hashCode()
+        val hash = thisEvent.pubKey.hashCode()
 
         // if the author is hidden by spam or blocked
         if (accountChoices.hiddenUsersHashCodes.contains(hash) ||
@@ -818,7 +823,7 @@ open class Note(
         }
 
         // if the post is sensitive and the user doesn't want to see sensitive content
-        if (accountChoices.showSensitiveContent == false && thisEvent.isSensitive()) {
+        if (accountChoices.showSensitiveContent == false && thisEvent.isSensitiveOrNSFW()) {
             return true
         }
 
@@ -986,7 +991,7 @@ class NoteLiveSet(
 
     val boostCount = innerBoosts.map { it.note.boosts.size }.distinctUntilChanged()
 
-    val content = innerMetadata.map { it.note.event?.content() ?: "" }
+    val content = innerMetadata.map { it.note.event?.content ?: "" }
 
     fun isInUse(): Boolean =
         metadata.hasObservers() ||

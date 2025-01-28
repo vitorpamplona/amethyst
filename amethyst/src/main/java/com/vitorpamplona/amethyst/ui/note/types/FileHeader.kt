@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.events.FileHeaderEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
 @Composable
 fun FileHeaderDisplay(

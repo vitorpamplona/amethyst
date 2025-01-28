@@ -31,21 +31,24 @@ import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Lud06
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.toNpub
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.BookmarkListEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.ReportEvent
-import com.vitorpamplona.quartz.events.UserMetadata
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.lightning.Lud06
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +90,7 @@ class User(
     fun toNProfile(): String {
         val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)?.writeRelays()
 
-        return Nip19Bech32.createNProfile(
+        return NProfile.create(
             pubkeyHex,
             relayList?.take(3) ?: listOfNotNull(latestMetadataRelay),
         )
@@ -305,9 +308,9 @@ class User(
         relay: Relay,
         eventTime: Long,
     ) {
-        val here = relaysBeingUsed[relay.url]
+        val here = relaysBeingUsed[relay.brief.url]
         if (here == null) {
-            relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))
+            relaysBeingUsed = relaysBeingUsed + Pair(relay.brief.url, RelayInfo(relay.brief.url, eventTime, 1))
         } else {
             if (eventTime > here.lastEvent) {
                 here.lastEvent = eventTime

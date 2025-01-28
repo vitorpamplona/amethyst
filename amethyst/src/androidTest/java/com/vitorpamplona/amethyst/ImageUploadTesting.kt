@@ -34,9 +34,9 @@ import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.CoroutineScope
@@ -85,7 +85,7 @@ class ImageUploadTesting {
         val inputStream = paylod.inputStream()
         val result =
             BlossomUploader()
-                .uploadImage(
+                .upload(
                     inputStream = inputStream,
                     hash = initialHash,
                     length = paylod.size,
@@ -105,7 +105,7 @@ class ImageUploadTesting {
         assertEquals("${server.baseUrl}/$initialHash", result.url?.removeSuffix(".png"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(result.url!!, false)
+            ImageDownloader().waitAndGetImage(result.url!!, false)?.bytes
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return
@@ -127,7 +127,7 @@ class ImageUploadTesting {
         val inputStream = paylod.inputStream()
         val result =
             Nip96Uploader()
-                .uploadImage(
+                .upload(
                     inputStream = inputStream,
                     length = paylod.size.toLong(),
                     contentType = "image/png",
@@ -148,7 +148,7 @@ class ImageUploadTesting {
         Assert.assertTrue("${server.name}: Invalid result url", url.startsWith("http"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(url, false)
+            ImageDownloader().waitAndGetImage(url, false)?.bytes
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return

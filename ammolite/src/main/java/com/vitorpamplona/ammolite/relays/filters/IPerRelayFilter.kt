@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.ammolite.relays.filters
 
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
 
 interface IPerRelayFilter {
+    fun toRelay(forRelay: String): Filter
+
     fun toJson(forRelay: String): String
 
     fun match(

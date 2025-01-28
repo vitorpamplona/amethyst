@@ -10,10 +10,10 @@
     <string name="post_was_flagged_as_inappropriate_by">A hozzászólás el lett némítva vagy be lett jelentve általa:</string>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
-    <string name="channel_image">Csatornakép</string>
+    <string name="channel_image">Csatorna profilképe</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
     <string name="could_not_decrypt_the_message">Nem sikerült visszafejteni az üzenetet</string>
-    <string name="group_picture">Csoportkép</string>
+    <string name="group_picture">Csoport profilképe</string>
     <string name="explicit_content">Szókimondó tartalom</string>
     <string name="spam">Kéretlen tartalom</string>
     <string name="spam_description">Az erről az átjátszóról érkező kéretlen tartalmú események száma</string>
@@ -121,6 +121,8 @@
     <string name="ln_url_outdated">LN-webcím (elavult)</string>
     <string name="save_to_gallery">Mentés a galériába</string>
     <string name="image_saved_to_the_gallery">Kép elmentve a képgalériába</string>
+    <string name="video_download_has_started_toast">A videó letöltése megkezdődött…</string>
+    <string name="media_download_has_started_toast">A média letöltése megkezdődött…</string>
     <string name="failed_to_save_the_image">Nem sikerült elmenteni a képet</string>
     <string name="video_saved_to_the_gallery">Videó elmentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült elmenteni a videót</string>
@@ -345,6 +347,7 @@
     <string name="add_content">Hozzáadás az üzenethez</string>
     <string name="add_caption">Képaláírás hozzáadása</string>
     <string name="add_caption_example">Kedves barátom</string>
+    <string name="use_direct_url">Közvetlen webcím használata</string>
     <string name="content_description">Tartalmi leírás</string>
     <string name="content_description_example">Egy kék csónak a fehér homokos tengerparton naplementekor</string>
     <string name="zap_type">Zap-típus</string>
@@ -598,6 +601,8 @@
     <string name="copy_url_to_clipboard">Webcím másolása a vágólapra</string>
     <string name="copy_the_note_id_to_the_clipboard">Bejegyzés-azonosító másolása a vágólapra</string>
     <string name="add_media_to_gallery">Média hozzáadása a galériához</string>
+    <string name="media_added">Média hozzáadva</string>
+    <string name="media_added_to_profile_gallery">Média hozzáadva az Ön profil-galériájába</string>
     <string name="created_at">Létrehozva ekkor:</string>
     <string name="rules">Szabályok</string>
     <string name="login_with_external_signer">Bejelentkezés Amberrel</string>
@@ -606,6 +611,7 @@
     <string name="poll_zap_value_min_max_explainer">A szavazatok egy Zap összeggel vannak súlyozva. Beállíthat egy minimális összeget, hogy elkerülje a spamelőket, és egy maximális összeget, hogy elkerülje, hogy a nagy Zap-elők átvegyék a szavazást. Használja ugyanazt az összeget mindkét mezőben, hogy minden szavazatot ugyanannyira értékeljen. Hagyja üresen, hogy bármilyen összeget elfogadjon.</string>
     <string name="error_dialog_zap_error">Nem sikerült Zap-et küldeni</string>
     <string name="error_dialog_talk_to_user">Üzenet a felhasználónak</string>
+    <string name="error_dialog_talk_to_user_name">Üzenet: %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
     <string name="relay_information_document_error_assemble_url">Nem sikerült elérni a következőt: %1$s: %2$s</string>
     <string name="relay_information_document_error_failed_to_assemble_url">Nem sikerült összeállítani a NIP-11 webcímet a következőhöz: %1$s: %2$s</string>
@@ -664,7 +670,8 @@
     <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">A kedvezményezett lightning-szolgáltatása ennél: %1$s nem érhető el. A(z) „%2$s” lightning-cím lett kiszámítva. Hiba: %3$s. Ellenőrizze, hogy a kiszolgáló működik-e, és hogy a lightning-cím helyes-e</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">Nem sikerült megoldani a következőt: %1$s. Ellenőrizze, hogy kapcsolódik-e, vagy működik-e a kiszolgáló, és hogy a(z) %2$s lightning-cím helyes-e</string>
     <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">Nem sikerült megoldani a következőt: %1$s. Ellenőrizze, hogy kapcsolódik-e, vagy működik-e a kiszolgáló, és hogy a(z) %2$s lightning-cím helyes-e.\n\nKivéve: %3$s</string>
-    <string name="could_not_fetch_invoice_from">Nem sikerült a számlát a következőtől lekérni: %1$s</string>
+    <string name="could_not_fetch_invoice_from">Nem sikerült lekérni a számlát a következőtől: %1$s</string>
+    <string name="could_not_fetch_invoice_from_details">Nem sikerült lekérni a számlát a következőtől: %1$s: %2$s</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">Hiba a Lightning-címből származó JSON elemzésekor. Ellenőrizze a felhasználó Lightning-beállítását</string>
     <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">Hiba történt a(z) %1$s JSON elemzésekor. Ellenőrizze a felhasználó Lightning-beállítását</string>
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">A visszahívási webcím nem található a felhasználó lightning-cím-kiszolgálójának konfigurációjában</string>
@@ -734,6 +741,7 @@
     <string name="could_not_download_from_the_server">Nem sikerült letölteni a kiszolgálóról az oda feltöltött médiát</string>
     <string name="could_not_check_downloaded_file">Nem lehetett ellenőrizni a letöltött fájlt a feltöltés után: %1$s</string>
     <string name="could_not_prepare_local_file_to_upload">Nem sikerült előkészíteni feltöltésre a helyi fájlt: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">Nem sikerült feltölteni a következőre: %1$s: %2$s</string>
     <string name="failed_to_upload_with_message">Nem sikerült feltölteni: %1$s</string>
     <string name="failed_to_delete_with_message">Nem sikerült törölni: %1$s</string>
     <string name="media_too_big_for_nip95">Média túl nagy a NIP-95 számára</string>
@@ -803,6 +811,7 @@
     <string name="search_relays_not_found_description">A kifejezetten a kereséshez és a felhasználói címkézéshez tervezett átjátszólista létrehozása javítani fogja ezeket az eredményeket.</string>
     <string name="search_relays_not_found_editing">Adjon hozzá 1–3 átjátszót a tartalom kereséshez vagy a felhasználók címkézéséhez. Győződjön meg arról, hogy a kiválasztott átjátszók alkalmazzák a NIP-50-et</string>
     <string name="search_relays_not_found_examples">Jó választási lehetőségek:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">Feltöltés közvetlen üzenetbe</string>
     <string name="relay_settings">Átjátszó-beállítások</string>
     <string name="public_home_section">Nyilvános kimenő és saját átjátszók</string>
     <string name="public_home_section_explainer">Ez az átjátszótípus tárolja az összes tartalmat. Az Amethyst ide küldi az Ön bejegyzéseit, és mások ezeket az átjátszókat fogják használni, hogy megtalálják az Ön tartalmát. Adjon hozzá 1–3 átjátszót. Ezek lehetnek személyes-, fizetett- vagy nyilvános átjátszók.</string>

@@ -53,11 +53,13 @@ import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.HighlightEvent
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip19Bech32.toNIP19
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -98,7 +100,7 @@ fun DisplayHighlight(
     authorHex: String?,
     url: String?,
     postAddress: ATag?,
-    postVersion: HexKey?,
+    postVersion: ETag?,
     makeItShort: Boolean,
     canPreview: Boolean,
     quotesLeft: Int,
@@ -148,7 +150,7 @@ private fun DisplayQuoteAuthor(
     authorHex: String?,
     baseUrl: String?,
     postAddress: ATag?,
-    postVersion: HexKey?,
+    postVersion: ETag?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -179,14 +181,14 @@ private fun DisplayQuoteAuthor(
     }
 
     var version by remember {
-        mutableStateOf<Note?>(postVersion?.let { accountViewModel.getNoteIfExists(it) })
+        mutableStateOf<Note?>(postVersion?.let { accountViewModel.getNoteIfExists(it.eventId) })
     }
 
     if (version == null && postVersion != null) {
         LaunchedEffect(key1 = postVersion) {
             val newNote =
                 withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateNote(postVersion)
+                    accountViewModel.getOrCreateNote(postVersion.eventId)
                 }
             if (version != newNote) {
                 version = newNote
@@ -247,7 +249,7 @@ fun DisplayEntryForNote(
 
     val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return
 
-    val description = noteEvent.firstTagFor("title", "subject", "alt")
+    val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
 
     Text("-", maxLines = 1)
 

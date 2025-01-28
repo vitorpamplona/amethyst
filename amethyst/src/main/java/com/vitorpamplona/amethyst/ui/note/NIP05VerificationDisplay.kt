@@ -72,9 +72,12 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.nip05
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedAddress
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
@@ -246,14 +249,23 @@ fun DisplayStatus(
     nav: INav,
 ) {
     val noteState by addressableNote.live().metadata.observeAsState()
-    val noteEvent = noteState?.note?.event ?: return
+    val noteEvent = noteState?.note?.event as? StatusEvent ?: return
 
+    DisplayStatus(noteEvent, accountViewModel, nav)
+}
+
+@Composable
+fun DisplayStatus(
+    event: StatusEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     DisplayStatusInner(
-        noteEvent.content(),
-        (noteEvent as? AddressableEvent)?.dTag() ?: "",
-        noteEvent.firstTaggedUrl()?.ifBlank { null },
-        noteEvent.firstTaggedAddress(),
-        noteEvent.firstTaggedEvent()?.ifBlank { null },
+        event.content,
+        event.dTag(),
+        event.firstTaggedUrl()?.ifBlank { null },
+        event.firstTaggedAddress(),
+        event.firstTaggedEvent(),
         accountViewModel,
         nav,
     )
@@ -265,7 +277,7 @@ fun DisplayStatusInner(
     type: String,
     url: String?,
     nostrATag: ATag?,
-    nostrHexID: String?,
+    nostrETag: ETag?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -324,8 +336,8 @@ fun DisplayStatusInner(
                 }
             }
         }
-    } else if (nostrHexID != null) {
-        LoadNote(baseNoteHex = nostrHexID, accountViewModel) {
+    } else if (nostrETag != null) {
+        LoadNote(baseNoteHex = nostrETag.eventId, accountViewModel) {
             if (it != null) {
                 Spacer(modifier = StdHorzSpacer)
                 IconButton(

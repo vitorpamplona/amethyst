@@ -23,13 +23,14 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.NIP17Factory
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.checkSignature
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import junit.framework.TestCase
 import org.junit.Assert
 import org.junit.Assert.assertTrue
@@ -88,8 +89,8 @@ class GiftWrapBenchmark {
             it.cachedGift(keyToUse) { event ->
                 event.checkSignature()
 
-                if (event is SealedGossipEvent) {
-                    event.cachedGossip(keyToUse) { innerData ->
+                if (event is SealedRumorEvent) {
+                    event.cachedRumor(keyToUse) { innerData ->
                         Assert.assertEquals(message, innerData.content)
                         countDownLatch2.countDown()
                     }
@@ -134,8 +135,8 @@ class GiftWrapBenchmark {
             wrap.cachedGift(keyToUse) { seal ->
                 seal.checkSignature()
 
-                if (seal is SealedGossipEvent) {
-                    seal.cachedGossip(keyToUse) { innerData ->
+                if (seal is SealedRumorEvent) {
+                    seal.cachedRumor(keyToUse) { innerData ->
                         Assert.assertEquals(message, innerData.content)
                         counter.countDown()
                     }

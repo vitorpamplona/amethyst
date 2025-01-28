@@ -35,10 +35,10 @@ import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -63,7 +63,7 @@ class BlossomUploader {
             }
         }.getOrNull()
 
-    suspend fun uploadImage(
+    suspend fun upload(
         uri: Uri,
         contentType: String?,
         size: Long?,
@@ -94,7 +94,7 @@ class BlossomUploader {
 
         checkNotNull(imageInputStream) { "Can't open the image input stream" }
 
-        return uploadImage(
+        return upload(
             imageInputStream,
             hash,
             payload.size,
@@ -114,7 +114,7 @@ class BlossomUploader {
         return "Nostr $encodedNIP98Event"
     }
 
-    suspend fun uploadImage(
+    suspend fun upload(
         inputStream: InputStream,
         hash: HexKey,
         length: Int,

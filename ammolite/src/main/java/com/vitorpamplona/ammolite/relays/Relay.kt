@@ -20,20 +20,13 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import android.util.Log
-import com.vitorpamplona.ammolite.BuildConfig
-import com.vitorpamplona.ammolite.service.checkNotInMainThread
-import com.vitorpamplona.ammolite.sockets.WebSocket
-import com.vitorpamplona.ammolite.sockets.WebSocketListener
-import com.vitorpamplona.ammolite.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.RelayAuthEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import kotlinx.coroutines.CancellationException
-import java.util.concurrent.atomic.AtomicBoolean
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relays.RelayState
+import com.vitorpamplona.quartz.nip01Core.relays.SimpleClientRelay
+import com.vitorpamplona.quartz.nip01Core.relays.SubscriptionCollection
+import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebsocketBuilderFactory
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 enum class FeedType {
     FOLLOWS,
@@ -53,34 +46,64 @@ val COMMON_FEED_TYPES =
 val EVENT_FINDER_TYPES =
     setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL)
 
+class RelaySubFilter(
+    val url: String,
+    val activeTypes: Set<FeedType>,
+    val subs: SubscriptionManager,
+) : SubscriptionCollection {
+    fun isMatch(filter: TypedFilter) = activeTypes.any { it in filter.types } && filter.filter.isValidFor(url)
+
+    fun match(filters: List<TypedFilter>): Boolean =
+        filters.any { filter ->
+            isMatch(filter)
+        }
+
+    override fun isActive(subscriptionId: String): Boolean = subs.isActive(subscriptionId) && match(subs.getSubscriptionFilters(subscriptionId))
+
+    override fun getFilters(subscriptionId: String) = filter(subs.getSubscriptionFilters(subscriptionId))
+
+    override fun allSubscriptions(): List<com.vitorpamplona.quartz.nip01Core.relays.Subscription> =
+        subs.allSubscriptions().mapNotNull { filter ->
+            val filters = filter(filter.value)
+            if (filters.isNotEmpty()) {
+                com.vitorpamplona.quartz.nip01Core.relays
+                    .Subscription(filter.key, filters)
+            } else {
+                null
+            }
+        }
+
+    override fun match(
+        subscriptionId: String,
+        event: Event,
+    ): Boolean = subs.getSubscriptionFilters(subscriptionId).any { it.filter.match(event, url) }
+
+    fun filter(filters: List<TypedFilter>): List<Filter> =
+        filters.mapNotNull { filter ->
+            if (isMatch(filter)) {
+                filter.filter.toRelay(url)
+            } else {
+                null
+            }
+        }
+}
+
 class Relay(
     val url: String,
     val read: Boolean = true,
     val write: Boolean = true,
     val forceProxy: Boolean = false,
     val activeTypes: Set<FeedType>,
-    val socketBuilder: WebsocketBuilder,
-    val subs: SubscriptionManager,
-) {
-    companion object {
-        // waits 3 minutes to reconnect once things fail
-        const val RECONNECTING_IN_SECONDS = 60 * 3
-    }
+    socketBuilderFactory: WebsocketBuilderFactory,
+    subs: SubscriptionManager,
+) : SimpleClientRelay.Listener {
+    private var listeners = setOf<Listener>()
+
+    val relaySubFilter = RelaySubFilter(url, activeTypes, subs)
+    val inner =
+        SimpleClientRelay(url, socketBuilderFactory.build(forceProxy), relaySubFilter, this@Relay, RelayStats.get(url))
 
     val brief = RelayBriefInfoCache.get(url)
-
-    private var listeners = setOf<Listener>()
-    private var socket: WebSocket? = null
-    private var isReady: Boolean = false
-    private var usingCompression: Boolean = false
-
-    private var lastConnectTentative: Long = 0L
-
-    private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
-
-    private val authResponse = mutableMapOf<HexKey, Boolean>()
-    private val authChallengesSent = mutableSetOf<String>()
-    private val outboxCache = mutableMapOf<HexKey, EventInterface>()
 
     fun register(listener: Listener) {
         listeners = listeners.plus(listener)
@@ -90,460 +113,43 @@ class Relay(
         listeners = listeners.minus(listener)
     }
 
-    fun isConnected(): Boolean = socket != null
+    fun isConnected() = inner.isConnected()
 
-    fun connect() {
-        connectAndRun {
-            checkNotInMainThread()
+    fun connect() = inner.connect()
 
-            // Sends everything.
-            renewFilters()
-            sendOutbox()
-        }
-    }
-
-    fun sendOutbox() {
-        synchronized(outboxCache) {
-            outboxCache.values.forEach {
-                send(it)
-            }
-        }
-    }
-
-    private var connectingBlock = AtomicBoolean()
-
-    fun connectAndRun(onConnected: (Relay) -> Unit) {
-        Log.d("Relay", "Relay.connect $url proxy: $forceProxy isAlreadyConnecting: ${connectingBlock.get()}")
+    fun connectAndRunAfterSync(onConnected: () -> Unit) {
         // BRB is crashing OkHttp Deflater object :(
         if (url.contains("brb.io")) return
 
-        // If there is a connection, don't wait.
-        if (connectingBlock.getAndSet(true)) {
-            return
-        }
-
-        try {
-            checkNotInMainThread()
-
-            if (socket != null) {
-                connectingBlock.set(false)
-                return
-            }
-
-            lastConnectTentative = TimeUtils.now()
-
-            socket = socketBuilder.build(url, false, RelayListener(onConnected))
-            socket?.connect()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-
-            RelayStats.newError(url, e.message ?: "Error trying to connect: ${e.javaClass.simpleName}")
-
-            markConnectionAsClosed()
-            e.printStackTrace()
-        } finally {
-            connectingBlock.set(false)
-        }
+        inner.connectAndRunAfterSync(onConnected)
     }
 
-    inner class RelayListener(
-        val onConnected: (Relay) -> Unit,
-    ) : WebSocketListener {
-        override fun onOpen(
-            pingMillis: Long,
-            compression: Boolean,
-        ) {
-            checkNotInMainThread()
-            Log.d("Relay", "Connect onOpen $url $socket")
+    fun sendOutbox() = inner.sendOutbox()
 
-            markConnectionAsReady(pingMillis, compression)
-
-            // Log.w("Relay", "Relay OnOpen, Loading All subscriptions $url")
-            onConnected(this@Relay)
-
-            listeners.forEach { it.onRelayStateChange(this@Relay, StateType.CONNECT, null) }
-        }
-
-        override fun onMessage(text: String) {
-            checkNotInMainThread()
-
-            RelayStats.addBytesReceived(url, text.bytesUsedInMemory())
-
-            try {
-                processNewRelayMessage(text)
-            } catch (e: Throwable) {
-                if (e is CancellationException) throw e
-                e.printStackTrace()
-                text.chunked(2000) { chunked ->
-                    listeners.forEach { it.onError(this@Relay, "", Error("Problem with $chunked")) }
-                }
-            }
-        }
-
-        override fun onClosing(
-            code: Int,
-            reason: String,
-        ) {
-            checkNotInMainThread()
-
-            Log.w("Relay", "Relay onClosing $url: $reason")
-
-            listeners.forEach {
-                it.onRelayStateChange(
-                    this@Relay,
-                    StateType.DISCONNECTING,
-                    null,
-                )
-            }
-        }
-
-        override fun onClosed(
-            code: Int,
-            reason: String,
-        ) {
-            checkNotInMainThread()
-
-            markConnectionAsClosed()
-
-            Log.w("Relay", "Relay onClosed $url: $reason")
-
-            listeners.forEach { it.onRelayStateChange(this@Relay, StateType.DISCONNECT, null) }
-        }
-
-        override fun onFailure(
-            t: Throwable,
-            responseMessage: String?,
-        ) {
-            checkNotInMainThread()
-
-            socket?.cancel() // 1000, "Normal close"
-
-            // checks if this is an actual failure. Closing the socket generates an onFailure as well.
-            if (!(socket == null && (t.message == "Socket is closed" || t.message == "Socket closed"))) {
-                RelayStats.newError(url, responseMessage ?: t.message ?: "onFailure event from server: ${t.javaClass.simpleName}")
-            }
-
-            // Failures disconnect the relay.
-            markConnectionAsClosed()
-
-            Log.w("Relay", "Relay onFailure $url, $responseMessage $responseMessage ${t.message} $socket")
-            t.printStackTrace()
-            listeners.forEach {
-                it.onError(
-                    this@Relay,
-                    "",
-                    Error("WebSocket Failure. Response: $responseMessage. Exception: ${t.message}", t),
-                )
-            }
-        }
-    }
-
-    fun markConnectionAsReady(
-        pingInMs: Long,
-        usingCompression: Boolean,
-    ) {
-        this.resetEOSEStatuses()
-        this.isReady = true
-        this.usingCompression = usingCompression
-
-        RelayStats.setPing(url, pingInMs)
-    }
-
-    fun markConnectionAsClosed() {
-        this.socket = null
-        this.isReady = false
-        this.usingCompression = false
-        this.resetEOSEStatuses()
-    }
-
-    fun processNewRelayMessage(newMessage: String) {
-        val msgArray = Event.mapper.readTree(newMessage)
-
-        when (val type = msgArray.get(0).asText()) {
-            "EVENT" -> {
-                val subscriptionId = msgArray.get(1).asText()
-                val event = Event.fromJson(msgArray.get(2))
-
-                // Log.w("Relay", "Relay onEVENT ${event.kind} $url, $subscriptionId ${msgArray.get(2)}")
-
-                listeners.forEach {
-                    it.onEvent(
-                        this@Relay,
-                        subscriptionId,
-                        event,
-                        afterEOSEPerSubscription[subscriptionId] == true,
-                    )
-                }
-            }
-            "EOSE" ->
-                listeners.forEach {
-                    val subscriptionId = msgArray.get(1).asText()
-
-                    afterEOSEPerSubscription[subscriptionId] = true
-                    // Log.w("Relay", "Relay onEOSE $url $subscriptionId")
-                    it.onRelayStateChange(this@Relay, StateType.EOSE, subscriptionId)
-                }
-            "NOTICE" ->
-                listeners.forEach {
-                    val message = msgArray.get(1).asText()
-                    Log.w("Relay", "Relay onNotice $url, $message")
-
-                    RelayStats.newNotice(url, message)
-
-                    it.onError(this@Relay, message, Error("Relay sent notice: $message"))
-                }
-            "OK" ->
-                listeners.forEach {
-                    val eventId = msgArray[1].asText()
-                    val success = msgArray[2].asBoolean()
-                    val message = if (msgArray.size() > 2) msgArray[3].asText() else ""
-
-                    Log.w("Relay", "Relay on OK $url, $eventId, $success, $message")
-
-                    if (authResponse.containsKey(eventId)) {
-                        val wasAlreadyAuthenticated = authResponse.get(eventId)
-                        authResponse.put(eventId, success)
-                        if (wasAlreadyAuthenticated != true && success) {
-                            renewFilters()
-                            sendOutbox()
-                        }
-                    }
-
-                    if (outboxCache.contains(eventId) && !message.startsWith("auth-required")) {
-                        synchronized(outboxCache) {
-                            outboxCache.remove(eventId)
-                        }
-                    }
-
-                    if (!success) {
-                        RelayStats.newNotice(url, "Failed to receive $eventId: $message")
-                    }
-
-                    it.onSendResponse(this@Relay, eventId, success, message)
-                }
-            "AUTH" ->
-                listeners.forEach {
-                    Log.w("Relay", "Relay onAuth $url, ${ msgArray[1].asText()}")
-                    it.onAuth(this@Relay, msgArray[1].asText())
-                }
-            "NOTIFY" ->
-                listeners.forEach {
-                    // Log.w("Relay", "Relay onNotify $url, ${msg[1].asString}")
-                    it.onNotify(this@Relay, msgArray[1].asText())
-                }
-            "CLOSED" -> listeners.forEach { Log.w("Relay", "Relay Closed Subscription $url, $newMessage") }
-            else -> {
-                RelayStats.newError(url, "Unsupported message: $newMessage")
-
-                listeners.forEach {
-                    Log.w("Relay", "Unsupported message: $newMessage")
-                    it.onError(
-                        this@Relay,
-                        "",
-                        Error("Unknown type $type on channel. Msg was $newMessage"),
-                    )
-                }
-            }
-        }
-    }
-
-    fun disconnect() {
-        Log.d("Relay", "Relay.disconnect $url")
-        checkNotInMainThread()
-
-        lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
-        socket?.cancel()
-        socket = null
-        isReady = false
-        usingCompression = false
-        resetEOSEStatuses()
-    }
-
-    fun resetEOSEStatuses() {
-        afterEOSEPerSubscription = LinkedHashMap(afterEOSEPerSubscription.size)
-
-        authResponse.clear()
-        authChallengesSent.clear()
-    }
+    fun disconnect() = inner.disconnect()
 
     fun sendFilter(
         requestId: String,
         filters: List<TypedFilter>,
     ) {
-        checkNotInMainThread()
-
         if (read) {
-            if (isConnected()) {
-                if (isReady) {
-                    val relayFilters =
-                        filters.filter { filter ->
-                            activeTypes.any { it in filter.types } && filter.filter.isValidFor(url)
-                        }
-
-                    if (relayFilters.isNotEmpty()) {
-                        writeToSocket(
-                            relayFilters.joinToStringLimited(
-                                separator = ",",
-                                limit = 19,
-                                prefix = """["REQ","$requestId",""",
-                                postfix = "]",
-                            ) {
-                                it.filter.toJson(url)
-                            },
-                        )
-
-                        afterEOSEPerSubscription[requestId] = false
-                    }
-                }
-            } else {
-                // waits 60 seconds to reconnect after disconnected.
-                if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
-                    // sends all filters after connection is successful.
-                    connect()
-                }
-            }
+            inner.sendRequest(requestId, relaySubFilter.filter(filters))
         }
     }
 
-    fun <T> Iterable<T>.joinToStringLimited(
-        separator: CharSequence = ", ",
-        prefix: CharSequence = "",
-        postfix: CharSequence = "",
-        limit: Int = -1,
-        transform: ((T) -> CharSequence)? = null,
-    ): String {
-        val buffer = StringBuilder()
-        buffer.append(prefix)
-        var count = 0
-        for (element in this) {
-            if (limit < 0 || count <= limit) {
-                if (++count > 1) buffer.append(separator)
-                when {
-                    transform != null -> buffer.append(transform(element))
-                    element is CharSequence? -> buffer.append(element)
-                    element is Char -> buffer.append(element)
-                    else -> buffer.append(element.toString())
-                }
-            } else {
-                break
-            }
-        }
-        buffer.append(postfix)
-        return buffer.toString()
-    }
+    fun connectAndSendFiltersIfDisconnected() = inner.connectAndSendFiltersIfDisconnected()
 
-    fun connectAndSendFiltersIfDisconnected() {
-        checkNotInMainThread()
+    fun renewFilters() = inner.renewSubscriptions()
 
-        if (socket == null) {
-            // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
-                // println("sendfilter Only if Disconnected ${url} ")
-                connect()
-            }
+    fun sendOverride(signedEvent: Event) = inner.send(signedEvent)
+
+    fun send(signedEvent: Event) {
+        if (signedEvent is RelayAuthEvent || write) {
+            inner.send(signedEvent)
         }
     }
 
-    fun renewFilters() {
-        // Force update all filters after AUTH.
-        subs.allSubscriptions().forEach {
-            sendFilter(requestId = it.key, it.value)
-        }
-    }
-
-    // This function sends the event regardless of the relay being write or not.
-    fun sendOverride(signedEvent: EventInterface) {
-        checkNotInMainThread()
-
-        listeners.forEach { listener ->
-            listener.onBeforeSend(this@Relay, signedEvent)
-        }
-
-        if (signedEvent is RelayAuthEvent) {
-            sendAuth(signedEvent)
-        } else {
-            sendEvent(signedEvent)
-        }
-    }
-
-    fun send(signedEvent: EventInterface) {
-        checkNotInMainThread()
-
-        listeners.forEach { listener ->
-            listener.onBeforeSend(this@Relay, signedEvent)
-        }
-
-        if (signedEvent is RelayAuthEvent) {
-            sendAuth(signedEvent)
-        } else {
-            if (write) {
-                sendEvent(signedEvent)
-            }
-        }
-    }
-
-    private fun sendAuth(signedEvent: RelayAuthEvent) {
-        val challenge = signedEvent.challenge() ?: ""
-
-        // only send replies to new challenges to avoid infinite loop:
-        // 1. Auth is sent
-        // 2. auth is rejected
-        // 3. auth is requested
-        // 4. auth is sent
-        // ...
-        if (!authChallengesSent.contains(challenge)) {
-            authResponse.put(signedEvent.id, false)
-            authChallengesSent.add(challenge)
-            writeToSocket("""["AUTH",${signedEvent.toJson()}]""")
-        }
-    }
-
-    private fun sendEvent(signedEvent: EventInterface) {
-        synchronized(outboxCache) {
-            outboxCache.put(signedEvent.id(), signedEvent)
-        }
-
-        if (isConnected()) {
-            if (isReady) {
-                writeToSocket("""["EVENT",${signedEvent.toJson()}]""")
-            }
-        } else {
-            // sends all filters after connection is successful.
-            connectAndRun {
-                // Sends everything.
-                renewFilters()
-                sendOutbox()
-            }
-        }
-    }
-
-    private fun writeToSocket(str: String) {
-        if (socket == null) {
-            listeners.forEach { listener ->
-                listener.onError(
-                    this@Relay,
-                    "",
-                    Error("Failed to send $str. Relay is not connected."),
-                )
-            }
-        }
-        socket?.let {
-            checkNotInMainThread()
-            val result = it.send(str)
-            listeners.forEach { listener ->
-                listener.onSend(this@Relay, str, result)
-            }
-            RelayStats.addBytesSent(url, str.bytesUsedInMemory())
-
-            if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
-                Log.d("Relay", "Relay send $url (${str.length} chars) $str")
-            }
-        }
-    }
-
-    fun close(subscriptionId: String) {
-        writeToSocket("""["CLOSE","$subscriptionId"]""")
-    }
+    fun close(subscriptionId: String) = inner.close(subscriptionId)
 
     fun isSameRelayConfig(other: RelaySetupInfoToConnect): Boolean =
         url == other.url &&
@@ -552,27 +158,74 @@ class Relay(
             read == other.read &&
             activeTypes == other.feedTypes
 
-    enum class StateType {
-        // Websocket connected
-        CONNECT,
+    override fun onEvent(
+        relay: SimpleClientRelay,
+        subscriptionId: String,
+        event: Event,
+        afterEOSE: Boolean,
+    ) = listeners.forEach { it.onEvent(this, subscriptionId, event, afterEOSE) }
 
-        // Websocket disconnecting
-        DISCONNECTING,
+    override fun onError(
+        relay: SimpleClientRelay,
+        subscriptionId: String,
+        error: Error,
+    ) = listeners.forEach { it.onError(this, subscriptionId, error) }
 
-        // Websocket disconnected
-        DISCONNECT,
+    override fun onEOSE(
+        relay: SimpleClientRelay,
+        subscriptionId: String,
+    ) = listeners.forEach { it.onEOSE(this, subscriptionId) }
 
-        // End Of Stored Events
-        EOSE,
-    }
+    override fun onRelayStateChange(
+        relay: SimpleClientRelay,
+        type: RelayState,
+    ) = listeners.forEach { it.onRelayStateChange(this, type) }
+
+    override fun onSendResponse(
+        relay: SimpleClientRelay,
+        eventId: String,
+        success: Boolean,
+        message: String,
+    ) = listeners.forEach { it.onSendResponse(this, eventId, success, message) }
+
+    override fun onAuth(
+        relay: SimpleClientRelay,
+        challenge: String,
+    ) = listeners.forEach { it.onAuth(this, challenge) }
+
+    override fun onNotify(
+        relay: SimpleClientRelay,
+        description: String,
+    ) = listeners.forEach { it.onNotify(this, description) }
+
+    override fun onClosed(
+        relay: SimpleClientRelay,
+        subscriptionId: String,
+        message: String,
+    ) { }
+
+    override fun onSend(
+        relay: SimpleClientRelay,
+        msg: String,
+        success: Boolean,
+    ) = listeners.forEach { it.onSend(this, msg, success) }
+
+    override fun onBeforeSend(
+        relay: SimpleClientRelay,
+        event: Event,
+    ) = listeners.forEach { it.onBeforeSend(this, event) }
 
     interface Listener {
-        /** A new message was received */
         fun onEvent(
             relay: Relay,
             subscriptionId: String,
             event: Event,
             afterEOSE: Boolean,
+        )
+
+        fun onEOSE(
+            relay: Relay,
+            subscriptionId: String,
         )
 
         fun onError(
@@ -593,32 +246,26 @@ class Relay(
             challenge: String,
         )
 
-        /**
-         * Connected to or disconnected from a relay
-         *
-         * @param type is 0 for disconnect and 1 for connect
-         */
         fun onRelayStateChange(
             relay: Relay,
-            type: StateType,
-            channel: String?,
+            type: RelayState,
         )
 
-        /** Relay sent an invoice */
+        /** Relay sent a notification */
         fun onNotify(
             relay: Relay,
             description: String,
+        )
+
+        fun onBeforeSend(
+            relay: Relay,
+            event: Event,
         )
 
         fun onSend(
             relay: Relay,
             msg: String,
             success: Boolean,
-        )
-
-        fun onBeforeSend(
-            relay: Relay,
-            event: EventInterface,
         )
     }
 }

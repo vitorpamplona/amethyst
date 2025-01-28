@@ -70,10 +70,10 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.AppMetadata
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -197,7 +197,7 @@ fun RenderAppDefinition(
                             text = it,
                             tags =
                                 remember {
-                                    (note.event?.tags() ?: emptyArray()).toImmutableListOfLists()
+                                    (note.event?.tags ?: emptyArray()).toImmutableListOfLists()
                                 },
                             fontWeight = FontWeight.Bold,
                             fontSize = 25.sp,
@@ -225,7 +225,7 @@ fun RenderAppDefinition(
                     ) {
                         val tags =
                             remember(note) {
-                                note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList
+                                note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList
                             }
                         val bgColor = MaterialTheme.colorScheme.background
                         val backgroundColor = remember { mutableStateOf(bgColor) }

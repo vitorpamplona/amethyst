@@ -38,7 +38,7 @@ object CreatedAtComparator : Comparator<Note> {
         } else if (secondEvent == null) {
             -1
         } else {
-            firstEvent.createdAt().compareTo(secondEvent.createdAt())
+            firstEvent.createdAt.compareTo(secondEvent.createdAt)
         }
     }
 }
@@ -58,7 +58,7 @@ object CreatedAtComparatorAddresses : Comparator<AddressableNote> {
         } else if (secondEvent == null) {
             -1
         } else {
-            firstEvent.createdAt().compareTo(secondEvent.createdAt())
+            firstEvent.createdAt.compareTo(secondEvent.createdAt)
         }
     }
 }

@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.events.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
 class UserProfileFollowsFeedFilter(
     val user: User,

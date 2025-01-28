@@ -22,8 +22,8 @@ package com.vitorpamplona.ammolite.relays
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relays.RelayState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -69,10 +69,7 @@ class RelayPool : Relay.Listener {
             } else {
                 addRelay(relay)
 
-                relay.connectAndRun {
-                    relay.renewFilters()
-                    relay.sendOutbox()
-
+                relay.connectAndRunAfterSync {
                     whenConnected(relay)
 
                     GlobalScope.launch(Dispatchers.IO) {
@@ -91,7 +88,8 @@ class RelayPool : Relay.Listener {
 
     fun loadRelays(relayList: List<Relay>) {
         check(relayList.isNotEmpty()) { "Relay list should never be empty" }
-        relayList.forEach { addRelay(it) }
+        relayList.forEach { addRelayInner(it) }
+        updateStatus()
     }
 
     fun unloadRelays() {
@@ -120,16 +118,16 @@ class RelayPool : Relay.Listener {
 
     fun sendToSelectedRelays(
         list: List<RelaySetupInfo>,
-        signedEvent: EventInterface,
+        signedEvent: Event,
     ) {
         list.forEach { relay -> relays.filter { it.url == relay.url }.forEach { it.sendOverride(signedEvent) } }
     }
 
-    fun send(signedEvent: EventInterface) {
+    fun send(signedEvent: Event) {
         relays.forEach { it.send(signedEvent) }
     }
 
-    fun sendOverride(signedEvent: EventInterface) {
+    fun sendOverride(signedEvent: Event) {
         relays.forEach { it.sendOverride(signedEvent) }
     }
 
@@ -142,9 +140,13 @@ class RelayPool : Relay.Listener {
     }
 
     fun addRelay(relay: Relay) {
+        addRelayInner(relay)
+        updateStatus()
+    }
+
+    private fun addRelayInner(relay: Relay) {
         relay.register(this)
         relays += relay
-        updateStatus()
     }
 
     fun removeRelay(relay: Relay) {
@@ -169,10 +171,14 @@ class RelayPool : Relay.Listener {
             afterEOSE: Boolean,
         )
 
-        fun onRelayStateChange(
-            type: Relay.StateType,
+        fun onEOSE(
             relay: Relay,
-            channel: String?,
+            subscriptionId: String,
+        )
+
+        fun onRelayStateChange(
+            type: RelayState,
+            relay: Relay,
         )
 
         fun onSendResponse(
@@ -200,7 +206,7 @@ class RelayPool : Relay.Listener {
 
         fun onBeforeSend(
             relay: Relay,
-            event: EventInterface,
+            event: Event,
         )
 
         fun onError(
@@ -228,15 +234,19 @@ class RelayPool : Relay.Listener {
         updateStatus()
     }
 
+    override fun onEOSE(
+        relay: Relay,
+        subscriptionId: String,
+    ) {
+        listeners.forEach { it.onEOSE(relay, subscriptionId) }
+        updateStatus()
+    }
+
     override fun onRelayStateChange(
         relay: Relay,
-        type: Relay.StateType,
-        channel: String?,
+        type: RelayState,
     ) {
-        listeners.forEach { it.onRelayStateChange(type, relay, channel) }
-        if (type != Relay.StateType.EOSE) {
-            updateStatus()
-        }
+        listeners.forEach { it.onRelayStateChange(type, relay) }
     }
 
     override fun onSendResponse(
@@ -272,7 +282,7 @@ class RelayPool : Relay.Listener {
 
     override fun onBeforeSend(
         relay: Relay,
-        event: EventInterface,
+        event: Event,
     ) {
         listeners.forEach { it.onBeforeSend(relay, event) }
     }

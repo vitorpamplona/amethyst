@@ -63,19 +63,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.note.AboutDisplay
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
-import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForSearchAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
@@ -395,33 +391,6 @@ fun HashtagLine(
                 "Search hashtag: #$tag",
                 fontWeight = FontWeight.Bold,
             )
-        }
-    }
-}
-
-@Composable
-fun UserLine(
-    baseUser: User,
-    accountViewModel: AccountViewModel,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 10.dp,
-                bottom = 10.dp,
-            ),
-    ) {
-        ClickableUserPicture(baseUser, 55.dp, accountViewModel, Modifier, null)
-
-        Column(
-            modifier = Modifier.padding(start = 10.dp).weight(1f),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseUser, accountViewModel = accountViewModel) }
-
-            AboutDisplay(baseUser)
         }
     }
 }

@@ -143,7 +143,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequestCard
@@ -155,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
@@ -196,18 +196,22 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
-import com.vitorpamplona.quartz.events.AppDefinitionEvent
-import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.events.BadgeProfilesEvent
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.GitHubIdentity
-import com.vitorpamplona.quartz.events.IdentityClaim
-import com.vitorpamplona.quartz.events.MastodonIdentity
-import com.vitorpamplona.quartz.events.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.events.PayInvoiceSuccessResponse
-import com.vitorpamplona.quartz.events.ReportEvent
-import com.vitorpamplona.quartz.events.TelegramIdentity
-import com.vitorpamplona.quartz.events.TwitterIdentity
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaim
+import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
+import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -885,7 +889,7 @@ private fun ProfileHeader(
                 ) {
                     MessageButton(baseUser, accountViewModel, nav)
 
-                    ProfileActions(baseUser, accountViewModel)
+                    ProfileActions(baseUser, accountViewModel, nav)
                 }
             }
 
@@ -909,6 +913,7 @@ private fun ProfileHeader(
 private fun ProfileActions(
     baseUser: User,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val tempFollowLists = remember { generateFollowLists().toMutableStateList() }
 
@@ -916,7 +921,7 @@ private fun ProfileActions(
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
     if (isMe) {
-        EditButton(accountViewModel)
+        EditButton(nav)
     }
 
     WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
@@ -1649,7 +1654,7 @@ private fun WatchAndRenderBadgeList(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun RenderBadgeList(
-    list: ImmutableList<String>,
+    list: ImmutableList<ETag>,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     nav: INav,
@@ -1664,17 +1669,17 @@ private fun RenderBadgeList(
 
 @Composable
 private fun LoadAndRenderBadge(
-    badgeAwardEventHex: String,
+    badgeAwardEvent: ETag,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
     nav: INav,
 ) {
-    var baseNote by remember(badgeAwardEventHex) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEventHex)) }
+    var baseNote by remember(badgeAwardEvent) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEvent)) }
 
-    LaunchedEffect(key1 = badgeAwardEventHex) {
+    LaunchedEffect(key1 = badgeAwardEvent) {
         if (baseNote == null) {
             withContext(Dispatchers.IO) {
-                baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEventHex)
+                baseNote = LocalCache.checkGetOrCreateNote(badgeAwardEvent)
             }
         }
     }
@@ -2114,14 +2119,8 @@ private fun MessageButton(
 }
 
 @Composable
-private fun EditButton(accountViewModel: AccountViewModel) {
-    var wantsToEdit by remember { mutableStateOf(false) }
-
-    if (wantsToEdit) {
-        NewUserMetadataView({ wantsToEdit = false }, accountViewModel)
-    }
-
-    InnerEditButton { wantsToEdit = true }
+private fun EditButton(nav: INav) {
+    InnerEditButton { nav.nav(Route.EditProfile.route) }
 }
 
 @Preview

@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlin.coroutines.cancellation.CancellationException
@@ -142,7 +142,7 @@ class UploadOrchestrator {
         updateState(0.2, UploadingState.Uploading)
         return try {
             val result =
-                Nip96Uploader().uploadImage(
+                Nip96Uploader().upload(
                     uri = fileUri,
                     contentType = contentType,
                     size = size,
@@ -186,7 +186,7 @@ class UploadOrchestrator {
         return try {
             val result =
                 BlossomUploader()
-                    .uploadImage(
+                    .upload(
                         uri = fileUri,
                         contentType = contentType,
                         size = size,
@@ -224,15 +224,15 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        val imageData: ByteArray? = ImageDownloader().waitAndGetImage(uploadResult.url, forceProxy(uploadResult.url))
+        val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(uploadResult.url, forceProxy(uploadResult.url))
 
         if (imageData != null) {
             updateState(0.8, UploadingState.Hashing)
 
             val result =
                 FileHeader.prepare(
-                    imageData,
-                    uploadResult.type ?: localContentType,
+                    imageData.bytes,
+                    uploadResult.type ?: localContentType ?: imageData.contentType,
                     uploadResult.dimension,
                 )
 

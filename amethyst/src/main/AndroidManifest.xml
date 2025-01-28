@@ -16,13 +16,11 @@
     <!-- To connect with relays -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- To take pictures -->
-    <uses-permission android:name="android.permission.CAMERA" />
-
     <!-- To Upload media (old devices) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <!-- To read QRs that contain nostr:<NIP19> -->
+    <!-- To take pictures -->
     <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- To read NFCs that contain nostr:<NIP19> -->

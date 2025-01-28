@@ -24,11 +24,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.events.VideoEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 class UserProfileGalleryFeedFilter(
     val user: User,
@@ -67,7 +67,7 @@ class UserProfileGalleryFeedFilter(
     ): Boolean {
         val noteEvent = it.event
         return (
-            (it.event?.pubKey() == user.pubkeyHex && (noteEvent is PictureEvent || noteEvent is VideoEvent || (noteEvent is ProfileGalleryEntryEvent) && noteEvent.hasUrl() && noteEvent.hasFromEvent())) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
+            (it.event?.pubKey == user.pubkeyHex && (noteEvent is PictureEvent || noteEvent is VideoEvent || (noteEvent is ProfileGalleryEntryEvent) && noteEvent.hasUrl() && noteEvent.hasFromEvent())) // && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET))
         ) &&
             params.match(noteEvent) &&
             account.isAcceptable(it)
