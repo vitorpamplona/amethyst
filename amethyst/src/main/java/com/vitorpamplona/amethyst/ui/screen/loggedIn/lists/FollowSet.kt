@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 
 @Stable
 class FollowSet(
