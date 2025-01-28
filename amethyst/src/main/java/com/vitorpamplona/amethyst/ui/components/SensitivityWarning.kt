@@ -57,7 +57,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.quartz.events.EventInterface
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 
 @Composable
 fun SensitivityWarning(
@@ -70,11 +71,11 @@ fun SensitivityWarning(
 
 @Composable
 fun SensitivityWarning(
-    event: EventInterface,
+    event: Event,
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val hasSensitiveContent = remember(event) { event.isSensitive() }
+    val hasSensitiveContent = remember(event) { event.isSensitiveOrNSFW() }
 
     SensitivityWarning(hasSensitiveContent, accountViewModel, content)
 }

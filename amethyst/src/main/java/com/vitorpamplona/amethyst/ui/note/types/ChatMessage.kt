@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
 
 @Composable
 fun RenderChatMessage(

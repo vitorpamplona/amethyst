@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.events.LnZapPaymentResponseEvent
-import com.vitorpamplona.quartz.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 
 class NostrLnZapPaymentResponseDataSource(
     private val fromServiceHex: String,

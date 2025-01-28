@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.ammolite.relays.NostrDataSource
 import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 abstract class AmethystNostrDataSource(
     debugName: String,

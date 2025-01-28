@@ -24,10 +24,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.IsInPublicChatChannel
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 
 open class DiscoverChatFeedFilter(
     val account: Account,
@@ -86,8 +86,10 @@ open class DiscoverChatFeedFilter(
                 }
             } else if (noteEvent is IsInPublicChatChannel) {
                 val channel = noteEvent.channel()?.let { LocalCache.checkGetOrCreateNote(it) }
+                val channelEvent = channel?.event
+
                 if (channel != null &&
-                    (channel.event == null || (channel.event is ChannelCreateEvent && params.match(channel.event)))
+                    (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent)))
                 ) {
                     if ((LocalCache.getChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
                         channel

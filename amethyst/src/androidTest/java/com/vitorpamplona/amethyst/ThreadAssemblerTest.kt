@@ -26,9 +26,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CoroutineScope
@@ -119,7 +121,7 @@ class ThreadAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                Event.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
+                EventMapper.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {

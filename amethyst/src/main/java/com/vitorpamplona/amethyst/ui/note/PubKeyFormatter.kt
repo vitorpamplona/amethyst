@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 
 fun ByteArray.toShortenHex(): String = toHexKey().toShortenHex()
 

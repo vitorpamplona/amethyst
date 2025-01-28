@@ -71,6 +71,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
@@ -103,7 +104,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -147,8 +147,9 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -169,7 +170,7 @@ fun ReactionsRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val wantsToSeeReactions = remember(baseNote) { mutableStateOf(false) }
+    val wantsToSeeReactions = rememberSaveable(baseNote) { mutableStateOf(false) }
 
     InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
 
@@ -580,7 +581,7 @@ private fun BoostWithDialog(
                 val forkEvent = wantsToFork?.event
                 if (forkEvent is BaseTextNoteEvent) {
                     val hex = forkEvent.replyingTo()
-                    wantsToFork?.replyTo?.filter { it.event?.id() == hex }?.firstOrNull()
+                    wantsToFork?.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
                 } else {
                     null
                 }
@@ -923,7 +924,7 @@ private fun RenderReactionType(
         val renderable =
             remember(reactionType) {
                 persistentListOf(
-                    Nip30CustomEmoji.ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
+                    CustomEmoji.ImageUrlType(reactionType.removePrefix(":").substringAfter(":")),
                 )
             }
 
@@ -1517,7 +1518,7 @@ fun RenderReaction(reactionType: String) {
 
         InLineIconRenderer(
             persistentListOf(
-                Nip30CustomEmoji.ImageUrlType(url),
+                CustomEmoji.ImageUrlType(url),
             ),
             style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
             maxLines = 1,

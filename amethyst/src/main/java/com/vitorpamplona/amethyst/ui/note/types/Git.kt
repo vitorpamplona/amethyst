@@ -61,12 +61,14 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.GitIssueEvent
-import com.vitorpamplona.quartz.events.GitPatchEvent
-import com.vitorpamplona.quartz.events.GitRepositoryEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.GitRepositoryEvent
 
 @Composable
 fun RenderGitPatchEvent(
@@ -177,7 +179,7 @@ private fun RenderGitPatchEvent(
                 note = note,
                 accountViewModel = accountViewModel,
             ) {
-                val tags = remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+                val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
                 TranslatableRichTextViewer(
                     content = eventContent,
@@ -283,7 +285,7 @@ private fun RenderGitIssueEvent(
                 accountViewModel = accountViewModel,
             ) {
                 val tags =
-                    remember(note) { note.event?.tags()?.toImmutableListOfLists() ?: EmptyTagList }
+                    remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
                 TranslatableRichTextViewer(
                     content = eventContent,

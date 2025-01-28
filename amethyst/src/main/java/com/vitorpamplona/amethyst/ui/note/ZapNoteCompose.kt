@@ -56,7 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

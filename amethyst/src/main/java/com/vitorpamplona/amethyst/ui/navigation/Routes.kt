@@ -216,6 +216,12 @@ sealed class Route(
             icon = R.drawable.ic_settings,
         )
 
+    object EditProfile :
+        Route(
+            route = "EditProfile",
+            icon = R.drawable.ic_settings,
+        )
+
     object EditRelays :
         Route(
             route = "EditRelays?toAdd={toAdd}",

@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.GenericRepostEvent
-import com.vitorpamplona.quartz.events.RepostEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -42,7 +42,7 @@ class ThreadAssembler {
 
         val markedAsRoot =
             note.event
-                ?.tags()
+                ?.tags
                 ?.firstOrNull { it[0] == "e" && it.size > 3 && it[3] == "root" }
                 ?.getOrNull(1)
         if (markedAsRoot != null) {

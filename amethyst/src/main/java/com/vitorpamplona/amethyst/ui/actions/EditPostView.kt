@@ -26,7 +26,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -37,8 +36,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,7 +43,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -98,14 +94,13 @@ import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.UserLine
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -415,8 +410,9 @@ fun EditPostView(
                             }
                         }
 
-                        ShowUserSuggestionListForEdit(
-                            postViewModel,
+                        ShowUserSuggestionList(
+                            postViewModel.userSuggestions,
+                            postViewModel::autocompleteWithUser,
                             accountViewModel,
                             modifier = Modifier.heightIn(0.dp, 300.dp),
                         )
@@ -424,34 +420,6 @@ fun EditPostView(
                         BottomRowActions(postViewModel)
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun ShowUserSuggestionListForEdit(
-    editPostViewModel: EditPostViewModel,
-    accountViewModel: AccountViewModel,
-    modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
-) {
-    val userSuggestions = editPostViewModel.userSuggestions
-    if (userSuggestions.isNotEmpty()) {
-        LazyColumn(
-            contentPadding =
-                PaddingValues(
-                    top = 10.dp,
-                ),
-            modifier = modifier,
-        ) {
-            itemsIndexed(
-                userSuggestions,
-                key = { _, item -> item.pubkeyHex },
-            ) { _, item ->
-                UserLine(item, accountViewModel) { editPostViewModel.autocompleteWithUser(item) }
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
             }
         }
     }

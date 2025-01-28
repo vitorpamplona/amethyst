@@ -1,2 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools"></resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="point_to_the_qr_code">Kamerani QR kodga yo\'naltiring</string>
+    <string name="show_qr">QR kodni ko‘rsatish</string>
+    <string name="profile_image">Profil rasmini</string>
+    <string name="your_profile_image">Sizning profil rasmingiz</string>
+    <string name="scan_qr">QR kodni skanerlang</string>
+    <string name="show_anyway">Baribir postni ko‘rsat</string>
+    <string name="post_was_hidden">Ushbu post yashirilgan, chunki u siz yashirgan foydalanuvchilar yoki so\'zlarni eslatadi</string>
+    <string name="post_was_flagged_as_inappropriate_by">Post ________ tomonidan bloklangan yoki xabar qilingan</string>
+    <string name="post_not_found">Post yuklanmoqda yoki estafetalar ro‘yxatingizda topilmadi</string>
+    <string name="post_not_found_short">👀</string>
+    <string name="channel_image">Kanal rasmi</string>
+    <string name="referenced_event_not_found">Havola qilingan post topilmadi</string>
+    <string name="could_not_decrypt_the_message">Xabarni shifrdan chiqarib bo\'lmadi</string>
+    <string name="group_picture">Guruh rasmi</string>
+    <string name="explicit_content"></string>
+</resources>

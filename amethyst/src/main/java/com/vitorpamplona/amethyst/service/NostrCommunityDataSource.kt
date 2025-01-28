@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
 
 object NostrCommunityDataSource : AmethystNostrDataSource("SingleCommunityFeed") {
     private var communityToWatch: AddressableNote? = null

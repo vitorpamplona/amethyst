@@ -30,9 +30,9 @@ import android.os.Build
 import android.util.Log
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.Blurhash
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.encoders.toHexKey
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 
@@ -55,10 +55,10 @@ class FileHeader(
             forceProxy: Boolean,
         ): Result<FileHeader> =
             try {
-                val imageData: ByteArray? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
+                val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
 
                 if (imageData != null) {
-                    prepare(imageData, mimeType, dimPrecomputed)
+                    prepare(imageData.bytes, mimeType ?: imageData.contentType, dimPrecomputed)
                 } else {
                     Result.failure(UnableToDownload(fileUrl))
                 }

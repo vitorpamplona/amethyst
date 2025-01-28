@@ -36,6 +36,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 object ShowFullTextCache {
     val cache = LruCache<String, Boolean>(10)
@@ -70,7 +71,7 @@ fun ExpandableRichTextViewer(
     nav: INav,
 ) {
     var showFullText by
-        remember {
+        rememberSaveable {
             val cached = ShowFullTextCache.cache[id]
             if (cached == null) {
                 ShowFullTextCache.cache.put(id, false)

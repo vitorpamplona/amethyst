@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.ots
 
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.ots.ICalendarAsyncSubmit
-import com.vitorpamplona.quartz.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.ots.Timestamp
+import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendarAsyncSubmit
+import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
+import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Optional
@@ -64,7 +64,10 @@ class OkHttpCalendarAsyncSubmit(
 
         client.newCall(request).execute().use {
             if (it.isSuccessful) {
-                val ctx = StreamDeserializationContext(it.body.bytes())
+                val ctx =
+                    StreamDeserializationContext(
+                        it.body.bytes(),
+                    )
                 val timestamp = Timestamp.deserialize(ctx, digest)
                 val of = Optional.of(timestamp)
                 queue!!.add(of)

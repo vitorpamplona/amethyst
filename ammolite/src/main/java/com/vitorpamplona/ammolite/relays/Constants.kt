@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 object Constants {
-    val activeTypes = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
+    val activeTypesFollows = setOf(FeedType.FOLLOWS, FeedType.PRIVATE_DMS)
     val activeTypesChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS)
     val activeTypesGlobalChats = setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.PRIVATE_DMS, FeedType.GLOBAL)
     val activeTypesSearch = setOf(FeedType.SEARCH)
@@ -35,7 +35,7 @@ object Constants {
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.nostr.bg"), read = true, write = true, feedTypes = activeTypesChats),
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.oxtr.dev"), read = true, write = true, feedTypes = activeTypesChats),
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.fmt.wiz.biz"), read = true, write = false, feedTypes = activeTypesChats),
-            RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.damus.io"), read = true, write = true, feedTypes = activeTypes),
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.damus.io"), read = true, write = true, feedTypes = activeTypesFollows),
             // Global
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.mom"), read = true, write = true, feedTypes = activeTypesGlobalChats),
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nos.lol"), read = true, write = true, feedTypes = activeTypesGlobalChats),

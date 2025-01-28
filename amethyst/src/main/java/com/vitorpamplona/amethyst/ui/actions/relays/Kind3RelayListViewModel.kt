@@ -30,8 +30,8 @@ import com.vitorpamplona.ammolite.relays.Constants.activeTypesGlobalChats
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelayStats
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
-import com.vitorpamplona.quartz.utils.RelayListRecommendationProcessor
+import com.vitorpamplona.quartz.nip65RelayList.RelayListRecommendationProcessor
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

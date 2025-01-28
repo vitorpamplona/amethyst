@@ -20,7 +20,12 @@
  */
 package com.vitorpamplona.ammolite.relays.filters
 
-import com.vitorpamplona.quartz.events.Event
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relays.filters.FilterMatcher
+import com.vitorpamplona.quartz.nip01Core.relays.filters.FilterSerializer
 
 /**
  * This is a nostr filter with per-relay authors list and since parameters
@@ -37,6 +42,8 @@ class SincePerRelayFilter(
 ) : IPerRelayFilter {
     override fun isValidFor(url: String) = true
 
+    override fun toRelay(forRelay: String) = Filter(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
+
     override fun toJson(forRelay: String) = FilterSerializer.toJson(ids, authors, kinds, tags, since?.get(forRelay)?.time, until, limit, search)
 
     override fun match(
@@ -45,7 +52,7 @@ class SincePerRelayFilter(
     ) = FilterMatcher.match(event, ids, authors, kinds, tags, since?.get(forRelay)?.time, until)
 
     override fun toDebugJson(): String {
-        val factory = Event.mapper.nodeFactory
+        val factory = JsonNodeFactory.instance
         val obj = FilterSerializer.toJsonObject(ids, authors, kinds, tags, null, until, limit, search)
 
         since?.run {
@@ -57,6 +64,6 @@ class SincePerRelayFilter(
                 obj.put("since", jsonObjectSince)
             }
         }
-        return Event.mapper.writeValueAsString(obj)
+        return EventMapper.toJson(obj)
     }
 }

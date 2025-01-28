@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.ots
 
-import com.vitorpamplona.quartz.ots.CalendarBuilder
-import com.vitorpamplona.quartz.ots.ICalendar
-import com.vitorpamplona.quartz.ots.ICalendarAsyncSubmit
+import com.vitorpamplona.quartz.nip03Timestamp.ots.CalendarBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendar
+import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendarAsyncSubmit
 
 class OkHttpCalendarBuilder(
     val forceProxy: (String) -> Boolean,

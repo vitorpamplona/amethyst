@@ -54,10 +54,11 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.crypto.nip17.AESGCM
-import com.vitorpamplona.quartz.events.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip17Dm.AESGCM
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable

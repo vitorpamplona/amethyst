@@ -24,9 +24,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.updated
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChatroomKey
-import com.vitorpamplona.quartz.events.ChatroomKeyable
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
 
 class ChatroomListKnownFeedFilter(
     val account: Account,
@@ -140,7 +141,7 @@ class ChatroomListKnownFeedFilter(
             account
                 .userProfile()
                 .latestContactList
-                ?.taggedEvents()
+                ?.taggedEventIds()
                 ?.toSet() ?: emptySet()
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems

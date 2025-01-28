@@ -25,12 +25,12 @@ import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.RelationshipStatusEvent
-import com.vitorpamplona.quartz.events.ReportEvent
-import com.vitorpamplona.quartz.events.StatusEvent
+import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 object NostrSingleUserDataSource : AmethystNostrDataSource("SingleUserFeed") {
     private var usersToWatch = setOf<User>()

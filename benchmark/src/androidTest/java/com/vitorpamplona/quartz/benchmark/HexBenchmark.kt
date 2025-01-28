@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.encoders.HexValidator
+import com.vitorpamplona.quartz.utils.Hex
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +46,7 @@ class HexBenchmark {
     @Test
     fun hexDecodeOurs() {
         r.measureRepeated {
-            com.vitorpamplona.quartz.encoders.Hex
+            Hex
                 .decode(hex)
         }
     }
@@ -54,7 +54,7 @@ class HexBenchmark {
     @Test
     fun hexEncodeOurs() {
         r.measureRepeated {
-            com.vitorpamplona.quartz.encoders.Hex
+            Hex
                 .encode(bytes)
         }
     }
@@ -89,6 +89,6 @@ class HexBenchmark {
 
     @Test
     fun isHex() {
-        r.measureRepeated { HexValidator.isHex(hex) }
+        r.measureRepeated { Hex.isHex(hex) }
     }
 }

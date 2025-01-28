@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
-import com.vitorpamplona.quartz.events.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)

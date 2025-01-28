@@ -179,7 +179,7 @@
     <string name="mark_all_known_as_read">Σήμανση όλων των γνωστοποιήσεων ως αναγνωσμένων</string>
     <string name="mark_all_new_as_read">Σήμανση όλων των νέων δημοσιεύσεων ως αναγνωσμένων</string>
     <string name="mark_all_as_read">Σήμανση όλων ως αναγνωσμένα</string>
-    <string name="backup_keys">Δημιουργία Αντιγράφου Ασφαλείας των Προσωπικών σας Κλειδιών</string>
+    <string name="backup_keys">Εφεδρικά κλειδιά</string>
     <string name="secret_key_copied_to_clipboard">Το \"Μυστικό Κλειδί\" (nsec) αντιγράφηκε στο πρόχειρο</string>
     <string name="copy_my_secret_key">Αντιγραφή του \"Μυστικού Κλειδιού\" μου</string>
     <string name="biometric_authentication_failed">Αποτυχία ταυτοποίησης</string>

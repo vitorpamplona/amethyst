@@ -24,8 +24,9 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
 
 class CommunityFeedFilter(
     val note: AddressableNote,

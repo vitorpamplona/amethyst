@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -41,7 +42,6 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 
 @Composable
 fun RenderGalleryFeed(
@@ -92,6 +92,8 @@ private fun GalleryFeedLoaded(
         columns = GridCells.Fixed(3),
         contentPadding = FeedPadding,
         state = listState,
+        verticalArrangement = spacedBy(1.dp),
+        horizontalArrangement = spacedBy(1.dp),
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
             GalleryCardCompose(
@@ -100,8 +102,7 @@ private fun GalleryFeedLoaded(
                     Modifier
                         .aspectRatio(1f)
                         .fillMaxSize()
-                        .animateItem()
-                        .padding(Size5dp),
+                        .animateItem(),
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

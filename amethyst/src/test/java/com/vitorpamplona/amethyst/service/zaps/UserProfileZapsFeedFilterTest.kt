@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.zaps
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.LnZapEventInterface
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert
@@ -59,7 +59,7 @@ class UserProfileZapsFeedFilterTest {
         Assert.assertEquals(zapRequest, actual.first().zapRequest)
         Assert.assertEquals(
             BigDecimal(200),
-            (actual.first().zapEvent.event as LnZapEventInterface).amount(),
+            (actual.first().zapEvent.event as LnZapEvent).amount(),
         )
     }
 
@@ -67,9 +67,9 @@ class UserProfileZapsFeedFilterTest {
         pubkey: HexKey,
         amount: Int,
     ): Note {
-        val lnZapEvent = mockk<LnZapEventInterface>()
+        val lnZapEvent = mockk<LnZapEvent>()
         every { lnZapEvent.amount() } returns amount.toBigDecimal()
-        every { lnZapEvent.pubKey() } returns pubkey
+        every { lnZapEvent.pubKey } returns pubkey
 
         val zapNote = mockk<Note>()
         every { zapNote.event } returns lnZapEvent

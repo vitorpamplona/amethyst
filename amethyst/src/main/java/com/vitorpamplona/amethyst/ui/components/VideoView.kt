@@ -119,7 +119,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
-import com.vitorpamplona.quartz.encoders.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

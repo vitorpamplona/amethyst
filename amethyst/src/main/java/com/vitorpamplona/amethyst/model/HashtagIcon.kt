@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.components.HashTag
 import com.vitorpamplona.amethyst.ui.components.RenderRegular
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.events.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 
 @Preview
 @Composable

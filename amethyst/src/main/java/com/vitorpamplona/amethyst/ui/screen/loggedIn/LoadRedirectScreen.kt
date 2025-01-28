@@ -43,16 +43,16 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Nav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ChatroomKeyable
-import com.vitorpamplona.quartz.events.EventInterface
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.SealedGossipEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -122,7 +122,7 @@ fun redirect(
 }
 
 fun redirect(
-    event: EventInterface,
+    event: Event,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -149,7 +149,7 @@ fun redirect(
         } ?: run {
             accountViewModel.unwrap(event) { redirect(it, accountViewModel, nav) }
         }
-    } else if (event is SealedGossipEvent) {
+    } else if (event is SealedRumorEvent) {
         event.innerEventId?.let {
             redirect(it, accountViewModel, nav)
         } ?: run {
@@ -157,7 +157,7 @@ fun redirect(
         }
     } else {
         if (event is ChannelCreateEvent) {
-            nav.popUpTo("Channel/${event.id()}", Route.Event.route)
+            nav.popUpTo("Channel/${event.id}", Route.Event.route)
         } else if (event is ChatroomKeyable) {
             val withKey = event.chatroomKey(accountViewModel.userProfile().pubkeyHex)
             accountViewModel.userProfile().createChatroom(withKey)
@@ -165,7 +165,7 @@ fun redirect(
         } else if (channelHex != null) {
             nav.popUpTo("Channel/$channelHex", Route.Event.route)
         } else {
-            nav.popUpTo("Note/${event.id()}", Route.Event.route)
+            nav.popUpTo("Note/${event.id}", Route.Event.route)
         }
     }
 }

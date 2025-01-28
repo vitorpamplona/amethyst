@@ -63,35 +63,43 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.ImmutableListOfLists
-import com.vitorpamplona.quartz.events.PrivateDmEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.toNIP19
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 
 @Composable
 fun ClickableRoute(
     word: String,
-    nip19: Nip19Bech32.ParseReturn,
+    nip19: Nip19Parser.ParseReturn,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     when (val entity = nip19.entity) {
-        is Nip19Bech32.NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NProfile -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.Note -> DisplayEvent(entity.hex, null, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NEmbed -> LoadAndDisplayEvent(entity.event, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NAddress -> DisplayAddress(entity, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is Nip19Bech32.NRelay -> {
+        is NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is NProfile -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> DisplayEvent(entity.hex, null, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is NEmbed -> LoadAndDisplayEvent(entity.event, nip19.additionalChars, accountViewModel, nav)
+        is NAddress -> DisplayAddress(entity, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is NRelay -> {
             Text(word)
         }
-        is Nip19Bech32.NSec -> {
+        is NSec -> {
             Text(word)
         }
         else -> {
@@ -230,24 +238,24 @@ private fun DisplayNoteLink(
 
 @Composable
 private fun DisplayAddress(
-    nip19: Nip19Bech32.NAddress,
+    nip19: NAddress,
     originalNip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.atag)) }
+    var noteBase by remember(nip19) { mutableStateOf(accountViewModel.getNoteIfExists(nip19.aTag())) }
 
     if (noteBase == null) {
-        LaunchedEffect(key1 = nip19.atag) {
-            accountViewModel.checkGetOrCreateAddressableNote(nip19.atag) { noteBase = it }
+        LaunchedEffect(key1 = nip19) {
+            accountViewModel.checkGetOrCreateAddressableNote(nip19.aTag()) { noteBase = it }
         }
     }
 
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
 
-        val route = remember(noteState) { "Note/${nip19.atag}" }
+        val route = remember(noteState) { "Note/${nip19.aTag()}" }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
 
         CreateClickableText(
@@ -433,20 +441,20 @@ fun CustomEmojiChecker(
     text: String,
     tags: ImmutableListOfLists<String>?,
     onRegularText: @Composable (String) -> Unit,
-    onEmojiText: @Composable (ImmutableList<Nip30CustomEmoji.Renderable>) -> Unit,
+    onEmojiText: @Composable (ImmutableList<CustomEmoji.Renderable>) -> Unit,
 ) {
     val mayContainEmoji by remember(text, tags) {
-        mutableStateOf(Nip30CustomEmoji.fastMightContainEmoji(text, tags))
+        mutableStateOf(CustomEmoji.fastMightContainEmoji(text, tags))
     }
 
     if (mayContainEmoji) {
         var emojiList by
             remember(text, tags) {
-                mutableStateOf<ImmutableList<Nip30CustomEmoji.Renderable>?>(null)
+                mutableStateOf<ImmutableList<CustomEmoji.Renderable>?>(null)
             }
 
         LaunchedEffect(text, tags) {
-            val newEmojiList = Nip30CustomEmoji.assembleAnnotatedList(text, tags)
+            val newEmojiList = CustomEmoji.assembleAnnotatedList(text, tags)
             if (newEmojiList != null) {
                 emojiList = newEmojiList
             }
@@ -467,20 +475,20 @@ fun CustomEmojiChecker(
     text: String,
     emojis: ImmutableMap<String, String>,
     onRegularText: @Composable (String) -> Unit,
-    onEmojiText: @Composable (ImmutableList<Nip30CustomEmoji.Renderable>) -> Unit,
+    onEmojiText: @Composable (ImmutableList<CustomEmoji.Renderable>) -> Unit,
 ) {
     val mayContainEmoji by remember(text, emojis) {
-        mutableStateOf(Nip30CustomEmoji.fastMightContainEmoji(text, emojis))
+        mutableStateOf(CustomEmoji.fastMightContainEmoji(text, emojis))
     }
 
     if (mayContainEmoji) {
         var emojiList by
             remember(text, emojis) {
-                mutableStateOf<ImmutableList<Nip30CustomEmoji.Renderable>?>(null)
+                mutableStateOf<ImmutableList<CustomEmoji.Renderable>?>(null)
             }
 
         LaunchedEffect(text, emojis) {
-            val newEmojiList = Nip30CustomEmoji.assembleAnnotatedList(text, emojis)
+            val newEmojiList = CustomEmoji.assembleAnnotatedList(text, emojis)
             if (newEmojiList != null) {
                 emojiList = newEmojiList
             }
@@ -667,7 +675,7 @@ fun CreateClickableTextWithEmoji(
 
 @Composable
 fun ClickableInLineIconRenderer(
-    wordsInOrder: ImmutableList<Nip30CustomEmoji.Renderable>,
+    wordsInOrder: ImmutableList<CustomEmoji.Renderable>,
     maxLines: Int = Int.MAX_VALUE,
     style: SpanStyle,
     suffix: String? = null,
@@ -686,7 +694,7 @@ fun ClickableInLineIconRenderer(
     val inlineContent =
         wordsInOrder
             .mapIndexedNotNull { idx, value ->
-                if (value is Nip30CustomEmoji.ImageUrlType) {
+                if (value is CustomEmoji.ImageUrlType) {
                     Pair(
                         "inlineContent$idx",
                         InlineTextContent(
@@ -717,9 +725,9 @@ fun ClickableInLineIconRenderer(
                 withStyle(
                     style,
                 ) {
-                    if (value is Nip30CustomEmoji.TextType) {
+                    if (value is CustomEmoji.TextType) {
                         append(value.text)
-                    } else if (value is Nip30CustomEmoji.ImageUrlType) {
+                    } else if (value is CustomEmoji.ImageUrlType) {
                         appendInlineContent("inlineContent$idx", "[icon]")
                     }
                 }
@@ -751,7 +759,7 @@ fun ClickableInLineIconRenderer(
 
 @Composable
 fun InLineIconRenderer(
-    wordsInOrder: ImmutableList<Nip30CustomEmoji.Renderable>,
+    wordsInOrder: ImmutableList<CustomEmoji.Renderable>,
     style: SpanStyle,
     fontSize: TextUnit = TextUnit.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
@@ -770,7 +778,7 @@ fun InLineIconRenderer(
     val inlineContent =
         wordsInOrder
             .mapIndexedNotNull { idx, value ->
-                if (value is Nip30CustomEmoji.ImageUrlType) {
+                if (value is CustomEmoji.ImageUrlType) {
                     Pair(
                         "inlineContent$idx",
                         InlineTextContent(
@@ -802,9 +810,9 @@ fun InLineIconRenderer(
                     withStyle(
                         style,
                     ) {
-                        if (value is Nip30CustomEmoji.TextType) {
+                        if (value is CustomEmoji.TextType) {
                             append(value.text)
-                        } else if (value is Nip30CustomEmoji.ImageUrlType) {
+                        } else if (value is CustomEmoji.ImageUrlType) {
                             appendInlineContent("inlineContent$idx", "[icon]")
                         }
                     }

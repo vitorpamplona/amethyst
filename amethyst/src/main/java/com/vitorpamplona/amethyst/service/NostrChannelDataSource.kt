@@ -27,8 +27,8 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.events.ChannelMessageEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
 
 object NostrChannelDataSource : AmethystNostrDataSource("ChatroomFeed") {
     var account: Account? = null

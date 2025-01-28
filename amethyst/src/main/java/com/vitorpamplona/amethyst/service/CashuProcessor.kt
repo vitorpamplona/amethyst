@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.R
@@ -30,8 +31,7 @@ import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.toHexKey
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -279,7 +279,7 @@ class CashuProcessor {
             val url = "$mintAddress/checkfees" // Melt cashu tokens at Mint
             val client = HttpClientManager.getHttpClient(forceProxy(url))
 
-            val factory = Event.mapper.nodeFactory
+            val factory = JsonNodeFactory.instance
 
             val jsonObject = factory.objectNode()
             jsonObject.put("pr", invoice)
@@ -343,7 +343,7 @@ class CashuProcessor {
             val url = token.mint + "/melt" // Melt cashu tokens at Mint
             val client = HttpClientManager.getHttpClient(forceProxy(url))
 
-            val factory = Event.mapper.nodeFactory
+            val factory = JsonNodeFactory.instance
 
             val jsonObject = factory.objectNode()
 

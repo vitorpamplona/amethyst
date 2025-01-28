@@ -29,12 +29,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class ImageDownloader {
+    class Blob(
+        val bytes: ByteArray,
+        val contentType: String?,
+    )
+
     suspend fun waitAndGetImage(
         imageUrl: String,
         forceProxy: Boolean,
-    ): ByteArray? =
+    ): Blob? =
         withContext(Dispatchers.IO) {
-            var imageData: ByteArray? = null
+            var imageData: Blob? = null
             var tentatives = 0
 
             // Servers are usually not ready.. so tries to download it for 15 times/seconds.
@@ -59,7 +64,7 @@ class ImageDownloader {
     private suspend fun tryGetTheImage(
         imageUrl: String,
         forceProxy: Boolean,
-    ): ByteArray? =
+    ): Blob? =
         withContext(Dispatchers.IO) {
             // TODO: Migrate to OkHttp
             HttpURLConnection.setFollowRedirects(true)
@@ -88,7 +93,10 @@ class ImageDownloader {
             }
 
             return@withContext if (responseCode in 200..300) {
-                huc.inputStream.use { it.readBytes() }
+                Blob(
+                    huc.inputStream.use { it.readBytes() },
+                    huc.headerFields.get("Content-Type")?.firstOrNull(),
+                )
             } else {
                 null
             }

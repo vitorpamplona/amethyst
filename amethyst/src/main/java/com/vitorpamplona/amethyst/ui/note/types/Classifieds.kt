@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 @Composable
 fun RenderClassifieds(

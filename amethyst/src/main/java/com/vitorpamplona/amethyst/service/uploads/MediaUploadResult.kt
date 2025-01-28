@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
-import com.vitorpamplona.quartz.encoders.Dimension
-import com.vitorpamplona.quartz.encoders.HexKey
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
 
 data class MediaUploadResult(
     // A publicly accessible URL to the BUD-01 GET /<sha256> endpoint (optionally with a file extension)

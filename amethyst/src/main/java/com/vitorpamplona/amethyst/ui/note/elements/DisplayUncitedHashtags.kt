@@ -35,8 +35,9 @@ import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

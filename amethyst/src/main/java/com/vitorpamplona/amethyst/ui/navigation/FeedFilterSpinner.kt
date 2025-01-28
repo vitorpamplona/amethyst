@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalPermissionsApi::class)

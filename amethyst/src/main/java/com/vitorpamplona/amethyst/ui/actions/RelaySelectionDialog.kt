@@ -56,7 +56,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.encoders.Nip11RelayInformation
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 

@@ -29,23 +29,23 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.HexKey
-import com.vitorpamplona.quartz.encoders.Nip47WalletConnect
-import com.vitorpamplona.quartz.encoders.RelayUrlFormatter
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.AppSpecificDataEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.ContactListEvent
-import com.vitorpamplona.quartz.events.LnZapEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PrivateOutboxRelayListEvent
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
-import com.vitorpamplona.quartz.signers.ExternalSignerLauncher
-import com.vitorpamplona.quartz.signers.NostrSignerExternal
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.ExternalSignerLauncher
+import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -371,7 +371,7 @@ class AccountSettings(
         appSettings: AppSpecificDataEvent?,
         newSyncedSettings: AccountSyncedSettingsInternal,
     ) {
-        if (appSettings == null || appSettings.content().isEmpty()) return
+        if (appSettings == null || appSettings.content.isEmpty()) return
 
         // Events might be different objects, we have to compare their ids.
         if (backupAppSpecificData?.id != appSettings.id) {

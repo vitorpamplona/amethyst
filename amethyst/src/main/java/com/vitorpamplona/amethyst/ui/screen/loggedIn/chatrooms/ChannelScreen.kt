@@ -130,6 +130,8 @@ import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -163,11 +165,14 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.EmptyTagList
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.quartz.events.Participant
-import com.vitorpamplona.quartz.events.findURLs
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -396,6 +401,7 @@ private suspend fun innerSendPost(
 
     val urls = findURLs(tagger.message)
     val usedAttachments = newPostModel.iMetaAttachments.filter { it.url in urls.toSet() }
+    val emojis = newPostModel.findEmoji(newPostModel.message.text, accountViewModel.account.myEmojis.value)
 
     if (channel is PublicChatChannel) {
         accountViewModel.account.sendChannelMessage(
@@ -406,6 +412,7 @@ private suspend fun innerSendPost(
             directMentions = tagger.directMentions,
             wantsToMarkAsSensitive = false,
             imetas = usedAttachments,
+            emojis = emojis,
             draftTag = draftTag,
         )
     } else if (channel is LiveActivitiesChannel) {
@@ -416,6 +423,7 @@ private suspend fun innerSendPost(
             mentions = tagger.pTags,
             wantsToMarkAsSensitive = false,
             imetas = usedAttachments,
+            emojis = emojis,
             draftTag = draftTag,
         )
     }
@@ -478,7 +486,18 @@ fun EditFieldRow(
     ) {
         val context = LocalContext.current
 
-        ShowUserSuggestionList(channelScreenModel, accountViewModel)
+        ShowUserSuggestionList(
+            channelScreenModel.userSuggestions,
+            channelScreenModel::autocompleteWithUser,
+            accountViewModel,
+        )
+
+        ShowEmojiSuggestionList(
+            channelScreenModel.emojiSuggestions,
+            channelScreenModel::autocompleteWithEmoji,
+            channelScreenModel::autocompleteWithEmojiUrl,
+            accountViewModel,
+        )
 
         MyTextField(
             value = channelScreenModel.message,
@@ -897,7 +916,7 @@ fun LongChannelHeader(
                 val tags =
                     remember(channelState) {
                         if (baseChannel is LiveActivitiesChannel) {
-                            baseChannel.info?.tags()?.toImmutableListOfLists() ?: EmptyTagList
+                            baseChannel.info?.tags?.toImmutableListOfLists() ?: EmptyTagList
                         } else {
                             EmptyTagList
                         }

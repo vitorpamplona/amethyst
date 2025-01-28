@@ -49,6 +49,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
@@ -81,7 +82,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URI
@@ -114,6 +115,7 @@ fun AppNavigation(
             composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
             composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
             composable(Route.Notification.route) { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+            composable(Route.EditProfile.route) { NewUserMetadataScreen(nav, accountViewModel) }
 
             composable(Route.Search.route) { SearchScreen(accountViewModel, nav) }
 
@@ -426,7 +428,7 @@ private fun NavigateIfIntentRequested(
                     }
                 } else if (intentNextPage.contains("ncryptsec1")) {
                     // login functions
-                    Nip19Bech32.tryParseAndClean(intentNextPage)?.let {
+                    Nip19Parser.tryParseAndClean(intentNextPage)?.let {
                         newAccount = it
                     }
 
@@ -481,7 +483,7 @@ private fun NavigateIfIntentRequested(
                                 }
                             } else if (uri.contains("ncryptsec")) {
                                 // login functions
-                                Nip19Bech32.tryParseAndClean(uri)?.let {
+                                Nip19Parser.tryParseAndClean(uri)?.let {
                                     newAccount = it
                                 }
                             } else {

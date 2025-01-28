@@ -54,10 +54,11 @@ import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.quartz.events.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.events.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.events.RelaySetEvent
-import com.vitorpamplona.quartz.events.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -74,15 +75,20 @@ fun DisplayRelaySet(
     val noteEvent = baseNote.event as? RelaySetEvent ?: return
 
     val relays by
-        remember(baseNote) {
+        remember(noteEvent) {
             mutableStateOf(
                 noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
             )
         }
 
+    val relayListName =
+        remember(noteEvent) {
+            noteEvent.tags.firstTagValueFor("title", "name") ?: "#${noteEvent.dTag()}"
+        }
+
     DisplayRelaySet(
         relays,
-        noteEvent.firstTagFor("title", "name") ?: "#${noteEvent.dTag()}",
+        relayListName,
         noteEvent.description(),
         backgroundColor,
         accountViewModel,

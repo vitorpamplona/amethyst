@@ -23,16 +23,18 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.crypto.CryptoUtils
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.hexToByteArray
-import com.vitorpamplona.quartz.events.ChatMessageEvent
-import com.vitorpamplona.quartz.events.Event
-import com.vitorpamplona.quartz.events.GiftWrapEvent
-import com.vitorpamplona.quartz.events.Gossip
-import com.vitorpamplona.quartz.events.SealedGossipEvent
-import com.vitorpamplona.quartz.signers.NostrSigner
-import com.vitorpamplona.quartz.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hasCorrectIDHash
+import com.vitorpamplona.quartz.nip01Core.hasVerifiedSignature
+import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -71,7 +73,7 @@ class GiftWrapReceivingBenchmark {
             isDraft = true,
             signer = sender,
         ) {
-            SealedGossipEvent.create(
+            SealedRumorEvent.create(
                 event = it,
                 encryptTo = receiver.pubKey,
                 signer = sender,
@@ -94,9 +96,9 @@ class GiftWrapReceivingBenchmark {
     fun createSeal(
         sender: NostrSigner,
         receiver: NostrSigner,
-    ): SealedGossipEvent {
+    ): SealedRumorEvent {
         val countDownLatch = CountDownLatch(1)
-        var seal: SealedGossipEvent? = null
+        var seal: SealedRumorEvent? = null
 
         ChatMessageEvent.create(
             msg = "Hi there! This is a test message",
@@ -111,7 +113,7 @@ class GiftWrapReceivingBenchmark {
             isDraft = true,
             signer = sender,
         ) {
-            SealedGossipEvent.create(
+            SealedRumorEvent.create(
                 event = it,
                 encryptTo = receiver.pubKey,
                 signer = sender,
@@ -223,6 +225,6 @@ class GiftWrapReceivingBenchmark {
                 seal.pubKey.hexToByteArray(),
             )
 
-        benchmarkRule.measureRepeated { assertNotNull(innerJson?.let { Gossip.fromJson(it) }) }
+        benchmarkRule.measureRepeated { assertNotNull(innerJson?.let { Rumor.fromJson(it) }) }
     }
 }

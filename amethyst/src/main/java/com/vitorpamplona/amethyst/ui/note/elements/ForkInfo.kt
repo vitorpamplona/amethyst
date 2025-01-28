@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.nip05
-import com.vitorpamplona.quartz.events.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
 
 @Composable
 fun ShowForkInformation(

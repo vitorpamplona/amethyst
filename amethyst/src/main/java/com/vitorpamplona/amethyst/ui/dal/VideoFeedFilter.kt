@@ -26,15 +26,15 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.SUPPORTED_VIDEO_FEED_MIME_TYPES_SET
-import com.vitorpamplona.quartz.events.AddressableEvent
-import com.vitorpamplona.quartz.events.FileHeaderEvent
-import com.vitorpamplona.quartz.events.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.events.MuteListEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PictureEvent
-import com.vitorpamplona.quartz.events.VideoHorizontalEvent
-import com.vitorpamplona.quartz.events.VideoMeta
-import com.vitorpamplona.quartz.events.VideoVerticalEvent
+import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoMeta
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
 class VideoFeedFilter(
     val account: Account,
@@ -72,7 +72,7 @@ class VideoFeedFilter(
         mimeType: String?,
     ): Boolean {
         // we don't have an youtube player
-        val urls = baseUrls.filter { !it.contains("youtu.be") }
+        val urls = baseUrls.filter { !it.contains("youtu.be") && !it.contains("youtube.com") }
 
         val isSupportedMimeType = mimeType?.let { SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it) } ?: false
 

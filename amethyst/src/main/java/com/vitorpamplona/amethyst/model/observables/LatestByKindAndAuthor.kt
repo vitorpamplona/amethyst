@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model.observables
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.events.Event
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -53,7 +53,7 @@ class LatestByKindAndAuthor<T : Event>(
                     .maxOrNullOf(
                         filter = { idHex: String, note: AddressableNote ->
                             note.event?.let {
-                                it.kind() == kind && it.pubKey() == pubkey
+                                it.kind == kind && it.pubKey == pubkey
                             } == true
                         },
                         comparator = CreatedAtComparatorAddresses,
@@ -63,7 +63,7 @@ class LatestByKindAndAuthor<T : Event>(
                     .maxOrNullOf(
                         filter = { idHex: String, note: Note ->
                             note.event?.let {
-                                it.kind() == kind && it.pubKey() == pubkey
+                                it.kind == kind && it.pubKey == pubkey
                             } == true
                         },
                         comparator = CreatedAtComparator,

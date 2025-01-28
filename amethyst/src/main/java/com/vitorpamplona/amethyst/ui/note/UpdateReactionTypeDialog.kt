@@ -86,10 +86,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Nip30CustomEmoji
-import com.vitorpamplona.quartz.events.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.events.EmojiUrl
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -144,7 +145,6 @@ class UpdateReactionTypeViewModel : ViewModel() {
                 ?.value
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UpdateReactionTypeDialog(
     onClose: () -> Unit,
@@ -294,8 +294,8 @@ private fun RenderReactionOption(
 
             val renderable =
                 persistentListOf(
-                    Nip30CustomEmoji.ImageUrlType(url),
-                    Nip30CustomEmoji.TextType(" ✖"),
+                    CustomEmoji.ImageUrlType(url),
+                    CustomEmoji.TextType(" ✖"),
                 )
 
             InLineIconRenderer(

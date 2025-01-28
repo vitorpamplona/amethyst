@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.events.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

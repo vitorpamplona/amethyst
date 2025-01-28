@@ -24,35 +24,42 @@ import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.crypto.KeyPair
-import com.vitorpamplona.quartz.encoders.ATag
-import com.vitorpamplona.quartz.encoders.Hex
-import com.vitorpamplona.quartz.encoders.HexValidator
-import com.vitorpamplona.quartz.encoders.Nip19Bech32
-import com.vitorpamplona.quartz.encoders.bechToBytes
-import com.vitorpamplona.quartz.encoders.toHexKey
-import com.vitorpamplona.quartz.events.AudioHeaderEvent
-import com.vitorpamplona.quartz.events.AudioTrackEvent
-import com.vitorpamplona.quartz.events.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.events.BookmarkListEvent
-import com.vitorpamplona.quartz.events.ChannelCreateEvent
-import com.vitorpamplona.quartz.events.ChannelMetadataEvent
-import com.vitorpamplona.quartz.events.ClassifiedsEvent
-import com.vitorpamplona.quartz.events.CommentEvent
-import com.vitorpamplona.quartz.events.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.events.EmojiPackEvent
-import com.vitorpamplona.quartz.events.HighlightEvent
-import com.vitorpamplona.quartz.events.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.events.InteractiveStorySceneEvent
-import com.vitorpamplona.quartz.events.LiveActivitiesEvent
-import com.vitorpamplona.quartz.events.LongTextNoteEvent
-import com.vitorpamplona.quartz.events.MetadataEvent
-import com.vitorpamplona.quartz.events.NNSEvent
-import com.vitorpamplona.quartz.events.PeopleListEvent
-import com.vitorpamplona.quartz.events.PinListEvent
-import com.vitorpamplona.quartz.events.PollNoteEvent
-import com.vitorpamplona.quartz.events.TextNoteEvent
-import com.vitorpamplona.quartz.events.WikiNoteEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip19Bech32.parse
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
+import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.PinListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.utils.Hex
 import kotlin.coroutines.cancellation.CancellationException
 
 object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFeed") {
@@ -67,21 +74,21 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
         val hexToWatch =
             try {
                 val isAStraightHex =
-                    if (HexValidator.isHex(mySearchString)) {
+                    if (Hex.isHex(mySearchString)) {
                         Hex.decode(mySearchString).toHexKey()
                     } else {
                         null
                     }
 
-                when (val parsed = Nip19Bech32.uriToRoute(mySearchString)?.entity) {
-                    is Nip19Bech32.NSec -> KeyPair(privKey = parsed.hex.bechToBytes()).pubKey.toHexKey()
-                    is Nip19Bech32.NPub -> parsed.hex
-                    is Nip19Bech32.NProfile -> parsed.hex
-                    is Nip19Bech32.Note -> parsed.hex
-                    is Nip19Bech32.NEvent -> parsed.hex
-                    is Nip19Bech32.NEmbed -> parsed.event.id
-                    is Nip19Bech32.NRelay -> null
-                    is Nip19Bech32.NAddress -> parsed.atag
+                when (val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity) {
+                    is NSec -> KeyPair(privKey = parsed.hex.bechToBytes()).pubKey.toHexKey()
+                    is NPub -> parsed.hex
+                    is NProfile -> parsed.hex
+                    is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> parsed.hex
+                    is NEvent -> parsed.hex
+                    is NEmbed -> parsed.event.id
+                    is NRelay -> null
+                    is NAddress -> parsed.aTag()
                     else -> isAStraightHex
                 }
             } catch (e: Exception) {

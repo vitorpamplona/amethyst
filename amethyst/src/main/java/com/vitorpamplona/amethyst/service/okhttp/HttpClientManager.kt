@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.Log
-import com.vitorpamplona.quartz.crypto.nip17.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.NostrCipher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy

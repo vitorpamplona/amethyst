@@ -52,10 +52,12 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.events.AudioHeaderEvent
-import com.vitorpamplona.quartz.events.AudioTrackEvent
-import com.vitorpamplona.quartz.events.Participant
-import com.vitorpamplona.quartz.events.toImmutableListOfLists
+import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip14Subject.subject
 import kotlinx.collections.immutable.toImmutableList
 import java.util.Locale
 
@@ -82,7 +84,7 @@ fun AudioTrackHeader(
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
     val subject = remember { noteEvent.subject() }
-    val content = remember { noteEvent.content() }
+    val content = remember { noteEvent.content }
     val participants = remember { noteEvent.participants() }
 
     var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
@@ -192,11 +194,11 @@ fun AudioHeader(
 ) {
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
     val waveform = remember { noteEvent.wavefrom()?.toImmutableList()?.ifEmpty { null } }
-    val content = remember { noteEvent.content().ifBlank { null } }
+    val content = remember { noteEvent.content.ifBlank { null } }
 
     val defaultBackground = MaterialTheme.colorScheme.background
     val background = remember { mutableStateOf(defaultBackground) }
-    val tags = remember(noteEvent) { noteEvent.tags().toImmutableListOfLists() }
+    val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
 
     Row(modifier = Modifier.padding(top = 5.dp)) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
