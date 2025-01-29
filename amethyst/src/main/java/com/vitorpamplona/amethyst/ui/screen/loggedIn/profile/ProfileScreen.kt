@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
 import android.content.Intent
-import androidx.compose.animation.animateContentSize
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -65,7 +65,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
@@ -76,7 +75,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -934,7 +932,10 @@ private fun ProfileActions(
             userHex = baseUser.pubkeyHex,
             followLists = tempFollowLists,
             addUser = { index, list ->
-                list.members.add(baseUser.pubkeyHex)
+                Log.d("Amethyst", "ProfileActions: Updating list ...")
+                val newList = list.memberList + baseUser.pubkeyHex
+                tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
+                println("Updated List.")
             },
         )
     }
@@ -1089,12 +1090,12 @@ fun FollowSetsActionMenu(
                             modifier = Modifier.fillMaxWidth(),
                             listHeader = list.name,
                             listIsPublic = !list.isPrivate,
-                            isUserInList = list.members.contains(userHex),
+                            isUserInList = list.memberList.contains(userHex),
                         ) {
-                            println("List contains user -> ${list.members.contains(userHex)}")
+                            println("List contains user -> ${list.memberList.contains(userHex)}")
                             println("Adding user to List -> ${list.name}")
                             addUser(index, list)
-                            println("List contains user -> ${list.members.contains(userHex)}")
+                            println("List contains user -> ${list.memberList.contains(userHex)}")
                         }
                     },
                     onClick = {},
@@ -1122,16 +1123,14 @@ private fun DropDownMenuHeader(
     }
 }
 
-class FollowInfo(
+data class FollowInfo(
     val name: String,
     val isPrivate: Boolean,
-    memberList: MutableList<String> = mutableListOf(),
-) {
-    var members = memberList
-}
+    val memberList: List<String> = listOf(),
+)
 
 fun generateFollowLists(): List<FollowInfo> =
-    (1..10).map { index: Int ->
+    List(10) { index: Int ->
         FollowInfo(
             name = "List No $index",
             isPrivate = index % 2 == 0,
@@ -1149,26 +1148,26 @@ fun FollowSetItem(
     Row(
         modifier =
             modifier
+//                .clickable(onClick = onAddUser)
                 .border(
                     width = Dp.Hairline,
                     color = Color.Gray,
                     shape = RoundedCornerShape(percent = 20),
-                ).padding(all = 10.dp)
-                .clickable(onClick = onAddUser),
+                ).padding(all = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (isUserInList) {
-            Column(
-                modifier = Modifier.animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Done,
-                    contentDescription = "Done icon",
-                    modifier = Modifier.size(FilterChipDefaults.IconSize),
-                )
-            }
-        }
+//        if (isUserInList) {
+//            Column(
+//                modifier = Modifier.animateContentSize(),
+//                verticalArrangement = Arrangement.spacedBy(5.dp),
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Filled.Done,
+//                    contentDescription = "Done icon",
+//                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+//                )
+//            }
+//        }
         Column(
             modifier = modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
@@ -1198,16 +1197,18 @@ fun FollowSetItem(
                 )
                 Spacer(modifier = StdHorzSpacer)
                 AssistChip(
-                    onClick = {},
+                    onClick = {
+                        onAddUser()
+                    },
                     label = {
-                        Text(text = if (isUserInList) "Delete" else "Add")
+                        Text(text = if (isUserInList) "Remove" else "Add")
                     },
                     leadingIcon = {
                         if (isUserInList) {
                             Icon(
                                 imageVector = Icons.Filled.Delete,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onError,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         } else {
                             Icon(
@@ -1222,11 +1223,22 @@ fun FollowSetItem(
                         AssistChipDefaults.assistChipColors(
                             containerColor =
                                 if (isUserInList) {
-                                    MaterialTheme.colorScheme.errorContainer
+                                    Color.Red.copy(alpha = 0.5f)
                                 } else {
                                     MaterialTheme.colorScheme.primary
                                 },
                         ),
+                    border =
+                        AssistChipDefaults
+                            .assistChipBorder(
+                                enabled = true,
+                                borderColor =
+                                    if (!isUserInList) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    },
+                            ),
                 )
             }
         }
