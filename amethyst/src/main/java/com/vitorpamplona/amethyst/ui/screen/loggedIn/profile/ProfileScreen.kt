@@ -933,9 +933,15 @@ private fun ProfileActions(
             followLists = tempFollowLists,
             addUser = { index, list ->
                 Log.d("Amethyst", "ProfileActions: Updating list ...")
-                val newList = list.memberList + baseUser.pubkeyHex
+                val newList = tempFollowLists[index].memberList + baseUser.pubkeyHex
                 tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
-                println("Updated List.")
+                println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+            },
+            removeUser = { index ->
+                Log.d("Amethyst", "ProfileActions: Updating list ...")
+                val newList = tempFollowLists[index].memberList - baseUser.pubkeyHex
+                tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
+                println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
             },
         )
     }
@@ -1030,7 +1036,8 @@ fun FollowSetsActionMenu(
     userHex: String,
     followLists: List<FollowInfo>,
     modifier: Modifier = Modifier,
-    addUser: (listIndex: Int, list: FollowInfo) -> Unit,
+    addUser: (followListItemIndex: Int, list: FollowInfo) -> Unit,
+    removeUser: (followListItemIndex: Int) -> Unit,
 ) {
     val (isMenuOpen, setMenuValue) = remember { mutableStateOf(false) }
     val uiScope = rememberCoroutineScope()
@@ -1091,12 +1098,16 @@ fun FollowSetsActionMenu(
                             listHeader = list.name,
                             listIsPublic = !list.isPrivate,
                             isUserInList = list.memberList.contains(userHex),
-                        ) {
-                            println("List contains user -> ${list.memberList.contains(userHex)}")
-                            println("Adding user to List -> ${list.name}")
-                            addUser(index, list)
-                            println("List contains user -> ${list.memberList.contains(userHex)}")
-                        }
+                            onRemoveUser = {
+                                removeUser(index)
+                            },
+                            onAddUser = {
+                                println("List contains user -> ${list.memberList.contains(userHex)}")
+                                println("Adding user to List -> ${list.name}")
+                                addUser(index, list)
+                                println("List contains user -> ${list.memberList.contains(userHex)}")
+                            },
+                        )
                     },
                     onClick = {},
                     modifier = Modifier.fillMaxWidth(),
@@ -1144,6 +1155,7 @@ fun FollowSetItem(
     listIsPublic: Boolean,
     isUserInList: Boolean,
     onAddUser: () -> Unit,
+    onRemoveUser: () -> Unit,
 ) {
     Row(
         modifier =
@@ -1198,7 +1210,7 @@ fun FollowSetItem(
                 Spacer(modifier = StdHorzSpacer)
                 AssistChip(
                     onClick = {
-                        onAddUser()
+                        if (isUserInList) onRemoveUser() else onAddUser()
                     },
                     label = {
                         Text(text = if (isUserInList) "Remove" else "Add")
