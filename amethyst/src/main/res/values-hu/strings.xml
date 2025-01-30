@@ -53,7 +53,7 @@
     <string name="zaps">Zap</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megtolás</string>
-    <string name="boosted">Megtolva</string>
+    <string name="boosted">megtolta</string>
     <string name="edited">szerkesztve</string>
     <string name="edited_number">#%1$s szerkesztése</string>
     <string name="original">eredeti</string>
