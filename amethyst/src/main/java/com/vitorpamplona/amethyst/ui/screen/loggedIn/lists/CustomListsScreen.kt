@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import kotlinx.collections.immutable.ImmutableList
 
 @Composable
 fun ListsScreen(
@@ -134,7 +133,7 @@ fun CustomListsScreen(
                         followSetsViewModel.invalidateData()
                     }
                 is FollowSetState.Loaded -> {
-                    val followSetFeed by (setsState as FollowSetState.Loaded).feed
+                    val followSetFeed = (setsState as FollowSetState.Loaded).feed
                     FollowListLoaded(
                         loadedFeedState = followSetFeed,
                     )
@@ -148,7 +147,7 @@ fun CustomListsScreen(
 @Composable
 fun FollowListLoaded(
     modifier: Modifier = Modifier,
-    loadedFeedState: ImmutableList<FollowSet>,
+    loadedFeedState: List<FollowSet>,
 ) {
     val listState = rememberLazyListState()
     Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")

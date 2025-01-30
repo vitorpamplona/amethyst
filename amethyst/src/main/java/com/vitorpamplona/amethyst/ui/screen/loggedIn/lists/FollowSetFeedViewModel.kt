@@ -50,7 +50,7 @@ open class FollowSetFeedViewModel(
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
+        viewModelScope.launch { refreshSuspended() }
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
@@ -66,7 +66,7 @@ open class FollowSetFeedViewModel(
             val oldNotesState = _feedContent.value
             if (oldNotesState is FollowSetState.Loaded) {
                 // Using size as a proxy for has changed.
-                if (!equalImmutableLists(notes, oldNotesState.feed.value.toImmutableList())) {
+                if (!equalImmutableLists(notes, oldNotesState.feed.toImmutableList())) {
                     updateFeed(notes)
                 }
             } else {
@@ -78,20 +78,16 @@ open class FollowSetFeedViewModel(
     }
 
     private fun updateFeed(notes: ImmutableList<FollowSet>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
+        viewModelScope.launch {
             if (notes.isEmpty()) {
                 _feedContent.update { FollowSetState.Empty }
-            } else if (currentState is FollowSetState.Loaded) {
-                // updates the current list
-                currentState.feed.value = notes
             } else {
-                _feedContent.update { FollowSetState.Loaded(mutableStateOf(notes)) }
+                _feedContent.update { FollowSetState.Loaded(notes) }
             }
         }
     }
 
-    private val bundler = BundledUpdate(250, Dispatchers.IO)
+    private val bundler = BundledUpdate(250)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
         bundler.invalidate(ignoreIfDoing) {
@@ -104,9 +100,9 @@ open class FollowSetFeedViewModel(
     var collectorJob: Job? = null
 
     init {
-        Log.d("Init", "${this.javaClass.simpleName}")
+        Log.d("Init", this.javaClass.simpleName)
         collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.Default) {
                 checkNotInMainThread()
 
                 LocalCache.live.newEventBundles.collect { newNotes ->

@@ -20,14 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
-import androidx.compose.runtime.MutableState
-import kotlinx.collections.immutable.ImmutableList
-
 sealed class FollowSetState {
     data object Loading : FollowSetState()
 
     class Loaded(
-        val feed: MutableState<ImmutableList<FollowSet>>,
+        val feed: List<FollowSet>,
     ) : FollowSetState()
 
     object Empty : FollowSetState()
