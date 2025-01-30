@@ -1168,18 +1168,6 @@ fun FollowSetItem(
                 ).padding(all = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-//        if (isUserInList) {
-//            Column(
-//                modifier = Modifier.animateContentSize(),
-//                verticalArrangement = Arrangement.spacedBy(5.dp),
-//            ) {
-//                Icon(
-//                    imageVector = Icons.Filled.Done,
-//                    contentDescription = "Done icon",
-//                    modifier = Modifier.size(FilterChipDefaults.IconSize),
-//                )
-//            }
-//        }
         Column(
             modifier = modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
@@ -1235,7 +1223,7 @@ fun FollowSetItem(
                         AssistChipDefaults.assistChipColors(
                             containerColor =
                                 if (isUserInList) {
-                                    Color.Red.copy(alpha = 0.5f)
+                                    MaterialTheme.colorScheme.errorContainer
                                 } else {
                                     MaterialTheme.colorScheme.primary
                                 },
@@ -1248,7 +1236,7 @@ fun FollowSetItem(
                                     if (!isUserInList) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
-                                        MaterialTheme.colorScheme.error
+                                        MaterialTheme.colorScheme.errorContainer
                                     },
                             ),
                 )
