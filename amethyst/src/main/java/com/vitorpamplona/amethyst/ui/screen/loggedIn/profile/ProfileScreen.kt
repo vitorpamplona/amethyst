@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
 import android.content.Intent
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.scrollBy
@@ -51,18 +53,28 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,6 +84,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -83,11 +96,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -107,6 +122,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -167,12 +183,14 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.LeftHalfCircleButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
@@ -195,6 +213,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
@@ -469,8 +488,13 @@ private fun RenderSurface(
                                                     Offset.Zero
                                                 } else {
                                                     // move to the max
-                                                    val newY = (borderLimit - scrollState.value).toFloat()
-                                                    coroutineScope.launch { scrollState.scrollBy(newY) }
+                                                    val newY =
+                                                        (borderLimit - scrollState.value).toFloat()
+                                                    coroutineScope.launch {
+                                                        scrollState.scrollBy(
+                                                            newY,
+                                                        )
+                                                    }
                                                     Offset(0f, -newY)
                                                 }
                                             }
@@ -889,6 +913,8 @@ private fun ProfileActions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val tempFollowLists = remember { generateFollowLists().toMutableStateList() }
+
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
@@ -902,6 +928,22 @@ private fun ProfileActions(
         } else {
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
         }
+        FollowSetsActionMenu(
+            userHex = baseUser.pubkeyHex,
+            followLists = tempFollowLists,
+            addUser = { index, list ->
+                Log.d("Amethyst", "ProfileActions: Updating list ...")
+                val newList = tempFollowLists[index].memberList + baseUser.pubkeyHex
+                tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
+                println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+            },
+            removeUser = { index ->
+                Log.d("Amethyst", "ProfileActions: Updating list ...")
+                val newList = tempFollowLists[index].memberList - baseUser.pubkeyHex
+                tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
+                println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+            },
+        )
     }
 }
 
@@ -928,7 +970,9 @@ private fun DisplayFollowUnfollowButton(
             .observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
 
     if (isLoggedInFollowingUser) {
-        UnfollowButton {
+        UnfollowButton(
+            shape = LeftHalfCircleButtonBorder,
+        ) {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toast(
                     R.string.read_only_user,
@@ -940,7 +984,10 @@ private fun DisplayFollowUnfollowButton(
         }
     } else {
         if (isUserFollowingLoggedIn) {
-            FollowButton(R.string.follow_back) {
+            FollowButton(
+                text = R.string.follow_back,
+                shape = LeftHalfCircleButtonBorder,
+            ) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
                         R.string.read_only_user,
@@ -951,7 +998,10 @@ private fun DisplayFollowUnfollowButton(
                 }
             }
         } else {
-            FollowButton(R.string.follow) {
+            FollowButton(
+                text = R.string.follow,
+                shape = LeftHalfCircleButtonBorder,
+            ) {
                 if (!accountViewModel.isWriteable()) {
                     accountViewModel.toast(
                         R.string.read_only_user,
@@ -963,6 +1013,7 @@ private fun DisplayFollowUnfollowButton(
             }
         }
     }
+//    FollowSetsActionMenu()
 }
 
 @Composable
@@ -978,6 +1029,237 @@ fun WatchIsHiddenUser(
             }.observeAsState(accountViewModel.account.isHidden(baseUser))
 
     content(isHidden)
+}
+
+@Composable
+fun FollowSetsActionMenu(
+    userHex: String,
+    followLists: List<FollowInfo>,
+    modifier: Modifier = Modifier,
+    addUser: (followListItemIndex: Int, list: FollowInfo) -> Unit,
+    removeUser: (followListItemIndex: Int) -> Unit,
+) {
+    val (isMenuOpen, setMenuValue) = remember { mutableStateOf(false) }
+    val uiScope = rememberCoroutineScope()
+
+    Column {
+        TextButton(
+            onClick = { setMenuValue(true) },
+            shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+            colors =
+                ButtonDefaults
+                    .buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            contentPadding = ZeroPadding,
+        ) {
+            Icon(
+                imageVector = if (isMenuOpen) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                contentDescription = "",
+            )
+        }
+
+//        Icon(
+//            imageVector = if (isMenuOpen.value) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+//            contentDescription = "",
+//            modifier =
+//                Modifier
+//                    .fillMaxHeight()
+//                    .background(
+//                        color = MaterialTheme.colorScheme.primary,
+//                        shape = ButtonBorder.copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+//                    ).border(
+//                        width = Dp.Hairline,
+//                        color = MaterialTheme.colorScheme.primary,
+//                        shape =
+//                            ButtonBorder
+//                                .copy(topStart = CornerSize(0f), bottomStart = CornerSize(0f)),
+//                    ).clickable(role = Role.DropdownList) {
+//                        isMenuOpen.value = !isMenuOpen.value
+//                    },
+//        )
+
+        DropdownMenu(
+            expanded = isMenuOpen,
+            onDismissRequest = {
+                uiScope.launch {
+                    delay(100L)
+                    setMenuValue(false)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            properties = PopupProperties(usePlatformDefaultWidth = true),
+        ) {
+            DropDownMenuHeader(headerText = "Add to lists")
+            followLists.forEachIndexed { index, list ->
+                Spacer(StdVertSpacer)
+                DropdownMenuItem(
+                    text = {
+                        FollowSetItem(
+                            modifier = Modifier.fillMaxWidth(),
+                            listHeader = list.name,
+                            listIsPublic = !list.isPrivate,
+                            isUserInList = list.memberList.contains(userHex),
+                            onRemoveUser = {
+                                removeUser(index)
+                            },
+                            onAddUser = {
+                                println("List contains user -> ${list.memberList.contains(userHex)}")
+                                println("Adding user to List -> ${list.name}")
+                                addUser(index, list)
+                                println("List contains user -> ${list.memberList.contains(userHex)}")
+                            },
+                        )
+                    },
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DropDownMenuHeader(
+    modifier: Modifier = Modifier,
+    headerText: String,
+) {
+    Column {
+        DropdownMenuItem(
+            text = {
+                Text(text = headerText, fontWeight = FontWeight.SemiBold)
+            },
+            onClick = {},
+            enabled = false,
+        )
+        HorizontalDivider()
+    }
+}
+
+data class FollowInfo(
+    val name: String,
+    val isPrivate: Boolean,
+    val memberList: List<String> = listOf(),
+)
+
+fun generateFollowLists(): List<FollowInfo> =
+    List(10) { index: Int ->
+        FollowInfo(
+            name = "List No $index",
+            isPrivate = index % 2 == 0,
+        )
+    }
+
+@Composable
+fun FollowSetItem(
+    modifier: Modifier = Modifier,
+    listHeader: String,
+    listIsPublic: Boolean,
+    isUserInList: Boolean,
+    onAddUser: () -> Unit,
+    onRemoveUser: () -> Unit,
+) {
+    Row(
+        modifier =
+            modifier
+//                .clickable(onClick = onAddUser)
+                .border(
+                    width = Dp.Hairline,
+                    color = Color.Gray,
+                    shape = RoundedCornerShape(percent = 20),
+                ).padding(all = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(listHeader, fontWeight = FontWeight.Bold)
+            Spacer(modifier = StdVertSpacer)
+            Row {
+                FilterChip(
+                    selected = isUserInList,
+                    enabled = isUserInList,
+                    onClick = {},
+                    label = {
+                        Text(text = if (isUserInList) "In List" else "Not in List")
+                    },
+                    leadingIcon =
+                        if (isUserInList) {
+                            {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAddCheck,
+                                    contentDescription = null,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    shape = ButtonBorder,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                AssistChip(
+                    onClick = {
+                        if (isUserInList) onRemoveUser() else onAddUser()
+                    },
+                    label = {
+                        Text(text = if (isUserInList) "Remove" else "Add")
+                    },
+                    leadingIcon = {
+                        if (isUserInList) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    },
+                    shape = ButtonBorder,
+                    colors =
+                        AssistChipDefaults.assistChipColors(
+                            containerColor =
+                                if (isUserInList) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                        ),
+                    border =
+                        AssistChipDefaults
+                            .assistChipBorder(
+                                enabled = true,
+                                borderColor =
+                                    if (!isUserInList) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.errorContainer
+                                    },
+                            ),
+                )
+            }
+        }
+
+        listIsPublic.let {
+            val text by derivedStateOf { if (!it) "Private" else "Public" }
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    painter =
+                        painterResource(
+                            if (!it) R.drawable.incognito else R.drawable.ic_public,
+                        ),
+                    contentDescription = "Icon for $text List",
+                )
+                Text(text, color = Color.Gray)
+            }
+        }
+    }
 }
 
 fun getIdentityClaimIcon(identity: IdentityClaim): Int =
@@ -1878,11 +2160,14 @@ private fun InnerEditButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun UnfollowButton(onClick: () -> Unit) {
+fun UnfollowButton(
+    shape: Shape = ButtonBorder,
+    onClick: () -> Unit,
+) {
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = shape,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -1896,12 +2181,13 @@ fun UnfollowButton(onClick: () -> Unit) {
 @Composable
 fun FollowButton(
     text: Int = R.string.follow,
+    shape: Shape = ButtonBorder,
     onClick: () -> Unit,
 ) {
     Button(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
-        shape = ButtonBorder,
+        shape = shape,
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
