@@ -35,6 +35,7 @@ data class Settings(
     val dontShowPushNotificationSelector: Boolean = false,
     val dontAskForNotificationPermissions: Boolean = false,
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
+    val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
 )
 
 enum class ThemeType(
@@ -75,6 +76,14 @@ enum class FeatureSetType(
     PERFORMANCE(2, R.string.ui_feature_set_type_performance),
 }
 
+enum class ProfileGalleryType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    CLASSIC(0, R.string.gallery_type_classic),
+    MODERN(1, R.string.gallery_type_modern),
+}
+
 fun parseConnectivityType(code: Boolean?): ConnectivityType =
     when (code) {
         ConnectivityType.ALWAYS.prefCode -> ConnectivityType.ALWAYS
@@ -102,6 +111,15 @@ fun parseFeatureSetType(screenCode: Int): FeatureSetType =
         FeatureSetType.PERFORMANCE.screenCode -> FeatureSetType.PERFORMANCE
         else -> {
             FeatureSetType.COMPLETE
+        }
+    }
+
+fun parseGalleryType(screenCode: Int): ProfileGalleryType =
+    when (screenCode) {
+        ProfileGalleryType.CLASSIC.screenCode -> ProfileGalleryType.CLASSIC
+        ProfileGalleryType.MODERN.screenCode -> ProfileGalleryType.MODERN
+        else -> {
+            ProfileGalleryType.CLASSIC
         }
     }
 

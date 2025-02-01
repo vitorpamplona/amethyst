@@ -77,6 +77,7 @@ fun GalleryThumbnail(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    ratio: Float = 1.0f,
 ) {
     val noteState by baseNote.live().metadata.observeAsState()
     val noteEvent = noteState?.note?.event ?: return
@@ -134,7 +135,7 @@ fun GalleryThumbnail(
             emptyList()
         }
 
-    InnerRenderGalleryThumb(content, baseNote, accountViewModel)
+    InnerRenderGalleryThumb(content, baseNote, accountViewModel, ratio)
 }
 
 @Composable
@@ -142,9 +143,10 @@ fun InnerRenderGalleryThumb(
     content: List<MediaUrlContent>,
     note: Note,
     accountViewModel: AccountViewModel,
+    ratio: Float = 1.0f,
 ) {
     if (content.isNotEmpty()) {
-        GalleryContentView(content, accountViewModel)
+        GalleryContentView(content, accountViewModel, ratio = ratio)
     } else {
         DisplayGalleryAuthorBanner(note)
     }
@@ -162,16 +164,17 @@ fun DisplayGalleryAuthorBanner(note: Note) {
 fun GalleryContentView(
     contentList: List<MediaUrlContent>,
     accountViewModel: AccountViewModel,
+    ratio: Float = 1.0f,
 ) {
     AutoNonlazyGrid(contentList.size) { contentIndex ->
         when (val content = contentList[contentIndex]) {
             is MediaUrlImage ->
                 SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                    UrlImageView(content, accountViewModel)
+                    UrlImageView(content, accountViewModel, ratio = ratio)
                 }
             is MediaUrlVideo ->
                 SensitivityWarning(content.contentWarning != null, accountViewModel) {
-                    UrlVideoView(content, accountViewModel)
+                    UrlVideoView(content, accountViewModel, ratio = ratio)
                 }
         }
     }
@@ -182,8 +185,9 @@ fun UrlImageView(
     content: MediaUrlImage,
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
+    ratio: Float = 1.0f,
 ) {
-    val defaultModifier = Modifier.fillMaxSize().aspectRatio(1f)
+    val defaultModifier = Modifier.fillMaxSize().aspectRatio(ratio)
 
     val showImage =
         remember {
@@ -250,8 +254,9 @@ fun UrlImageView(
 fun UrlVideoView(
     content: MediaUrlVideo,
     accountViewModel: AccountViewModel,
+    ratio: Float = 1.0f,
 ) {
-    val defaultModifier = Modifier.fillMaxSize().aspectRatio(1f)
+    val defaultModifier = Modifier.fillMaxSize().aspectRatio(ratio)
 
     val automaticallyStartPlayback =
         remember(content) {

@@ -48,10 +48,12 @@ import androidx.core.os.LocaleListCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.parseBooleanType
 import com.vitorpamplona.amethyst.model.parseConnectivityType
 import com.vitorpamplona.amethyst.model.parseFeatureSetType
+import com.vitorpamplona.amethyst.model.parseGalleryType
 import com.vitorpamplona.amethyst.model.parseThemeType
 import com.vitorpamplona.amethyst.ui.components.PushNotificationSettingsRow
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -187,6 +189,12 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
             TitleExplainer(stringRes(FeatureSetType.PERFORMANCE.resourceId)),
         )
 
+    val galleryItems =
+        persistentListOf(
+            TitleExplainer(stringRes(ProfileGalleryType.CLASSIC.resourceId)),
+            TitleExplainer(stringRes(ProfileGalleryType.MODERN.resourceId)),
+        )
+
     val showImagesIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowImages.screenCode
     val videoIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyStartPlayback.screenCode
     val linkIndex = sharedPreferencesViewModel.sharedPrefs.automaticallyShowUrlPreview.screenCode
@@ -204,6 +212,8 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
 
     val featureSetIndex =
         sharedPreferencesViewModel.sharedPrefs.featureSet.screenCode
+    val galleryIndex =
+        sharedPreferencesViewModel.sharedPrefs.gallerySet.screenCode
 
     Column(
         Modifier
@@ -295,8 +305,18 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
         ) {
             sharedPreferencesViewModel.updateFeatureSetType(parseFeatureSetType(it))
         }
+        Spacer(modifier = HalfVertSpacer)
 
         Spacer(modifier = HalfVertSpacer)
+
+        SettingsRow(
+            R.string.gallery_style,
+            R.string.gallery_style_description,
+            galleryItems,
+            galleryIndex,
+        ) {
+            sharedPreferencesViewModel.updateGallerySetType(parseGalleryType(it))
+        }
 
         PushNotificationSettingsRow(sharedPreferencesViewModel)
     }
