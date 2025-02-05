@@ -66,6 +66,7 @@ class User(
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
     var followSets: List<AddressableNote> = listOf()
+        private set
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -162,6 +163,10 @@ class User(
 
         liveSet?.innerRelays?.invalidateData()
         flowSet?.relays?.invalidateData()
+    }
+
+    fun updateFollowSets(sets: List<AddressableNote>) {
+        followSets = followSets + sets
     }
 
     fun addReport(note: Note) {

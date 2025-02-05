@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 sealed class FollowSetState {
     data object Loading : FollowSetState()
 
-    class Loaded(
+    data class Loaded(
         val feed: List<FollowSet>,
     ) : FollowSetState()
 
-    object Empty : FollowSetState()
+    data object Empty : FollowSetState()
 
-    class FeedError(
+    data class FeedError(
         val errorMessage: String,
     ) : FollowSetState()
 }
