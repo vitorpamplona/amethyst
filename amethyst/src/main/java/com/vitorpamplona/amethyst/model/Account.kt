@@ -3564,7 +3564,8 @@ class Account(
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.Default) {
             val followSetNotes = LocalCache.getFollowSetsFor(userProfile())
-            userProfile().followSets = followSetNotes
+            userProfile().updateFollowSets(followSetNotes)
+//            userProfile().followSets = followSetNotes
             println("Number of follow sets: ${followSetNotes.size}")
         }
 
@@ -3575,7 +3576,7 @@ class Account(
                 signer,
             )
 
-    fun followSetNotesFlow() = MutableStateFlow(userProfile().followSets)
+//    fun followSetNotesFlow() = MutableStateFlow(userProfile().followSets)
 
     fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
 

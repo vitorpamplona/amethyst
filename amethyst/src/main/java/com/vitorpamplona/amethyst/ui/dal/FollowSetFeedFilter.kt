@@ -32,7 +32,8 @@ class FollowSetFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
     override fun feed(): List<FollowSet> {
-        if (account.userProfile().followSets.isEmpty()) {
+        val userFollowSets = account.userProfile().followSets
+        if (userFollowSets.isEmpty()) {
             account.scope.launch {
                 try {
                     account.getFollowSetNotes()
@@ -43,6 +44,6 @@ class FollowSetFeedFilter(
                 }
             }
         }
-        return account.followSetNotesFlow().value.map { account.mapNoteToFollowSet(it) }
+        return userFollowSets.map { account.mapNoteToFollowSet(it) }
     }
 }
