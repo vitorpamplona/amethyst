@@ -50,46 +50,53 @@ open class FollowSetFeedViewModel(
     val feedContent = _feedContent.asStateFlow()
 
     private fun refresh() {
-        viewModelScope.launch { refreshSuspended() }
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshSuspended()
+        }
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
     private fun refreshSuspended() {
         checkNotInMainThread()
-
         try {
             isRefreshing.value = true
+            val oldFeedState = _feedContent.value
 
-            val notes = dataSource.loadTop().toImmutableList()
+            val newSets = dataSource.loadTop().toImmutableList()
 
-            val oldNotesState = _feedContent.value
-            if (oldNotesState is FollowSetState.Loaded) {
+            if (oldFeedState is FollowSetState.Loaded) {
+                val oldFeedList = oldFeedState.feed.toImmutableList()
                 // Using size as a proxy for has changed.
-                if (!equalImmutableLists(notes, oldNotesState.feed.toImmutableList())) {
-                    updateFeed(notes)
+                if (!equalImmutableLists(newSets, oldFeedList)) {
+                    updateFeed(newSets)
                 }
             } else {
-                updateFeed(notes)
+                updateFeed(newSets)
             }
+        } catch (e: Exception) {
+            Log.e(
+                "FollowSetFeedViewModel",
+                "refreshSuspended: Error loading or refreshing feed -> ${e.message}",
+            )
+            _feedContent.update { FollowSetState.FeedError(e.message.toString()) }
         } finally {
             isRefreshing.value = false
         }
     }
 
-    private fun updateFeed(notes: ImmutableList<FollowSet>) {
-        viewModelScope.launch {
-            if (notes.isEmpty()) {
-                _feedContent.update { FollowSetState.Empty }
-            } else {
-                _feedContent.update { FollowSetState.Loaded(notes) }
-            }
+    private fun updateFeed(sets: ImmutableList<FollowSet>) {
+        if (sets.isNotEmpty()) {
+            _feedContent.update { FollowSetState.Loaded(sets) }
+        } else {
+            _feedContent.update { FollowSetState.Empty }
         }
     }
 
-    private val bundler = BundledUpdate(250)
+    private val bundler = BundledUpdate(1000, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
+//        refresh()
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
@@ -101,12 +108,10 @@ open class FollowSetFeedViewModel(
 
     init {
         Log.d("Init", this.javaClass.simpleName)
+        Log.d(this.javaClass.simpleName, " FollowSetState : ${_feedContent.value}")
         collectorJob =
-            viewModelScope.launch(Dispatchers.Default) {
-                checkNotInMainThread()
-
+            viewModelScope.launch(Dispatchers.IO) {
                 LocalCache.live.newEventBundles.collect { newNotes ->
-                    checkNotInMainThread()
 
                     invalidateData()
                 }

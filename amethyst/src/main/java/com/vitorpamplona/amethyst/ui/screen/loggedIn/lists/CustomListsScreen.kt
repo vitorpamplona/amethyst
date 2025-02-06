@@ -32,18 +32,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -64,7 +66,9 @@ import com.vitorpamplona.amethyst.ui.screen.NostrUserFollowSetFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
@@ -79,26 +83,7 @@ fun ListsScreen(
             factory = NostrUserFollowSetFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val followSetsFlow by followSetsViewModel.account.followSetNotesFlow().collectAsState()
-    LaunchedEffect(followSetsFlow) {
-        followSetsViewModel.invalidateData()
-    }
-
-    CustomListsScreen(
-        followSetsViewModel,
-        accountViewModel,
-        nav,
-    )
-}
-
-@Composable
-fun CustomListsScreen(
-    followSetsViewModel: NostrUserFollowSetFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
     val lifeCycleOwner = LocalLifecycleOwner.current
-    val setsState by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
 
     DisposableEffect(lifeCycleOwner) {
         val observer =
@@ -113,6 +98,31 @@ fun CustomListsScreen(
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val followSetsFlow by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
+
+    LaunchedEffect(followSetsFlow) {
+        followSetsViewModel.invalidateData()
+    }
+
+    CustomListsScreen(
+        followSetsFlow,
+        refresh = {
+            followSetsViewModel.invalidateData()
+        },
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun CustomListsScreen(
+    followSetState: FollowSetState,
+    refresh: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+//    val setsState by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
+
     DisappearingScaffold(
         isInvertedLayout = false,
         accountViewModel = accountViewModel,
@@ -121,24 +131,29 @@ fun CustomListsScreen(
         },
     ) {
         Column(Modifier.padding(it).fillMaxHeight()) {
-            when (setsState) {
-                FollowSetState.Empty ->
-                    FeedEmpty {
-                        followSetsViewModel.invalidateData()
-                    }
-                is FollowSetState.FeedError ->
-                    FeedError(
-                        (setsState as FollowSetState.FeedError).errorMessage,
-                    ) {
-                        followSetsViewModel.invalidateData()
-                    }
+            when (followSetState) {
+                FollowSetState.Loading -> LoadingFeed()
+
                 is FollowSetState.Loaded -> {
-                    val followSetFeed = (setsState as FollowSetState.Loaded).feed
+                    val followSetFeed = followSetState.feed
                     FollowListLoaded(
                         loadedFeedState = followSetFeed,
+                        onRefresh = refresh,
                     )
                 }
-                FollowSetState.Loading -> LoadingFeed()
+
+                is FollowSetState.Empty -> {
+                    FeedEmpty {
+                        refresh()
+                    }
+                }
+
+                is FollowSetState.FeedError ->
+                    FeedError(
+                        followSetState.errorMessage,
+                    ) {
+                        refresh()
+                    }
             }
         }
     }
@@ -148,9 +163,11 @@ fun CustomListsScreen(
 fun FollowListLoaded(
     modifier: Modifier = Modifier,
     loadedFeedState: List<FollowSet>,
+    onRefresh: () -> Unit = {},
 ) {
-    val listState = rememberLazyListState()
     Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")
+
+    val listState = rememberLazyListState()
     LazyColumn(
         state = listState,
         contentPadding = FeedPadding,
@@ -173,17 +190,37 @@ fun CustomListItem(
                     width = Dp.Hairline,
                     color = Color.Gray,
                     shape = RoundedCornerShape(percent = 20),
-                ).padding(all = 10.dp),
+                ).padding(all = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
-            Text(followSet.title, fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(followSet.title, fontWeight = FontWeight.Bold)
+                Spacer(modifier = StdHorzSpacer)
+                FilterChip(
+                    selected = true,
+                    onClick = {},
+                    label = {
+                        Text(text = "${followSet.profileList.size}")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.People,
+                            contentDescription = null,
+                        )
+                    },
+                    shape = ButtonBorder,
+                )
+            }
             Spacer(modifier = StdVertSpacer)
             Text(
-                followSet.description ?: "No description for this list.",
+                followSet.description ?: "",
+                fontWeight = FontWeight.Light,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 3,
             )
@@ -203,7 +240,7 @@ fun CustomListItem(
                         ),
                     contentDescription = "Icon for $text List",
                 )
-                Text(text, color = Color.Gray)
+                Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
             }
         }
     }
@@ -214,7 +251,7 @@ fun CustomListItem(
 private fun ListItemPreview() {
     val sampleFollowSet =
         FollowSet(
-            isPrivate = true,
+            isPrivate = false,
             title = "Sample List Title",
             description = "Sample List Description",
             emptySet(),
