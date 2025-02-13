@@ -20,51 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip92IMeta
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.ALT
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.BLUR_HASH
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.DIMENSION
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.FILE_SIZE
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.HASH
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.MAGNET_URI
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.MIME_TYPE
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.ORIGINAL_HASH
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent.Companion.TORRENT_INFOHASH
-
 class IMetaTagBuilder(
     val url: String,
 ) {
-    val properties = mutableMapOf<String, String>()
+    val properties = mutableMapOf<String, MutableList<String>>()
 
     fun add(
         key: String,
         value: String,
     ): IMetaTagBuilder {
-        properties.set(key, value)
+        properties.getOrPut(key) { mutableListOf() }.add(value)
         return this
     }
-
-    fun magnet(uri: String) = add(MAGNET_URI, uri)
-
-    fun mimeType(mime: String) = add(MIME_TYPE, mime)
-
-    fun alt(alt: String) = add(ALT, alt)
-
-    fun hash(hash: HexKey) = add(HASH, hash)
-
-    fun size(size: Int) = add(FILE_SIZE, size.toString())
-
-    fun dims(dims: Dimension) = add(DIMENSION, dims.toString())
-
-    fun blurhash(blurhash: String) = add(BLUR_HASH, blurhash)
-
-    fun originalHash(originalHash: String) = add(ORIGINAL_HASH, originalHash)
-
-    fun torrent(uri: String) = add(TORRENT_INFOHASH, uri)
-
-    fun sensitiveContent(reason: String) = add(CONTENT_WARNING, reason)
 
     fun build() = IMetaTag(url, properties)
 }

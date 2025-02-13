@@ -20,16 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip13Pow
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun TagArrayBuilder.pow(
+fun <T : Event> TagArrayBuilder<T>.pow(
     nonce: String,
     commitment: Int,
-) = add(PoWTag.assemble(nonce, commitment.toString()))
-
-fun TagArrayBuilder.pow(
-    nonce: String,
-    commitment: String,
 ) = add(PoWTag.assemble(nonce, commitment))
 
-fun TagArrayBuilder.pow(tag: PoWTag) = add(tag.toTagArray())
+fun <T : Event> TagArrayBuilder<T>.pow(tag: PoWTag) = add(tag.toTagArray())

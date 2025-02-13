@@ -21,6 +21,5 @@
 package com.vitorpamplona.quartz.nip57Zaps.zapraiser
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
 
-fun Event.zapraiserAmount() = tags.firstTagValueAsLong("zapraiser")
+fun Event.zapraiserAmount() = tags.zapraiserAmount()

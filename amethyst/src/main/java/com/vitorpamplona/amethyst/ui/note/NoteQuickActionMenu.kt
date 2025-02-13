@@ -95,8 +95,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.bounties.getReward
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -124,7 +124,7 @@ val njumpLink = { nip19BechAddress: String ->
 
 val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
-        if (note.event?.getReward() != null) {
+        if (note.event?.bountyBaseReward() != null) {
             "https://nostrbounties.com/b/${note.address().toNAddr()}"
         } else if (note.event is PeopleListEvent) {
             "https://listr.lol/a/${note.address().toNAddr()}"

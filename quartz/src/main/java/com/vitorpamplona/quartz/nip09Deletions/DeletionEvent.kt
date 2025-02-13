@@ -24,11 +24,20 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTagIds
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -46,59 +55,47 @@ class DeletionEvent(
 
     fun deleteAddresses() = taggedAddresses()
 
-    fun deleteAddressTags() = tags.mapNotNull { if (it.size > 1 && it[0] == "a") it[1] else null }
+    fun deleteAddressTags() = tags.mapNotNull(ATag::parseAddress)
 
     companion object {
         const val KIND = 5
         const val ALT = "Deletion event"
 
-        fun create(
+        fun build(
             deleteEvents: List<Event>,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DeletionEvent) -> Unit,
-        ) {
-            val content = ""
-            val tags = mutableListOf<Array<String>>()
+            initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
 
-            val kinds =
-                deleteEvents
-                    .mapTo(HashSet()) {
-                        "${it.kind}"
-                    }.map {
-                        arrayOf("k", it)
-                    }
+            deleteEvents.forEach {
+                eTag(ETag(it.id))
+                if (it is AddressableEvent) {
+                    aTag(it.aTag())
+                }
+            }
 
-            tags.addAll(deleteEvents.map { arrayOf("e", it.id) })
-            tags.addAll(deleteEvents.mapNotNull { if (it is AddressableEvent) arrayOf("a", it.address().toTag()) else null })
-            tags.addAll(kinds)
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            pTagIds(deleteEvents.mapTo(HashSet()) { it.pubKey })
+            kinds(deleteEvents.mapTo(HashSet()) { it.kind })
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            initializer()
         }
 
-        fun createForVersionOnly(
+        fun buildForVersionOnly(
             deleteEvents: List<Event>,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DeletionEvent) -> Unit,
-        ) {
-            val content = ""
-            val tags = mutableListOf<Array<String>>()
+            initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
 
-            val kinds =
-                deleteEvents
-                    .mapTo(HashSet()) {
-                        "${it.kind}"
-                    }.map {
-                        arrayOf("k", it)
-                    }
+            deleteEvents.forEach {
+                pTag(PTag(it.pubKey))
+                eTag(ETag(it.id))
+            }
 
-            tags.addAll(deleteEvents.map { arrayOf("e", it.id) })
-            tags.addAll(kinds)
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            kinds(deleteEvents.mapTo(HashSet()) { it.kind })
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            initializer()
         }
     }
 }

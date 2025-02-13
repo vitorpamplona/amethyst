@@ -37,14 +37,15 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.KeyPair
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip02FollowList.Contact
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip02FollowList.ContactTag
+import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -282,11 +283,11 @@ class AccountStateViewModel : ViewModel() {
                     backupUserMetadata = MetadataEvent.newUser(name, tempSigner),
                     backupContactList =
                         ContactListEvent.createFromScratch(
-                            followUsers = listOf(Contact(keyPair.pubKey.toHexKey(), null)),
+                            followUsers = listOf(ContactTag(keyPair.pubKey.toHexKey(), null, null)),
                             followEvents = DefaultChannels.toList(),
                             relayUse =
                                 Constants.defaultRelays.associate {
-                                    it.url to ContactListEvent.ReadWrite(it.read, it.write)
+                                    it.url to ReadWrite(it.read, it.write)
                                 },
                             signer = tempSigner,
                         ),

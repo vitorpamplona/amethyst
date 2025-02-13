@@ -21,18 +21,17 @@
 package com.vitorpamplona.quartz.nip01Core.tags.people
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.isAnyTagged
-import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
-fun Event.isTaggedUser(idHex: String) = tags.isTagged("p", idHex)
+fun Event.isTaggedUser(idHex: String) = tags.isTaggedUser(idHex)
 
-fun Event.isTaggedUsers(idHexes: Set<String>) = tags.isAnyTagged("p", idHexes)
+fun Event.isTaggedUsers(idHexes: Set<String>) = tags.isTaggedUsers(idHexes)
 
-fun Event.taggedUsers() = tags.mapValues("p")
+fun Event.taggedUsers() = tags.taggedUsers()
 
-fun Event.firstTaggedUser() = tags.firstTagValue("p")
+fun Event.taggedUserIds() = tags.taggedUserIds()
 
-fun Event.hasAnyTaggedUser() = tags.hasTagWithContent("p")
+fun Event.firstTaggedUser() = tags.firstTaggedUser()
+
+fun Event.firstTaggedUserId() = tags.firstTaggedUserId()
+
+fun Event.hasAnyTaggedUser() = tags.hasAnyTaggedUser()

@@ -26,11 +26,11 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.verify
 import junit.framework.TestCase
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.CoroutineScope
@@ -125,7 +125,7 @@ class ThreadAssemblerTest {
 
             var counter = 0
             eventArray.forEach {
-                TestCase.assertTrue("${it.id} failed signature check", it.hasValidSignature())
+                TestCase.assertTrue("${it.id} failed signature check", it.verify())
                 LocalCache.verifyAndConsume(it, null)
                 counter++
             }

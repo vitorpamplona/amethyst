@@ -22,10 +22,15 @@ package com.vitorpamplona.quartz.nip01Core.tags.geohash
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-fun geohashMipMap(geohash: String): TagArray =
-    geohash.indices
-        .asSequence()
-        .map { arrayOf("g", geohash.substring(0, it + 1)) }
-        .toList()
-        .reversed()
-        .toTypedArray()
+class GeoHash {
+    companion object {
+        const val TAG_NAME = "g"
+
+        @JvmStatic
+        fun geoMipMap(geohash: String): List<String> = geohash.indices.map { geohash.substring(0, it + 1) }.reversed()
+
+        fun geohashMipMap(geohash: String): TagArray = geoMipMap(geohash).map { arrayOf(TAG_NAME, it) }.toTypedArray()
+
+        fun assemble(geohash: String) = geohashMipMap(geohash)
+    }
+}

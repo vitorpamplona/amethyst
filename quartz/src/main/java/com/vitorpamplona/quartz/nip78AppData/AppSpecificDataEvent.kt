@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class AppSpecificDataEvent(
@@ -61,7 +61,7 @@ class AppSpecificDataEvent(
 
             val newTags =
                 if (withD.none { it.size > 0 && it[0] == "alt" }) {
-                    withD + AltTagSerializer.toTagArray(ALT)
+                    withD + AltTag.assemble(ALT)
                 } else {
                     withD
                 }

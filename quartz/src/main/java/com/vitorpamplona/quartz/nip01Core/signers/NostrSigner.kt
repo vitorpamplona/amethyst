@@ -24,13 +24,18 @@ import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip04Dm.Nip04
+import com.vitorpamplona.quartz.nip04Dm.Nip04Encryption
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
 abstract class NostrSigner(
     val pubKey: HexKey,
 ) {
+    fun <T : Event> sign(
+        ev: EventTemplate<T>,
+        onReady: (T) -> Unit,
+    ) = sign(ev.createdAt, ev.kind, ev.tags, ev.content, onReady)
+
     abstract fun <T : Event> sign(
         createdAt: Long,
         kind: Int,
@@ -73,12 +78,17 @@ abstract class NostrSigner(
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        if (Nip04.isNIP04(encryptedContent)) {
+        if (Nip04Encryption.isNIP04(encryptedContent)) {
             nip04Decrypt(encryptedContent, fromPublicKey, onReady)
         } else {
             nip44Decrypt(encryptedContent, fromPublicKey, onReady)
         }
     }
+
+    fun <T : Event> assembleRumor(
+        ev: EventTemplate<T>,
+        onReady: (T) -> Unit,
+    ) = assembleRumor(ev.createdAt, ev.kind, ev.tags, ev.content, onReady)
 
     fun <T : Event> assembleRumor(
         createdAt: Long,

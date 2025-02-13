@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent.ReadWrite
+import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import java.util.UUID
 
 class BunkerResponseGetRelays(

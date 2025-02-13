@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip21UriScheme
 
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip19Bech32.toNIP19
 
 fun Event.toNostrUri(): String = "nostr:${toNIP19()}"
+
+fun EventHintBundle<Event>.toNostrUri(): String = "nostr:${toNEvent()}"

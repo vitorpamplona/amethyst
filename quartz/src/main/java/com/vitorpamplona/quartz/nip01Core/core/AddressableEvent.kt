@@ -22,12 +22,15 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
 @Immutable
-interface AddressableEvent {
+interface AddressableEvent : IEvent {
     fun dTag(): String
 
-    fun address(relayHint: String? = null): ATag
+    fun aTag(relayHint: String? = null): ATag
+
+    fun address(): Address
 
     fun addressTag(): String
 }

@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -126,7 +126,7 @@ class NotificationSummaryState(
                             (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id)
                     }
-                } else if (noteEvent is BaseTextNoteEvent) {
+                } else if (noteEvent is BaseThreadedEvent) {
                     if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
                         val isCitation =
                             noteEvent.findCitations().any {
@@ -194,7 +194,7 @@ class NotificationSummaryState(
                             takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }
-                    } else if (noteEvent is BaseTextNoteEvent) {
+                    } else if (noteEvent is BaseThreadedEvent) {
                         if (noteEvent.isTaggedUser(currentUser) && noteEvent.pubKey != currentUser) {
                             val isCitation =
                                 noteEvent.findCitations().any {

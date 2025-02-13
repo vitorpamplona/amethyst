@@ -26,10 +26,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_PLANNED
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 
 open class DiscoverLiveFeedFilter(
     val account: Account,
@@ -93,9 +91,9 @@ open class DiscoverLiveFeedFilter(
 
     fun convertStatusToOrder(status: String?): Int =
         when (status) {
-            STATUS_LIVE -> 2
-            STATUS_PLANNED -> 1
-            STATUS_ENDED -> 0
+            StatusTag.STATUS.LIVE.code -> 2
+            StatusTag.STATUS.PLANNED.code -> 1
+            StatusTag.STATUS.ENDED.code -> 0
             else -> 0
         }
 }

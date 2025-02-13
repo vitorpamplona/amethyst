@@ -24,11 +24,21 @@ import android.net.Uri
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip35Torrents.tags.BtihTag
+import com.vitorpamplona.quartz.nip35Torrents.tags.FileTag
+import com.vitorpamplona.quartz.nip35Torrents.tags.InfoHashTag
+import com.vitorpamplona.quartz.nip35Torrents.tags.TrackerTag
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -40,15 +50,15 @@ class TorrentEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun title() = tags.firstTagValue("title")
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun btih() = tags.firstTagValue("btih")
+    fun btih() = tags.firstNotNullOfOrNull(BtihTag::parse)
 
-    fun x() = tags.firstTagValue("x")
+    fun x() = tags.firstNotNullOfOrNull(InfoHashTag::parse)
 
-    fun trackers() = tags.mapValues("tracker")
+    fun trackers() = tags.mapNotNull(TrackerTag::parse)
 
-    fun files() = tags.filter { it.size > 1 && it[0] == "file" }.map { TorrentFile(it[1], it.getOrNull(2)?.toLongOrNull()) }
+    fun files() = tags.mapNotNull(FileTag::parse)
 
     fun toMagnetLink(): String {
         val builder = Uri.Builder()
@@ -64,64 +74,45 @@ class TorrentEvent(
         return builder.build().toString()
     }
 
-    fun totalSizeBytes(): Long = tags.filter { it.size > 1 && it[0] == "file" }.sumOf { it.getOrNull(2)?.toLongOrNull() ?: 0L }
+    fun totalSizeBytes(): Long = tags.sumOf { FileTag.parseBytes(it) ?: 0L }
 
     companion object {
         const val KIND = 2003
         const val ALT_DESCRIPTION = "A torrent file"
 
-        val DEFAULT_TRACKERS =
-            listOf(
-                "http://tracker.loadpeers.org:8080/xvRKfvAlnfuf5EfxTT5T0KIVPtbqAHnX/announce",
-                "udp://tracker.coppersurfer.tk:6969/announce",
-                "udp://tracker.openbittorrent.com:6969/announce",
-                "udp://open.stealth.si:80/announce",
-                "udp://tracker.torrent.eu.org:451/announce",
-                "udp://tracker.opentrackr.org:1337",
-            )
+        fun build(
+            description: String?,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<TorrentEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description ?: "", createdAt) {
+            alt(ALT_DESCRIPTION)
+            initializer()
+        }
 
-        fun create(
+        fun build(
             title: String,
             btih: String,
-            files: List<TorrentFile>,
+            files: List<FileTag>,
             description: String? = null,
             x: String? = null,
             trackers: List<String>? = null,
             alt: String? = null,
-            sensitiveContent: Boolean? = null,
-            signer: NostrSigner,
+            contentWarningReason: String? = null,
             createdAt: Long = TimeUtils.now(),
-            onReady: (TorrentEvent) -> Unit,
-        ) {
-            val tags =
-                listOfNotNull(
-                    arrayOf("title", title),
-                    arrayOf("btih", btih),
-                    x?.let { arrayOf("x", it) },
-                    alt?.let { arrayOf("alt", it) } ?: AltTagSerializer.toTagArray(ALT_DESCRIPTION),
-                    sensitiveContent?.let {
-                        if (it) {
-                            ContentWarningSerializer.toTagArray()
-                        } else {
-                            null
-                        }
-                    },
-                ) +
-                    files.map {
-                        if (it.bytes != null) {
-                            arrayOf(it.fileName, it.bytes.toString())
-                        } else {
-                            arrayOf(it.fileName)
-                        }
-                    } +
-                    (
-                        trackers?.map {
-                            arrayOf(it)
-                        } ?: emptyList()
-                    )
+        ) = eventTemplate(KIND, description ?: "", createdAt) {
+            alt(alt ?: ALT_DESCRIPTION)
+            title(title)
+            btih(btih)
+            files(files)
+            trackers?.let { trackers(it) }
+            x?.let { infohash(it) }
+            contentWarningReason?.let { contentWarning(it) }
 
-            val content = description ?: ""
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            description?.let {
+                hashtags(findHashtags(it))
+                references(findURLs(it))
+                quotes(findNostrUris(it))
+            }
         }
     }
 }

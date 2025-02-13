@@ -21,9 +21,9 @@
 package com.vitorpamplona.quartz.nip39ExtIdentities
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.mapTagged
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 
 fun MetadataEvent.identityClaims() =
     tags.mapTagged("i") {

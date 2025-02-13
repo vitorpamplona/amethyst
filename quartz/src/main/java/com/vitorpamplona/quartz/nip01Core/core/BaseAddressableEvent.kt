@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.core
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 
 @Immutable
@@ -38,7 +39,9 @@ open class BaseAddressableEvent(
     AddressableEvent {
     override fun dTag() = tags.dTag()
 
-    override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
+    override fun aTag(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
+
+    override fun address() = Address(kind, pubKey, dTag())
 
     /**
      * Creates the tag in a memory efficient way (without creating the ATag class

@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.quartz.nip01Core.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 
 @Preview
 @Composable

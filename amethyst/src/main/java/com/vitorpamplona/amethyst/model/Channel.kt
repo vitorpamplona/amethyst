@@ -28,12 +28,15 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip19Bech32.toNEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.Dispatchers
 
@@ -41,11 +44,23 @@ import kotlinx.coroutines.Dispatchers
 class PublicChatChannel(
     idHex: String,
 ) : Channel(idHex) {
-    var info = ChannelCreateEvent.ChannelData(null, null, null)
+    var event: ChannelCreateEvent? = null
+    var info = ChannelData(null, null, null, null)
+
+    override fun relays() = info.relays ?: super.relays()
 
     fun updateChannelInfo(
         creator: User,
-        channelInfo: ChannelCreateEvent.ChannelData,
+        channelInfo: ChannelCreateEvent,
+        updatedAt: Long,
+    ) {
+        this.event = channelInfo
+        updateChannelInfo(creator, channelInfo.channelInfo(), updatedAt)
+    }
+
+    fun updateChannelInfo(
+        creator: User,
+        channelInfo: ChannelData,
         updatedAt: Long,
     ) {
         this.info = channelInfo
@@ -76,6 +91,8 @@ class LiveActivitiesChannel(
 
     fun address() = address
 
+    override fun relays() = info?.allRelayUrls() ?: super.relays()
+
     fun updateChannelInfo(
         creator: User,
         channelInfo: LiveActivitiesEvent,
@@ -97,6 +114,10 @@ class LiveActivitiesChannel(
             .isNotEmpty()
 }
 
+data class Counter(
+    var number: Int = 0,
+)
+
 @Stable
 abstract class Channel(
     val idHex: String,
@@ -105,6 +126,7 @@ abstract class Channel(
     var updatedMetadataAt: Long = 0
     val notes = LargeCache<HexKey, Note>()
     var lastNoteCreatedAt: Long = 0
+    private var relays = mapOf<RelayBriefInfoCache.RelayBriefInfo, Counter>()
 
     open fun id() = Hex.decode(idHex)
 
@@ -120,6 +142,14 @@ abstract class Channel(
 
     open fun profilePicture(): String? = creator?.info?.banner
 
+    open fun relays() =
+        relays.keys
+            .toSortedSet { o1, o2 ->
+                val o1Count = relays[o1]?.number ?: 0
+                val o2Count = relays[o2]?.number ?: 0
+                o2Count.compareTo(o1Count) // descending
+            }.map { it.url }
+
     open fun updateChannelInfo(
         creator: User,
         updatedAt: Long,
@@ -130,11 +160,30 @@ abstract class Channel(
         live.invalidateData()
     }
 
-    fun addNote(note: Note) {
+    @Synchronized
+    fun addRelaySync(briefInfo: RelayBriefInfoCache.RelayBriefInfo) {
+        if (briefInfo !in relays) {
+            relays = relays + Pair(briefInfo, Counter(1))
+        }
+    }
+
+    fun addNote(
+        note: Note,
+        relay: Relay? = null,
+    ) {
         notes.put(note.idHex, note)
 
         if ((note.createdAt() ?: 0) > lastNoteCreatedAt) {
             lastNoteCreatedAt = note.createdAt() ?: 0
+        }
+
+        if (relay != null) {
+            val counter = relays[relay.brief]
+            if (counter != null) {
+                counter.number++
+            } else {
+                addRelaySync(relay.brief)
+            }
         }
     }
 

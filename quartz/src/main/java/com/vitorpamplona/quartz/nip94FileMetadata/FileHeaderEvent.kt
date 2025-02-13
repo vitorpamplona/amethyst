@@ -23,9 +23,23 @@ package com.vitorpamplona.quartz.nip94FileMetadata
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,102 +51,80 @@ class FileHeaderEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
+    fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 
-    fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }
+    fun urls() = tags.mapNotNull(UrlTag::parse)
 
-    fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
+    fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
 
-    fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
+    fun hash() = tags.firstNotNullOfOrNull(HashTag::parse)
 
-    fun size() = tags.firstOrNull { it.size > 1 && it[0] == FILE_SIZE }?.get(1)
+    fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
 
-    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
+    fun dimensions() = tags.firstNotNullOfOrNull(DimensionTag::parse)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
+    fun magnetURI() = tags.firstNotNullOfOrNull(MagnetTag::parse)
 
-    fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
+    fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
 
-    fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
+    fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
 
-    fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
+    fun thumb() = tags.firstNotNullOfOrNull(ThumbTag::parse)
 
-    fun isOneOf(mimeTypes: Set<String>) = tags.any { it.size > 1 && it[0] == MIME_TYPE && mimeTypes.contains(it[1]) }
+    fun service() = tags.firstNotNullOfOrNull(ServiceTag::parse)
+
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
+    fun fallback() = tags.firstNotNullOfOrNull(FallbackTag::parse)
+
+    fun hasUrl() = tags.any(UrlTag::isTag)
+
+    fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
 
     companion object {
         const val KIND = 1063
         const val ALT_DESCRIPTION = "Verifiable file url"
 
-        const val URL = "url"
-        const val ENCRYPTION_KEY = "aes-256-gcm"
-        const val MIME_TYPE = "m"
-        const val FILE_SIZE = "size"
-        const val DIMENSION = "dim"
-        const val HASH = "x"
-        const val MAGNET_URI = "magnet"
-        const val TORRENT_INFOHASH = "i"
-        const val BLUR_HASH = "blurhash"
-        const val ORIGINAL_HASH = "ox"
-        const val ALT = "alt"
-
-        fun buildTags(
+        fun build(
             url: String,
-            magnetUri: String? = null,
-            mimeType: String? = null,
-            alt: String? = null,
-            hash: String? = null,
-            size: String? = null,
-            dimensions: Dimension? = null,
-            blurhash: String? = null,
-            originalHash: String? = null,
-            magnetURI: String? = null,
-            torrentInfoHash: String? = null,
-            sensitiveContent: Boolean? = null,
-        ): Array<Array<String>> =
-            listOfNotNull(
-                arrayOf(URL, url),
-                magnetUri?.let { arrayOf(MAGNET_URI, it) },
-                mimeType?.let { arrayOf(MIME_TYPE, it) },
-                alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: AltTagSerializer.toTagArray(ALT_DESCRIPTION),
-                hash?.let { arrayOf(HASH, it) },
-                size?.let { arrayOf(FILE_SIZE, it) },
-                dimensions?.let { arrayOf(DIMENSION, it.toString()) },
-                blurhash?.let { arrayOf(BLUR_HASH, it) },
-                originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
-                magnetURI?.let { arrayOf(MAGNET_URI, it) },
-                torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
-                sensitiveContent?.let {
-                    if (it) {
-                        ContentWarningSerializer.toTagArray()
-                    } else {
-                        null
-                    }
-                },
-            ).toTypedArray()
-
-        fun create(
-            url: String,
-            magnetUri: String? = null,
-            mimeType: String? = null,
-            alt: String? = null,
-            hash: String? = null,
-            size: String? = null,
-            dimensions: Dimension? = null,
-            blurhash: String? = null,
-            originalHash: String? = null,
-            magnetURI: String? = null,
-            torrentInfoHash: String? = null,
-            sensitiveContent: Boolean? = null,
-            signer: NostrSigner,
+            caption: String?,
             createdAt: Long = TimeUtils.now(),
-            onReady: (FileHeaderEvent) -> Unit,
-        ) {
-            val tags = buildTags(url, magnetUri, mimeType, alt, hash, size, dimensions, blurhash, originalHash, magnetURI, torrentInfoHash, sensitiveContent)
+            initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, caption ?: "", createdAt) {
+            url(url)
+            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
+            initializer()
+        }
 
-            val content = alt ?: ""
-            signer.sign(createdAt, KIND, tags, content, onReady)
+        fun build(
+            url: String,
+            caption: String?,
+            mimeType: String? = null,
+            hash: String? = null,
+            size: Int? = null,
+            dimension: DimensionTag? = null,
+            blurhash: String? = null,
+            originalHash: String? = null,
+            magnetUri: String? = null,
+            torrentInfoHash: String? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<FileHeaderEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, caption ?: "", createdAt) {
+            url(url)
+            caption?.ifBlank { null }?.let { alt(caption) } ?: alt(ALT_DESCRIPTION)
+
+            hash?.let { hash(it) }
+            size?.let { fileSize(it) }
+            mimeType?.let { mimeType(it) }
+            dimension?.let { dimension(it) }
+            blurhash?.let { blurhash(it) }
+            originalHash?.let { originalHash(it) }
+            magnetUri?.let { magnet(it) }
+            torrentInfoHash?.let { torrentInfohash(it) }
+
+            initializer()
         }
     }
 }

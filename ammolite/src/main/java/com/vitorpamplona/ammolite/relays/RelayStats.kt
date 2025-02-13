@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import com.vitorpamplona.quartz.nip01Core.relays.RelayStat
+import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
 
 object RelayStats {
     private val innerCache = mutableMapOf<String, RelayStat>()

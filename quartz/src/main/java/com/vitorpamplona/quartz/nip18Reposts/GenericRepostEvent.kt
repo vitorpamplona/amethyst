@@ -24,8 +24,17 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.aTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -52,6 +61,25 @@ class GenericRepostEvent(
         const val KIND = 16
         const val ALT = "Generic repost"
 
+        fun build(
+            boostedPost: Event,
+            eventSourceRelay: String?,
+            authorHomeRelay: String?,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<GenericRepostEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, boostedPost.toJson(), createdAt) {
+            alt(ALT)
+
+            kind(boostedPost.kind)
+            pTag(PTag(boostedPost.pubKey, authorHomeRelay))
+            eTag(ETag(boostedPost.id, eventSourceRelay, boostedPost.pubKey))
+            if (boostedPost is AddressableEvent) {
+                aTag(boostedPost.aTag(eventSourceRelay))
+            }
+
+            initializer()
+        }
+
         fun create(
             boostedPost: Event,
             signer: NostrSigner,
@@ -67,11 +95,11 @@ class GenericRepostEvent(
                 )
 
             if (boostedPost is AddressableEvent) {
-                tags.add(arrayOf("a", boostedPost.address().toTag()))
+                tags.add(arrayOf("a", boostedPost.aTag().toTag()))
             }
 
             tags.add(arrayOf("k", "${boostedPost.kind}"))
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            tags.add(AltTag.assemble(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }

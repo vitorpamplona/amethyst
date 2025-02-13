@@ -142,7 +142,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         return if (element is AddressableNote && loadedCreatedAt != null) {
             innerAdd(element.address, element, loadedCreatedAt)
         } else if (noteEvent is AddressableEvent && loadedCreatedAt != null) {
-            innerAdd(noteEvent.address(), element, loadedCreatedAt)
+            innerAdd(noteEvent.aTag(), element, loadedCreatedAt)
         } else {
             set.add(element)
         }
@@ -193,7 +193,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         element.address()?.let {
             map.remove(it)
         }
-        (element.event as? AddressableEvent)?.address()?.let {
+        (element.event as? AddressableEvent)?.aTag()?.let {
             map.remove(it)
         }
 

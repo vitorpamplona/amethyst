@@ -182,7 +182,7 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -521,7 +521,7 @@ fun NewPostScreen(
                                     it,
                                     accountViewModel.account.settings.defaultFileServer,
                                     onAdd = { alt, server, sensitiveContent, mediaQuality ->
-                                        postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
+                                        postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, false, server, accountViewModel::toast, context)
                                         if (server.type != ServerType.NIP95) {
                                             accountViewModel.account.settings.changeDefaultFileServer(server)
                                         }
@@ -977,22 +977,22 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             val conditionTypes =
                 listOf(
                     Triple(
-                        ClassifiedsEvent.CONDITION.NEW,
+                        ConditionTag.CONDITION.NEW,
                         stringRes(id = R.string.classifieds_condition_new),
                         stringRes(id = R.string.classifieds_condition_new_explainer),
                     ),
                     Triple(
-                        ClassifiedsEvent.CONDITION.USED_LIKE_NEW,
+                        ConditionTag.CONDITION.USED_LIKE_NEW,
                         stringRes(id = R.string.classifieds_condition_like_new),
                         stringRes(id = R.string.classifieds_condition_like_new_explainer),
                     ),
                     Triple(
-                        ClassifiedsEvent.CONDITION.USED_GOOD,
+                        ConditionTag.CONDITION.USED_GOOD,
                         stringRes(id = R.string.classifieds_condition_good),
                         stringRes(id = R.string.classifieds_condition_good_explainer),
                     ),
                     Triple(
-                        ClassifiedsEvent.CONDITION.USED_FAIR,
+                        ConditionTag.CONDITION.USED_FAIR,
                         stringRes(id = R.string.classifieds_condition_fair),
                         stringRes(id = R.string.classifieds_condition_fair_explainer),
                     ),

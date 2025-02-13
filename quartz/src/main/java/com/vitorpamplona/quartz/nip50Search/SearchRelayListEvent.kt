@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -58,7 +58,7 @@ class SearchRelayListEvent(
             relays
                 .map {
                     arrayOf("relay", it)
-                }.plusElement(AltTagSerializer.toTagArray("Relay list to use for Search"))
+                }.plusElement(AltTag.assemble("Relay list to use for Search"))
                 .toTypedArray()
 
         fun updateRelayList(

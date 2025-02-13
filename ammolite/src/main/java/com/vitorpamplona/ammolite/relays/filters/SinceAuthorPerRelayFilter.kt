@@ -24,9 +24,9 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relays.filters.FilterMatcher
-import com.vitorpamplona.quartz.nip01Core.relays.filters.FilterSerializer
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterMatcher
+import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterSerializer
 
 /**
  * This is a nostr filter with per-relay authors list and since parameters

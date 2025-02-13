@@ -33,14 +33,15 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
@@ -86,14 +87,15 @@ class User(
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
-    fun toNProfile(): String {
-        val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)?.writeRelays()
+    fun authorRelayList() = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)
 
-        return NProfile.create(
-            pubkeyHex,
-            relayList?.take(3) ?: listOfNotNull(latestMetadataRelay),
-        )
-    }
+    fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
+
+    fun relayHints() = authorRelayList()?.writeRelays()?.take(3) ?: listOfNotNull(latestMetadataRelay)
+
+    fun bestRelayHint() = authorRelayList()?.writeRelays()?.firstOrNull() ?: latestMetadataRelay
+
+    fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
     fun toNostrUri() = "nostr:${toNProfile()}"
 

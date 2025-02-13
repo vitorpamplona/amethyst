@@ -24,8 +24,8 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 object NostrCommunityDataSource : AmethystNostrDataSource("SingleCommunityFeed") {
     private var communityToWatch: AddressableNote? = null
@@ -38,7 +38,7 @@ object NostrCommunityDataSource : AmethystNostrDataSource("SingleCommunityFeed")
         val authors =
             community
                 .moderators()
-                .map { it.key }
+                .map { it.pubKey }
                 .plus(listOfNotNull(myCommunityToWatch.author?.pubkeyHex))
 
         if (authors.isEmpty()) return null

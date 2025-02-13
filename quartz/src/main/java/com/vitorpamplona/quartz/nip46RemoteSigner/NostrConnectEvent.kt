@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -94,7 +94,7 @@ class NostrConnectEvent(
         ) {
             val tags =
                 arrayOf(
-                    AltTagSerializer.toTagArray(ALT),
+                    AltTag.assemble(ALT),
                     arrayOf("p", remoteKey),
                 )
 

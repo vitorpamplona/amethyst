@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.Blurhash
 import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 
@@ -40,7 +40,7 @@ class FileHeader(
     val mimeType: String?,
     val hash: String,
     val size: Int,
-    val dim: Dimension?,
+    val dim: DimensionTag?,
     val blurHash: Blurhash?,
 ) {
     class UnableToDownload(
@@ -51,7 +51,7 @@ class FileHeader(
         suspend fun prepare(
             fileUrl: String,
             mimeType: String?,
-            dimPrecomputed: Dimension?,
+            dimPrecomputed: DimensionTag?,
             forceProxy: Boolean,
         ): Result<FileHeader> =
             try {
@@ -71,7 +71,7 @@ class FileHeader(
         fun prepare(
             data: ByteArray,
             mimeType: String?,
-            dimPrecomputed: Dimension?,
+            dimPrecomputed: DimensionTag?,
         ): Result<FileHeader> =
             try {
                 val hash = CryptoUtils.sha256(data).toHexKey()
@@ -82,7 +82,7 @@ class FileHeader(
                         val opt = BitmapFactory.Options()
                         opt.inPreferredConfig = Bitmap.Config.ARGB_8888
                         val mBitmap = BitmapFactory.decodeByteArray(data, 0, data.size, opt)
-                        Pair(Blurhash(mBitmap.toBlurhash()), Dimension(mBitmap.width, mBitmap.height))
+                        Pair(Blurhash(mBitmap.toBlurhash()), DimensionTag(mBitmap.width, mBitmap.height))
                     } else if (mimeType?.startsWith("video/") == true) {
                         val mediaMetadataRetriever = MediaMetadataRetriever()
                         mediaMetadataRetriever.setDataSource(ByteArrayMediaDataSource(data))
@@ -135,12 +135,12 @@ fun MediaMetadataRetriever.getThumbnail(): Bitmap? {
     }
 }
 
-fun MediaMetadataRetriever.prepareDimFromVideo(): Dimension? {
+fun MediaMetadataRetriever.prepareDimFromVideo(): DimensionTag? {
     val width = prepareVideoWidth() ?: return null
     val height = prepareVideoHeight() ?: return null
 
     return if (width > 0 && height > 0) {
-        Dimension(width, height)
+        DimensionTag(width, height)
     } else {
         null
     }

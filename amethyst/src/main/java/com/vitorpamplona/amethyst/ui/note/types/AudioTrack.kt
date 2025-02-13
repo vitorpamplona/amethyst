@@ -51,15 +51,12 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.audio.track.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip14Subject.subject
-import kotlinx.collections.immutable.toImmutableList
-import java.util.Locale
 
 @Composable
 fun RenderAudioTrack(
@@ -84,10 +81,9 @@ fun AudioTrackHeader(
     val media = remember { noteEvent.media() }
     val cover = remember { noteEvent.cover() }
     val subject = remember { noteEvent.subject() }
-    val content = remember { noteEvent.content }
     val participants = remember { noteEvent.participants() }
 
-    var participantUsers by remember { mutableStateOf<List<Pair<Participant, User>>>(emptyList()) }
+    var participantUsers by remember { mutableStateOf<List<Pair<ParticipantTag, User>>>(emptyList()) }
 
     LaunchedEffect(key1 = participants) {
         accountViewModel.loadParticipants(participants) { participantUsers = it }
@@ -129,13 +125,6 @@ fun AudioTrackHeader(
                     Spacer(Modifier.width(5.dp))
                     UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
                     Spacer(Modifier.width(5.dp))
-                    it.first.role?.let {
-                        Text(
-                            text = it.capitalize(Locale.ROOT),
-                            color = MaterialTheme.colorScheme.placeholderText,
-                            maxLines = 1,
-                        )
-                    }
                 }
             }
 
@@ -193,7 +182,7 @@ fun AudioHeader(
     nav: INav,
 ) {
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
-    val waveform = remember { noteEvent.wavefrom()?.toImmutableList()?.ifEmpty { null } }
+    val waveform = remember { noteEvent.wavefrom() }
     val content = remember { noteEvent.content.ifBlank { null } }
 
     val defaultBackground = MaterialTheme.colorScheme.background

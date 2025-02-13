@@ -27,15 +27,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.IsInPublicChatChannel
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.collections.immutable.persistentSetOf
 import java.net.URLEncoder
 
@@ -56,11 +56,11 @@ fun routeFor(
         val innerEvent = noteEvent.preCachedDraft(loggedIn.pubkeyHex)
 
         if (innerEvent is IsInPublicChatChannel) {
-            innerEvent.channel()?.let {
+            innerEvent.channelId()?.let {
                 return "Channel/$it"
             }
         } else if (innerEvent is LiveActivitiesEvent) {
-            innerEvent.address().toTag().let {
+            innerEvent.aTag().toTag().let {
                 return "Channel/${URLEncoder.encode(it, "utf-8")}"
             }
         } else if (innerEvent is LiveActivitiesChatMessageEvent) {
@@ -72,20 +72,20 @@ fun routeFor(
             loggedIn.createChatroom(room)
             return "Room/${room.hashCode()}"
         } else if (innerEvent is AddressableEvent) {
-            return "Note/${URLEncoder.encode(noteEvent.address().toTag(), "utf-8")}"
+            return "Note/${URLEncoder.encode(noteEvent.aTag().toTag(), "utf-8")}"
         } else {
             return "Note/${URLEncoder.encode(noteEvent.id, "utf-8")}"
         }
     } else if (noteEvent is AppDefinitionEvent) {
         return "ContentDiscovery/${noteEvent.id}"
     } else if (noteEvent is IsInPublicChatChannel) {
-        noteEvent.channel()?.let {
+        noteEvent.channelId()?.let {
             return "Channel/$it"
         }
     } else if (noteEvent is ChannelCreateEvent) {
         return "Channel/${noteEvent.id}"
     } else if (noteEvent is LiveActivitiesEvent) {
-        noteEvent.address().toTag().let {
+        noteEvent.aTag().toTag().let {
             return "Channel/${URLEncoder.encode(it, "utf-8")}"
         }
     } else if (noteEvent is LiveActivitiesChatMessageEvent) {
@@ -97,9 +97,9 @@ fun routeFor(
         loggedIn.createChatroom(room)
         return "Room/${room.hashCode()}"
     } else if (noteEvent is CommunityDefinitionEvent) {
-        return "Community/${URLEncoder.encode(noteEvent.address().toTag(), "utf-8")}"
+        return "Community/${URLEncoder.encode(noteEvent.aTag().toTag(), "utf-8")}"
     } else if (noteEvent is AddressableEvent) {
-        return "Note/${URLEncoder.encode(noteEvent.address().toTag(), "utf-8")}"
+        return "Note/${URLEncoder.encode(noteEvent.aTag().toTag(), "utf-8")}"
     } else {
         return "Note/${URLEncoder.encode(noteEvent.id, "utf-8")}"
     }

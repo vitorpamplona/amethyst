@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relays.RelayStat
+import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
 
 @Immutable
 data class BasicRelaySetupInfo(

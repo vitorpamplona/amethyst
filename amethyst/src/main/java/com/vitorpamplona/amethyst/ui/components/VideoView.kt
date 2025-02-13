@@ -119,8 +119,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
-import kotlinx.collections.immutable.ImmutableList
+import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -208,10 +208,10 @@ fun VideoView(
     roundedCorner: Boolean,
     gallery: Boolean = false,
     contentScale: ContentScale,
-    waveform: ImmutableList<Int>? = null,
+    waveform: WaveformTag? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: Dimension? = null,
+    dimensions: DimensionTag? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -239,10 +239,10 @@ fun VideoView(
     thumb: VideoThumb? = null,
     borderModifier: Modifier,
     contentScale: ContentScale,
-    waveform: ImmutableList<Int>? = null,
+    waveform: WaveformTag? = null,
     artworkUri: String? = null,
     authorName: String? = null,
-    dimensions: Dimension? = null,
+    dimensions: DimensionTag? = null,
     blurhash: String? = null,
     nostrUriCallback: String? = null,
     onDialog: ((Boolean) -> Unit)? = null,
@@ -355,7 +355,7 @@ fun VideoViewInner(
     showControls: Boolean = true,
     contentScale: ContentScale,
     borderModifier: Modifier,
-    waveform: ImmutableList<Int>? = null,
+    waveform: WaveformTag? = null,
     artworkUri: String? = null,
     authorName: String? = null,
     nostrUriCallback: String? = null,
@@ -732,7 +732,7 @@ private fun RenderVideoPlayer(
     showControls: Boolean = true,
     contentScale: ContentScale,
     nostrUriCallback: String?,
-    waveform: ImmutableList<Int>? = null,
+    waveform: WaveformTag? = null,
     keepPlaying: MutableState<Boolean>,
     automaticallyStartPlayback: State<Boolean>,
     activeOnScreen: MutableState<Boolean>,
@@ -863,7 +863,7 @@ private fun pollCurrentDuration(controller: MediaController) =
 
 @Composable
 fun Waveform(
-    waveform: ImmutableList<Int>,
+    waveform: WaveformTag,
     controller: MediaController,
     modifier: Modifier,
 ) {
@@ -897,13 +897,13 @@ fun Waveform(
 
 @Composable
 fun DrawWaveform(
-    waveform: ImmutableList<Int>,
+    waveform: WaveformTag,
     waveformProgress: MutableFloatState,
     modifier: Modifier,
 ) {
     AudioWaveformReadOnly(
         modifier = modifier.padding(start = 10.dp, end = 10.dp),
-        amplitudes = waveform,
+        amplitudes = waveform.wave,
         progress = waveformProgress.floatValue,
         progressBrush =
             Brush.infiniteLinearGradient(

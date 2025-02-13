@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -62,7 +62,7 @@ class CalendarTimeSlotEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (CalendarTimeSlotEvent) -> Unit,
         ) {
-            val tags = arrayOf(AltTagSerializer.toTagArray(ALT))
+            val tags = arrayOf(AltTag.assemble(ALT))
             signer.sign(createdAt, KIND, tags, "", onReady)
         }
     }

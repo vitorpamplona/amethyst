@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 open class DiscoverNIP89FeedFilter(
@@ -76,7 +76,7 @@ open class DiscoverNIP89FeedFilter(
         val filterParams = buildFilterParams(account)
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent) &&
-            noteEvent.includeKind("5300") &&
+            noteEvent.includeKind(5300) &&
             noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
     }
 

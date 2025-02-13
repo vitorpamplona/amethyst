@@ -155,7 +155,7 @@ fun RenderBadgeAward(
 
     Text(text = stringRes(R.string.award_granted_to))
 
-    LaunchedEffect(key1 = note) { accountViewModel.loadUsers(noteEvent.awardees()) { awardees = it } }
+    LaunchedEffect(key1 = note) { accountViewModel.loadUsers(noteEvent.awardeeIds()) { awardees = it } }
 
     FlowRow(modifier = Modifier.padding(top = 5.dp)) {
         awardees.take(100).forEach { user ->

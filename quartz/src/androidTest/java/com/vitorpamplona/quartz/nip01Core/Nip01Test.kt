@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.sha256Hash
 import fr.acinq.secp256k1.Secp256k1
 import org.junit.Assert.assertEquals

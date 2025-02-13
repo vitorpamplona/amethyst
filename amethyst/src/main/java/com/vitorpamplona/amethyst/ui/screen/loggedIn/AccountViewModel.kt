@@ -72,21 +72,21 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxi
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.KeyPair
-import com.vitorpamplona.quartz.nip01Core.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -105,12 +105,12 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import fr.acinq.secp256k1.Hex
 import kotlinx.collections.immutable.ImmutableList
@@ -769,9 +769,9 @@ class AccountViewModel(
 
     fun addEmojiPack(
         usersEmojiList: Note,
-        emojiList: Note,
+        emojiPack: Note,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiList) }
+        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiPack) }
     }
 
     fun addMediaToGallery(
@@ -779,7 +779,7 @@ class AccountViewModel(
         url: String,
         relay: String?,
         blurhash: String?,
-        dim: Dimension?,
+        dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
     ) {
@@ -1179,15 +1179,15 @@ class AccountViewModel(
 
     fun getChannelIfExists(hex: HexKey): Channel? = LocalCache.getChannelIfExists(hex)
 
-    fun loadParticipants(
-        participants: List<Participant>,
-        onReady: (ImmutableList<Pair<Participant, User>>) -> Unit,
+    fun <T : PubKeyReferenceTag> loadParticipants(
+        participants: List<T>,
+        onReady: (ImmutableList<Pair<T, User>>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val participantUsers =
                 participants
                     .mapNotNull { part ->
-                        checkGetOrCreateUser(part.key)?.let {
+                        checkGetOrCreateUser(part.pubKey)?.let {
                             Pair(
                                 part,
                                 it,
@@ -1221,7 +1221,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.Default) {
             account.decryptPeopleList(event) { privateTagList ->
                 onReady(
-                    (event.taggedUsers() + event.filterUsers(privateTagList))
+                    (event.taggedUserIds() + event.filterUsers(privateTagList))
                         .toSet()
                         .mapNotNull { hex -> checkGetOrCreateUser(hex) }
                         .sortedBy { account.isFollowing(it) }
@@ -1539,7 +1539,7 @@ class AccountViewModel(
     ): Note {
         val note =
             if (innerEvent is AddressableEvent) {
-                AddressableNote(innerEvent.address())
+                AddressableNote(innerEvent.aTag())
             } else {
                 Note(innerEvent.id)
             }
@@ -1605,7 +1605,7 @@ class AccountViewModel(
         readingScene: InteractiveStoryBaseEvent,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
+            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.aTag()).relayHintUrl()
 
             val readingState = getInteractiveStoryReadingState(root.addressTag())
             val readingStateEvent = readingState.event as? InteractiveStoryReadingStateEvent
@@ -1613,7 +1613,7 @@ class AccountViewModel(
             if (readingStateEvent != null) {
                 account.updateInteractiveStoryReadingState(readingStateEvent, readingScene, sceneNoteRelayHint)
             } else {
-                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.address()).relayHintUrl()
+                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.aTag()).relayHintUrl()
 
                 account.createInteractiveStoryReadingState(root, rootNoteRelayHint, readingScene, sceneNoteRelayHint)
             }

@@ -57,7 +57,7 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNIP19
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +79,7 @@ fun RenderHighlight(
     DisplayHighlight(
         highlight = noteEvent.quote(),
         context = noteEvent.context(),
-        authorHex = noteEvent.author(),
+        authorHex = noteEvent.pubKey,
         url = noteEvent.inUrl(),
         postAddress = noteEvent.inPost(),
         postVersion = noteEvent.inPostVersion(),
@@ -247,7 +247,7 @@ fun DisplayEntryForNote(
         RenderUserAsClickableText(author, null, nav)
     }
 
-    val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return
+    val noteEvent = noteState?.note?.event as? BaseThreadedEvent ?: return
 
     val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
 

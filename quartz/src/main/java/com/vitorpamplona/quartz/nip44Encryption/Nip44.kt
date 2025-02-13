@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
+import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip04Dm.Nip04
+import com.vitorpamplona.quartz.nip04Dm.Nip04Encoder
+import com.vitorpamplona.quartz.nip04Dm.Nip04Encryption
 import fr.acinq.secp256k1.Secp256k1
 import java.security.SecureRandom
 import java.util.Base64
@@ -29,7 +31,7 @@ import java.util.Base64
 class Nip44(
     secp256k1: Secp256k1,
     random: SecureRandom,
-    val nip04: Nip04,
+    val nip04: Nip04Encryption,
 ) {
     public val v1 = Nip44v1(secp256k1, random)
     public val v2 = Nip44v2(secp256k1, random)
@@ -85,12 +87,19 @@ class Nip44(
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): String? {
-        val info = EventMapper.mapper.readValue(json, EncryptedInfoString::class.java)
+        // Ignores if it is not a valid json
+        val info =
+            try {
+                EventMapper.mapper.readValue(json, EncryptedInfoString::class.java)
+            } catch (e: Exception) {
+                Log.e("NIP44", "Unable to parse json $json")
+                return null
+            }
 
         return when (info.v) {
-            Nip04.EncryptedInfo.V -> {
+            Nip04Encoder.V -> {
                 val encryptedInfo =
-                    Nip04.EncryptedInfo(
+                    Nip04Encoder(
                         ciphertext = Base64.getDecoder().decode(info.ciphertext),
                         nonce = Base64.getDecoder().decode(info.nonce),
                     )
@@ -127,10 +136,17 @@ class Nip44(
     ): String? {
         if (payload.isEmpty()) return null
 
-        val byteArray = Base64.getDecoder().decode(payload)
+        // Ignores if it is not base64
+        val byteArray =
+            try {
+                Base64.getDecoder().decode(payload)
+            } catch (e: Exception) {
+                Log.e("NIP44", "Unable to parse base64 $payload")
+                return null
+            }
 
         return when (byteArray[0].toInt()) {
-            Nip04.EncryptedInfo.V -> nip04.decrypt(payload, privateKey, pubKey)
+            Nip04Encoder.V -> nip04.decrypt(payload, privateKey, pubKey)
             Nip44v1.EncryptedInfo.V -> v1.decrypt(payload, privateKey, pubKey)
             Nip44v2.EncryptedInfo.V -> v2.decrypt(payload, privateKey, pubKey)
             else -> null

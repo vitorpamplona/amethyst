@@ -24,15 +24,16 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -63,7 +64,7 @@ class PrivateDmEvent(
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used for
      * initial messages.
      */
-    private fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    private fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this) }?.getOrNull()
 
@@ -86,9 +87,9 @@ class PrivateDmEvent(
      * Nip-18 messages should refer to other events by inline references in the content like
      * `[](e/c06f795e1234a9a1aecc731d768d4f3ca73e80031734767067c82d67ce82e506).
      */
-    fun replyTo() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun replyTo() = tags.firstNotNullOfOrNull(MarkedETag::parseId)
 
-    fun with(pubkeyHex: String): Boolean = pubkeyHex == pubKey || tags.any { it.size > 1 && it[0] == "p" && it[1] == pubkeyHex }
+    fun with(pubkeyHex: HexKey): Boolean = pubkeyHex == pubKey || tags.any(PTag::isTagged, pubkeyHex)
 
     fun cachedContentFor(signer: NostrSigner): String? = decryptedContent[signer.pubKey]
 
@@ -120,62 +121,33 @@ class PrivateDmEvent(
         const val ALT = "Private Message"
         const val NIP_18_ADVERTISEMENT = "[//]: # (nip18)\n"
 
-        fun create(
-            recipientPubKey: HexKey,
+        fun prepareMessageToEncrypt(
             msg: String,
-            replyTos: List<String>? = null,
-            mentions: List<String>? = null,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            publishedRecipientPubKey: HexKey? = null,
-            advertiseNip18: Boolean = true,
-            markAsSensitive: Boolean,
-            zapRaiserAmount: Long?,
-            geohash: String? = null,
             imetas: List<IMetaTag>? = null,
-            isDraft: Boolean,
-            onReady: (PrivateDmEvent) -> Unit,
-        ) {
+            advertiseNip18: Boolean = true,
+        ): String {
             var message = msg
             imetas?.forEach {
                 message = message.replace(it.url, Nip54InlineMetadata().createUrl(it.url, it.properties))
             }
 
-            message =
-                if (advertiseNip18) {
-                    NIP_18_ADVERTISEMENT + message
-                } else {
-                    message
-                }
-
-            val tags = mutableListOf<Array<String>>()
-            publishedRecipientPubKey?.let { tags.add(arrayOf("p", publishedRecipientPubKey)) }
-            replyTos?.forEach { tags.add(arrayOf("e", it, "", "reply")) }
-            mentions?.forEach { tags.add(arrayOf("p", it)) }
-            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
-            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
-
-            if (markAsSensitive) {
-                tags.add(ContentWarningSerializer.toTagArray())
+            return if (advertiseNip18) {
+                NIP_18_ADVERTISEMENT + message
+            } else {
+                message
             }
+        }
 
-            geohash?.let { tags.addAll(geohashMipMap(it)) }
-            /* Privacy issue: DO NOT ADD THESE TO THE TAGS.
-            imetas?.forEach {
-                tags.add(Nip92MediaAttachments.createTag(it))
-            }
-             */
+        fun build(
+            to: PTag,
+            encryptedMessage: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<PrivateDmEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, encryptedMessage, createdAt) {
+            alt(ALT)
+            pTag(to)
 
-            tags.add(AltTagSerializer.toTagArray(ALT))
-
-            signer.nip04Encrypt(message, recipientPubKey) { content ->
-                if (isDraft) {
-                    signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), content, onReady)
-                } else {
-                    signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
-                }
-            }
+            initializer()
         }
     }
 }

@@ -21,10 +21,14 @@
 package com.vitorpamplona.quartz.experimental.nns
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nns.tags.IPv4Tag
+import com.vitorpamplona.quartz.experimental.nns.tags.IPv6Tag
+import com.vitorpamplona.quartz.experimental.nns.tags.VersionTag
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -36,23 +40,32 @@ class NNSEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun ip4() = tags.firstOrNull { it.size > 1 && it[0] == "ip4" }?.get(1)
+    fun ip4() = tags.firstNotNullOfOrNull(IPv4Tag::parse)
 
-    fun ip6() = tags.firstOrNull { it.size > 1 && it[0] == "ip6" }?.get(1)
+    fun ip6() = tags.firstNotNullOfOrNull(IPv6Tag::parse)
 
-    fun version() = tags.firstOrNull { it.size > 1 && it[0] == "version" }?.get(1)
+    fun version() = tags.firstNotNullOfOrNull(VersionTag::parse)
 
     companion object {
         const val KIND = 30053
         const val ALT = "DNS records"
 
-        fun create(
-            signer: NostrSigner,
+        fun build(
             createdAt: Long = TimeUtils.now(),
-            onReady: (NNSEvent) -> Unit,
-        ) {
-            val tags = arrayOf(AltTagSerializer.toTagArray(ALT))
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            initializer: TagArrayBuilder<NNSEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+            initializer()
+        }
+
+        fun build(
+            ipv4: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<NNSEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+            ipv4(ipv4)
+            initializer()
         }
     }
 }

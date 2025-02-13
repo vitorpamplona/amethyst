@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip57Zaps
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.zapPolls.POLL_OPTION
+import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -76,7 +76,7 @@ class LnZapEvent(
         try {
             zapRequest
                 ?.tags
-                ?.firstOrNull { it.size > 1 && it[0] == POLL_OPTION }
+                ?.firstOrNull { it.size > 1 && it[0] == PollOptionTag.TAG_NAME }
                 ?.get(1)
                 ?.toInt()
         } catch (e: Exception) {

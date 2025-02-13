@@ -23,10 +23,11 @@ package com.vitorpamplona.amethyst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
-import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import junit.framework.TestCase.assertEquals
 import org.junit.Assert
@@ -46,27 +47,27 @@ class OkHttpOtsTest {
 
     @Before
     fun setup() {
-        OtsEvent.otsInstance = OpenTimestamps(OkHttpBlockstreamExplorer(forceProxy = { false }), OkHttpCalendarBuilder(forceProxy = { false }))
+        OtsResolver.ots = OpenTimestamps(OkHttpBlockstreamExplorer(forceProxy = { false }), OkHttpCalendarBuilder(forceProxy = { false }))
     }
 
     @Test
     fun verifyNostrEvent() {
         val ots = EventMapper.fromJson(otsEvent) as OtsEvent
-        println(ots.info())
+        println(OtsResolver.info(ots.otsByteArray()))
         assertEquals(1707688818L, ots.verify())
     }
 
     @Test
     fun verifyNostrEvent2() {
         val ots = EventMapper.fromJson(otsEvent2) as OtsEvent
-        println(ots.info())
+        println(OtsResolver.info(ots.otsByteArray()))
         assertEquals(1706322179L, ots.verify())
     }
 
     @Test
     fun verifyNostrPendingEvent() {
         val ots = EventMapper.fromJson(otsPendingEvent) as OtsEvent
-        println(ots.info())
+        println(OtsResolver.info(ots.otsByteArray()))
         assertEquals(null, ots.verify())
     }
 
@@ -79,7 +80,7 @@ class OkHttpOtsTest {
 
         val otsFile = OtsEvent.stamp(otsEvent2Digest)
 
-        OtsEvent.create(otsEvent2Digest, otsFile, signer) {
+        signer.sign(OtsEvent.build(otsEvent2Digest, otsFile)) {
             ots = it
             countDownLatch.countDown()
         }
@@ -87,7 +88,7 @@ class OkHttpOtsTest {
         Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
         println(ots!!.toJson())
-        println(ots!!.info())
+        println(OtsResolver.info(ots!!.otsByteArray()))
 
         // Should not be valid because we need to wait for confirmations
         assertEquals(null, ots!!.verify())

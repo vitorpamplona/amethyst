@@ -84,7 +84,7 @@ fun RenderTextModificationEvent(
     val isAuthorTheLoggedUser =
         remember {
             val authorOfTheOriginalNote =
-                noteEvent.editedNote()?.let { accountViewModel.getNoteIfExists(it.eventId)?.author?.pubkeyHex ?: it.authorPubKeyHex }
+                noteEvent.editedNote()?.let { accountViewModel.getNoteIfExists(it.eventId)?.author?.pubkeyHex ?: it.author }
 
             mutableStateOf(accountViewModel.isLoggedUser(authorOfTheOriginalNote))
         }

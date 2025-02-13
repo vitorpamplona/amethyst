@@ -89,8 +89,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -116,7 +116,7 @@ class UpdateReactionTypeViewModel : ViewModel() {
         nextChoice = TextFieldValue("")
     }
 
-    fun addChoice(customEmoji: EmojiUrl) {
+    fun addChoice(customEmoji: EmojiUrlTag) {
         reactionSet = reactionSet + (customEmoji.encode())
     }
 
@@ -337,7 +337,7 @@ private fun RenderReactionOption(
 private fun EmojiSelector(
     accountViewModel: AccountViewModel,
     nav: INav,
-    onClick: ((EmojiUrl) -> Unit)? = null,
+    onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     LoadAddressableNote(
         aTag =
@@ -372,7 +372,7 @@ fun EmojiCollectionGallery(
     emojiCollections: ImmutableList<ATag>,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onClick: ((EmojiUrl) -> Unit)? = null,
+    onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     val color = MaterialTheme.colorScheme.background
     val bgColor = remember { mutableStateOf(color) }
@@ -396,7 +396,7 @@ private fun WatchAndRenderNote(
     bgColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onClick: ((EmojiUrl) -> Unit)?,
+    onClick: ((EmojiUrlTag) -> Unit)?,
 ) {
     val scope = rememberCoroutineScope()
 

@@ -24,17 +24,21 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hasCorrectIDHash
-import com.vitorpamplona.quartz.nip01Core.hasVerifiedSignature
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.Rumor
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.verifyId
+import com.vitorpamplona.quartz.nip01Core.verifySignature
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -60,18 +64,18 @@ class GiftWrapReceivingBenchmark {
         val countDownLatch = CountDownLatch(1)
         var wrap: GiftWrapEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Hi there! This is a test message",
-            to = listOf(receiver.pubKey),
-            subject = "Party Tonight",
-            replyTos = emptyList(),
-            mentions = emptyList(),
-            zapReceiver = null,
-            markAsSensitive = true,
-            zapRaiserAmount = 10000,
-            geohash = null,
-            isDraft = true,
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Hi there! This is a test message",
+                to =
+                    listOf(
+                        PTag(receiver.pubKey),
+                    ),
+            ) {
+                changeSubject("Party Tonight")
+                zapraiser(10000)
+                contentWarning("nsfw")
+            },
         ) {
             SealedRumorEvent.create(
                 event = it,
@@ -100,18 +104,18 @@ class GiftWrapReceivingBenchmark {
         val countDownLatch = CountDownLatch(1)
         var seal: SealedRumorEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Hi there! This is a test message",
-            to = listOf(receiver.pubKey),
-            subject = "Party Tonight",
-            replyTos = emptyList(),
-            mentions = emptyList(),
-            zapReceiver = null,
-            markAsSensitive = true,
-            zapRaiserAmount = 10000,
-            geohash = null,
-            isDraft = true,
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Hi there! This is a test message",
+                to =
+                    listOf(
+                        PTag(receiver.pubKey),
+                    ),
+            ) {
+                changeSubject("Party Tonight")
+                zapraiser(10000)
+                contentWarning("nsfw")
+            },
         ) {
             SealedRumorEvent.create(
                 event = it,
@@ -145,7 +149,7 @@ class GiftWrapReceivingBenchmark {
 
         val wrap = createWrap(sender, receiver)
 
-        benchmarkRule.measureRepeated { wrap.hasCorrectIDHash() }
+        benchmarkRule.measureRepeated { wrap.verifyId() }
     }
 
     @Test
@@ -155,7 +159,7 @@ class GiftWrapReceivingBenchmark {
 
         val wrap = createWrap(sender, receiver)
 
-        benchmarkRule.measureRepeated { wrap.hasVerifiedSignature() }
+        benchmarkRule.measureRepeated { wrap.verifySignature() }
     }
 
     @Test

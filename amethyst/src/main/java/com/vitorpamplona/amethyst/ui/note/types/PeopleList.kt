@@ -94,7 +94,7 @@ fun DisplayPeopleList(
     )
 
     LaunchedEffect(Unit) {
-        accountViewModel.loadUsers(noteEvent.bookmarkedPeople()) {
+        accountViewModel.loadUsers(noteEvent.bookmarkedPeopleIds()) {
             members = it
         }
     }

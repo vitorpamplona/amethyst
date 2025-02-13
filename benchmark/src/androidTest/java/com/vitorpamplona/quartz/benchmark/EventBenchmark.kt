@@ -24,8 +24,8 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.hasValidSignature
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -60,7 +60,7 @@ class EventBenchmark {
         val event = EventMapper.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue(event.hasValidSignature())
+            assertTrue(event.verify())
         }
     }
 

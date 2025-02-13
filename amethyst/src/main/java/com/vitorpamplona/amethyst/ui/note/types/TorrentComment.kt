@@ -179,7 +179,7 @@ fun RenderTorrentComment(
 
             torrentInfo?.let {
                 TorrentHeader(
-                    torrentHex = it,
+                    torrentHex = it.eventId,
                     modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
                     accountViewModel = accountViewModel,
                     nav = nav,

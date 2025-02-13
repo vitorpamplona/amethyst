@@ -46,10 +46,19 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.experimental.nip95.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
+import com.vitorpamplona.quartz.nip94FileMetadata.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
+import com.vitorpamplona.quartz.nip94FileMetadata.dims
+import com.vitorpamplona.quartz.nip94FileMetadata.hash
+import com.vitorpamplona.quartz.nip94FileMetadata.magnet
+import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
+import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
+import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
+import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -165,7 +174,7 @@ open class EditPostViewModel : ViewModel() {
                 myMultiOrchestrator.upload(
                     viewModelScope,
                     alt,
-                    sensitiveContent,
+                    if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQuality),
                     server,
                     myAccount,
@@ -175,7 +184,12 @@ open class EditPostViewModel : ViewModel() {
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, sensitiveContent) { nip95 ->
+                        account?.createNip95(
+                            state.result.bytes,
+                            headerInfo = state.result.fileHeader,
+                            alt,
+                            if (sensitiveContent) "" else null,
+                        ) { nip95 ->
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 

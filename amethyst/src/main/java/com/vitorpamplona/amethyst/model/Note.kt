@@ -37,35 +37,40 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
+import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
@@ -108,6 +113,8 @@ class AddressableNote(
         val thisEvent = event
         return deletionAddressables.contains(address) || (thisEvent != null && deletionEvents.contains(thisEvent.id))
     }
+
+    override fun toATag() = ATag.parse(idHex, relayHintUrl())
 }
 
 @Stable
@@ -195,11 +202,11 @@ open class Note(
             event is LiveActivitiesChatMessageEvent ||
             event is LiveActivitiesEvent
         ) {
-            (event as? ChannelMessageEvent)?.channel()
-                ?: (event as? ChannelMetadataEvent)?.channel()
+            (event as? ChannelMessageEvent)?.channelId()
+                ?: (event as? ChannelMetadataEvent)?.channelId()
                 ?: (event as? ChannelCreateEvent)?.id
                 ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
-                ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
+                ?: (event as? LiveActivitiesEvent)?.aTag()?.toTag()
         } else {
             null
         }
@@ -438,6 +445,13 @@ open class Note(
     fun addRelay(relay: Relay) {
         if (relay.brief !in relays) {
             addRelaySync(relay.brief)
+            flowSet?.relays?.invalidateData()
+        }
+    }
+
+    fun addRelayBrief(brief: RelayBriefInfoCache.RelayBriefInfo) {
+        if (brief !in relays) {
+            addRelaySync(brief)
             flowSet?.relays?.invalidateData()
         }
     }
@@ -702,7 +716,7 @@ open class Note(
 
     fun hasPledgeBy(user: User): Boolean =
         replies
-            .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
+            .filter { it.event?.hasAdditionalReward() ?: false }
             .any {
                 val pledgeValue =
                     try {
@@ -716,18 +730,7 @@ open class Note(
                 pledgeValue != null && it.author == user
             }
 
-    fun pledgedAmountByOthers(): BigDecimal =
-        replies
-            .filter { it.event?.isTaggedHash("bounty-added-reward") ?: false }
-            .mapNotNull {
-                try {
-                    BigDecimal(it.event?.content)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    null
-                    // do nothing if it can't convert to bigdecimal
-                }
-            }.sumOf { it }
+    fun pledgedAmountByOthers(): BigDecimal = replies.sumOf { it.event?.addedRewardValue() ?: BigDecimal.ZERO }
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
@@ -839,7 +842,7 @@ open class Note(
         }
 
         if (accountChoices.hiddenWordsCase.isNotEmpty()) {
-            if (thisEvent is BaseTextNoteEvent && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
+            if (thisEvent is BaseThreadedEvent && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
                 return true
             }
 
@@ -915,7 +918,46 @@ open class Note(
         deletionAddressables: Set<ATag>,
     ): Boolean {
         val thisEvent = event
-        return deletionEvents.contains(idHex) || (thisEvent is AddressableEvent && deletionAddressables.contains(thisEvent.address()))
+        return deletionEvents.contains(idHex) || (thisEvent is AddressableEvent && deletionAddressables.contains(thisEvent.aTag()))
+    }
+
+    fun toETag(): ETag {
+        val noteEvent = event
+        return if (noteEvent != null) {
+            ETag(noteEvent.id, relayHintUrl(), noteEvent.pubKey)
+        } else {
+            ETag(idHex, relayHintUrl(), author?.pubkeyHex)
+        }
+    }
+
+    fun toEId(): EventReference {
+        val noteEvent = event
+        return if (noteEvent != null) {
+            // uses the confirmed event id if available
+            EventReference(noteEvent.id, noteEvent.pubKey, relayHintUrl())
+        } else {
+            EventReference(idHex, author?.pubkeyHex, relayHintUrl())
+        }
+    }
+
+    fun <T : Event> toEventHint() = (event as? T)?.let { EventHintBundle(it, relayHintUrl(), author?.bestRelayHint()) }
+
+    fun toMarkedETag(marker: MarkedETag.MARKER): MarkedETag {
+        val noteEvent = event
+        return if (noteEvent != null) {
+            MarkedETag(noteEvent.id, relayHintUrl(), marker, noteEvent.pubKey)
+        } else {
+            MarkedETag(idHex, relayHintUrl(), marker, author?.pubkeyHex)
+        }
+    }
+
+    open fun toATag(): ATag? {
+        val noteEvent = event
+        return if (noteEvent is AddressableEvent) {
+            ATag(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag(), relayHintUrl())
+        } else {
+            null
+        }
     }
 }
 

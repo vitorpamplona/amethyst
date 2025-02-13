@@ -24,13 +24,15 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import junit.framework.TestCase
 import org.junit.Assert
 import org.junit.Assert.assertTrue
@@ -60,9 +62,11 @@ class GiftWrapBenchmark {
         var events: NIP17Factory.Result? = null
         val countDownLatch = CountDownLatch(1)
 
-        NIP17Factory().createMsgNIP17(
-            message,
-            listOf(receiver.pubKey),
+        NIP17Factory().createMessageNIP17(
+            ChatMessageEvent.build(
+                message,
+                listOf(PTag(receiver.pubKey)),
+            ),
             sender,
         ) {
             events = it
@@ -110,9 +114,11 @@ class GiftWrapBenchmark {
         var giftWrap: GiftWrapEvent? = null
         val countDownLatch = CountDownLatch(1)
 
-        NIP17Factory().createMsgNIP17(
-            message,
-            listOf(receiver.pubKey),
+        NIP17Factory().createMessageNIP17(
+            ChatMessageEvent.build(
+                message,
+                listOf(PTag(receiver.pubKey)),
+            ),
             sender,
         ) {
             giftWrap = it.wraps.first()

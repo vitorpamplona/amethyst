@@ -20,28 +20,22 @@
  */
 package com.vitorpamplona.quartz.experimental.inlineMetadata
 
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlin.coroutines.cancellation.CancellationException
 
 class Nip54InlineMetadata {
-    fun createUrl(header: IMetaTag): String =
-        createUrl(
-            header.url,
-            header.properties,
-        )
-
     fun createUrl(
         url: String,
-        tags: Map<String, String>,
+        tags: Map<String, List<String>>,
     ): String {
         val extension =
             tags
                 .mapNotNull {
-                    if (it.key != "url") {
-                        "${it.key}=${URLEncoder.encode(it.value, "utf-8")}"
+                    val value = it.value.firstOrNull()
+                    if (it.key != "url" && value != null) {
+                        "${it.key}=${URLEncoder.encode(value, "utf-8")}"
                     } else {
                         null
                     }

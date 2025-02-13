@@ -49,10 +49,10 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 @Composable
 fun RenderTextEvent(
@@ -71,14 +71,14 @@ fun RenderTextEvent(
     val showReply by
         remember(note) {
             derivedStateOf {
-                noteEvent is BaseTextNoteEvent && !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
+                noteEvent is BaseThreadedEvent && !makeItShort && unPackReply && (note.replyTo != null || noteEvent.hasAnyTaggedUser())
             }
         }
 
     if (showReply) {
         val replyingDirectlyTo =
             remember(note) {
-                if (noteEvent is BaseTextNoteEvent) {
+                if (noteEvent is BaseThreadedEvent) {
                     val replyingTo = noteEvent.replyingToAddressOrEvent()
                     if (replyingTo != null) {
                         val newNote = accountViewModel.getNoteIfExists(replyingTo)

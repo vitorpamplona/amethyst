@@ -35,9 +35,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.RequestDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.ResponseDeserializer
-import com.vitorpamplona.quartz.nip59Giftwrap.Rumor
-import com.vitorpamplona.quartz.nip59Giftwrap.RumorDeserializer
-import com.vitorpamplona.quartz.nip59Giftwrap.RumorSerializer
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorDeserializer
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorSerializer
 
 class EventMapper {
     companion object {

@@ -21,8 +21,9 @@
 package com.vitorpamplona.quartz
 
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.Nip01
-import com.vitorpamplona.quartz.nip04Dm.Nip04
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip04Dm.Nip04Encoder
+import com.vitorpamplona.quartz.nip04Dm.Nip04Encryption
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
@@ -38,7 +39,7 @@ object CryptoUtils {
 
     val nip01 = Nip01(secp256k1, random)
     val nip06 = Nip06(secp256k1)
-    val nip04 = Nip04(secp256k1, random)
+    val nip04 = Nip04Encryption(secp256k1, random)
     val nip44 = Nip44(secp256k1, random, nip04)
     val nip49 = Nip49(secp256k1, random)
 
@@ -84,7 +85,7 @@ object CryptoUtils {
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): String? =
-        if (Nip04.isNIP04(msg)) {
+        if (Nip04Encryption.isNIP04(msg)) {
             decryptNIP04(msg, privateKey, pubKey)
         } else {
             decryptNIP44(msg, privateKey, pubKey)
@@ -100,7 +101,7 @@ object CryptoUtils {
     fun encryptNIP04(
         msg: String,
         sharedSecret: ByteArray,
-    ): Nip04.EncryptedInfo = nip04.encrypt(msg, sharedSecret)
+    ): Nip04Encoder = nip04.encrypt(msg, sharedSecret)
 
     fun decryptNIP04(
         msg: String,
@@ -109,7 +110,7 @@ object CryptoUtils {
     ): String = nip04.decrypt(msg, privateKey, pubKey)
 
     fun decryptNIP04(
-        encryptedInfo: Nip04.EncryptedInfo,
+        encryptedInfo: Nip04Encoder,
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): String = nip04.decrypt(encryptedInfo, privateKey, pubKey)

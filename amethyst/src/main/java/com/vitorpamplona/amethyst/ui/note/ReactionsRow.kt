@@ -147,7 +147,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import kotlinx.collections.immutable.ImmutableList
@@ -579,7 +579,7 @@ private fun BoostWithDialog(
         val replyTo =
             remember(wantsToFork) {
                 val forkEvent = wantsToFork?.event
-                if (forkEvent is BaseTextNoteEvent) {
+                if (forkEvent is BaseThreadedEvent) {
                     val hex = forkEvent.replyingTo()
                     wantsToFork?.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
                 } else {

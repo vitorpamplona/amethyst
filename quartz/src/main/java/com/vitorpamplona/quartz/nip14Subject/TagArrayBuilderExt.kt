@@ -21,5 +21,6 @@
 package com.vitorpamplona.quartz.nip14Subject
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
-fun TagArrayBuilder.subject(subject: String) = add(SubjectTag.assemble(subject))
+fun TagArrayBuilder<TextNoteEvent>.subject(subject: String) = addUnique(SubjectTag.assemble(subject))

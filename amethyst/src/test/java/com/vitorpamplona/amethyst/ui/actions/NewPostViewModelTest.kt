@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import io.mockk.MockKAnnotations
 import io.mockk.every
@@ -70,7 +71,7 @@ class NewPostViewModelTest {
             every { accountViewModel.account } returns mockk<Account>()
 
             val textNoteEvent = mockk<TextNoteEvent>(relaxed = true)
-            every { textNoteEvent.mentions() } returns listOf("user1", "user2")
+            every { textNoteEvent.mentions() } returns listOf(PTag("user1"), PTag("user2"))
             every { replyingTo.event } returns textNoteEvent
 
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
@@ -110,7 +111,7 @@ class NewPostViewModelTest {
             every { accountViewModel.account } returns mockk<Account>()
 
             val textNoteEvent = mockk<TextNoteEvent>(relaxed = true)
-            every { textNoteEvent.mentions() } returns listOf("")
+            every { textNoteEvent.mentions() } returns emptyList()
             every { replyingTo.event } returns textNoteEvent
 
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)

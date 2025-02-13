@@ -52,7 +52,7 @@ fun NewPollClosing(pollViewModel: NewPostViewModel) {
     pollViewModel.isValidClosedAt.value = true
     if (text.isNotEmpty()) {
         try {
-            val int = text.toInt()
+            val int = text.toLong()
             if (int < 0) {
                 pollViewModel.isValidClosedAt.value = false
             } else {

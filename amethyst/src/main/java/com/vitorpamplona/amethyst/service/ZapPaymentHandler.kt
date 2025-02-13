@@ -32,14 +32,14 @@ import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.BaseZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +77,7 @@ class ZapPaymentHandler(
             if (!zapSplitSetup.isNullOrEmpty()) {
                 zapSplitSetup
             } else if (noteEvent is LiveActivitiesEvent && noteEvent.hasHost()) {
-                noteEvent.hosts().map { ZapSplitSetup(it.pubKeyHex, it.relay, weight = 1.0) }
+                noteEvent.hosts().map { ZapSplitSetup(it.pubKey, it.relayHint, weight = 1.0) }
             } else if (noteEvent is AppDefinitionEvent) {
                 val appLud16 = noteEvent.appMetaData()?.lnAddress()
                 if (appLud16 != null) {

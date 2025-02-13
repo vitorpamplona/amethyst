@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertEquals
 import org.junit.Ignore
@@ -219,7 +219,7 @@ internal class Nip46Test {
 
     @Test
     fun testRelaysResponse() {
-        val expected = BunkerResponseGetRelays(relays = mapOf("url" to ContactListEvent.ReadWrite(true, false)))
+        val expected = BunkerResponseGetRelays(relays = mapOf("url" to ReadWrite(true, false)))
         val actual = encodeDecodeEvent(expected)
 
         assertEquals(expected.id, actual.id)

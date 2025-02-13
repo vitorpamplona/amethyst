@@ -28,11 +28,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.experimental.zapPolls.CLOSED_AT
-import com.vitorpamplona.quartz.experimental.zapPolls.CONSENSUS_THRESHOLD
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.VALUE_MAXIMUM
-import com.vitorpamplona.quartz.experimental.zapPolls.VALUE_MINIMUM
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -81,17 +77,12 @@ class PollNoteViewModel : ViewModel() {
             pollNote = note
             pollEvent = pollNote?.event as PollNoteEvent
             pollOptions = pollEvent?.pollOptions()
-            valueMaximum = pollEvent?.getTagLong(VALUE_MAXIMUM)
-            valueMinimum = pollEvent?.getTagLong(VALUE_MINIMUM)
+            valueMaximum = pollEvent?.maxAmount()
+            valueMinimum = pollEvent?.minAmount()
             valueMinimumBD = valueMinimum?.let { BigDecimal(it) }
             valueMaximumBD = valueMaximum?.let { BigDecimal(it) }
-            consensusThreshold =
-                pollEvent
-                    ?.getTagLong(CONSENSUS_THRESHOLD)
-                    ?.toFloat()
-                    ?.div(100)
-                    ?.toBigDecimal()
-            closedAt = pollEvent?.getTagLong(CLOSED_AT)
+            consensusThreshold = pollEvent?.consensusThreshold()?.toBigDecimal()
+            closedAt = pollEvent?.closedAt()
 
             totalZapped = BigDecimal.ZERO
             wasZappedByLoggedInAccount = false

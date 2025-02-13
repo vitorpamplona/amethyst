@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 class PoWTag(
     val nonce: String,
-    val commitment: String?,
+    val commitment: Int?,
 ) {
     fun countMemory(): Long = 2 * pointerSizeInBytes + nonce.bytesUsedInMemory() + (commitment?.bytesUsedInMemory() ?: 0)
 
@@ -34,17 +34,27 @@ class PoWTag(
 
     companion object {
         const val TAG_NAME = "nonce"
+        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun parse(tags: Array<String>): PoWTag {
-            require(tags[0] == TAG_NAME)
-            return PoWTag(tags[1], tags.getOrNull(2))
+        fun hasTagWithContent(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tag: Array<String>): PoWTag? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return PoWTag(tag[1], tag.getOrNull(2)?.toIntOrNull())
+        }
+
+        @JvmStatic
+        fun parseCommitment(tag: Array<String>): Int? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return tag.getOrNull(2)?.toIntOrNull()
         }
 
         @JvmStatic
         fun assemble(
             nonce: String,
-            commitment: String?,
-        ) = arrayOfNotNull(TAG_NAME, nonce, commitment)
+            commitment: Int?,
+        ) = arrayOfNotNull(TAG_NAME, nonce, commitment.toString())
     }
 }

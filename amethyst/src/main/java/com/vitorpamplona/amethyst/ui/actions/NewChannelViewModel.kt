@@ -26,6 +26,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -53,19 +57,44 @@ class NewChannelViewModel : ViewModel() {
     fun create() {
         viewModelScope.launch(Dispatchers.IO) {
             account?.let { account ->
-                if (originalChannel == null) {
-                    account.sendCreateNewChannel(
-                        channelName.value.text,
-                        channelDescription.value.text,
-                        channelPicture.value.text,
-                    )
+                val channel = originalChannel
+                if (channel == null) {
+                    val template =
+                        ChannelCreateEvent.build(
+                            channelName.value.text,
+                            channelDescription.value.text,
+                            channelPicture.value.text,
+                            null,
+                        )
+
+                    account.sendCreateNewChannel(template)
                 } else {
-                    account.sendChangeChannel(
-                        channelName.value.text,
-                        channelDescription.value.text,
-                        channelPicture.value.text,
-                        originalChannel!!,
-                    )
+                    val event = channel.event
+
+                    val template =
+                        if (event != null) {
+                            val hint = EventHintBundle<ChannelCreateEvent>(event, channel.relays().firstOrNull())
+
+                            ChannelMetadataEvent.build(
+                                channelName.value.text,
+                                channelDescription.value.text,
+                                channelPicture.value.text,
+                                null,
+                                hint,
+                            )
+                        } else {
+                            val eTag = ETag(channel.idHex, channel.relays().firstOrNull())
+
+                            ChannelMetadataEvent.build(
+                                channelName.value.text,
+                                channelDescription.value.text,
+                                channelPicture.value.text,
+                                null,
+                                eTag,
+                            )
+                        }
+
+                    account.sendChangeChannel(template)
                 }
             }
 

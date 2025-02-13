@@ -72,7 +72,7 @@ fun RenderInteractiveStory(
 
     val currentScene = readingState?.currentScene()
 
-    if (currentScene != null && currentScene != rootEvent.address()) {
+    if (currentScene != null && currentScene != rootEvent.aTag()) {
         LoadAddressableNote(currentScene, accountViewModel) { currentSceneBaseNote ->
             val currentScene = currentSceneBaseNote?.live()?.metadata?.observeAsState()
             val currentSceneEvent = currentScene?.value?.note?.event as? InteractiveStoryBaseEvent

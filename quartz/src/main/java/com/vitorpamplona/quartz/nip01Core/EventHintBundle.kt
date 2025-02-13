@@ -22,6 +22,11 @@ package com.vitorpamplona.quartz.nip01Core
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -31,9 +36,11 @@ data class EventHintBundle<T : Event>(
     val event: T,
 ) {
     var relay: String? = null
+    var authorHomeRelay: String? = null
 
-    constructor(event: T, relayHint: String? = null) : this(event) {
+    constructor(event: T, relayHint: String? = null, authorHomeRelay: String? = null) : this(event) {
         this.relay = relayHint
+        this.authorHomeRelay = authorHomeRelay
     }
 
     fun countMemory(): Long =
@@ -43,9 +50,15 @@ data class EventHintBundle<T : Event>(
 
     fun toNEvent(): String = NEvent.create(event.id, event.pubKey, event.kind, relay)
 
-    fun toTagArray(tag: String) = listOfNotNull(tag, event.id, relay, event.pubKey).toTypedArray()
+    fun toETag() = ETag(event.id, relay, event.pubKey)
 
-    fun toETagArray() = toTagArray("e")
+    fun toATag() = ATag(event.kind, event.pubKey, event.dTag(), relay)
 
-    fun toQTagArray() = toTagArray("q")
+    fun toPTag() = PTag(event.pubKey, authorHomeRelay)
+
+    fun toMarkedETag(marker: MarkedETag.MARKER) = MarkedETag(event.id, relay, marker, event.pubKey)
+
+    fun toETagArray() = ETag.assemble(event.id, relay, event.pubKey)
+
+    fun toQTagArray() = ETag(event.id, relay, event.pubKey).toQTagArray()
 }

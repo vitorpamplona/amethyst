@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -110,13 +110,13 @@ class ServiceManager(
                 else -> HttpClientManager.setDefaultProxy(null)
             }
 
-            OtsEvent.otsInstance =
+            OtsResolver.ots =
                 OpenTimestamps(
                     OkHttpBlockstreamExplorer(myAccount::shouldUseTorForMoneyOperations),
                     OkHttpCalendarBuilder(myAccount::shouldUseTorForMoneyOperations),
                 )
         } else {
-            OtsEvent.otsInstance =
+            OtsResolver.ots =
                 OpenTimestamps(
                     OkHttpBlockstreamExplorer { false },
                     OkHttpCalendarBuilder { false },

@@ -23,23 +23,25 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
+import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
@@ -138,13 +140,13 @@ class NotificationFeedFilter(
             return true
         }
 
-        if (event is BaseTextNoteEvent) {
+        if (event is BaseThreadedEvent) {
             if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) return true
 
             val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
             val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
             val isAuthorOfAFork =
-                event.isForkFromAddressWithPubkey(authorHex) || (event.forkFromVersion()?.let { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex } == true)
+                event.isForkFromAddressWithPubkey(authorHex) || (event.forkFromVersion()?.let { LocalCache.getNoteIfExists(it.eventId)?.author?.pubkeyHex == authorHex } == true)
 
             return isAuthoredPostCited || isAuthorDirectlyCited || isAuthorOfAFork
         }

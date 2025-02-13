@@ -69,9 +69,10 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -159,11 +160,11 @@ fun RenderLiveActivityEventInner(
 
         CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
-                LiveActivitiesEvent.STATUS_LIVE -> {
+                StatusTag.STATUS.LIVE.code -> {
                     media?.let { CrossfadeCheckIfVideoIsOnline(it, accountViewModel) { LiveFlag() } }
                 }
 
-                LiveActivitiesEvent.STATUS_PLANNED -> {
+                StatusTag.STATUS.PLANNED.code -> {
                     ScheduledFlag(starts)
                 }
             }
@@ -171,7 +172,7 @@ fun RenderLiveActivityEventInner(
     }
 
     media?.let { media ->
-        if (status == LiveActivitiesEvent.STATUS_LIVE) {
+        if (status == StatusTag.STATUS.LIVE.code) {
             CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
                 if (isOnline) {
                     Row(
@@ -206,7 +207,7 @@ fun RenderLiveActivityEventInner(
                 }
             }
         } else {
-            if (status == LiveActivitiesEvent.STATUS_ENDED || (status == LiveActivitiesEvent.STATUS_PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
+            if (status == StatusTag.STATUS.ENDED.code || (status == StatusTag.STATUS.PLANNED.code && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -233,7 +234,7 @@ fun RenderLiveActivityEventInner(
     }
 
     var participantUsers by remember {
-        mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+        mutableStateOf<ImmutableList<Pair<ParticipantTag, User>>>(
             persistentListOf(),
         )
     }

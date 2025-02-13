@@ -31,49 +31,51 @@ import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.blossom.BlossomServersEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
-import com.vitorpamplona.quartz.experimental.nip95.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
-import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.mapTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.forEachTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.mapTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
+import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
@@ -82,18 +84,18 @@ import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.ChannelListEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMuteUserEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.GitReplyEvent
-import com.vitorpamplona.quartz.nip34Git.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
@@ -113,8 +115,8 @@ import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -122,27 +124,28 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.CommunityListEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
-import com.vitorpamplona.quartz.nip96FileStorage.FileServersEvent
+import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -287,7 +290,7 @@ object LocalCache {
 
     fun getOrCreateNote(event: Event): Note =
         if (event is AddressableEvent) {
-            getOrCreateAddressableNote(event.address())
+            getOrCreateAddressableNote(event.aTag())
         } else {
             getOrCreateNote(event.id)
         }
@@ -301,6 +304,8 @@ object LocalCache {
         return null
     }
 
+    fun checkGetOrCreateNote(atag: ATag) = getOrCreateAddressableNote(atag)
+
     fun checkGetOrCreateNote(key: String): Note? {
         checkNotInMainThread()
 
@@ -312,7 +317,7 @@ object LocalCache {
             val noteEvent = note.event
             return if (noteEvent is AddressableEvent) {
                 // upgrade to the latest
-                val newNote = checkGetOrCreateAddressableNote(noteEvent.address().toTag())
+                val newNote = checkGetOrCreateAddressableNote(noteEvent.aTag().toTag())
 
                 if (newNote != null && newNote.event == null) {
                     val author = note.author ?: getOrCreateUser(noteEvent.pubKey)
@@ -412,12 +417,17 @@ object LocalCache {
         return note
     }
 
-    fun getOrCreateNote(key: ETag): Note {
+    fun getOrCreateNote(key: GenericETag): Note {
         val note = getOrCreateNote(key.eventId)
         // Loads the user outside a Syncronized block to avoid blocking
-        val possibleAuthor = key.authorPubKeyHex
+        val possibleAuthor = key.author
         if (note.author == null && possibleAuthor != null) {
             note.author = checkGetOrCreateUser(possibleAuthor)
+        }
+        val relayHint = key.relay
+        if (!relayHint.isNullOrBlank()) {
+            val relay = RelayBriefInfoCache.get(RelayUrlFormatter.normalize(relayHint))
+            note.addRelayBrief(relay)
         }
         return note
     }
@@ -521,7 +531,7 @@ object LocalCache {
 
         val replyTo = computeReplyTo(event)
 
-        if (event is BaseTextNoteEvent && antiSpam.isSpam(event, relay)) {
+        if (event is BaseThreadedEvent && antiSpam.isSpam(event, relay)) {
             return
         }
 
@@ -588,7 +598,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
+        val note = getOrCreateAddressableNote(event.aTag())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -622,7 +632,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
+        val note = getOrCreateAddressableNote(event.aTag())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -681,7 +691,9 @@ object LocalCache {
             is GenericRepostEvent ->
                 event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
-            is CommunityPostApprovalEvent -> event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) }
+            is CommunityPostApprovalEvent ->
+                event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.approvedAddresses().map { checkGetOrCreateNote(it) }
             is ReactionEvent ->
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
@@ -691,7 +703,7 @@ object LocalCache {
             is ChannelMessageEvent ->
                 event
                     .tagsWithoutCitations()
-                    .filter { it != event.channel() }
+                    .filter { it != event.channelId() }
                     .mapNotNull { checkGetOrCreateNote(it) }
             is LiveActivitiesChatMessageEvent ->
                 event
@@ -718,7 +730,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
+        val note = getOrCreateAddressableNote(event.aTag())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -735,7 +747,7 @@ object LocalCache {
                 getOrCreateChannel(note.idHex) { LiveActivitiesChannel(note.address) }
                     as? LiveActivitiesChannel
 
-            val creator = event.host()?.ifBlank { null }?.let { checkGetOrCreateUser(it) } ?: author
+            val creator = event.host()?.let { checkGetOrCreateUser(it.pubKey) } ?: author
 
             channel?.updateChannelInfo(creator, event, event.createdAt)
 
@@ -888,7 +900,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
+        val note = getOrCreateAddressableNote(event.aTag())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -945,7 +957,7 @@ object LocalCache {
 
     fun consume(event: BadgeProfilesEvent) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
+        val note = getOrCreateAddressableNote(event.aTag())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -1017,7 +1029,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.address())
+        val note = getOrCreateAddressableNote(event.aTag())
         val author = getOrCreateUser(event.pubKey)
 
         val replyTos = computeReplyTo(event)
@@ -1182,7 +1194,7 @@ object LocalCache {
             getChannelIfExists(it.toTag())?.removeNote(deleteNote)
         }
 
-        (deletedEvent as? TorrentCommentEvent)?.torrent()?.let {
+        (deletedEvent as? TorrentCommentEvent)?.torrentIds()?.let {
             getNoteIfExists(it)?.removeReply(deleteNote)
         }
 
@@ -1353,14 +1365,17 @@ object LocalCache {
         refreshObservers(note)
     }
 
-    fun consume(event: ChannelCreateEvent) {
+    fun consume(
+        event: ChannelCreateEvent,
+        relay: Relay?,
+    ) {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
         val oldChannel = getOrCreateChannel(event.id) { PublicChatChannel(it) }
         val author = getOrCreateUser(event.pubKey)
 
         val note = getOrCreateNote(event.id)
         if (note.event == null) {
-            oldChannel.addNote(note)
+            oldChannel.addNote(note, relay)
             note.loadEvent(event, author, emptyList())
 
             refreshObservers(note)
@@ -1371,13 +1386,16 @@ object LocalCache {
         }
         if (oldChannel.creator == null || oldChannel.creator == author) {
             if (oldChannel is PublicChatChannel) {
-                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+                oldChannel.updateChannelInfo(author, event, event.createdAt)
             }
         }
     }
 
-    fun consume(event: ChannelMetadataEvent) {
-        val channelId = event.channel()
+    fun consume(
+        event: ChannelMetadataEvent,
+        relay: Relay?,
+    ) {
+        val channelId = event.channelId()
         // Log.d("MT", "New PublicChatMetadata ${event.channelInfo()}")
         if (channelId.isNullOrBlank()) return
 
@@ -1396,7 +1414,7 @@ object LocalCache {
 
         val note = getOrCreateNote(event.id)
         if (note.event == null) {
-            oldChannel.addNote(note)
+            oldChannel.addNote(note, relay)
             note.loadEvent(event, author, emptyList())
 
             refreshObservers(note)
@@ -1407,14 +1425,14 @@ object LocalCache {
         event: ChannelMessageEvent,
         relay: Relay?,
     ) {
-        val channelId = event.channel()
+        val channelId = event.channelId()
 
         if (channelId.isNullOrBlank()) return
 
         val channel = checkGetOrCreateChannel(channelId) ?: return
 
         val note = getOrCreateNote(event.id)
-        channel.addNote(note)
+        channel.addNote(note, relay)
 
         val author = getOrCreateUser(event.pubKey)
 
@@ -1457,7 +1475,7 @@ object LocalCache {
         val channel = getOrCreateChannel(activityId.toTag()) { LiveActivitiesChannel(activityId) }
 
         val note = getOrCreateNote(event.id)
-        channel.addNote(note)
+        channel.addNote(note, relay)
 
         val author = getOrCreateUser(event.pubKey)
 
@@ -2102,7 +2120,7 @@ object LocalCache {
                 val noteEvent = note.event
                 if (noteEvent is AddressableEvent) {
                     noteEvent.createdAt <
-                        (addressables.get(noteEvent.address().toTag())?.event?.createdAt ?: 0)
+                        (addressables.get(noteEvent.aTag().toTag())?.event?.createdAt ?: 0)
                 } else {
                     false
                 }
@@ -2111,7 +2129,7 @@ object LocalCache {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            val newerVersion = (it.event as? AddressableEvent)?.address()?.toTag()?.let { tag -> addressables.get(tag) }
+            val newerVersion = (it.event as? AddressableEvent)?.aTag()?.toTag()?.let { tag -> addressables.get(tag) }
             if (newerVersion != null) {
                 it.moveAllReferencesTo(newerVersion)
             }
@@ -2295,7 +2313,7 @@ object LocalCache {
     fun justVerify(event: Event): Boolean {
         checkNotInMainThread()
 
-        return if (!event.hasValidSignature()) {
+        return if (!event.verify()) {
             try {
                 event.checkSignature()
             } catch (e: Exception) {
@@ -2327,7 +2345,7 @@ object LocalCache {
         draftWrap: DraftEvent,
         draft: Event,
     ) {
-        val note = getOrCreateAddressableNote(draftWrap.address())
+        val note = getOrCreateAddressableNote(draftWrap.aTag())
         val author = getOrCreateUser(draftWrap.pubKey)
 
         when (draft) {
@@ -2378,9 +2396,9 @@ object LocalCache {
                 }
             }
             is ChannelMessageEvent -> {
-                draft.channel()?.let { channelId ->
+                draft.channelId()?.let { channelId ->
                     checkGetOrCreateChannel(channelId)?.let { channel ->
-                        channel.addNote(note)
+                        channel.addNote(note, null)
                     }
                 }
             }
@@ -2447,7 +2465,7 @@ object LocalCache {
                 }
             }
             is ChannelMessageEvent -> {
-                draft.channel()?.let { channelId ->
+                draft.channelId()?.let { channelId ->
                     checkGetOrCreateChannel(channelId)?.let { channel ->
                         channel.removeNote(draftWrap)
                     }
@@ -2506,11 +2524,11 @@ object LocalCache {
                 is CalendarDateSlotEvent -> consume(event, relay)
                 is CalendarTimeSlotEvent -> consume(event, relay)
                 is CalendarRSVPEvent -> consume(event, relay)
-                is ChannelCreateEvent -> consume(event)
+                is ChannelCreateEvent -> consume(event, relay)
                 is ChannelListEvent -> consume(event, relay)
                 is ChannelHideMessageEvent -> consume(event)
                 is ChannelMessageEvent -> consume(event, relay)
-                is ChannelMetadataEvent -> consume(event)
+                is ChannelMetadataEvent -> consume(event, relay)
                 is ChannelMuteUserEvent -> consume(event)
                 is ChatMessageEncryptedFileHeaderEvent -> consume(event, relay)
                 is ChatMessageEvent -> consume(event, relay)

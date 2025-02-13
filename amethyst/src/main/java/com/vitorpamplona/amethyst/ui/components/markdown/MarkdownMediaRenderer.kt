@@ -48,8 +48,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
 import com.vitorpamplona.amethyst.ui.theme.Size17Modifier
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
-import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -57,11 +55,12 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import kotlinx.coroutines.runBlocking
 
 class MarkdownMediaRenderer(
     val startOfText: String,
-    val tags: ImmutableListOfLists<String>?,
+    val imetaByUrl: Map<String, IMetaTag>,
     val canPreview: Boolean,
     val quotesLeft: Int,
     val backgroundColor: MutableState<Color>,
@@ -94,7 +93,7 @@ class MarkdownMediaRenderer(
             val content =
                 parser.createMediaContent(
                     fullUrl = uri,
-                    eventTags = tags ?: EmptyTagList,
+                    eventTags = imetaByUrl,
                     description = title?.ifEmpty { null } ?: startOfText,
                 ) ?: MediaUrlImage(url = uri, description = title?.ifEmpty { null } ?: startOfText)
 
@@ -116,7 +115,7 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
-        val content = parser.createMediaContent(uri, eventTags = tags ?: EmptyTagList, startOfText, callbackUri)
+        val content = parser.createMediaContent(uri, imetaByUrl, startOfText, callbackUri)
 
         if (canPreview) {
             if (content != null) {

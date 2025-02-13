@@ -22,11 +22,11 @@ package com.vitorpamplona.quartz.nip19Bech32
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hasValidSignature
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.utils.Hex
@@ -52,7 +52,9 @@ class NIP19EmbedTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        TextNoteEvent.create("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size.", isDraft = false, signer = signer) {
+        signer.sign(
+            TextNoteEvent.build("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size."),
+        ) {
             textNote = it
             countDownLatch.countDown()
         }
@@ -67,7 +69,7 @@ class NIP19EmbedTests {
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
-        assertTrue(decodedNote.hasValidSignature())
+        assertTrue(decodedNote.verify())
 
         assertEquals(textNote!!.toJson(), decodedNote.toJson())
     }
@@ -83,7 +85,7 @@ class NIP19EmbedTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        FhirResourceEvent.create(fhirPayload = visionPrescriptionFhir, signer = signer) {
+        signer.sign(FhirResourceEvent.build(visionPrescriptionFhir)) {
             eyeglassesPrescriptionEvent = it
             countDownLatch.countDown()
         }
@@ -99,7 +101,7 @@ class NIP19EmbedTests {
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
-        assertTrue(decodedNote.hasValidSignature())
+        assertTrue(decodedNote.verify())
 
         assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
     }
@@ -115,7 +117,7 @@ class NIP19EmbedTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        FhirResourceEvent.create(fhirPayload = visionPrescriptionBundle, signer = signer) {
+        signer.sign(FhirResourceEvent.build(visionPrescriptionBundle)) {
             eyeglassesPrescriptionEvent = it
             countDownLatch.countDown()
         }
@@ -131,7 +133,7 @@ class NIP19EmbedTests {
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
-        assertTrue(decodedNote.hasValidSignature())
+        assertTrue(decodedNote.verify())
 
         assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
     }
@@ -147,7 +149,7 @@ class NIP19EmbedTests {
 
         val countDownLatch = CountDownLatch(1)
 
-        FhirResourceEvent.create(fhirPayload = visionPrescriptionBundle2, signer = signer) {
+        signer.sign(FhirResourceEvent.build(visionPrescriptionBundle2)) {
             eyeglassesPrescriptionEvent = it
             countDownLatch.countDown()
         }
@@ -163,7 +165,7 @@ class NIP19EmbedTests {
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
-        assertTrue(decodedNote.hasValidSignature())
+        assertTrue(decodedNote.verify())
 
         assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
     }

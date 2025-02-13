@@ -22,22 +22,18 @@ package com.vitorpamplona.quartz.nip01Core.tags.events
 
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstMapTagged
 import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
-import com.vitorpamplona.quartz.nip19Bech32.parse
 
 fun TagArray.forEachTaggedEventId(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(ETag.TAG_NAME, onEach)
 
 fun <R> TagArray.mapTaggedEventId(map: (eventId: HexKey) -> R) = this.mapValueTagged(ETag.TAG_NAME, map)
 
-fun TagArray.taggedEvents() = this.mapTagged(ETag.TAG_NAME) { ETag.parse(it) }
+fun TagArray.taggedEvents() = this.mapNotNull(ETag::parse)
 
-fun TagArray.taggedEventIds() = this.mapValues(ETag.TAG_NAME)
+fun TagArray.taggedEventIds() = this.mapNotNull(ETag::parseId)
 
-fun TagArray.firstTaggedEvent() = this.firstMapTagged(ETag.TAG_NAME) { ETag.parse(it) }
+fun TagArray.firstTaggedEvent() = this.firstNotNullOfOrNull(ETag::parse)
 
 fun TagArray.isTaggedEvent(idHex: String) = this.isTagged(ETag.TAG_NAME, idHex)

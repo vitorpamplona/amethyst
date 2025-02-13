@@ -39,7 +39,7 @@ open class Event(
     val tags: TagArray,
     val content: String,
     val sig: HexKey,
-) {
+) : IEvent {
     open fun isContentEncoded() = false
 
     open fun countMemory(): Long =

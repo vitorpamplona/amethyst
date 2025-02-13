@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.quartz.nip17Dm
 
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 class NIP17Factory {
     data class Result(
@@ -76,131 +77,51 @@ class NIP17Factory {
         recursiveGiftWrapCreation(event, to.toList(), signer, wraps, onReady)
     }
 
-    fun createMsgNIP17(
-        msg: String,
-        to: List<HexKey>,
+    fun createMessageNIP17(
+        template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
-        subject: String? = null,
-        replyTos: List<String>? = null,
-        mentions: List<String>? = null,
-        zapReceiver: List<ZapSplitSetup>? = null,
-        markAsSensitive: Boolean = false,
-        zapRaiserAmount: Long? = null,
-        geohash: String? = null,
-        imetas: List<IMetaTag>? = null,
-        emojis: List<EmojiUrl>? = null,
-        draftTag: String? = null,
         onReady: (Result) -> Unit,
     ) {
-        val senderPublicKey = signer.pubKey
-
-        ChatMessageEvent.create(
-            msg = msg,
-            to = to,
-            signer = signer,
-            subject = subject,
-            replyTos = replyTos,
-            mentions = mentions,
-            zapReceiver = zapReceiver,
-            markAsSensitive = markAsSensitive,
-            zapRaiserAmount = zapRaiserAmount,
-            geohash = geohash,
-            isDraft = draftTag != null,
-            imetas = imetas,
-            emojis = emojis,
-        ) { senderMessage ->
-            if (draftTag != null) {
+        signer.sign(template) { senderMessage ->
+            createWraps(senderMessage, senderMessage.groupMembers(), signer) { wraps ->
                 onReady(
                     Result(
                         msg = senderMessage,
-                        wraps = listOf(),
+                        wraps = wraps,
                     ),
                 )
-            } else {
-                createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
-                    onReady(
-                        Result(
-                            msg = senderMessage,
-                            wraps = wraps,
-                        ),
-                    )
-                }
             }
         }
     }
 
     fun createEncryptedFileNIP17(
-        url: String,
-        to: List<HexKey>,
-        repliesToHex: List<HexKey>? = null,
-        contentType: String?,
-        algo: String,
-        key: ByteArray,
-        nonce: ByteArray? = null,
-        originalHash: String? = null,
-        hash: String? = null,
-        size: Int? = null,
-        dimensions: Dimension? = null,
-        blurhash: String? = null,
-        sensitiveContent: Boolean? = null,
-        alt: String?,
-        draftTag: String? = null,
+        template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
         onReady: (Result) -> Unit,
     ) {
-        val senderPublicKey = signer.pubKey
-
-        ChatMessageEncryptedFileHeaderEvent.create(
-            url = url,
-            to = to,
-            repliesTo = repliesToHex,
-            contentType = contentType,
-            algo = algo,
-            key = key,
-            nonce = nonce,
-            originalHash = originalHash,
-            hash = hash,
-            size = size,
-            dimensions = dimensions,
-            blurhash = blurhash,
-            sensitiveContent = sensitiveContent,
-            alt = alt,
-            signer = signer,
-            isDraft = draftTag != null,
-        ) { senderMessage ->
-            if (draftTag != null) {
+        signer.sign(template) { senderMessage ->
+            createWraps(senderMessage, senderMessage.groupMembers(), signer) { wraps ->
                 onReady(
                     Result(
                         msg = senderMessage,
-                        wraps = listOf(),
+                        wraps = wraps,
                     ),
                 )
-            } else {
-                createWraps(senderMessage, to.plus(senderPublicKey).toSet(), signer) { wraps ->
-                    onReady(
-                        Result(
-                            msg = senderMessage,
-                            wraps = wraps,
-                        ),
-                    )
-                }
             }
         }
     }
 
     fun createReactionWithinGroup(
         content: String,
-        originalNote: Event,
+        originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
         onReady: (Result) -> Unit,
     ) {
         val senderPublicKey = signer.pubKey
 
-        ReactionEvent.create(
-            content,
-            originalNote,
-            signer,
+        signer.sign(
+            ReactionEvent.build(content, originalNote),
         ) { senderReaction ->
             createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer) { wraps ->
                 onReady(
@@ -214,18 +135,16 @@ class NIP17Factory {
     }
 
     fun createReactionWithinGroup(
-        emojiUrl: EmojiUrl,
-        originalNote: Event,
+        emojiUrl: EmojiUrlTag,
+        originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
         onReady: (Result) -> Unit,
     ) {
         val senderPublicKey = signer.pubKey
 
-        ReactionEvent.create(
-            emojiUrl,
-            originalNote,
-            signer,
+        signer.sign(
+            ReactionEvent.build(emojiUrl, originalNote),
         ) { senderReaction ->
             createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer) { wraps ->
                 onReady(

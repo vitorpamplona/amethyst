@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -45,7 +45,7 @@ class CalendarEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (CalendarEvent) -> Unit,
         ) {
-            val tags = arrayOf(AltTagSerializer.toTagArray(ALT))
+            val tags = arrayOf(AltTag.assemble(ALT))
             signer.sign(createdAt, KIND, tags, "", onReady)
         }
     }

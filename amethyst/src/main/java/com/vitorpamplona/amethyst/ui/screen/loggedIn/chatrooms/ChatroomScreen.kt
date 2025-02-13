@@ -79,6 +79,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -118,9 +119,18 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.NIP17Group
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip92IMeta.imetas
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
@@ -519,24 +529,39 @@ private fun innerSendPost(
     val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
     val emojis = newPostModel.findEmoji(newPostModel.message.text, accountViewModel.account.myEmojis.value)
 
+    val message = newPostModel.message.text
+
     if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
-        accountViewModel.account.sendNIP17PrivateMessage(
-            message = newPostModel.message.text,
-            toUsers = room.users.toList(),
-            replyingTo = replyTo.value,
-            mentions = null,
-            wantsToMarkAsSensitive = false,
-            imetas = usedAttachments,
-            emojis = emojis,
-            draftTag = dTag,
-        )
+        val replyHint = replyTo.value?.toEventHint<ChatMessageEvent>()
+        val template =
+            if (replyHint == null) {
+                ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
+                    hashtags(findHashtags(message))
+                    references(findURLs(message))
+                    quotes(findNostrUris(message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            } else {
+                ChatMessageEvent.reply(message, replyHint) {
+                    hashtags(findHashtags(message))
+                    references(findURLs(message))
+                    quotes(findNostrUris(message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            }
+
+        accountViewModel.account.sendNIP17PrivateMessage(template, dTag)
     } else {
         accountViewModel.account.sendPrivateMessage(
             message = newPostModel.message.text,
-            toUser = room.users.first(),
+            toUser = room.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
             replyingTo = replyTo.value,
             mentions = null,
-            wantsToMarkAsSensitive = false,
+            contentWarningReason = null,
             imetas = usedAttachments,
             draftTag = dTag,
         )
@@ -862,14 +887,15 @@ fun NewSubjectView(
                     PostButton(
                         onPost = {
                             scope.launch(Dispatchers.IO) {
-                                accountViewModel.account.sendNIP17PrivateMessage(
-                                    message = message.value,
-                                    toUsers = room.users.toList(),
-                                    subject = groupName.value.ifBlank { null },
-                                    replyingTo = null,
-                                    mentions = null,
-                                    wantsToMarkAsSensitive = false,
-                                )
+                                val template =
+                                    ChatMessageEvent.build(
+                                        message.value,
+                                        room.users.map { LocalCache.getOrCreateUser(it).toPTag() },
+                                    ) {
+                                        groupName.value.ifBlank { null }?.let { changeSubject(it) }
+                                    }
+
+                                accountViewModel.account.sendNIP17PrivateMessage(template)
                             }
 
                             onClose()

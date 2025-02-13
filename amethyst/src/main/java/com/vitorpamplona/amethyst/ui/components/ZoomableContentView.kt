@@ -97,7 +97,7 @@ import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -514,7 +514,7 @@ fun ShowHash(content: MediaUrlContent) {
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
 
-fun aspectRatio(dim: Dimension?): Float? {
+fun aspectRatio(dim: DimensionTag?): Float? {
     if (dim == null) return null
 
     return dim.width.toFloat() / dim.height.toFloat()
@@ -641,7 +641,7 @@ fun ShareImageAction(
     videoUri: String?,
     postNostrUri: String?,
     blurhash: String?,
-    dim: Dimension?,
+    dim: DimensionTag?,
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,

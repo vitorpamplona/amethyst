@@ -26,7 +26,7 @@ import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 object NostrChatroomDataSource : AmethystNostrDataSource("ChatroomFeed") {
     lateinit var account: Account

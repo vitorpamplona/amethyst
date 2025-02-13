@@ -29,35 +29,47 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class ETag(
-    val eventId: HexKey,
-) {
-    var relay: String? = null
-    var authorPubKeyHex: HexKey? = null
+    override val eventId: HexKey,
+) : GenericETag {
+    override var relay: String? = null
+    override var author: HexKey? = null
 
     constructor(eventId: HexKey, relayHint: String? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
         this.relay = relayHint
-        this.authorPubKeyHex = authorPubKeyHex
+        this.author = authorPubKeyHex
     }
 
     fun countMemory(): Long =
         3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             eventId.bytesUsedInMemory() +
             (relay?.bytesUsedInMemory() ?: 0) +
-            (authorPubKeyHex?.bytesUsedInMemory() ?: 0)
+            (author?.bytesUsedInMemory() ?: 0)
 
-    fun toNEvent(): String = NEvent.create(eventId, authorPubKeyHex, null, relay)
+    fun toNEvent(): String = NEvent.create(eventId, author, null, relay)
 
-    fun toETagArray() = arrayOfNotNull(TAG_NAME, eventId, relay, authorPubKeyHex)
+    override fun toTagArray() = toNamedTagArray(TAG_NAME)
 
-    fun toQTagArray() = arrayOfNotNull("q", eventId, relay, authorPubKeyHex)
+    fun toQTagArray() = toNamedTagArray("q")
+
+    fun toNamedTagArray(key: String) = arrayOfNotNull(key, eventId, relay, author)
 
     companion object {
         const val TAG_NAME = "e"
+        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun parse(tags: Array<String>): ETag {
-            require(tags[0] == TAG_NAME)
-            return ETag(tags[1], tags.getOrNull(2), tags.getOrNull(3))
+        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tag: Array<String>): ETag? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return ETag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+        }
+
+        @JvmStatic
+        fun parseId(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return tag[1]
         }
 
         @JvmStatic

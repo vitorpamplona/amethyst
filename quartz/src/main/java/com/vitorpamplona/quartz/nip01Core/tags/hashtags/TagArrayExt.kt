@@ -23,20 +23,25 @@ package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.anyTagged
+import com.vitorpamplona.quartz.nip01Core.core.firstAnyLowercaseTaggedValue
 import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
 import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
+import com.vitorpamplona.quartz.nip01Core.core.isAnyLowercaseTagged
+import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
-fun TagArray.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged("t", onEach)
+fun TagArray.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(HashTag.TAG_NAME, onEach)
 
-fun TagArray.anyHashTag(onEach: (str: String) -> Boolean) = this.anyTagged("t", onEach)
+fun TagArray.anyHashTag(onEach: (str: String) -> Boolean) = this.anyTagged(HashTag.TAG_NAME, onEach)
 
-fun TagArray.hasHashtags() = this.hasTagWithContent("t")
+fun TagArray.hasHashtags() = this.hasTagWithContent(HashTag.TAG_NAME)
 
-fun TagArray.hashtags() = this.mapValues("t")
+fun TagArray.hashtags() = this.mapValues(HashTag.TAG_NAME)
 
-fun TagArray.isTaggedHash(hashtag: String) = this.any { it.size > 1 && it[0] == "t" && it[1].equals(hashtag, true) }
+fun TagArray.countHashtags() = this.count(HashTag::isTagged)
 
-fun TagArray.isTaggedHashes(hashtags: Set<String>) = this.any { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }
+fun TagArray.isTaggedHash(hashtag: String) = this.isTagged(HashTag.TAG_NAME, hashtag, true)
 
-fun TagArray.firstIsTaggedHashes(hashtags: Set<String>) = this.firstOrNull { it.size > 1 && it[0] == "t" && it[1].lowercase() in hashtags }?.getOrNull(1)
+fun TagArray.isTaggedHashes(hashtags: Set<String>) = this.isAnyLowercaseTagged(HashTag.TAG_NAME, hashtags)
+
+fun TagArray.firstIsTaggedHashes(hashtags: Set<String>) = this.firstAnyLowercaseTaggedValue(HashTag.TAG_NAME, hashtags)

@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -39,8 +40,11 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip17Dm.AESGCM
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -98,7 +102,7 @@ open class ChatFileUploadModel : ViewModel() {
                 myMultiOrchestrator.uploadEncrypted(
                     viewModelScope,
                     caption,
-                    sensitiveContent,
+                    if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQualitySlider),
                     cipher,
                     mySelectedServer,
@@ -109,24 +113,30 @@ open class ChatFileUploadModel : ViewModel() {
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        account?.sendNIP17EncryptedFile(
-                            url = state.result.url,
-                            toUsers = myChatroom.users.toList(),
-                            replyingTo = null,
-                            contentType = state.result.mimeTypeBeforeEncryption,
-                            algo = cipher.name(),
-                            key = cipher.keyBytes,
-                            nonce = cipher.nonce,
-                            originalHash = state.result.hashBeforeEncryption,
-                            hash = state.result.fileHeader.hash,
-                            size = state.result.fileHeader.size,
-                            dimensions = state.result.fileHeader.dim,
-                            blurhash =
-                                state.result.fileHeader.blurHash
-                                    ?.blurhash,
-                            alt = caption,
-                            sensitiveContent = sensitiveContent,
-                        )
+                        val template =
+                            ChatMessageEncryptedFileHeaderEvent.build(
+                                url = state.result.url,
+                                to = myChatroom.users.map { LocalCache.getOrCreateUser(it).toPTag() },
+                                cipher = cipher,
+                                mimeType = state.result.mimeTypeBeforeEncryption,
+                                originalHash = state.result.hashBeforeEncryption,
+                                hash = state.result.fileHeader.hash,
+                                size = state.result.fileHeader.size,
+                                dimension = state.result.fileHeader.dim,
+                                blurhash =
+                                    state.result.fileHeader.blurHash
+                                        ?.blurhash,
+                            ) {
+                                if (caption.isNotEmpty()) {
+                                    alt(caption)
+                                }
+
+                                if (sensitiveContent) {
+                                    contentWarning("")
+                                }
+                            }
+
+                        account?.sendNIP17EncryptedFile(template)
                     }
                 }
 

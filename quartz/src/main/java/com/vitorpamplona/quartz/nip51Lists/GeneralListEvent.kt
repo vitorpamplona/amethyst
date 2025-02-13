@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
@@ -47,6 +48,8 @@ abstract class GeneralListEvent(
     fun bookmarkedPosts() = taggedEvents()
 
     fun bookmarkedPeople() = taggedUsers()
+
+    fun bookmarkedPeopleIds() = taggedUserIds()
 
     fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
 

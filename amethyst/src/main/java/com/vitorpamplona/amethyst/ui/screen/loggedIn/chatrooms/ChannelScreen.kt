@@ -165,14 +165,27 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.liveStreamTag
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.experimental.audio.Participant
+import com.vitorpamplona.quartz.nip01Core.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
+import com.vitorpamplona.quartz.nip28PublicChat.base.notify
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.notify
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
+import com.vitorpamplona.quartz.nip92IMeta.imetas
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -403,29 +416,93 @@ private suspend fun innerSendPost(
     val usedAttachments = newPostModel.iMetaAttachments.filter { it.url in urls.toSet() }
     val emojis = newPostModel.findEmoji(newPostModel.message.text, accountViewModel.account.myEmojis.value)
 
+    val channelRelays = channel.relays()
+
     if (channel is PublicChatChannel) {
-        accountViewModel.account.sendChannelMessage(
-            message = tagger.message,
-            toChannel = channel.idHex,
-            replyTo = tagger.eTags,
-            mentions = tagger.pTags,
-            directMentions = tagger.directMentions,
-            wantsToMarkAsSensitive = false,
-            imetas = usedAttachments,
-            emojis = emojis,
-            draftTag = draftTag,
-        )
+        val replyingToEvent = replyTo.value?.toEventHint<ChannelMessageEvent>()
+        val channelEvent = channel.event
+
+        val template =
+            if (replyingToEvent != null) {
+                ChannelMessageEvent.reply(tagger.message, replyingToEvent) {
+                    notify(replyingToEvent.toPTag())
+
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            } else if (channelEvent != null) {
+                val hint = EventHintBundle(channelEvent, channelRelays.firstOrNull())
+                ChannelMessageEvent.message(tagger.message, hint) {
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            } else {
+                ChannelMessageEvent.message(tagger.message, ETag(channel.idHex, channelRelays.firstOrNull())) {
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            }
+
+        val broadcast = tagger.directMentionsNotes + (tagger.eTags ?: emptyList())
+
+        accountViewModel.account.signAndSendWithList(draftTag, template, channelRelays, broadcast)
     } else if (channel is LiveActivitiesChannel) {
-        accountViewModel.account.sendLiveMessage(
-            message = tagger.message,
-            toChannel = channel.address,
-            replyTo = tagger.eTags,
-            mentions = tagger.pTags,
-            wantsToMarkAsSensitive = false,
-            imetas = usedAttachments,
-            emojis = emojis,
-            draftTag = draftTag,
-        )
+        val replyingToEvent = replyTo.value?.toEventHint<LiveActivitiesChatMessageEvent>()
+        val activity = channel.info
+
+        val template =
+            if (replyingToEvent != null) {
+                LiveActivitiesChatMessageEvent.reply(tagger.message, replyingToEvent) {
+                    notify(replyingToEvent.toPTag())
+
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            } else if (activity != null) {
+                val hint = EventHintBundle(activity, channelRelays.firstOrNull() ?: replyingToEvent?.relay)
+
+                LiveActivitiesChatMessageEvent.message(tagger.message, hint) {
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            } else {
+                if (channel.address.relay == null) {
+                    channel.address.relay = channelRelays.firstOrNull() ?: replyingToEvent?.relay
+                }
+
+                LiveActivitiesChatMessageEvent.message(tagger.message, channel.address) {
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                }
+            }
+
+        val broadcast = tagger.directMentionsNotes + (tagger.eTags ?: emptyList())
+
+        accountViewModel.account.signAndSendWithList(draftTag, template, channelRelays, broadcast)
     }
 }
 
@@ -533,7 +610,7 @@ fun EditFieldRow(
                     channelScreenModel.selectImage(it)
                     channelScreenModel.upload(
                         alt = null,
-                        sensitiveContent = false,
+                        contentWarningReason = null,
                         // Use MEDIUM quality
                         mediaQuality = MediaCompressor.compressorQualityToInt(CompressorQuality.MEDIUM),
                         server = accountViewModel.account.settings.defaultFileServer,
@@ -988,21 +1065,20 @@ fun LongChannelHeader(
         }
     }
 
-    var participantUsers by
-        remember(baseChannel) {
-            mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+    if (channel is LiveActivitiesChannel) {
+        var participantUsers by remember(baseChannel) {
+            mutableStateOf<ImmutableList<Pair<ParticipantTag, User>>>(
                 persistentListOf(),
             )
         }
 
-    if (channel is LiveActivitiesChannel) {
         LaunchedEffect(key1 = channelState) {
             launch(Dispatchers.IO) {
                 val newParticipantUsers =
                     channel.info
                         ?.participants()
                         ?.mapNotNull { part ->
-                            LocalCache.checkGetOrCreateUser(part.key)?.let { Pair(part, it) }
+                            LocalCache.checkGetOrCreateUser(part.pubKey)?.let { Pair(part, it) }
                         }?.toImmutableList()
 
                 if (
@@ -1135,7 +1211,7 @@ private fun LiveChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isLive by remember(channel) { derivedStateOf { channel.info?.status() == STATUS_LIVE } }
+    val isLive by remember(channel) { derivedStateOf { channel.info?.status() == StatusTag.STATUS.LIVE.code } }
 
     val note = remember(channel.idHex) { LocalCache.getNoteIfExists(channel.idHex) }
 

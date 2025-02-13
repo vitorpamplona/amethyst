@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import java.io.File
 
 @Immutable
 abstract class BaseMediaContent(
     val description: String? = null,
-    val dim: Dimension? = null,
+    val dim: DimensionTag? = null,
     val blurhash: String? = null,
 )
 
@@ -36,7 +36,7 @@ abstract class MediaUrlContent(
     val url: String,
     description: String? = null,
     val hash: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     blurhash: String? = null,
     val uri: String? = null,
     val mimeType: String? = null,
@@ -48,7 +48,7 @@ open class MediaUrlImage(
     description: String? = null,
     hash: String? = null,
     blurhash: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     uri: String? = null,
     val contentWarning: String? = null,
     mimeType: String? = null,
@@ -59,7 +59,7 @@ class EncryptedMediaUrlImage(
     description: String? = null,
     hash: String? = null,
     blurhash: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     uri: String? = null,
     contentWarning: String? = null,
     mimeType: String? = null,
@@ -73,7 +73,7 @@ open class MediaUrlVideo(
     url: String,
     description: String? = null,
     hash: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     uri: String? = null,
     val artworkUri: String? = null,
     val authorName: String? = null,
@@ -87,7 +87,7 @@ class EncryptedMediaUrlVideo(
     url: String,
     description: String? = null,
     hash: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     uri: String? = null,
     artworkUri: String? = null,
     authorName: String? = null,
@@ -105,7 +105,7 @@ abstract class MediaPreloadedContent(
     description: String? = null,
     val mimeType: String? = null,
     val isVerified: Boolean? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     blurhash: String? = null,
     val uri: String,
     val id: String? = null,
@@ -118,7 +118,7 @@ class MediaLocalImage(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,
@@ -129,7 +129,7 @@ class MediaLocalVideo(
     localFile: File?,
     mimeType: String? = null,
     description: String? = null,
-    dim: Dimension? = null,
+    dim: DimensionTag? = null,
     blurhash: String? = null,
     isVerified: Boolean? = null,
     uri: String,

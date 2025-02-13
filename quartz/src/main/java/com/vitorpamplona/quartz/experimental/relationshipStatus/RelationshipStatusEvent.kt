@@ -21,9 +21,16 @@
 package com.vitorpamplona.quartz.experimental.relationshipStatus
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetnameTag
+import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
+import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip51Lists.Nip51PrivateTags
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -36,29 +43,15 @@ class RelationshipStatusEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
+
+    fun petname() = tags.firstNotNullOfOrNull(PetnameTag::parse)
+
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
     companion object {
         const val KIND = 30382
         const val ALT = "Relationship Status"
-
-        const val PETNAME = "petname"
-        const val SUMMARY = "summary"
-
-        private fun create(
-            content: String,
-            tags: Array<Array<String>>,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (RelationshipStatusEvent) -> Unit,
-        ) {
-            val newTags =
-                if (tags.any { it.size > 1 && it[0] == "alt" }) {
-                    tags
-                } else {
-                    tags + AltTagSerializer.toTagArray(ALT)
-                }
-
-            signer.sign(createdAt, KIND, newTags, content, onReady)
-        }
 
         fun create(
             targetUser: HexKey,
@@ -66,18 +59,26 @@ class RelationshipStatusEvent(
             summary: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
+            publicInitializer: TagArrayBuilder<RelationshipStatusEvent>.() -> Unit = {},
+            privateInitializer: TagArrayBuilder<RelationshipStatusEvent>.() -> Unit = {},
             onReady: (RelationshipStatusEvent) -> Unit,
         ) {
-            val tags = mutableListOf<Array<String>>()
-            tags.add(arrayOf("d", targetUser))
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            val publicTags =
+                tagArray {
+                    alt(ALT)
+                    dTag(targetUser)
+                    publicInitializer()
+                }
 
-            val privateTags = mutableListOf<Array<String>>()
-            petname?.let { privateTags.add(arrayOf(PETNAME, it)) }
-            summary?.let { privateTags.add(arrayOf(SUMMARY, it)) }
+            val privateTags =
+                tagArray {
+                    petname?.let { petname(it) }
+                    summary?.let { summary(it) }
+                    privateInitializer()
+                }
 
-            encryptTags(privateTags.toTypedArray(), signer) { content ->
-                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            Nip51PrivateTags.encryptNip44(privateTags, signer) { content ->
+                signer.sign(createdAt, KIND, publicTags, content, onReady)
             }
         }
     }

@@ -58,9 +58,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 
 @Composable
@@ -69,7 +69,7 @@ public fun RenderEmojiPack(
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    onClick: ((EmojiUrl) -> Unit)? = null,
+    onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     val noteEvent by
         baseNote
@@ -101,7 +101,7 @@ public fun RenderEmojiPack(
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    onClick: ((EmojiUrl) -> Unit)? = null,
+    onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
 

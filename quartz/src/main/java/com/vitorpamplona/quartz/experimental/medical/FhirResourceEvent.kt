@@ -21,9 +21,12 @@
 package com.vitorpamplona.quartz.experimental.medical
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent.Companion.ALT
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -37,16 +40,15 @@ class FhirResourceEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     companion object {
         const val KIND = 82
+        const val ALT_DESCRIPTION = "Medical data"
 
-        fun create(
+        fun build(
             fhirPayload: String,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (FhirResourceEvent) -> Unit,
-        ) {
-            val tags = mutableListOf<Array<String>>()
-
-            signer.sign(createdAt, KIND, tags.toTypedArray(), fhirPayload, onReady)
+            initializer: TagArrayBuilder<FhirResourceEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, fhirPayload, createdAt) {
+            alt(ALT)
+            initializer()
         }
     }
 }

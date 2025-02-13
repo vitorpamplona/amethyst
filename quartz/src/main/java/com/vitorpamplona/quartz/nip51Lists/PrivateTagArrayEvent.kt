@@ -22,10 +22,8 @@ package com.vitorpamplona.quartz.nip51Lists
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -65,8 +63,8 @@ abstract class PrivateTagArrayEvent(
         }
 
         try {
-            signer.decrypt(content, pubKey) {
-                privateTagsCache = EventMapper.mapper.readValue<Array<Array<String>>>(it)
+            Nip51PrivateTags.decrypt(content, signer) {
+                privateTagsCache = it
                 privateTagsCache?.let { onReady(it) }
             }
         } catch (e: Throwable) {
@@ -80,7 +78,7 @@ abstract class PrivateTagArrayEvent(
         onReady: (content: String) -> Unit,
     ) {
         privateTags(signer) { privateTags ->
-            encryptTags(
+            Nip51PrivateTags.encryptNip04(
                 privateTags = change(privateTags),
                 signer = signer,
             ) { encryptedTags ->
@@ -99,7 +97,7 @@ abstract class PrivateTagArrayEvent(
         ) {
             if (toPrivate) {
                 current.privateTags(signer) { privateTags ->
-                    encryptTags(
+                    Nip51PrivateTags.encryptNip04(
                         privateTags = privateTags.plus(newTag),
                         signer = signer,
                     ) { encryptedTags ->
@@ -120,7 +118,7 @@ abstract class PrivateTagArrayEvent(
         ) {
             if (toPrivate) {
                 current.privateTags(signer) { privateTags ->
-                    encryptTags(
+                    Nip51PrivateTags.encryptNip04(
                         privateTags = privateTags.plus(newTag),
                         signer = signer,
                     ) { encryptedTags ->
@@ -170,7 +168,7 @@ abstract class PrivateTagArrayEvent(
             onReady: (content: String, tags: Array<Array<String>>) -> Unit,
         ) {
             current.privateTags(signer) { privateTags ->
-                encryptTags(
+                Nip51PrivateTags.encryptNip04(
                     privateTags = privateTags.replaceAll(oldTagStartsWith, newTag),
                     signer = signer,
                 ) { encryptedTags ->
@@ -187,7 +185,7 @@ abstract class PrivateTagArrayEvent(
             onReady: (content: String, tags: Array<Array<String>>) -> Unit,
         ) {
             current.privateTags(signer) { privateTags ->
-                encryptTags(
+                Nip51PrivateTags.encryptNip04(
                     privateTags = privateTags.remove(oldTagStartsWith),
                     signer = signer,
                 ) { encryptedTags ->
@@ -203,7 +201,7 @@ abstract class PrivateTagArrayEvent(
             onReady: (content: String, tags: Array<Array<String>>) -> Unit,
         ) {
             current.privateTags(signer) { privateTags ->
-                encryptTags(
+                Nip51PrivateTags.encryptNip04(
                     privateTags = privateTags.remove(oldTagStartsWith),
                     signer = signer,
                 ) { encryptedTags ->
@@ -226,7 +224,7 @@ abstract class PrivateTagArrayEvent(
             onReady: (content: String, tags: Array<Array<String>>) -> Unit,
         ) {
             current.privateTags(signer) { privateTags ->
-                encryptTags(
+                Nip51PrivateTags.encryptNip04(
                     privateTags = privateTags.remove(oldTagStartsWith),
                     signer = signer,
                 ) { encryptedTags ->
@@ -241,7 +239,7 @@ abstract class PrivateTagArrayEvent(
             signer: NostrSigner,
             onReady: (content: String, tags: Array<Array<String>>) -> Unit,
         ) {
-            encryptTags(
+            Nip51PrivateTags.encryptNip04(
                 privateTags = arrayOf(newTag),
                 signer = signer,
             ) { encryptedTags ->
@@ -257,15 +255,5 @@ abstract class PrivateTagArrayEvent(
         ) {
             onReady("", arrayOf(arrayOf("d", dTag), newTag))
         }
-
-        fun encryptTags(
-            privateTags: Array<Array<String>>? = null,
-            signer: NostrSigner,
-            onReady: (String) -> Unit,
-        ) = signer.nip04Encrypt(
-            if (privateTags.isNullOrEmpty()) "" else EventMapper.mapper.writeValueAsString(privateTags),
-            signer.pubKey,
-            onReady,
-        )
     }
 }

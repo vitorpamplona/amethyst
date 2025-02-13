@@ -22,9 +22,11 @@ package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.UUID
 
@@ -42,40 +44,26 @@ class VideoVerticalEvent(
         const val KIND = 34236
         const val ALT_DESCRIPTION = "Vertical Video"
 
-        fun create(
-            url: String,
-            mimeType: String? = null,
-            alt: String? = null,
-            hash: String? = null,
-            size: Int? = null,
-            duration: Int? = null,
-            dimensions: Dimension? = null,
-            blurhash: String? = null,
-            sensitiveContent: Boolean? = null,
-            service: String? = null,
+        fun build(
+            video: VideoMeta,
+            description: String,
             dTag: String = UUID.randomUUID().toString(),
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (VideoVerticalEvent) -> Unit,
-        ) {
-            create(
-                kind = KIND,
-                dTag = dTag,
-                url = url,
-                mimeType = mimeType,
-                alt = alt,
-                hash = hash,
-                size = size,
-                duration = duration,
-                dimensions = dimensions,
-                blurhash = blurhash,
-                sensitiveContent = sensitiveContent,
-                service = service,
-                altDescription = ALT_DESCRIPTION,
-                signer = signer,
-                createdAt = createdAt,
-                onReady = onReady,
-            )
+            initializer: TagArrayBuilder<VideoVerticalEvent>.() -> Unit = {},
+        ) = build(description, dTag, createdAt) {
+            videoIMeta(video)
+            initializer()
+        }
+
+        fun build(
+            description: String,
+            dTag: String = UUID.randomUUID().toString(),
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<VideoVerticalEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            dTag(dTag)
+            alt(ALT_DESCRIPTION)
+            initializer()
         }
     }
 }
