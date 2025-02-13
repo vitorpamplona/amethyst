@@ -65,6 +65,8 @@ class User(
     var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
+    var followSets: List<AddressableNote> = listOf()
+        private set
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -161,6 +163,10 @@ class User(
 
         liveSet?.innerRelays?.invalidateData()
         flowSet?.relays?.invalidateData()
+    }
+
+    fun updateFollowSets(sets: List<AddressableNote>) {
+        followSets = followSets + sets
     }
 
     fun addReport(note: Note) {
@@ -467,16 +473,19 @@ class UserFlowSet(
     val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
     val relays = UserBundledRefresherFlow(u)
+    val followSets = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
         metadata.stateFlow.subscriptionCount.value > 0 ||
             relays.stateFlow.subscriptionCount.value > 0 ||
-            follows.stateFlow.subscriptionCount.value > 0
+            follows.stateFlow.subscriptionCount.value > 0 ||
+            followSets.stateFlow.subscriptionCount.value > 0
 
     fun destroy() {
         metadata.destroy()
         relays.destroy()
         follows.destroy()
+        followSets.destroy()
     }
 }
 
