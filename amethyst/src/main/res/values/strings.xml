@@ -634,6 +634,9 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_performance">Performance</string>
 
+    <string name="gallery_type_classic">Classic</string>
+    <string name="gallery_type_modern">Modern</string>
+
     <string name="system">System</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
@@ -649,6 +652,9 @@
 
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
+
+    <string name="gallery_style">Profile Gallery Style</string>
+    <string name="gallery_style_description">Choose the gallery style</string>
 
     <string name="load_image">Load Image</string>
 

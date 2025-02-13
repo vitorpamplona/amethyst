@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.ThemeType
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ class SettingsState {
     var dontShowPushNotificationSelector by mutableStateOf<Boolean>(false)
     var dontAskForNotificationPermissions by mutableStateOf<Boolean>(false)
     var featureSet by mutableStateOf(FeatureSetType.SIMPLIFIED)
+    var gallerySet by mutableStateOf(ProfileGalleryType.CLASSIC)
 
     var isOnMobileData: State<Boolean> = mutableStateOf(false)
 
@@ -68,6 +70,14 @@ class SettingsState {
                 ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
                 ConnectivityType.NEVER -> false
                 ConnectivityType.ALWAYS -> true
+            }
+        }
+
+    val modernGalleryStyle =
+        derivedStateOf {
+            when (gallerySet) {
+                ProfileGalleryType.CLASSIC -> false
+                ProfileGalleryType.MODERN -> true
             }
         }
 
@@ -117,6 +127,7 @@ class SharedPreferencesViewModel : ViewModel() {
             sharedPrefs.automaticallyShowProfilePictures = savedSettings.automaticallyShowProfilePictures
             sharedPrefs.dontShowPushNotificationSelector = savedSettings.dontShowPushNotificationSelector
             sharedPrefs.dontAskForNotificationPermissions = savedSettings.dontAskForNotificationPermissions
+            sharedPrefs.gallerySet = savedSettings.gallerySet
             sharedPrefs.featureSet = savedSettings.featureSet
 
             updateLanguageInTheUI()
@@ -191,6 +202,13 @@ class SharedPreferencesViewModel : ViewModel() {
         }
     }
 
+    fun updateGallerySetType(newgalleryType: ProfileGalleryType) {
+        if (sharedPrefs.gallerySet != newgalleryType) {
+            sharedPrefs.gallerySet = newgalleryType
+            saveSharedSettings()
+        }
+    }
+
     fun dontShowPushNotificationSelector() {
         if (sharedPrefs.dontShowPushNotificationSelector == false) {
             sharedPrefs.dontShowPushNotificationSelector = true
@@ -237,6 +255,7 @@ class SharedPreferencesViewModel : ViewModel() {
                     sharedPrefs.dontShowPushNotificationSelector,
                     sharedPrefs.dontAskForNotificationPermissions,
                     sharedPrefs.featureSet,
+                    sharedPrefs.gallerySet,
                 ),
             )
         }

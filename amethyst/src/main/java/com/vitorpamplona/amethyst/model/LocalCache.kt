@@ -1863,6 +1863,21 @@ object LocalCache {
         )
     }
 
+    /**
+     * Will return true if supplied note is one of events to be excluded from
+     * search results.
+     */
+    private fun excludeNoteEventFromSearchResults(note: Note): Boolean =
+        (
+            note.event is GenericRepostEvent ||
+                note.event is RepostEvent ||
+                note.event is CommunityPostApprovalEvent ||
+                note.event is ReactionEvent ||
+                note.event is LnZapEvent ||
+                note.event is LnZapRequestEvent ||
+                note.event is FileHeaderEvent
+        )
+
     fun findNotesStartingWith(
         text: String,
         forAccount: Account,
@@ -1873,19 +1888,13 @@ object LocalCache {
 
         if (key != null) {
             val note = getNoteIfExists(key)
-            if (note != null) {
+            if ((note != null) && !excludeNoteEventFromSearchResults(note)) {
                 return listOfNotNull(note)
             }
         }
 
         return notes.filter { _, note ->
-            if (note.event is GenericRepostEvent ||
-                note.event is RepostEvent ||
-                note.event is CommunityPostApprovalEvent ||
-                note.event is ReactionEvent ||
-                note.event is LnZapEvent ||
-                note.event is LnZapRequestEvent
-            ) {
+            if (excludeNoteEventFromSearchResults(note)) {
                 return@filter false
             }
 
@@ -1910,13 +1919,7 @@ object LocalCache {
             return@filter false
         } +
             addressables.filter { _, addressable ->
-                if (addressable.event is GenericRepostEvent ||
-                    addressable.event is RepostEvent ||
-                    addressable.event is CommunityPostApprovalEvent ||
-                    addressable.event is ReactionEvent ||
-                    addressable.event is LnZapEvent ||
-                    addressable.event is LnZapRequestEvent
-                ) {
+                if (excludeNoteEventFromSearchResults(addressable)) {
                     return@filter false
                 }
 

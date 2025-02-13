@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
@@ -87,6 +89,14 @@ private fun GalleryFeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
+
+    sharedPreferencesViewModel.init()
+
+    var ratio = 1.0f
+    if (sharedPreferencesViewModel.sharedPrefs.modernGalleryStyle.value) {
+        ratio = 0.8f
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -100,11 +110,12 @@ private fun GalleryFeedLoaded(
                 baseNote = item,
                 modifier =
                     Modifier
-                        .aspectRatio(1f)
+                        .aspectRatio(ratio)
                         .fillMaxSize()
                         .animateItem(),
                 accountViewModel = accountViewModel,
                 nav = nav,
+                ratio = ratio,
             )
         }
     }
