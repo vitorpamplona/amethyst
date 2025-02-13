@@ -41,4 +41,5 @@ val DEFAULT_MEDIA_SERVERS: List<ServerName> =
         ServerName("Satellite (Paid)", "https://cdn.satellite.earth", ServerType.Blossom),
         ServerName("NostrCheck.me (Blossom)", "https://cdn.nostrcheck.me", ServerType.Blossom),
         ServerName("Nostr.Download", "https://nostr.download", ServerType.Blossom),
+        ServerName("NostrMedia (Paid)", "https://nostrmedia.com", ServerType.Blossom),
     )
