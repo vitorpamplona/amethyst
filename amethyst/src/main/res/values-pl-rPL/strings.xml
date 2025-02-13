@@ -7,7 +7,7 @@
     <string name="scan_qr">Zeskanuj QR kod</string>
     <string name="show_anyway">Pokaż mimo wszystko</string>
     <string name="post_was_hidden">Ten post został ukryty, ponieważ dotyczy ukrytych użytkowników lub słów</string>
-    <string name="post_was_flagged_as_inappropriate_by">Post został wyciszony lub zgłoszony przez</string>
+    <string name="post_was_flagged_as_inappropriate_by">Wpis został ukryty lub zgłoszony przez</string>
     <string name="post_not_found">Wydarzenie jest wczytywane lub nie można go znaleźć na liście transmiterów</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Zdjęcie kanału</string>
@@ -80,7 +80,7 @@
     <string name="note_to_receiver">Wiadomość dla odbiorcy</string>
     <string name="thank_you_so_much">Dziękuję bardzo!</string>
     <string name="amount_in_sats">Kwota w Satsach</string>
-    <string name="send_sats">Wyślij Satsy</string>
+    <string name="send_sats">Wyślij</string>
     <string name="error_parsing_preview_for">"Błąd analizowania podglądu dla %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Podgląd obrazu karty dla %1$s"</string>
     <string name="new_channel">Nowy kanał</string>
@@ -539,6 +539,8 @@
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
     <string name="ui_feature_set_type_performance">Dynamiczny</string>
+    <string name="gallery_type_classic">Klasyczny</string>
+    <string name="gallery_type_modern">Nowoczesny</string>
     <string name="system">Automatyczny</string>
     <string name="light">Jasny</string>
     <string name="dark">Ciemny</string>
@@ -553,9 +555,11 @@
     <string name="automatically_hide_nav_bars_description">Ukrywa pasek przewijania</string>
     <string name="ui_style">Tryb interfejsu</string>
     <string name="ui_style_description">Wybierz styl wpisu</string>
+    <string name="gallery_style">Styl galerii</string>
+    <string name="gallery_style_description">Wybierz styl galerii</string>
     <string name="load_image">Załaduj obraz</string>
     <string name="spamming_users">Spamerzy</string>
-    <string name="muted_button">Wyciszone. Kliknij, aby wyłączyć wyciszenie</string>
+    <string name="muted_button">Wyciszone. Kliknij, aby włączyć dźwięk</string>
     <string name="mute_button">Dźwięk włączony. Kliknij, aby wyciszyć</string>
     <string name="search_button">Wyszukiwanie lokalne i zdalne</string>
     <string name="nip05_verified">Adres Nostr został zweryfikowany</string>
