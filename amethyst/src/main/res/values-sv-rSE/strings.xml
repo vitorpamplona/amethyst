@@ -536,6 +536,8 @@
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
     <string name="ui_feature_set_type_performance">Prestanda</string>
+    <string name="gallery_type_classic">Klassisk</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
@@ -550,6 +552,8 @@
     <string name="automatically_hide_nav_bars_description">Dölj navigeringsfält vid bläddring</string>
     <string name="ui_style">UI läge</string>
     <string name="ui_style_description">Välj stilen för inlägg</string>
+    <string name="gallery_style">Profilgalleri stil</string>
+    <string name="gallery_style_description">Välj galleriets stil</string>
     <string name="load_image">Ladda bild</string>
     <string name="spamming_users">Spammare</string>
     <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>

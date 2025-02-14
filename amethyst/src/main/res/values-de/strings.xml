@@ -542,6 +542,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ui_feature_set_type_complete">Fertig</string>
     <string name="ui_feature_set_type_simplified">Vereinfacht</string>
     <string name="ui_feature_set_type_performance">Leistung</string>
+    <string name="gallery_type_classic">Klassisch</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>
@@ -556,6 +558,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
     <string name="ui_style">UI-Modus</string>
     <string name="ui_style_description">Wählen Sie den Beitragsstil</string>
+    <string name="gallery_style">Profilgalerie-Stil</string>
+    <string name="gallery_style_description">Galeriestil auswählen</string>
     <string name="load_image">Bild laden</string>
     <string name="spamming_users">Spammer</string>
     <string name="muted_button">Stummgeschaltet. Drücken, um Ton einzuschalten</string>
