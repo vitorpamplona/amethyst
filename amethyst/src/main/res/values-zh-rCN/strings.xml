@@ -347,6 +347,7 @@
     <string name="add_content">添加到消息</string>
     <string name="add_caption">添加标题</string>
     <string name="add_caption_example">我最爱的朋友</string>
+    <string name="use_direct_url">使用直接链接</string>
     <string name="content_description">内容描述</string>
     <string name="content_description_example">日落时分，白色沙滩上的蓝色小船</string>
     <string name="zap_type">打闪类型</string>
@@ -538,6 +539,8 @@
     <string name="ui_feature_set_type_complete">完整版</string>
     <string name="ui_feature_set_type_simplified">简化版</string>
     <string name="ui_feature_set_type_performance">极速版</string>
+    <string name="gallery_type_classic">经典</string>
+    <string name="gallery_type_modern">现代</string>
     <string name="system">系统</string>
     <string name="light">浅色</string>
     <string name="dark">深色</string>
@@ -552,6 +555,8 @@
     <string name="automatically_hide_nav_bars_description">滚动时隐藏导航栏</string>
     <string name="ui_style">界面模式</string>
     <string name="ui_style_description">选择帖子样式</string>
+    <string name="gallery_style">资料页图库样式</string>
+    <string name="gallery_style_description">选择图库样式</string>
     <string name="load_image">加载图像</string>
     <string name="spamming_users">垃圾邮件</string>
     <string name="muted_button">静音。点击取消静音</string>
@@ -810,6 +815,7 @@
     <string name="search_relays_not_found_description">通过创建专用于关键词和标签检索的中继列表能够改善搜索结果。</string>
     <string name="search_relays_not_found_editing">设置 1 ~ 3 个支持 NIP-50 的中继，用于关键词和标签检索。</string>
     <string name="search_relays_not_found_examples">示例：\n - nostr.wine\n - reiny.nostr.band\n - reliy.noswhere.com</string>
+    <string name="dm_upload">DM 上传</string>
     <string name="relay_settings">中继设置</string>
     <string name="public_home_section">公共时间线中继</string>
     <string name="public_home_section_explainer">这类中继会保存您的所有内容。Amethyst 会将您的事件发送到这些中继，其他人则通过这些中继查找您的内容。可以设置 1 ~ 3 个中继。它们可以是个人专用中继、付费中继或者公共中继。</string>
