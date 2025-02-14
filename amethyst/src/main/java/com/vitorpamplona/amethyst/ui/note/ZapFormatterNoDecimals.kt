@@ -24,36 +24,19 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 
-val TenGiga = BigDecimal(10000000000)
-val OneGiga = BigDecimal(1000000000)
-val TenMega = BigDecimal(10000000)
-val OneMega = BigDecimal(1000000)
-val TenKilo = BigDecimal(10000)
-val OneKilo = BigDecimal(1000)
-
-private val dfGBig =
+private val dfG =
     object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.#G")
+        override fun initialValue() = DecimalFormat("#G")
     }
 
-private val dfGSmall =
+private val dfM =
     object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.0G")
-    }
-
-private val dfMBig =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.#M")
-    }
-
-private val dfMSmall =
-    object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.0M")
+        override fun initialValue() = DecimalFormat("#M")
     }
 
 private val dfK =
     object : ThreadLocal<DecimalFormat>() {
-        override fun initialValue() = DecimalFormat("#.#k")
+        override fun initialValue() = DecimalFormat("#k")
     }
 
 private val dfN =
@@ -61,23 +44,21 @@ private val dfN =
         override fun initialValue() = DecimalFormat("#")
     }
 
-fun showAmount(amount: BigDecimal?): String {
+fun showAmountInteger(amount: BigDecimal?): String {
     if (amount == null) return ""
     if (amount.abs() < BigDecimal(0.01)) return ""
 
     return when {
-        amount >= TenGiga -> dfGBig.get().format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneGiga -> dfGSmall.get().format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
-        amount >= TenMega -> dfMBig.get().format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
-        amount >= OneMega -> dfMSmall.get().format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneGiga -> dfG.get().format(amount.div(OneGiga).setScale(0, RoundingMode.HALF_UP))
+        amount >= OneMega -> dfM.get().format(amount.div(OneMega).setScale(0, RoundingMode.HALF_UP))
         amount >= TenKilo -> dfK.get().format(amount.div(OneKilo).setScale(0, RoundingMode.HALF_UP))
         else -> dfN.get().format(amount)
     }
 }
 
-fun showAmountWithZero(amount: BigDecimal?): String {
+fun showAmountIntegerWithZero(amount: BigDecimal?): String {
     if (amount == null) return "0"
     if (amount.abs() < BigDecimal(0.01)) return "0"
 
-    return showAmount(amount)
+    return showAmountInteger(amount)
 }

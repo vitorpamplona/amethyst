@@ -145,6 +145,7 @@ import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.NostrUserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.NostrUserProfileConversationsFeedViewModel
@@ -159,7 +160,6 @@ import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.RenderGalleryFeed
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -729,7 +729,7 @@ private fun ZapTabHeader(baseUser: User) {
         }
     }
 
-    Text(text = "${showAmountAxis(zapAmount)} ${stringRes(id = R.string.zaps)}")
+    Text(text = "${showAmountInteger(zapAmount)} ${stringRes(id = R.string.zaps)}")
 }
 
 @Composable

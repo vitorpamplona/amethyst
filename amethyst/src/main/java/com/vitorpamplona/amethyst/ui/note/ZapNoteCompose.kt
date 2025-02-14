@@ -47,7 +47,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ShowUserButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
@@ -144,7 +143,7 @@ private fun ZapAmount(zapEventNote: Note) {
 
     LaunchedEffect(key1 = noteState) {
         launch(Dispatchers.IO) {
-            val newZapAmount = showAmountAxis((noteState?.note?.event as? LnZapEvent)?.amount)
+            val newZapAmount = showAmountInteger((noteState?.note?.event as? LnZapEvent)?.amount)
             if (zapAmount != newZapAmount) {
                 zapAmount = newZapAmount
             }

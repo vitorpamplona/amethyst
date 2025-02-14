@@ -22,16 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import android.util.Log
 import androidx.compose.runtime.Stable
-import com.patrykandpatrick.vico.core.chart.composed.ComposedChartEntryModel
-import com.patrykandpatrick.vico.core.entry.ChartEntryModel
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
-import com.patrykandpatrick.vico.core.entry.composed.plus
-import com.patrykandpatrick.vico.core.entry.entryOf
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModel
+import com.patrykandpatrick.vico.core.cartesian.data.LineCartesianLayerModel
+import com.patrykandpatrick.vico.core.common.data.ExtraStore
+import com.patrykandpatrick.vico.core.common.data.MutableExtraStore
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.note.showCount
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.nip01Core.HexKey
@@ -52,37 +52,30 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+val ShowDecimals = ExtraStore.Key<Boolean>()
+val BottomAxisLabelKey = ExtraStore.Key<List<String>>()
+
 @Stable
 class NotificationSummaryState(
     val account: Account,
 ) {
     val user: User = account.userProfile()
 
-    private var _reactions = MutableStateFlow<Map<String, Int>>(emptyMap())
-    private var _boosts = MutableStateFlow<Map<String, Int>>(emptyMap())
-    private var _zaps = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
-    private var _replies = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var reactions = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var boosts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private var zaps = MutableStateFlow<Map<String, BigDecimal>>(emptyMap())
+    private var replies = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-    private var _chartModel = MutableStateFlow<ComposedChartEntryModel<ChartEntryModel>?>(null)
-    private var _axisLabels = MutableStateFlow<List<String>>(emptyList())
-
-    val reactions = _reactions.asStateFlow()
-    val boosts = _boosts.asStateFlow()
-    val zaps = _zaps.asStateFlow()
-    val replies = _replies.asStateFlow()
-
+    private var _chartModel = MutableStateFlow<CartesianChartModel?>(null)
     val chartModel = _chartModel.asStateFlow()
-    val axisLabels = _axisLabels.asStateFlow()
 
     private var takenIntoAccount = setOf<HexKey>()
     private val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
-    val todaysReplyCount = _replies.map { showCount(it[today()]) }.distinctUntilChanged()
-    val todaysBoostCount = _boosts.map { showCount(it[today()]) }.distinctUntilChanged()
-    val todaysReactionCount = _reactions.map { showCount(it[today()]) }.distinctUntilChanged()
-    val todaysZapAmount = _zaps.map { showAmountAxis(it[today()]) }.distinctUntilChanged()
-
-    var shouldShowDecimalsInAxis = false
+    val todaysReplyCount = replies.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysBoostCount = boosts.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysReactionCount = reactions.map { showCount(it[today()]) }.distinctUntilChanged()
+    val todaysZapAmount = zaps.map { showAmountInteger(it[today()]) }.distinctUntilChanged()
 
     fun formatDate(createAt: Long): String =
         sdf.format(
@@ -146,10 +139,10 @@ class NotificationSummaryState(
         }
 
         this.takenIntoAccount = takenIntoAccount
-        this._reactions.emit(reactions)
-        this._replies.emit(replies)
-        this._zaps.emit(zaps)
-        this._boosts.emit(boosts)
+        this.reactions.emit(reactions)
+        this.replies.emit(replies)
+        this.zaps.emit(zaps)
+        this.boosts.emit(boosts)
 
         refreshChartModel()
     }
@@ -159,10 +152,10 @@ class NotificationSummaryState(
 
         val currentUser = user.pubkeyHex
 
-        val reactions = this._reactions.value.toMutableMap()
-        val boosts = this._boosts.value.toMutableMap()
-        val zaps = this._zaps.value.toMutableMap()
-        val replies = this._replies.value.toMutableMap()
+        val reactions = this.reactions.value.toMutableMap()
+        val boosts = this.boosts.value.toMutableMap()
+        val zaps = this.zaps.value.toMutableMap()
+        val replies = this.replies.value.toMutableMap()
         val takenIntoAccount = this.takenIntoAccount.toMutableSet()
         var hasNewElements = false
 
@@ -217,10 +210,10 @@ class NotificationSummaryState(
 
         if (hasNewElements) {
             this.takenIntoAccount = takenIntoAccount
-            this._reactions.emit(reactions)
-            this._replies.emit(replies)
-            this._zaps.emit(zaps)
-            this._boosts.emit(boosts)
+            this.reactions.emit(reactions)
+            this.replies.emit(replies)
+            this.zaps.emit(zaps)
+            this.boosts.emit(boosts)
 
             refreshChartModel()
         }
@@ -229,59 +222,42 @@ class NotificationSummaryState(
     private suspend fun refreshChartModel() {
         checkNotInMainThread()
 
-        val day = 24 * 60 * 60L
         val now = LocalDateTime.now()
-        val displayAxisFormatter = DateTimeFormatter.ofPattern("EEE")
 
-        val dataAxisLabels = listOf(6, 5, 4, 3, 2, 1, 0).map { sdf.format(now.minusSeconds(day * it)) }
+        val dataAxisLabelIndexes = listOf(-6, -5, -4, -3, -2, -1, 0)
+        val dataAxisLabels = dataAxisLabelIndexes.map { sdf.format(now.plusDays(it.toLong())) }
 
-        val listOfCountCurves =
-            listOf(
-                dataAxisLabels.mapIndexed { index, dateStr ->
-                    entryOf(index, _replies.value[dateStr]?.toFloat() ?: 0f)
-                },
-                dataAxisLabels.mapIndexed { index, dateStr ->
-                    entryOf(index, _boosts.value[dateStr]?.toFloat() ?: 0f)
-                },
-                dataAxisLabels.mapIndexed { index, dateStr ->
-                    entryOf(index, _reactions.value[dateStr]?.toFloat() ?: 0f)
-                },
-            )
-
-        val listOfValueCurves =
-            listOf(
-                dataAxisLabels.mapIndexed { index, dateStr ->
-                    entryOf(index, _zaps.value[dateStr]?.toFloat() ?: 0f)
-                },
-            )
-
-        val chartEntryModelProducer1 = ChartEntryModelProducer(listOfCountCurves).getModel()
-        val chartEntryModelProducer2 = ChartEntryModelProducer(listOfValueCurves).getModel()
-
-        chartEntryModelProducer1?.let { chart1 ->
-            chartEntryModelProducer2?.let { chart2 ->
-                this.shouldShowDecimalsInAxis = shouldShowDecimals(chart2.minY, chart2.maxY)
-
-                this._axisLabels.emit(
-                    listOf(6, 5, 4, 3, 2, 1, 0).map {
-                        displayAxisFormatter.format(now.minusSeconds(day * it))
-                    },
-                )
-                this._chartModel.emit(chart1.plus(chart2))
+        val chart1 =
+            LineCartesianLayerModel.build {
+                series(dataAxisLabelIndexes, dataAxisLabels.map { replies.value[it]?.toFloat() ?: 0f })
+                series(dataAxisLabelIndexes, dataAxisLabels.map { boosts.value[it]?.toFloat() ?: 0f })
+                series(dataAxisLabelIndexes, dataAxisLabels.map { reactions.value[it]?.toFloat() ?: 0f })
             }
-        }
+
+        val chart2 =
+            LineCartesianLayerModel.build {
+                series(dataAxisLabelIndexes, dataAxisLabels.map { zaps.value[it]?.toFloat() ?: 0f })
+            }
+
+        val model = CartesianChartModel(chart1, chart2)
+
+        val mutableStore = MutableExtraStore()
+
+        mutableStore[ShowDecimals] = shouldShowDecimals(chart2.minY, chart2.maxY)
+
+        this._chartModel.emit(model.copy(mutableStore))
     }
 
     // determine if the min max are so close that they render to the same number.
     fun shouldShowDecimals(
-        min: Float,
-        max: Float,
+        min: Double,
+        max: Double,
     ): Boolean {
         val step = (max - min) / 8
 
-        var previous = showAmountAxis(min.toBigDecimal())
+        var previous = showAmountInteger(min.toBigDecimal())
         for (i in 1..7) {
-            val current = showAmountAxis((min + (i * step)).toBigDecimal())
+            val current = showAmountInteger((min + (i * step)).toBigDecimal())
             if (previous == current) {
                 return true
             }

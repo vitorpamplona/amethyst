@@ -64,11 +64,11 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
@@ -536,7 +536,7 @@ class AccountViewModel(
                                 it.request.event
                                     ?.content
                                     ?.ifBlank { null },
-                                showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                                showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                             )
                     }.toMutableMap()
 
@@ -569,7 +569,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
-                            showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -577,7 +577,7 @@ class AccountViewModel(
                             it.request.event
                                 ?.content
                                 ?.ifBlank { null },
-                            showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                         )
                     }
                 } else {
@@ -586,7 +586,7 @@ class AccountViewModel(
                         it.request.event
                             ?.content
                             ?.ifBlank { null },
-                        showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                        showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                     )
                 }
             }.toImmutableList()
@@ -603,7 +603,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
                             cachedPrivateRequest.content.ifBlank { null },
-                            showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -611,7 +611,7 @@ class AccountViewModel(
                             it.first.event
                                 ?.content
                                 ?.ifBlank { null },
-                            showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                         )
                     }
                 } else {
@@ -620,7 +620,7 @@ class AccountViewModel(
                         it.first.event
                             ?.content
                             ?.ifBlank { null },
-                        showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                        showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                     )
                 }
             }.toImmutableList()
@@ -642,7 +642,7 @@ class AccountViewModel(
                                 it.first.event
                                     ?.content
                                     ?.ifBlank { null },
-                                showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                                showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                             )
                     }.toMutableMap()
 
@@ -687,7 +687,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             newAuthor,
                             decryptedContent.content.ifBlank { null },
-                            showAmountAxis(amount),
+                            showAmountInteger(amount),
                         ),
                     )
                 }
@@ -698,7 +698,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             zapRequest.author,
                             zapRequest.event?.content?.ifBlank { null },
-                            showAmountAxis(amount),
+                            showAmountInteger(amount),
                         ),
                     )
                 }

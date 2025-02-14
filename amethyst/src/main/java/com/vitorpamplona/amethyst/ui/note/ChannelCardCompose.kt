@@ -86,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
@@ -386,7 +385,7 @@ fun InnerRenderClassifiedsThumb(
             card.price?.let {
                 val priceTag =
                     remember(card) {
-                        val newAmount = it.amount.toBigDecimalOrNull()?.let { showAmountAxis(it) } ?: it.amount
+                        val newAmount = it.amount.toBigDecimalOrNull()?.let { showAmountInteger(it) } ?: it.amount
 
                         if (it.frequency != null && it.currency != null) {
                             "$newAmount ${it.currency}/${it.frequency}"
