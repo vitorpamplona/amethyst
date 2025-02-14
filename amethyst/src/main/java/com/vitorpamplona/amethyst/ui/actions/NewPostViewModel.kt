@@ -576,7 +576,7 @@ open class NewPostViewModel : ViewModel() {
     }
 
     fun sendDraft(relayList: List<RelaySetupInfo>) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             sendDraftSync(relayList)
         }
     }
