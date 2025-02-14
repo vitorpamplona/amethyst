@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
-import com.patrykandpatrick.vico.core.extension.forEachIndexedExtended
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -86,6 +85,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import kotlin.math.min
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -372,12 +372,12 @@ fun DisplayUserSetAsSubject(
         }
     } else {
         Row {
-            userList.take(4).forEachIndexedExtended { index, isFirst, isLast, value ->
+            userList.take(4).forEachIndexed { index, value ->
                 LoadUser(baseUserHex = value, accountViewModel) {
                     it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight, accountViewModel = accountViewModel) }
                 }
 
-                if (!isLast) {
+                if (min(userList.size, 4) - 1 != index) {
                     Text(
                         text = ", ",
                         fontWeight = fontWeight,
