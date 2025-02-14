@@ -539,6 +539,8 @@
     <string name="ui_feature_set_type_complete">Teljes</string>
     <string name="ui_feature_set_type_simplified">Egyszerűsített</string>
     <string name="ui_feature_set_type_performance">Teljesítmény</string>
+    <string name="gallery_type_classic">Klasszikus</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
@@ -553,6 +555,8 @@
     <string name="automatically_hide_nav_bars_description">Navigációs sáv elrejtése görgetéskor</string>
     <string name="ui_style">Felhasználói felület módja</string>
     <string name="ui_style_description">Bejegyzés stílusának kiválasztása</string>
+    <string name="gallery_style">Profilgaléria stílusa</string>
+    <string name="gallery_style_description">Válassza ki a galéria stílusát</string>
     <string name="load_image">Kép betöltése</string>
     <string name="spamming_users">Spamelők</string>
     <string name="muted_button">Némítva. Koppintson a némitás megszüntetéséhez</string>
