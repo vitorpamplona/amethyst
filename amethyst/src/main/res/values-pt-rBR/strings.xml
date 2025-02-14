@@ -366,7 +366,7 @@
     <string name="no_nip96_server_message">Você não tem nenhum servidor NIP-96. Você pode usar a lista de Amethyst, ou adicionar um abaixo ↓</string>
     <string name="no_blossom_server_message">Você não tem nenhum servidor de Blossom configurado. Você pode usar a lista de Amethyst, ou adicionar um abaixo ↓</string>
     <string name="built_in_media_servers_title">Servidores de Mídia Integrados</string>
-    <string name="built_in_servers_description">Lista padrão do Ametite. Você pode adicioná-los individualmente ou adicionar a lista.</string>
+    <string name="built_in_servers_description">Lista padrão do Amethyst. Você pode adicioná-los individualmente ou adicionar a lista.</string>
     <string name="use_default_servers">Usar Lista Padrão</string>
     <string name="add_media_server">Adicionar servidor de mídia</string>
     <string name="delete_media_server">Apagar servidor de mídia</string>
