@@ -20,30 +20,48 @@
  */
 package com.vitorpamplona.quartz.nip13Pow
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.junit.Assert.assertEquals
-import org.junit.Test
-import org.junit.runner.RunWith
+import com.vitorpamplona.quartz.nip01Core.HexKey
 
-@RunWith(AndroidJUnit4::class)
-class PoWRankParserTest {
-    @Test
-    fun setPoW() {
-        assertEquals(26, PoWRankParser.calculatePowRankOf("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e"))
-    }
+class PoWRankProcessor {
+    companion object {
+        @JvmStatic
+        fun compute(
+            id: HexKey,
+            commitedPoW: Int?,
+        ): Int {
+            val actualRank = calculatePowRankOf(id)
 
-    @Test
-    fun setPoWIfCommited25() {
-        assertEquals(25, PoWRankParser.compute("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e", 25))
-    }
+            return if (commitedPoW == null) {
+                actualRank
+            } else {
+                if (actualRank >= commitedPoW) {
+                    commitedPoW
+                } else {
+                    actualRank
+                }
+            }
+        }
 
-    @Test
-    fun setPoWIfCommited26() {
-        assertEquals(26, PoWRankParser.compute("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e", 26))
-    }
-
-    @Test
-    fun setPoWIfCommited27() {
-        assertEquals(26, PoWRankParser.compute("00000026c91e9fc75fdb95b367776e2594b931cebda6d5ca3622501006669c9e", 27))
+        @JvmStatic
+        fun calculatePowRankOf(id: HexKey): Int {
+            var rank = 0
+            for (i in 0..id.length) {
+                if (id[i] == '0') {
+                    rank += 4
+                } else if (id[i] in '4'..'7') {
+                    rank += 1
+                    break
+                } else if (id[i] in '2'..'3') {
+                    rank += 2
+                    break
+                } else if (id[i] == '1') {
+                    rank += 3
+                    break
+                } else {
+                    break
+                }
+            }
+            return rank
+        }
     }
 }

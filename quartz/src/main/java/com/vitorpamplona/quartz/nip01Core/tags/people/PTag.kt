@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.people
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
@@ -66,7 +67,10 @@ data class PTag(
         @JvmStatic
         fun parseKey(tag: Array<String>): HexKey? {
             if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
-            if (tag[1].length != 64) return null
+            if (tag[1].length != 64) {
+                Log.w("PTag", "Invalid `$TAG_NAME` value ${tag.joinToString(", ")}")
+                return null
+            }
             return tag[1]
         }
 
