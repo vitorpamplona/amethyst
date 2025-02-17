@@ -59,16 +59,13 @@ fun ShowForkInformation(
     val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
     val forkedEvent = remember(noteEvent) { noteEvent.forkFromVersion() }
     if (forkedAddress != null) {
-        LoadAddressableNote(
-            aTag = forkedAddress,
-            accountViewModel = accountViewModel,
-        ) { addressableNote ->
+        LoadAddressableNote(forkedAddress, accountViewModel) { addressableNote ->
             if (addressableNote != null) {
                 ForkInformationRowLightColor(addressableNote, modifier, accountViewModel, nav)
             }
         }
     } else if (forkedEvent != null) {
-        LoadNote(forkedEvent.eventId, accountViewModel = accountViewModel) { event ->
+        LoadNote(forkedEvent.eventId, accountViewModel) { event ->
             if (event != null) {
                 ForkInformationRowLightColor(event, modifier, accountViewModel, nav)
             }

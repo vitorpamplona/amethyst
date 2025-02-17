@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -81,7 +81,7 @@ fun RenderHighlight(
         context = noteEvent.context(),
         authorHex = noteEvent.pubKey,
         url = noteEvent.inUrl(),
-        postAddress = noteEvent.inPost(),
+        postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
         makeItShort = makeItShort,
         canPreview = canPreview,
@@ -99,7 +99,7 @@ fun DisplayHighlight(
     context: String?,
     authorHex: String?,
     url: String?,
-    postAddress: ATag?,
+    postAddress: Address?,
     postVersion: ETag?,
     makeItShort: Boolean,
     canPreview: Boolean,
@@ -149,7 +149,7 @@ private fun DisplayQuoteAuthor(
     highlightQuote: String,
     authorHex: String?,
     baseUrl: String?,
-    postAddress: ATag?,
+    postAddress: Address?,
     postVersion: ETag?,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -165,7 +165,7 @@ private fun DisplayQuoteAuthor(
     }
 
     var addressable by remember {
-        mutableStateOf<AddressableNote?>(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it.toTag()) })
+        mutableStateOf<AddressableNote?>(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it) })
     }
 
     if (addressable == null && postAddress != null) {

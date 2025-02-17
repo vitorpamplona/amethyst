@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.anyHashTag
@@ -54,6 +55,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -85,11 +87,11 @@ import kotlin.coroutines.resume
 
 @Stable
 class AddressableNote(
-    val address: ATag,
-) : Note(address.toTag()) {
-    override fun idNote() = address.toNAddr(relayHintUrl())
+    val address: Address,
+) : Note(address.toValue()) {
+    override fun idNote() = toNAddr()
 
-    override fun toNEvent() = address.toNAddr(relayHintUrl())
+    override fun toNEvent() = toNAddr()
 
     override fun idDisplayNote() = idNote().toShortenHex()
 
@@ -108,13 +110,15 @@ class AddressableNote(
 
     override fun wasOrShouldBeDeletedBy(
         deletionEvents: Set<HexKey>,
-        deletionAddressables: Set<ATag>,
+        deletionAddressables: Set<Address>,
     ): Boolean {
         val thisEvent = event
         return deletionAddressables.contains(address) || (thisEvent != null && deletionEvents.contains(thisEvent.id))
     }
 
-    override fun toATag() = ATag.parse(idHex, relayHintUrl())
+    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
+
+    fun toATag() = ATag(address, relayHintUrl())
 }
 
 @Stable
@@ -211,7 +215,7 @@ open class Note(
             null
         }
 
-    open fun address(): ATag? = null
+    open fun address(): Address? = null
 
     open fun createdAt() = event?.createdAt
 
@@ -915,10 +919,10 @@ open class Note(
 
     open fun wasOrShouldBeDeletedBy(
         deletionEvents: Set<HexKey>,
-        deletionAddressables: Set<ATag>,
+        deletionAddressables: Set<Address>,
     ): Boolean {
         val thisEvent = event
-        return deletionEvents.contains(idHex) || (thisEvent is AddressableEvent && deletionAddressables.contains(thisEvent.aTag()))
+        return deletionEvents.contains(idHex) || (thisEvent is AddressableEvent && deletionAddressables.contains(thisEvent.address()))
     }
 
     fun toETag(): ETag {
@@ -948,15 +952,6 @@ open class Note(
             MarkedETag(noteEvent.id, relayHintUrl(), marker, noteEvent.pubKey)
         } else {
             MarkedETag(idHex, relayHintUrl(), marker, author?.pubkeyHex)
-        }
-    }
-
-    open fun toATag(): ATag? {
-        val noteEvent = event
-        return if (noteEvent is AddressableEvent) {
-            ATag(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag(), relayHintUrl())
-        } else {
-            null
         }
     }
 }

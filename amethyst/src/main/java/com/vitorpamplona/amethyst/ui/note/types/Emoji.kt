@@ -56,11 +56,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.RemoveButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 
 @Composable
@@ -180,13 +178,7 @@ private fun EmojiListOptions(
     emojiPackNote: Note,
 ) {
     LoadAddressableNote(
-        aTag =
-            ATag(
-                EmojiPackSelectionEvent.KIND,
-                accountViewModel.userProfile().pubkeyHex,
-                "",
-                null,
-            ),
+        accountViewModel.account.getEmojiPackSelectionAddress(),
         accountViewModel,
     ) {
         it?.let { usersEmojiList ->

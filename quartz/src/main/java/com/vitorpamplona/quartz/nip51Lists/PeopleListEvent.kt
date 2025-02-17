@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip51Lists
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -126,6 +127,8 @@ class PeopleListEvent(
         const val KIND = 30000
         const val BLOCK_LIST_D_TAG = "mute"
         const val ALT = "List of people"
+
+        fun createBlockAddress(pubKey: HexKey) = Address(KIND, pubKey, BLOCK_LIST_D_TAG)
 
         fun blockListFor(pubKeyHex: HexKey): String = "30000:$pubKeyHex:$BLOCK_LIST_D_TAG"
 

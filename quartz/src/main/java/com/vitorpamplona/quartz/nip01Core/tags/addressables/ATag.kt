@@ -34,19 +34,9 @@ data class ATag(
     val kind: Int,
     val pubKeyHex: String,
     val dTag: String,
+    val relay: String? = null,
 ) {
-    var relay: String? = null
-
-    constructor(address: Address) : this(address.kind, address.pubKeyHex, address.dTag)
-
-    constructor(
-        kind: Int,
-        pubKeyHex: HexKey,
-        dTag: String,
-        relayHint: String?,
-    ) : this(kind, pubKeyHex, dTag) {
-        this.relay = relayHint
-    }
+    constructor(address: Address, relayHint: String? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
 
     fun countMemory(): Long =
         5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
@@ -128,6 +118,9 @@ data class ATag(
 
         @JvmStatic
         fun parseAddress(tag: Array<String>) = ATagParser.parseAddress(TAG_NAME, tag)
+
+        @JvmStatic
+        fun parseAddressId(tag: Array<String>) = ATagParser.parseAddressId(TAG_NAME, tag)
 
         @JvmStatic
         fun assemble(

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -113,9 +114,14 @@ abstract class GeneralListEvent(
         onReady: (List<String>) -> Unit,
     ) = privateTags(signer) { onReady(filterEvents(it)) }
 
-    fun privateTaggedAddresses(
+    fun privateATags(
         signer: NostrSigner,
         onReady: (List<ATag>) -> Unit,
+    ) = privateTags(signer) { onReady(filterATags(it)) }
+
+    fun privateAddress(
+        signer: NostrSigner,
+        onReady: (List<Address>) -> Unit,
     ) = privateTags(signer) { onReady(filterAddresses(it)) }
 
     fun filterUsers(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
@@ -126,15 +132,9 @@ abstract class GeneralListEvent(
 
     fun filterEvents(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
 
-    fun filterAddresses(tags: Array<Array<String>>): List<ATag> =
-        tags
-            .filter { it.firstOrNull() == "a" }
-            .mapNotNull {
-                val aTagValue = it.getOrNull(1)
-                val relay = it.getOrNull(2)
+    fun filterATags(tags: Array<Array<String>>): List<ATag> = tags.mapNotNull(ATag::parse)
 
-                if (aTagValue != null) ATag.parse(aTagValue, relay) else null
-            }
+    fun filterAddresses(tags: Array<Array<String>>): List<Address> = tags.mapNotNull(ATag::parseAddress)
 
     companion object {
         fun createPrivateTags(

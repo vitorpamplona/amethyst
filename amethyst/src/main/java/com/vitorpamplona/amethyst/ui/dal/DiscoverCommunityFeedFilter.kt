@@ -23,8 +23,7 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip19Bech32.parseAtagUnckecked
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
@@ -54,7 +53,7 @@ open class DiscoverCommunityFeedFilter(
         val notes =
             LocalCache.addressables.mapNotNullIntoSet { key, note ->
                 val noteEvent = note.event
-                if (noteEvent == null && shouldInclude(ATag.parseAtagUnckecked(key), filterParams)) {
+                if (noteEvent == null && shouldInclude(Address.parse(key), filterParams)) {
                     // send unloaded communities to the screen
                     note
                 } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
@@ -86,7 +85,7 @@ open class DiscoverCommunityFeedFilter(
                 if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
                     listOf(note)
                 } else if (noteEvent is CommunityPostApprovalEvent) {
-                    noteEvent.communities().mapNotNull {
+                    noteEvent.communityAddresses().mapNotNull {
                         val definitionNote = LocalCache.getOrCreateAddressableNote(it)
                         val definitionEvent = definitionNote.event
 
@@ -106,7 +105,7 @@ open class DiscoverCommunityFeedFilter(
     }
 
     private fun shouldInclude(
-        aTag: ATag?,
+        aTag: Address?,
         params: FilterByListParams,
     ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag)
 

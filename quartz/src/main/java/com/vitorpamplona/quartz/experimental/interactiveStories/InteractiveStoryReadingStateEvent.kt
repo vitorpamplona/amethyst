@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -57,12 +58,17 @@ class InteractiveStoryReadingStateEvent(
 
     fun root() = tags.firstNotNullOfOrNull(RootSceneTag::parse)
 
-    fun currentScene() = tags.firstNotNullOfOrNull(ATag::parse)
+    fun currentScene() = tags.firstNotNullOfOrNull(ATag::parseAddress)
 
     companion object {
         const val KIND = 30298
         const val ALT1 = "Interactive Story Reading state"
         const val ALT2 = "The reading state of "
+
+        fun createAddress(
+            pubKey: HexKey,
+            dtag: String,
+        ): Address = Address(KIND, pubKey, dtag)
 
         fun createAddressATag(
             pubKey: HexKey,

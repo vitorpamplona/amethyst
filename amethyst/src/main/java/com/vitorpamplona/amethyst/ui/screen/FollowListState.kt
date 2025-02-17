@@ -127,7 +127,7 @@ class FollowListState(
         checkNotInMainThread()
 
         val hasNewList =
-            newNotes.any {
+            newNotes.any { it ->
                 val noteEvent = it.event
 
                 noteEvent?.pubKey == account.userProfile().pubkeyHex &&

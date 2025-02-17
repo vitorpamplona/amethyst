@@ -486,11 +486,7 @@ private suspend fun innerSendPost(
                     imetas(usedAttachments)
                 }
             } else {
-                if (channel.address.relay == null) {
-                    channel.address.relay = channelRelays.firstOrNull() ?: replyingToEvent?.relay
-                }
-
-                LiveActivitiesChatMessageEvent.message(tagger.message, channel.address) {
+                LiveActivitiesChatMessageEvent.message(tagger.message, channel.toATag()) {
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
                     quotes(findNostrUris(tagger.message))

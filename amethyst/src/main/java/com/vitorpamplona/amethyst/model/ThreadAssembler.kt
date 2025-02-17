@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import kotlinx.collections.immutable.ImmutableSet
@@ -132,7 +132,7 @@ class ThreadAssembler {
 }
 
 class OnlyLatestVersionSet : MutableSet<Note> {
-    val map = hashMapOf<ATag, Long>()
+    val map = hashMapOf<Address, Long>()
     val set = hashSetOf<Note>()
 
     override fun add(element: Note): Boolean {
@@ -142,14 +142,14 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         return if (element is AddressableNote && loadedCreatedAt != null) {
             innerAdd(element.address, element, loadedCreatedAt)
         } else if (noteEvent is AddressableEvent && loadedCreatedAt != null) {
-            innerAdd(noteEvent.aTag(), element, loadedCreatedAt)
+            innerAdd(noteEvent.address(), element, loadedCreatedAt)
         } else {
             set.add(element)
         }
     }
 
     private fun innerAdd(
-        address: ATag,
+        address: Address,
         element: Note,
         loadedCreatedAt: Long,
     ): Boolean {
@@ -193,7 +193,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
         element.address()?.let {
             map.remove(it)
         }
-        (element.event as? AddressableEvent)?.aTag()?.let {
+        (element.event as? AddressableEvent)?.address()?.let {
             map.remove(it)
         }
 

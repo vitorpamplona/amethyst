@@ -20,14 +20,16 @@
  */
 package com.vitorpamplona.quartz.experimental.interactiveStories.tags
 
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
 class StoryOptionTag(
     val option: String,
-    val address: ATag,
+    val address: Address,
+    val relay: String?,
 ) {
-    fun toTagArray() = assemble(option, address)
+    fun toTagArray() = assemble(option, address, relay)
 
     companion object {
         const val TAG_NAME = "option"
@@ -37,13 +39,16 @@ class StoryOptionTag(
         fun parse(tag: Array<String>): StoryOptionTag? {
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
 
-            return ATag.parse(tag[2], tag.getOrNull(3))?.let { StoryOptionTag(tag[1], it) }
+            val address = Address.parse(tag[2]) ?: return null
+
+            return StoryOptionTag(tag[1], address, tag.getOrNull(3))
         }
 
         @JvmStatic
         fun assemble(
             title: String,
-            destination: ATag,
-        ) = arrayOfNotNull(TAG_NAME, title, destination.toTag(), destination.relay)
+            address: Address,
+            relay: String?,
+        ) = arrayOfNotNull(TAG_NAME, title, address.toValue(), relay)
     }
 }

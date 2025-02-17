@@ -61,7 +61,7 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
     LoadAddressableNote(
-        EmojiPackSelectionEvent.createAddressATag(accountViewModel.userProfile().pubkeyHex),
+        EmojiPackSelectionEvent.createAddress(accountViewModel.userProfile().pubkeyHex),
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
@@ -73,7 +73,7 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
                 .observeAsState((usersEmojiList.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList())
 
             collections?.forEach {
-                LoadAddressableNote(aTag = it, accountViewModel) {
+                LoadAddressableNote(it, accountViewModel) {
                     it?.live()?.metadata?.observeAsState()
                 }
             }

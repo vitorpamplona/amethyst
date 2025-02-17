@@ -46,5 +46,5 @@ open class BaseAddressableEvent(
     /**
      * Creates the tag in a memory efficient way (without creating the ATag class
      */
-    override fun addressTag() = ATag.assembleATagId(kind, pubKey, dTag())
+    override fun addressTag() = Address.assemble(kind, pubKey, dTag())
 }

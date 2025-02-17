@@ -55,7 +55,7 @@ class DeletionEvent(
 
     fun deleteAddresses() = taggedAddresses()
 
-    fun deleteAddressTags() = tags.mapNotNull(ATag::parseAddress)
+    fun deleteAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     companion object {
         const val KIND = 5

@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
@@ -54,9 +55,13 @@ class CommunityPostApprovalEvent(
             null
         }
 
-    fun communities() = taggedAddresses().filter { it.kind == CommunityDefinitionEvent.KIND }
+    fun communities() = taggedATags().filter { it.kind == CommunityDefinitionEvent.KIND }
+
+    fun communityAddresses() = taggedAddresses().filter { it.kind == CommunityDefinitionEvent.KIND }
 
     fun approvedEvents() = taggedEvents()
+
+    fun approvedATags() = taggedATags().filter { it.kind != CommunityDefinitionEvent.KIND }
 
     fun approvedAddresses() = taggedAddresses().filter { it.kind != CommunityDefinitionEvent.KIND }
 

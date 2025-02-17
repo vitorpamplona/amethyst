@@ -792,11 +792,7 @@ open class NewPostViewModel : ViewModel() {
                             imetas(usedAttachments)
                         }
                     } else {
-                        if (channel.address.relay == null) {
-                            channel.address.relay = channelRelays.firstOrNull() ?: replyingToEvent?.relay
-                        }
-
-                        LiveActivitiesChatMessageEvent.message(tagger.message, channel.address) {
+                        LiveActivitiesChatMessageEvent.message(tagger.message, channel.toATag()) {
                             tagger.pTags?.let { notify(it.map { it.toPTag() }) }
 
                             hashtags(findHashtags(tagger.message))

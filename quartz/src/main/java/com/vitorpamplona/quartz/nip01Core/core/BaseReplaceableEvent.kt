@@ -44,7 +44,7 @@ open class BaseReplaceableEvent(
     /**
      * Creates the tag in a memory efficient way (without creating the ATag class
      */
-    override fun addressTag() = ATag.assembleATagId(kind, pubKey, FIXED_D_TAG)
+    override fun addressTag() = Address.assemble(kind, pubKey, dTag())
 
     companion object {
         const val FIXED_D_TAG = ""

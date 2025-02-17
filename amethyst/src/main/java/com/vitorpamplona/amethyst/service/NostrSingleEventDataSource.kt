@@ -81,7 +81,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                                         CommunityPostApprovalEvent.KIND,
                                         LiveActivitiesChatMessageEvent.KIND,
                                     ),
-                                tags = mapOf("a" to it.mapNotNull { it.address()?.toTag() }),
+                                tags = mapOf("a" to it.mapNotNull { it.address()?.toValue() }),
                                 since = findMinimumEOSEs(it),
                                 // Max amount of "replies" to download on a specific event.
                                 limit = 1000,
@@ -95,7 +95,7 @@ object NostrSingleEventDataSource : AmethystNostrDataSource("SingleEventFeed") {
                                     listOf(
                                         DeletionEvent.KIND,
                                     ),
-                                tags = mapOf("a" to it.mapNotNull { it.address()?.toTag() }),
+                                tags = mapOf("a" to it.mapNotNull { it.address()?.toValue() }),
                                 since = findMinimumEOSEs(it),
                                 // Max amount of "replies" to download on a specific event.
                                 limit = 10,

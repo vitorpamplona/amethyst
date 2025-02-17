@@ -137,10 +137,10 @@ private fun RenderGitPatchEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val repository = remember(noteEvent) { noteEvent.repository() }
+    val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
 
     if (repository != null) {
-        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+        LoadAddressableNote(repository, accountViewModel) {
             if (it != null) {
                 RenderShortRepositoryHeader(it, accountViewModel, nav)
                 Spacer(modifier = DoubleVertSpacer)
@@ -242,10 +242,10 @@ private fun RenderGitIssueEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val repository = remember(noteEvent) { noteEvent.repository() }
+    val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
 
     if (repository != null) {
-        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+        LoadAddressableNote(repository, accountViewModel) {
             if (it != null) {
                 RenderShortRepositoryHeader(it, accountViewModel, nav)
                 Spacer(modifier = DoubleVertSpacer)

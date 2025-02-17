@@ -66,13 +66,13 @@ fun RenderInteractiveStory(
     val rootEvent = note.value?.note?.event as? InteractiveStoryBaseEvent ?: return
 
     // keep updating the reading state event with new versions
-    val readingStateNote = accountViewModel.getInteractiveStoryReadingState(address.toTag())
+    val readingStateNote = accountViewModel.getInteractiveStoryReadingState(address.toValue())
     val latestReadingNoteState = readingStateNote.live().metadata.observeAsState()
     val readingState = latestReadingNoteState.value?.note?.event as? InteractiveStoryReadingStateEvent
 
     val currentScene = readingState?.currentScene()
 
-    if (currentScene != null && currentScene != rootEvent.aTag()) {
+    if (currentScene != null && currentScene != rootEvent.address()) {
         LoadAddressableNote(currentScene, accountViewModel) { currentSceneBaseNote ->
             val currentScene = currentSceneBaseNote?.live()?.metadata?.observeAsState()
             val currentSceneEvent = currentScene?.value?.note?.event as? InteractiveStoryBaseEvent

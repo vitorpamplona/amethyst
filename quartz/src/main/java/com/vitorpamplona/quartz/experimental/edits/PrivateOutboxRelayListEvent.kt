@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -101,6 +102,8 @@ class PrivateOutboxRelayListEvent(
     companion object {
         const val KIND = 10013
         val TAGS = arrayOf(AltTag.assemble("Relay list to store private content from this author"))
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 

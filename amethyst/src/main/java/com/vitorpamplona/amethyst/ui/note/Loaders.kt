@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.service.CachedGeoLocations
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -112,20 +112,20 @@ fun LoadAddressableNote(
 
 @Composable
 fun LoadAddressableNote(
-    aTag: ATag,
+    address: Address,
     accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
     var note by
-        remember(aTag) {
-            mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTag.toTag()))
+        remember(address) {
+            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address.toValue()))
         }
 
     if (note == null) {
-        LaunchedEffect(key1 = aTag) {
+        LaunchedEffect(key1 = address) {
             val newNote =
                 withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateAddressableNote(aTag)
+                    accountViewModel.getOrCreateAddressableNote(address)
                 }
             if (note != newNote) {
                 note = newNote

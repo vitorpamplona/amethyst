@@ -50,7 +50,7 @@ object NostrCommunityDataSource : AmethystNostrDataSource("SingleCommunityFeed")
                     authors = authors,
                     tags =
                         mapOf(
-                            "a" to listOf(myCommunityToWatch.address.toTag()),
+                            "a" to listOf(myCommunityToWatch.address.toValue()),
                         ),
                     kinds = listOf(CommunityPostApprovalEvent.KIND),
                     limit = 500,

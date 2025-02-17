@@ -44,7 +44,7 @@ class GitReplyEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+    fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)
 

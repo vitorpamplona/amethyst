@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip10Notes
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithEventsOrAddresses
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithPeople
@@ -141,7 +141,7 @@ open class BaseThreadedEvent(
         val uncertainRepliesTo = unmarkedReplyTos()
 
         val tagAddresses =
-            taggedAddresses()
+            taggedATags()
                 .filter {
                     it.kind != CommunityDefinitionEvent.KIND && (kind != WikiNoteEvent.KIND || it.kind != WikiNoteEvent.KIND)
                     // removes forks from itself.

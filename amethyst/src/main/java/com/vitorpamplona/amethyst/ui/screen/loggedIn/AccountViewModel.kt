@@ -79,7 +79,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -987,17 +987,17 @@ class AccountViewModel(
     }
 
     fun updateStatus(
-        it: ATag,
+        address: Address,
         newStatus: String,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.updateStatus(LocalCache.getOrCreateAddressableNote(it), newStatus)
+            account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
         }
     }
 
-    fun deleteStatus(it: ATag) {
+    fun deleteStatus(address: Address) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.deleteStatus(LocalCache.getOrCreateAddressableNote(it))
+            account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
         }
     }
 
@@ -1124,16 +1124,18 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
     }
 
-    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
+    suspend fun getOrCreateAddressableNote(key: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
 
     fun getOrCreateAddressableNote(
-        key: ATag,
+        key: Address,
         onResult: (AddressableNote?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) { onResult(getOrCreateAddressableNote(key)) }
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+
+    fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     suspend fun findStatusesForUser(
         myUser: User,
@@ -1539,7 +1541,7 @@ class AccountViewModel(
     ): Note {
         val note =
             if (innerEvent is AddressableEvent) {
-                AddressableNote(innerEvent.aTag())
+                AddressableNote(innerEvent.address())
             } else {
                 Note(innerEvent.id)
             }
@@ -1598,14 +1600,14 @@ class AccountViewModel(
             AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
         )
 
-    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddressATag(account.signer.pubKey, dATag))
+    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
 
     fun updateInteractiveStoryReadingState(
         root: InteractiveStoryBaseEvent,
         readingScene: InteractiveStoryBaseEvent,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.aTag()).relayHintUrl()
+            val sceneNoteRelayHint = LocalCache.getOrCreateAddressableNote(readingScene.address()).relayHintUrl()
 
             val readingState = getInteractiveStoryReadingState(root.addressTag())
             val readingStateEvent = readingState.event as? InteractiveStoryReadingStateEvent
@@ -1613,7 +1615,7 @@ class AccountViewModel(
             if (readingStateEvent != null) {
                 account.updateInteractiveStoryReadingState(readingStateEvent, readingScene, sceneNoteRelayHint)
             } else {
-                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.aTag()).relayHintUrl()
+                val rootNoteRelayHint = LocalCache.getOrCreateAddressableNote(root.address()).relayHintUrl()
 
                 account.createInteractiveStoryReadingState(root, rootNoteRelayHint, readingScene, sceneNoteRelayHint)
             }

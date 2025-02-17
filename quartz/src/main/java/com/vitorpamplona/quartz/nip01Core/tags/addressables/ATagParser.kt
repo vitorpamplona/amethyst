@@ -99,6 +99,15 @@ class ATagParser {
         fun parseAddress(
             tagName: String,
             tag: Array<String>,
+        ): Address? {
+            if (tag.isNotName(tagName, TAG_SIZE)) return null
+            return Address.parse(tag[1])
+        }
+
+        @JvmStatic
+        fun parseAddressId(
+            tagName: String,
+            tag: Array<String>,
         ): String? {
             if (tag.isNotName(tagName, TAG_SIZE)) return null
             return tag[1]

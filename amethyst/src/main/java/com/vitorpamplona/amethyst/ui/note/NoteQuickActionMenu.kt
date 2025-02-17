@@ -125,13 +125,13 @@ val njumpLink = { nip19BechAddress: String ->
 val externalLinkForNote = { note: Note ->
     if (note is AddressableNote) {
         if (note.event?.bountyBaseReward() != null) {
-            "https://nostrbounties.com/b/${note.address().toNAddr()}"
+            "https://nostrbounties.com/b/${note.toNAddr()}"
         } else if (note.event is PeopleListEvent) {
-            "https://listr.lol/a/${note.address().toNAddr()}"
+            "https://listr.lol/a/${note.toNAddr()}"
         } else if (note.event is AudioTrackEvent) {
-            "https://zapstr.live/?track=${note.address().toNAddr()}"
+            "https://zapstr.live/?track=${note.toNAddr()}"
         } else {
-            njumpLink(note.address().toNAddr())
+            njumpLink(note.toNAddr())
         }
     } else {
         if (note.event is FileHeaderEvent) {

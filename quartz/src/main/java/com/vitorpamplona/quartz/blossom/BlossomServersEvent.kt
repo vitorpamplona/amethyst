@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -49,6 +50,8 @@ class BlossomServersEvent(
     companion object {
         const val KIND = 10063
         const val ALT = "File servers used by the author"
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 

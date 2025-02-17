@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -42,6 +43,15 @@ class GitPatchEvent(
             ?: tags.firstOrNull { it.size > 1 && it[0] == "a" }
 
     private fun repositoryHex() = innerRepository()?.getOrNull(1)
+
+    fun repositoryAddress() =
+        innerRepository()?.let {
+            if (it.size > 1) {
+                Address.parse(it[1])
+            } else {
+                null
+            }
+        }
 
     fun repository() =
         innerRepository()?.let {

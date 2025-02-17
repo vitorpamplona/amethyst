@@ -39,9 +39,11 @@ class LiveActivitiesChatMessageEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    private fun activityHex() = tags.firstNotNullOfOrNull(ATag::parseAddress)
+    private fun activityHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 
     fun activity() = tags.firstNotNullOfOrNull(ATag::parse)
+
+    fun activityAddress() = tags.firstNotNullOfOrNull(ATag::parseAddress)
 
     override fun markedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
 

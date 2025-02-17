@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.experimental.forks
 
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 
@@ -30,9 +30,7 @@ fun BaseThreadedEvent.isAFork() = tags.any { it.size > 3 && (it[0] == "a" || it[
 fun BaseThreadedEvent.forkFromAddress() =
     tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "fork" }?.let {
         val aTagValue = it[1]
-        val relay = it.getOrNull(2)
-
-        ATag.parse(aTagValue, relay)
+        Address.parse(aTagValue)
     }
 
 fun BaseThreadedEvent.forkFromVersion() = tags.firstNotNullOfOrNull(MarkedETag::parseFork)

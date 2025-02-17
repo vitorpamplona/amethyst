@@ -32,6 +32,8 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip19Bech32.toNEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -81,17 +83,19 @@ class PublicChatChannel(
 
 @Stable
 class LiveActivitiesChannel(
-    val address: ATag,
-) : Channel(address.toTag()) {
+    val address: Address,
+) : Channel(address.toValue()) {
     var info: LiveActivitiesEvent? = null
 
-    override fun idNote() = address.toNAddr()
+    override fun idNote() = toNAddr()
 
     override fun idDisplayNote() = idNote().toShortenHex()
 
     fun address() = address
 
     override fun relays() = info?.allRelayUrls() ?: super.relays()
+
+    fun relayHintUrl() = relays().firstOrNull()
 
     fun updateChannelInfo(
         creator: User,
@@ -112,6 +116,10 @@ class LiveActivitiesChannel(
         listOfNotNull(info?.title(), info?.summary())
             .filter { it.contains(prefix, true) }
             .isNotEmpty()
+
+    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
+
+    fun toATag() = ATag(address, relayHintUrl())
 }
 
 data class Counter(
@@ -167,6 +175,15 @@ abstract class Channel(
         }
     }
 
+    fun addRelay(relay: Relay) {
+        val counter = relays[relay.brief]
+        if (counter != null) {
+            counter.number++
+        } else {
+            addRelaySync(relay.brief)
+        }
+    }
+
     fun addNote(
         note: Note,
         relay: Relay? = null,
@@ -178,12 +195,7 @@ abstract class Channel(
         }
 
         if (relay != null) {
-            val counter = relays[relay.brief]
-            if (counter != null) {
-                counter.number++
-            } else {
-                addRelaySync(relay.brief)
-            }
+            addRelay(relay)
         }
     }
 

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip96FileStorage.config.tags.ServerTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -44,6 +45,8 @@ class FileServersEvent(
     companion object {
         const val KIND = 10096
         const val ALT_DESCRIPTOR = "File servers used by the author"
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 

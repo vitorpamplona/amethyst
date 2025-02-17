@@ -56,7 +56,7 @@ fun RenderPostApproval(
     val noteEvent = note.event as? CommunityPostApprovalEvent ?: return
 
     Column(Modifier.fillMaxWidth()) {
-        noteEvent.communities().forEach { tag ->
+        noteEvent.communityAddresses().forEach { tag ->
             LoadAddressableNote(tag, accountViewModel) { baseNote ->
                 baseNote?.let {
                     RenderCommunity(

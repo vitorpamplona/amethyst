@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.mapTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -275,6 +276,8 @@ object LocalCache {
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = addressables.get(key)
 
+    fun getAddressableNoteIfExists(address: Address): AddressableNote? = getAddressableNoteIfExists(address.toValue())
+
     fun getNoteIfExists(key: String): Note? = addressables.get(key) ?: notes.get(key)
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
@@ -290,7 +293,7 @@ object LocalCache {
 
     fun getOrCreateNote(event: Event): Note =
         if (event is AddressableEvent) {
-            getOrCreateAddressableNote(event.aTag())
+            getOrCreateAddressableNote(event.address())
         } else {
             getOrCreateNote(event.id)
         }
@@ -303,8 +306,6 @@ object LocalCache {
         }
         return null
     }
-
-    fun checkGetOrCreateNote(atag: ATag) = getOrCreateAddressableNote(atag)
 
     fun checkGetOrCreateNote(key: String): Note? {
         checkNotInMainThread()
@@ -371,9 +372,10 @@ object LocalCache {
         if (isValidHex(key)) {
             return channels.getOrCreate(key) { PublicChatChannel(key) }
         }
-        val aTag = ATag.parse(key, null)
-        if (aTag != null) {
-            return channels.getOrCreate(aTag.toTag()) { LiveActivitiesChannel(aTag) }
+
+        val address = Address.parse(key)
+        if (address != null) {
+            return channels.getOrCreate(address.toValue()) { LiveActivitiesChannel(address) }
         }
         return null
     }
@@ -387,7 +389,7 @@ object LocalCache {
 
     fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
         try {
-            val addr = ATag.parse(key, null) // relay doesn't matter for the index.
+            val addr = Address.parse(key)
             if (addr != null) {
                 getOrCreateAddressableNote(addr)
             } else {
@@ -398,17 +400,12 @@ object LocalCache {
             null
         }
 
-    fun getOrCreateAddressableNoteInternal(key: ATag): AddressableNote {
-        // checkNotInMainThread()
-
-        // we can't use naddr here because naddr might include relay info and
-        // the preferred relay should not be part of the index.
-        return addressables.getOrCreate(key.toTag()) {
+    fun getOrCreateAddressableNoteInternal(key: Address): AddressableNote =
+        addressables.getOrCreate(key.toValue()) {
             AddressableNote(key)
         }
-    }
 
-    fun getOrCreateAddressableNote(key: ATag): AddressableNote {
+    fun getOrCreateAddressableNote(key: Address): AddressableNote {
         val note = getOrCreateAddressableNoteInternal(key)
         // Loads the user outside a Syncronized block to avoid blocking
         if (note.author == null) {
@@ -598,7 +595,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.aTag())
+        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -632,7 +629,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.aTag())
+        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -693,7 +690,7 @@ object LocalCache {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             is CommunityPostApprovalEvent ->
                 event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.approvedAddresses().map { checkGetOrCreateNote(it) }
+                    event.approvedAddresses().map { getOrCreateAddressableNote(it) }
             is ReactionEvent ->
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
@@ -730,7 +727,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.aTag())
+        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -743,9 +740,11 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
 
-            val channel =
-                getOrCreateChannel(note.idHex) { LiveActivitiesChannel(note.address) }
-                    as? LiveActivitiesChannel
+            val channel = getOrCreateChannel(note.idHex) { LiveActivitiesChannel(note.address) } as? LiveActivitiesChannel
+
+            if (relay != null) {
+                channel?.addRelay(relay)
+            }
 
             val creator = event.host()?.let { checkGetOrCreateUser(it.pubKey) } ?: author
 
@@ -900,7 +899,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.aTag())
+        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -957,7 +956,7 @@ object LocalCache {
 
     fun consume(event: BadgeProfilesEvent) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.aTag())
+        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
         if (version.event == null) {
@@ -1029,7 +1028,7 @@ object LocalCache {
         relay: Relay?,
     ) {
         val version = getOrCreateNote(event.id)
-        val note = getOrCreateAddressableNote(event.aTag())
+        val note = getOrCreateAddressableNote(event.address())
         val author = getOrCreateUser(event.pubKey)
 
         val replyTos = computeReplyTo(event)
@@ -1131,7 +1130,7 @@ object LocalCache {
                     }
                 }
 
-            val addressList = event.deleteAddressTags()
+            val addressList = event.deleteAddressIds()
             val addressSet = addressList.toSet()
 
             addressList
@@ -1296,7 +1295,7 @@ object LocalCache {
 
         val author = getOrCreateUser(event.pubKey)
 
-        val communities = event.communities()
+        val communities = event.communityAddresses()
         val eventsApproved = computeReplyTo(event)
 
         val repliesTo = communities.map { getOrCreateAddressableNote(it) }
@@ -1470,9 +1469,9 @@ object LocalCache {
         event: LiveActivitiesChatMessageEvent,
         relay: Relay?,
     ) {
-        val activityId = event.activity() ?: return
+        val activityAddress = event.activityAddress() ?: return
 
-        val channel = getOrCreateChannel(activityId.toTag()) { LiveActivitiesChannel(activityId) }
+        val channel = getOrCreateChannel(activityAddress.toValue()) { LiveActivitiesChannel(activityAddress) }
 
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
@@ -2348,7 +2347,7 @@ object LocalCache {
         draftWrap: DraftEvent,
         draft: Event,
     ) {
-        val note = getOrCreateAddressableNote(draftWrap.aTag())
+        val note = getOrCreateAddressableNote(draftWrap.address())
         val author = getOrCreateUser(draftWrap.pubKey)
 
         when (draft) {

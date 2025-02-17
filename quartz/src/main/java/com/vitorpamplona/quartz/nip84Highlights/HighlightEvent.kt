@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip84Highlights
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUser
@@ -49,7 +50,9 @@ class HighlightEvent(
 
     fun context() = tags.firstNotNullOfOrNull(ContextTag::parse)
 
-    fun inPost() = firstTaggedAddress()
+    fun inPost() = firstTaggedATag()
+
+    fun inPostAddress() = firstTaggedAddress()
 
     fun inPostVersion() = firstTaggedEvent()
 

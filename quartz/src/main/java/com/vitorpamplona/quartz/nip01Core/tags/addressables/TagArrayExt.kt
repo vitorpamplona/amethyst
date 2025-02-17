@@ -29,14 +29,18 @@ fun <R> TagArray.mapTaggedAddress(map: (address: String) -> R) = this.mapValueTa
 
 fun TagArray.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = this.firstNotNullOfOrNull(ATag::parseIfIsIn, addressableNotes)
 
-fun TagArray.isTaggedAddressableNote(idHex: String) = this.any(ATag::isTagged, idHex)
+fun TagArray.isTaggedAddressableNote(addressId: String) = this.any(ATag::isTagged, addressId)
 
-fun TagArray.isTaggedAddressableNotes(idHexes: Set<String>) = this.any(ATag::isIn, idHexes)
+fun TagArray.isTaggedAddressableNotes(addressIds: Set<String>) = this.any(ATag::isIn, addressIds)
 
 fun TagArray.isTaggedAddressableKind(kind: Int) = this.any(ATag::isTaggedWithKind, kind.toString())
 
 fun TagArray.getTagOfAddressableKind(kind: Int) = this.firstNotNullOfOrNull(ATag::parseIfOfKind, kind.toString())
 
-fun TagArray.taggedAddresses() = this.mapNotNull(ATag::parse)
+fun TagArray.taggedATags() = this.mapNotNull(ATag::parse)
 
-fun TagArray.firstTaggedAddress() = this.firstNotNullOfOrNull(ATag::parse)
+fun TagArray.firstTaggedATag() = this.firstNotNullOfOrNull(ATag::parse)
+
+fun TagArray.taggedAddresses() = this.mapNotNull(ATag::parseAddress)
+
+fun TagArray.firstTaggedAddress() = this.firstNotNullOfOrNull(ATag::parseAddress)

@@ -176,7 +176,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
@@ -704,7 +704,7 @@ private fun BookmarkTabHeader(baseUser: User) {
                 (
                     bookmarkList?.taggedEvents()?.count()
                         ?: 0
-                ) + (bookmarkList?.taggedAddresses()?.count() ?: 0)
+                ) + (bookmarkList?.taggedATags()?.count() ?: 0)
 
             if (newBookmarks != userBookmarks) {
                 userBookmarks = newBookmarks
@@ -1349,8 +1349,8 @@ private fun DisplayBadges(
     nav: INav,
 ) {
     LoadAddressableNote(
-        aTag = BadgeProfilesEvent.createAddressTag(baseUser.pubkeyHex),
-        accountViewModel = accountViewModel,
+        BadgeProfilesEvent.createAddress(baseUser.pubkeyHex),
+        accountViewModel,
     ) { note ->
         if (note != null) {
             WatchAndRenderBadgeList(

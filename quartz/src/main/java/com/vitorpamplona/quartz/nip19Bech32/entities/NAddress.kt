@@ -75,12 +75,14 @@ data class NAddress(
             kind: Int,
             pubKeyHex: String,
             dTag: String,
-            relay: String?,
+            vararg relays: String?,
         ): String =
             TlvBuilder()
                 .apply {
                     addString(TlvTypes.SPECIAL, dTag)
-                    addStringIfNotNull(TlvTypes.RELAY, relay)
+                    relays.forEach {
+                        addStringIfNotNull(TlvTypes.RELAY, it)
+                    }
                     addHex(TlvTypes.AUTHOR, pubKeyHex)
                     addInt(TlvTypes.KIND, kind)
                 }.build()

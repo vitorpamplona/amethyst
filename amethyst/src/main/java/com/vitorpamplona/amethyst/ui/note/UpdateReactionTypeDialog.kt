@@ -86,7 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
@@ -340,13 +340,7 @@ private fun EmojiSelector(
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     LoadAddressableNote(
-        aTag =
-            ATag(
-                EmojiPackSelectionEvent.KIND,
-                accountViewModel.userProfile().pubkeyHex,
-                "",
-                null,
-            ),
+        accountViewModel.account.getEmojiPackSelectionAddress(),
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
@@ -369,7 +363,7 @@ private fun EmojiSelector(
 
 @Composable
 fun EmojiCollectionGallery(
-    emojiCollections: ImmutableList<ATag>,
+    emojiCollections: ImmutableList<Address>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
@@ -382,8 +376,8 @@ fun EmojiCollectionGallery(
     LazyColumn(
         state = listState,
     ) {
-        itemsIndexed(emojiCollections, key = { _, item -> item.toTag() }) { _, item ->
-            LoadAddressableNote(aTag = item, accountViewModel) {
+        itemsIndexed(emojiCollections, key = { _, item -> item }) { _, item ->
+            LoadAddressableNote(item, accountViewModel) {
                 it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
             }
         }

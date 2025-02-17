@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
-class Address(
+data class Address(
     val kind: Int,
     val pubKeyHex: HexKey,
     val dTag: String,

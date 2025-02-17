@@ -1004,7 +1004,7 @@ private fun RenderWikiHeaderForThread(
             }
 
             forkedAddress?.let {
-                LoadAddressableNote(aTag = it, accountViewModel = accountViewModel) { originalVersion ->
+                LoadAddressableNote(it, accountViewModel) { originalVersion ->
                     if (originalVersion != null) {
                         ForkInformationRow(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
                     }

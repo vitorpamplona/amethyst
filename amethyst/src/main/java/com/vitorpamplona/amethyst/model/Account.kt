@@ -85,8 +85,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
@@ -1001,7 +1003,7 @@ class Account(
                     hashtags = (listEvent.hashtags() + listEvent.filterHashtags(privateTagList)).toSet(),
                     geotags = (listEvent.geohashes() + listEvent.filterGeohashes(privateTagList)).toSet(),
                     addresses =
-                        (listEvent.taggedAddresses() + listEvent.filterAddresses(privateTagList))
+                        (listEvent.taggedATags() + listEvent.filterATags(privateTagList))
                             .map { it.toTag() }
                             .toSet(),
                 ),
@@ -1124,7 +1126,9 @@ class Account(
 
     fun getEmojiPackSelectionFlow(): StateFlow<NoteState> = getEmojiPackSelectionNote().flow().metadata.stateFlow
 
-    fun getEmojiPackSelectionNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(EmojiPackSelectionEvent.createAddressATag(userProfile().pubkeyHex))
+    fun getEmojiPackSelectionAddress() = EmojiPackSelectionEvent.createAddress(userProfile().pubkeyHex)
+
+    fun getEmojiPackSelectionNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getEmojiPackSelectionAddress())
 
     fun convertEmojiSelectionPack(selection: EmojiPackSelectionEvent?): List<StateFlow<NoteState>>? =
         selection?.taggedAddresses()?.map {
@@ -1849,7 +1853,7 @@ class Account(
         val contactList = userProfile().latestContactList
 
         if (contactList != null) {
-            ContactListEvent.followAddressableEvent(contactList, community.address, signer) {
+            ContactListEvent.followAddressableEvent(contactList, community.toATag(), signer) {
                 Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
@@ -1862,7 +1866,7 @@ class Account(
                 followUsers = emptyList(),
                 followTags = emptyList(),
                 followGeohashes = emptyList(),
-                followCommunities = listOf(community.address),
+                followCommunities = listOf(community.toATag()),
                 followEvents = DefaultChannels.toList(),
                 relayUse = relays,
                 signer = signer,
@@ -2008,7 +2012,7 @@ class Account(
         if (contactList != null && contactList.tags.isNotEmpty()) {
             ContactListEvent.unfollowAddressableEvent(
                 contactList,
-                community.address,
+                community.toATag(),
                 signer,
                 onReady = this::onNewEventCreated,
             )
@@ -2860,7 +2864,7 @@ class Account(
         if (note is AddressableNote) {
             BookmarkListEvent.addReplaceable(
                 userProfile().latestBookmarkList,
-                note.address,
+                note.toATag(),
                 isPrivate,
                 signer,
             ) {
@@ -2891,7 +2895,7 @@ class Account(
         if (note is AddressableNote) {
             BookmarkListEvent.removeReplaceable(
                 bookmarks,
-                note.address,
+                note.toATag(),
                 isPrivate,
                 signer,
             ) {
@@ -2954,7 +2958,7 @@ class Account(
         }
 
         if (note is AddressableNote) {
-            userProfile().latestBookmarkList?.privateTaggedAddresses(signer) {
+            userProfile().latestBookmarkList?.privateAddress(signer) {
                 onReady(it.contains(note.address))
             }
         } else {
@@ -2968,40 +2972,19 @@ class Account(
         if (!isWriteable()) return false
 
         if (note is AddressableNote) {
-            return userProfile().latestBookmarkList?.taggedAddresses()?.contains(note.address) == true
+            return userProfile().latestBookmarkList?.isTaggedAddressableNote(note.idHex) == true
         } else {
-            return userProfile().latestBookmarkList?.taggedEventIds()?.contains(note.idHex) == true
+            return userProfile().latestBookmarkList?.isTaggedEvent(note.idHex) == true
         }
     }
 
-    fun getAppSpecificDataNote(): AddressableNote {
-        val aTag = AppSpecificDataEvent.createTag(userProfile().pubkeyHex, APP_SPECIFIC_DATA_D_TAG)
-        return LocalCache.getOrCreateAddressableNote(aTag)
-    }
+    fun getAppSpecificDataNote() = LocalCache.getOrCreateAddressableNote(AppSpecificDataEvent.createAddress(userProfile().pubkeyHex, APP_SPECIFIC_DATA_D_TAG))
 
     fun getAppSpecificDataFlow(): StateFlow<NoteState> = getAppSpecificDataNote().flow().metadata.stateFlow
 
-    fun getBlockListNote(): AddressableNote {
-        val aTag =
-            ATag(
-                PeopleListEvent.KIND,
-                userProfile().pubkeyHex,
-                PeopleListEvent.BLOCK_LIST_D_TAG,
-                null,
-            )
-        return LocalCache.getOrCreateAddressableNote(aTag)
-    }
+    fun getBlockListNote() = LocalCache.getOrCreateAddressableNote(PeopleListEvent.createBlockAddress(userProfile().pubkeyHex))
 
-    fun getMuteListNote(): AddressableNote {
-        val aTag =
-            ATag(
-                MuteListEvent.KIND,
-                userProfile().pubkeyHex,
-                "",
-                null,
-            )
-        return LocalCache.getOrCreateAddressableNote(aTag)
-    }
+    fun getMuteListNote() = LocalCache.getOrCreateAddressableNote(MuteListEvent.createAddress(userProfile().pubkeyHex))
 
     fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
 
@@ -3345,10 +3328,7 @@ class Account(
         )
     }
 
-    fun getDMRelayListNote(): AddressableNote =
-        LocalCache.getOrCreateAddressableNote(
-            ChatMessageRelayListEvent.createAddressATag(signer.pubKey),
-        )
+    fun getDMRelayListNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(ChatMessageRelayListEvent.createAddress(signer.pubKey))
 
     fun getDMRelayListFlow(): StateFlow<NoteState> = getDMRelayListNote().flow().metadata.stateFlow
 
@@ -3380,7 +3360,7 @@ class Account(
 
     fun getPrivateOutboxRelayListNote(): AddressableNote =
         LocalCache.getOrCreateAddressableNote(
-            PrivateOutboxRelayListEvent.createAddressATag(signer.pubKey),
+            PrivateOutboxRelayListEvent.createAddress(signer.pubKey),
         )
 
     fun getPrivateOutboxRelayListFlow(): StateFlow<NoteState> = getPrivateOutboxRelayListNote().flow().metadata.stateFlow
@@ -3414,7 +3394,7 @@ class Account(
 
     fun getSearchRelayListNote(): AddressableNote =
         LocalCache.getOrCreateAddressableNote(
-            SearchRelayListEvent.createAddressATag(signer.pubKey),
+            SearchRelayListEvent.createAddress(signer.pubKey),
         )
 
     fun getSearchRelayListFlow(): StateFlow<NoteState> = getSearchRelayListNote().flow().metadata.stateFlow
@@ -3448,7 +3428,7 @@ class Account(
 
     fun getNIP65RelayListNote(pubkey: HexKey = signer.pubKey): AddressableNote =
         LocalCache.getOrCreateAddressableNote(
-            AdvertisedRelayListEvent.createAddressATag(pubkey),
+            AdvertisedRelayListEvent.createAddress(pubkey),
         )
 
     fun getNIP65RelayListFlow(pubkey: HexKey = signer.pubKey): StateFlow<NoteState> = getNIP65RelayListNote(pubkey).flow().metadata.stateFlow
@@ -3484,13 +3464,13 @@ class Account(
 
     fun getFileServersListFlow(): StateFlow<NoteState> = getFileServersNote().flow().metadata.stateFlow
 
-    fun getFileServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddressATag(userProfile().pubkeyHex))
+    fun getFileServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(FileServersEvent.createAddress(userProfile().pubkeyHex))
 
     fun getBlossomServersList(): BlossomServersEvent? = getBlossomServersNote().event as? BlossomServersEvent
 
     fun getBlossomServersListFlow(): StateFlow<NoteState> = getBlossomServersNote().flow().metadata.stateFlow
 
-    fun getBlossomServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(BlossomServersEvent.createAddressATag(userProfile().pubkeyHex))
+    fun getBlossomServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(BlossomServersEvent.createAddress(userProfile().pubkeyHex))
 
     fun host(url: String): String =
         try {
