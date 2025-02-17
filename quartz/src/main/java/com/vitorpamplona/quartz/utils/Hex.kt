@@ -42,8 +42,13 @@ object Hex {
         if (hex.isEmpty()) return false
         if (hex.length and 1 != 0) return false // must be even
 
-        for (c in hex.indices) {
-            if (hexToByte[hex[c].code] < 0) return false
+        try {
+            for (c in hex.indices) {
+                if (hexToByte[hex[c].code] < 0) return false
+            }
+        } catch (e: IllegalArgumentException) {
+            // there are p tags with emoji's which makes the hex[c].code > 256
+            return false
         }
 
         return true
