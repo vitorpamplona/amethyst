@@ -193,6 +193,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.Math.round
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -325,8 +326,10 @@ fun NewPostScreen(
                         CloseButton(
                             onPress = {
                                 scope.launch {
-                                    postViewModel.sendDraftSync(relayList = relayList)
-                                    postViewModel.cancel()
+                                    withContext(Dispatchers.IO) {
+                                        postViewModel.sendDraftSync(relayList = relayList)
+                                        postViewModel.cancel()
+                                    }
                                     delay(100)
                                     nav.popBack()
                                 }
