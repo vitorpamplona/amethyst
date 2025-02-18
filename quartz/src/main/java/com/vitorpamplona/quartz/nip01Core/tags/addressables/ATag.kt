@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.name
 import com.vitorpamplona.quartz.nip01Core.core.value
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
@@ -45,7 +46,7 @@ data class ATag(
             dTag.bytesUsedInMemory() +
             (relay?.bytesUsedInMemory() ?: 0)
 
-    fun toTag() = assembleATagId(kind, pubKeyHex, dTag)
+    fun toTag() = Address.assemble(kind, pubKeyHex, dTag)
 
     fun toATagArray() = removeTrailingNullsAndEmptyOthers(TAG_NAME, toTag(), relay)
 
@@ -65,68 +66,73 @@ data class ATag(
         fun isTagged(
             tag: Array<String>,
             addressId: String,
-        ) = ATagParser.isTagged(tag, TAG_NAME, addressId)
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == addressId
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             address: ATag,
-        ) = ATagParser.isTagged(tag, TAG_NAME, address.toTag())
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == address.toTag()
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
             addressIds: Set<String>,
-        ) = ATagParser.isIn(tag, TAG_NAME, addressIds)
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] in addressIds
 
         @JvmStatic
         fun isTaggedWithKind(
             tag: Array<String>,
             kind: String,
-        ) = ATagParser.isTaggedWithKind(tag, TAG_NAME, kind)
-
-        @JvmStatic
-        fun assembleATagId(
-            kind: Int,
-            pubKey: HexKey,
-            dTag: String,
-        ) = ATagParser.assembleATagId(kind, pubKey, dTag)
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && Address.isOfKind(tag[1], kind)
 
         @JvmStatic
         fun parseIfOfKind(
             tag: Array<String>,
             kind: String,
-        ) = ATagParser.parseIfOfKind(tag, TAG_NAME, kind)
+        ) = if (isTaggedWithKind(tag, kind)) parse(tag[1], tag.getOrNull(2)) else null
 
         @JvmStatic
         fun parseIfIsIn(
             tag: Array<String>,
             addresses: Set<String>,
-        ) = ATagParser.parseIfIsIn(tag, TAG_NAME, addresses)
+        ) = if (isIn(tag, addresses)) parse(tag[1], tag.getOrNull(2)) else null
 
         @JvmStatic
         fun parse(
             aTagId: String,
             relay: String?,
-        ) = ATagParser.parse(aTagId, relay)
+        ) = Address.parse(aTagId)?.let { ATag(it.kind, it.pubKeyHex, it.dTag, relay) }
 
         @JvmStatic
-        fun parse(tag: Array<String>) = ATagParser.parse(TAG_NAME, tag)
+        fun parse(tag: Array<String>): ATag? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return parse(tag[1], tag.getOrNull(2))
+        }
 
         @JvmStatic
-        fun parseValidAddress(tag: Array<String>) = ATagParser.parseValidAddress(TAG_NAME, tag)
+        fun parseValidAddress(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return Address.parse(tag[1])?.toValue()
+        }
 
         @JvmStatic
-        fun parseAddress(tag: Array<String>) = ATagParser.parseAddress(TAG_NAME, tag)
+        fun parseAddress(tag: Array<String>): Address? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return Address.parse(tag[1])
+        }
 
         @JvmStatic
-        fun parseAddressId(tag: Array<String>) = ATagParser.parseAddressId(TAG_NAME, tag)
+        fun parseAddressId(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return tag[1]
+        }
 
         @JvmStatic
         fun assemble(
             aTagId: HexKey,
             relay: String?,
-        ) = ATagParser.assemble(TAG_NAME, aTagId, relay)
+        ) = arrayOfNotNull(TAG_NAME, aTagId, relay)
 
         @JvmStatic
         fun assemble(
@@ -134,6 +140,6 @@ data class ATag(
             pubKey: String,
             dTag: String,
             relay: String?,
-        ) = ATagParser.assemble(TAG_NAME, kind, pubKey, dTag, relay)
+        ) = assemble(Address.assemble(kind, pubKey, dTag), relay)
     }
 }

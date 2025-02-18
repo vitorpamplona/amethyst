@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -125,7 +125,7 @@ class DraftEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dTag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dTag)
+        ): String = Address.assemble(KIND, pubKey, dTag)
 
         fun create(
             dTag: String,

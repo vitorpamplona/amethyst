@@ -78,7 +78,7 @@ class InteractiveStoryReadingStateEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dtag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
+        ): String = Address.assemble(KIND, pubKey, dtag)
 
         fun update(
             base: InteractiveStoryReadingStateEvent,

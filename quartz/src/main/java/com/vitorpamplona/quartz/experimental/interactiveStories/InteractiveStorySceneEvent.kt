@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -50,7 +51,7 @@ class InteractiveStorySceneEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dtag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
+        ): String = Address.assemble(KIND, pubKey, dtag)
 
         fun build(
             baseId: String,

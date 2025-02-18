@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventUpdate
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -52,7 +51,7 @@ class EmojiPackSelectionEvent(
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
-        fun createAddressTag(pubKey: HexKey) = ATag.assembleATagId(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey) = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
         fun add(
             currentSelection: EmojiPackSelectionEvent,

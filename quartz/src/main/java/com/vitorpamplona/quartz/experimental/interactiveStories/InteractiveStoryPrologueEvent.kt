@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -43,15 +44,15 @@ class InteractiveStoryPrologueEvent(
         const val KIND = 30296
         const val ALT = "The prologue of an interactive story called "
 
+        fun createAddress(
+            pubKey: HexKey,
+            dtag: String,
+        ): String = Address.assemble(KIND, pubKey, dtag)
+
         fun createAddressATag(
             pubKey: HexKey,
             dtag: String,
         ): ATag = ATag(KIND, pubKey, dtag, null)
-
-        fun createAddressTag(
-            pubKey: HexKey,
-            dtag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
 
         fun build(
             baseId: String,

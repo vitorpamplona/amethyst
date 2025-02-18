@@ -55,7 +55,7 @@ class BlossomServersEvent(
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATagId(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
         fun createTagArray(servers: List<String>): Array<Array<String>> =
             servers
