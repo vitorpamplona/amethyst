@@ -26,16 +26,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.AddressReference
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
 @Immutable
 class RootAddressTag(
-    val ref: AddressReference,
+    val addressId: String,
+    val relay: String? = null,
 ) {
-    constructor(aTagId: String, relayHint: String?) : this(AddressReference(aTagId, relayHint))
-
-    fun toTagArray() = assemble(ref.addressId, ref.relay)
+    fun toTagArray() = assemble(addressId, relay)
 
     companion object {
         const val TAG_NAME = "A"
