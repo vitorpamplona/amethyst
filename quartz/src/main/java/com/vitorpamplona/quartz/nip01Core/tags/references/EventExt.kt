@@ -20,19 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.references
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-
-fun Event.forEachReferenceTag(onEach: (eventId: HexKey) -> Unit) = tags.forEachReference(onEach)
-
-fun Event.anyReferenceTag(onEach: (str: String) -> Boolean) = tags.anyReference(onEach)
 
 fun Event.hasReferenceTag() = tags.hasReferences()
 
 fun Event.references() = tags.references()
 
-fun Event.isTaggedReference(hashtag: String) = tags.isTaggedReference(hashtag)
+fun Event.isTaggedReference(reference: String) = tags.isTaggedReference(reference)
 
-fun Event.isTaggedReferences(hashtags: Set<String>) = tags.isTaggedReferences(hashtags)
-
-fun Event.firstIsTaggedReferences(hashtags: Set<String>) = tags.firstIsTaggedReferences(hashtags)
+fun Event.isTaggedReferences(references: Set<String>) = tags.isTaggedReferences(references)

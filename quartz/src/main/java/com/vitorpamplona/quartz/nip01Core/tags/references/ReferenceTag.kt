@@ -28,13 +28,33 @@ class ReferenceTag {
         const val TAG_SIZE = 2
 
         @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            reference: String,
+        ): Boolean = tag.size >= 2 && tag[0] == TAG_NAME && tag[1] == reference
+
+        @JvmStatic
+        fun isIn(
+            tag: Array<String>,
+            references: Set<String>,
+        ): Boolean = tag.size >= 2 && tag[0] == TAG_NAME && tag[1] in references
+
+        @JvmStatic
+        fun hasReference(tag: Array<String>): Boolean {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return false
+            return tag[1].isNotEmpty()
+        }
+
+        @JvmStatic
         fun parse(tag: Array<String>): String? {
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             return tag[1]
         }
 
+        @JvmStatic
         fun assemble(url: String) = arrayOf(TAG_NAME, HttpUrlFormatter.normalize(url))
 
+        @JvmStatic
         fun assemble(urls: List<String>): List<Array<String>> = urls.mapTo(HashSet()) { HttpUrlFormatter.normalize(it) }.map { arrayOf(TAG_NAME, it) }
     }
 }

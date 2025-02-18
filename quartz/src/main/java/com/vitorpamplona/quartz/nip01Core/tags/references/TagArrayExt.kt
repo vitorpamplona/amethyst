@@ -20,26 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.references
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.anyTagged
-import com.vitorpamplona.quartz.nip01Core.core.firstAnyLowercaseTaggedValue
-import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.isAnyLowercaseTagged
-import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
+import com.vitorpamplona.quartz.nip01Core.core.any
 
-fun TagArray.forEachReference(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(ReferenceTag.TAG_NAME, onEach)
+fun TagArray.hasReferences() = this.any(ReferenceTag::hasReference)
 
-fun TagArray.anyReference(onEach: (str: String) -> Boolean) = this.anyTagged(ReferenceTag.TAG_NAME, onEach)
+fun TagArray.references() = this.mapNotNull(ReferenceTag::parse)
 
-fun TagArray.hasReferences() = this.hasTagWithContent(ReferenceTag.TAG_NAME)
+fun TagArray.isTaggedReference(reference: String) = this.any(ReferenceTag::isTagged, reference)
 
-fun TagArray.references() = this.mapValues(ReferenceTag.TAG_NAME)
-
-fun TagArray.isTaggedReference(hashtag: String) = this.isTagged(ReferenceTag.TAG_NAME, hashtag, true)
-
-fun TagArray.isTaggedReferences(hashtags: Set<String>) = this.isAnyLowercaseTagged(ReferenceTag.TAG_NAME, hashtags)
-
-fun TagArray.firstIsTaggedReferences(hashtags: Set<String>) = this.firstAnyLowercaseTaggedValue(ReferenceTag.TAG_NAME, hashtags)
+fun TagArray.isTaggedReferences(references: Set<String>) = this.any(ReferenceTag::isIn, references)
