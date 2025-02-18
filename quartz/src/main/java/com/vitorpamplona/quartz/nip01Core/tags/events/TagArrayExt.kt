@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.tags.events
 
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
@@ -36,4 +37,4 @@ fun TagArray.taggedEventIds() = this.mapNotNull(ETag::parseId)
 
 fun TagArray.firstTaggedEvent() = this.firstNotNullOfOrNull(ETag::parse)
 
-fun TagArray.isTaggedEvent(idHex: String) = this.isTagged(ETag.TAG_NAME, idHex)
+fun TagArray.isTaggedEvent(idHex: String) = this.any(ETag::isTagged, idHex)

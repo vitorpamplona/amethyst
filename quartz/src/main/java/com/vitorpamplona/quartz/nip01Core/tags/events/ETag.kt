@@ -61,6 +61,12 @@ data class ETag(
         fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            eventId: HexKey,
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == eventId
+
+        @JvmStatic
         fun parse(tag: Array<String>): ETag? {
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             return ETag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
