@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip17Dm.files.encryption
 
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec

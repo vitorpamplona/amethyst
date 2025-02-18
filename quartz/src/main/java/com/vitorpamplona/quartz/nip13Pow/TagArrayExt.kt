@@ -21,9 +21,12 @@
 package com.vitorpamplona.quartz.nip13Pow
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 
 fun TagArray.commitedPoW() = this.firstNotNullOfOrNull(PoWTag::parseCommitment)
 
 fun TagArray.hasPoW() = this.any(PoWTag::hasTagWithContent)
+
+fun TagArray.powTag() = this.firstNotNullOfOrNull(PoWTag::parse)
 
 fun TagArray.powTags() = this.mapNotNull(PoWTag::parse)

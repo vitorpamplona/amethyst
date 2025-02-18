@@ -27,8 +27,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.buildAnnotatedStringWithUrlHighlighting
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import org.junit.Assert.assertEquals
 import org.junit.Test

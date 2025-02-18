@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetnameTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

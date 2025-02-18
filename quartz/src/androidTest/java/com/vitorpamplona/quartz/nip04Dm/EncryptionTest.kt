@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip04Dm
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Encryption
 import junit.framework.TestCase.assertEquals

@@ -26,8 +26,8 @@ import com.vitorpamplona.quartz.experimental.audio.track.tags.MediaTag
 import com.vitorpamplona.quartz.experimental.audio.track.tags.ParticipantTag
 import com.vitorpamplona.quartz.experimental.audio.track.tags.PriceTag
 import com.vitorpamplona.quartz.experimental.audio.track.tags.TypeTag
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag

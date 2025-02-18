@@ -32,7 +32,7 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.lightning.Lud06
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash

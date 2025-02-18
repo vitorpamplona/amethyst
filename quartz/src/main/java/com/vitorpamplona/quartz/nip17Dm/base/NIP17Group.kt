@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip17Dm.base
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 interface NIP17Group {
     fun groupMembers(): Set<HexKey>

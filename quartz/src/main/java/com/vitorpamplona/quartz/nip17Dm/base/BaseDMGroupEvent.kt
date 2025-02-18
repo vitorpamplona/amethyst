@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip17Dm.base
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import kotlinx.collections.immutable.toImmutableSet

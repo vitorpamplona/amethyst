@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-
 typealias TagArray = Array<Array<String>>
 
 fun <T : Event> TagArray.builder(initializer: TagArrayBuilder<T>.() -> Unit = {}) = TagArrayBuilder<T>().addAll(this).apply(initializer).build()

@@ -21,40 +21,37 @@
 package com.vitorpamplona.quartz.utils.sha256
 
 import android.util.Log
-import java.security.MessageDigest
 import java.util.concurrent.ArrayBlockingQueue
 
 class Sha256Pool(
     size: Int,
 ) {
-    private val pool = ArrayBlockingQueue<MessageDigest>(size)
-
-    private fun digest() = MessageDigest.getInstance("SHA-256")
+    private val pool = ArrayBlockingQueue<Sha256Hasher>(size)
 
     init {
         repeat(size) {
-            pool.add(digest())
+            pool.add(Sha256Hasher())
         }
     }
 
-    private fun acquire(): MessageDigest {
+    private fun acquire(): Sha256Hasher {
         if (pool.size < 1) {
             Log.w("SHA256Pool", "Pool running low in available digests")
         }
         return pool.take()
     }
 
-    private fun release(digest: MessageDigest) {
+    private fun release(digest: Sha256Hasher) {
         digest.reset()
         pool.put(digest)
     }
 
     fun hash(byteArray: ByteArray): ByteArray {
-        val digest = acquire()
+        val hasher = acquire()
         try {
-            return digest.digest(byteArray)
+            return hasher.digest(byteArray)
         } finally {
-            release(digest)
+            release(hasher)
         }
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip13Pow
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 
 fun <T : Event> TagArrayBuilder<T>.pow(
     nonce: String,

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip17Dm.files.tags
 
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 class EncryptionKey {
     companion object {

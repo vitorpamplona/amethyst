@@ -22,8 +22,8 @@ package com.vitorpamplona.quartz.nip04Dm.messages
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

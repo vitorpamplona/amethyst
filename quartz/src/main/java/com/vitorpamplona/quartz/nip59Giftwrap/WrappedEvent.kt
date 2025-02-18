@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip59Giftwrap
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @Immutable
 open class WrappedEvent(

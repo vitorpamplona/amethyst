@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core
 
 import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.Hex
 

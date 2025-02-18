@@ -18,10 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core
+package com.vitorpamplona.quartz.nip01Core.crypto
 
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
@@ -68,6 +70,8 @@ class EventHasher {
             tags: Array<Array<String>>,
             content: String,
         ): ByteArray = sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
+
+        fun hashId(serializedJsonAsBytes: ByteArray): String = sha256(serializedJsonAsBytes).toHexKey()
 
         fun hashId(
             pubKey: HexKey,

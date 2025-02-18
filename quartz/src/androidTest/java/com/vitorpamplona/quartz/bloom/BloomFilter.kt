@@ -21,17 +21,17 @@
 package com.vitorpamplona.quartz.bloom
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.math.BigInteger
-import java.security.MessageDigest
 import java.util.Base64
 import java.util.BitSet
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -44,7 +44,7 @@ class BloomFilter(
     private val bits: BitSet = BitSet(size),
     private val salt: ByteArray = RandomInstance.bytes(8),
 ) {
-    private val hash = MessageDigest.getInstance("SHA-256")
+    private val hash = Sha256Hasher()
     private val lock = ReentrantReadWriteLock()
 
     fun add(value: HexKey) = add(value.hexToByteArray())
@@ -83,7 +83,7 @@ class BloomFilter(
     fun hash(
         seed: Int,
         value: ByteArray,
-    ) = BigInteger(1, hash.digest(value + salt + seed.toByte()))
+    ) = BigInteger(1, hash.hash(value + salt + seed.toByte()))
         .remainder(BigInteger.valueOf(size.toLong()))
         .toInt()
 

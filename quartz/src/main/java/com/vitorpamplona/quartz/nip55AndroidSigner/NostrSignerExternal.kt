@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip55AndroidSigner
 
 import android.util.Log
 import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.EventHasher
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent

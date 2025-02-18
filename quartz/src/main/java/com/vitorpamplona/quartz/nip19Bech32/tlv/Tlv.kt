@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip19Bech32.tlv
 
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

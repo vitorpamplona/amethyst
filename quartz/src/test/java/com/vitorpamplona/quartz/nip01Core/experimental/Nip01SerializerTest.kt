@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.experimental
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.generateId
 import junit.framework.TestCase.assertEquals
 import org.junit.Test

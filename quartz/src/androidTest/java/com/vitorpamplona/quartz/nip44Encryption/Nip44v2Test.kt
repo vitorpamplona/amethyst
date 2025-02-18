@@ -23,12 +23,12 @@ package com.vitorpamplona.quartz.nip44Encryption
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull

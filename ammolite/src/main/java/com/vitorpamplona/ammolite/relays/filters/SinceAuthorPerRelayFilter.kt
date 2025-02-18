@@ -21,8 +21,8 @@
 package com.vitorpamplona.ammolite.relays.filters
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterMatcher

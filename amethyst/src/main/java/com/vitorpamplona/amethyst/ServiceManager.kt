@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes

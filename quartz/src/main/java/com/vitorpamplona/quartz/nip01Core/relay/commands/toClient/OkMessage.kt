@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 class OkMessage(
     val eventId: HexKey,

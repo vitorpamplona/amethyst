@@ -22,13 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.signers
 
 import android.util.Log
 import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.EventHasher
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -39,6 +39,8 @@ class NostrSignerSync(
     val keyPair: KeyPair,
     val pubKey: HexKey = keyPair.pubKey.toHexKey(),
 ) {
+    fun <T : Event> sign(ev: EventTemplate<T>) = signNormal<T>(ev.createdAt, ev.kind, ev.tags, ev.content)
+
     fun <T : Event> sign(
         createdAt: Long,
         kind: Int,

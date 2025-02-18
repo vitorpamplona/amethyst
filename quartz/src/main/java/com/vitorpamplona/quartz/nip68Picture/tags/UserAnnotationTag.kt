@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip68Picture.tags
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 class UserAnnotationTag(
     val pubkey: HexKey,

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.nip95.header
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag

@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip22Comments
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent

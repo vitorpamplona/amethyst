@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.ConsensusThresholdTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.MaximumTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.MinimumTag
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent

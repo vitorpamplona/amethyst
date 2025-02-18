@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

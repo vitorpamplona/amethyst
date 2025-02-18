@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 class EventManualSerializer {
     companion object {

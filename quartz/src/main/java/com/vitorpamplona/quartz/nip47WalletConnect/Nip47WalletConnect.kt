@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip47WalletConnect
 
 import android.net.Uri
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import kotlinx.coroutines.CancellationException
 

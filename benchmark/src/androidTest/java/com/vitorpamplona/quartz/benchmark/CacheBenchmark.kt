@@ -26,8 +26,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.commons.data.LargeCache
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import org.junit.Assert.assertTrue
 import org.junit.Rule

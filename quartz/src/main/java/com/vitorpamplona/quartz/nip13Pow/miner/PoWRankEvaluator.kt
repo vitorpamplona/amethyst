@@ -18,12 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip13Pow
+package com.vitorpamplona.quartz.nip13Pow.miner
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-class PoWRankProcessor {
+class PoWRankEvaluator {
     companion object {
+        const val R8 = 0b00000000.toByte()
+        const val R7 = 0b00000001.toByte()
+        const val R6 = 0b00000010.toByte()
+        const val R5 = 0b00000100.toByte()
+        const val R4 = 0b00001000.toByte()
+        const val R3 = 0b00010000.toByte()
+        const val R2 = 0b00100000.toByte()
+        const val R1 = 0b01000000.toByte()
+        const val NEGATIVE = 0b10000000.toByte()
+
         @JvmStatic
         fun compute(
             id: HexKey,
@@ -58,6 +68,36 @@ class PoWRankProcessor {
                     rank += 3
                     break
                 } else {
+                    break
+                }
+            }
+            return rank
+        }
+
+        @JvmStatic
+        fun calculatePowRankOf(id: ByteArray): Int {
+            var rank = 0
+            for (byte in id) {
+                if (byte == R8) {
+                    rank += 8
+                } else if (byte < 0) {
+                    break
+                } else {
+                    if (byte < R6) {
+                        rank += 7
+                    } else if (byte < R5) {
+                        rank += 6
+                    } else if (byte < R4) {
+                        rank += 5
+                    } else if (byte < R3) {
+                        rank += 4
+                    } else if (byte < R2) {
+                        rank += 3
+                    } else if (byte < R1) {
+                        rank += 2
+                    } else {
+                        rank += 1
+                    }
                     break
                 }
             }

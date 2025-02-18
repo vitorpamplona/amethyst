@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.zaps
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import io.mockk.every
 import io.mockk.mockk

@@ -18,13 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core
+package com.vitorpamplona.quartz.utils.sha256
 
-import com.vitorpamplona.quartz.utils.Hex
+import java.security.MessageDigest
 
-/** Makes the distinction between String and Hex * */
-typealias HexKey = String
+class Sha256Hasher {
+    val digest = MessageDigest.getInstance("SHA-256")
 
-fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
+    fun hash(byteArray: ByteArray) = digest.digest(byteArray).also { digest.reset() }
 
-fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
+    fun digest(byteArray: ByteArray) = digest.digest(byteArray)
+
+    fun reset() = digest.reset()
+}

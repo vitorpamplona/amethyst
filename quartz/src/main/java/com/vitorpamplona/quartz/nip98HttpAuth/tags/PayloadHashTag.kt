@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip98HttpAuth.tags
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 class PayloadHashTag {

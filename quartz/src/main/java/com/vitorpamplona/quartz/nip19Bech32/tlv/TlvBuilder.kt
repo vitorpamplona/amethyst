@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip19Bech32.tlv
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import java.io.ByteArrayOutputStream
 
 class TlvBuilder {

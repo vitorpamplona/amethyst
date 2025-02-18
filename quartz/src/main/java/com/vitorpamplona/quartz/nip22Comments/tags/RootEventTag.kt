@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip22Comments.tags
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches

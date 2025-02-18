@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip17Dm.files
 
 import com.vitorpamplona.quartz.nip01Core.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag

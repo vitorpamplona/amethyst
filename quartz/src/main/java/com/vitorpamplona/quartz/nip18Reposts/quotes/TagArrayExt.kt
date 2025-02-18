@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip18Reposts.quotes
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.forEachTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged

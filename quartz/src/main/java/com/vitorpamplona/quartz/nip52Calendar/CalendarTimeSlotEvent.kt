@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip52Calendar
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip06KeyDerivation
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.RandomInstance
 import junit.framework.TestCase.assertEquals

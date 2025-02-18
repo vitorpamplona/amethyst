@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.profileGallery
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag

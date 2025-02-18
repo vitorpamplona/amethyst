@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import java.util.UUID
 
 class BunkerResponsePublicKey(

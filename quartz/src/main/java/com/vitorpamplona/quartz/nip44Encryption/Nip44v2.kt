@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
 import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance

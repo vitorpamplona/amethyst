@@ -23,8 +23,8 @@ package com.vitorpamplona.quartz.nip19Bech32
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent

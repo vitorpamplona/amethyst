@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.people
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
 fun <T : Event> TagArrayBuilder<T>.pTag(

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.events
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 interface GenericETag {
     val eventId: HexKey

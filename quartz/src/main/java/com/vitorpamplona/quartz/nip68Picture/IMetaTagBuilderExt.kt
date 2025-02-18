@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip68Picture
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip68Picture.tags.UserAnnotationTag

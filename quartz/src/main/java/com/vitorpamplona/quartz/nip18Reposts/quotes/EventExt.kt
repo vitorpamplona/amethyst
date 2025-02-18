@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip18Reposts.quotes
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 fun Event.forEachTaggedQuoteId(onEach: (eventId: HexKey) -> Unit) = tags.forEachTaggedQuoteId(onEach)
 
