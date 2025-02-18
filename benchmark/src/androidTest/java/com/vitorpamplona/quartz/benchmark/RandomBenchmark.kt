@@ -23,36 +23,28 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class SignVerifyBenchmark {
+class RandomBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun sign() {
-        val keyPair = KeyPair()
-        val msg = sha256(RandomInstance.bytes(1000))
-
-        benchmarkRule.measureRepeated { assertNotNull(Nip01.sign(msg, keyPair.privKey!!)) }
+    fun random32Bytes() {
+        benchmarkRule.measureRepeated { assertNotNull(RandomInstance.bytes(32)) }
     }
 
     @Test
-    fun verify() {
-        val keyPair = KeyPair()
-        val msg = sha256(RandomInstance.bytes(1000))
-        val signature = Nip01.sign(msg, keyPair.privKey!!)
+    fun random1000Bytes() {
+        benchmarkRule.measureRepeated { assertNotNull(RandomInstance.bytes(1000)) }
+    }
 
-        benchmarkRule.measureRepeated {
-            assertTrue(Nip01.verify(signature, msg, keyPair.pubKey))
-        }
+    @Test
+    fun randomInt() {
+        benchmarkRule.measureRepeated { assertNotNull(RandomInstance.int(1000)) }
     }
 }
