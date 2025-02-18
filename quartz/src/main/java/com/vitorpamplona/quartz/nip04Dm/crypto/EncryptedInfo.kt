@@ -18,31 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip04Dm
+package com.vitorpamplona.quartz.nip04Dm.crypto
 
 import android.util.Log
 import java.util.Base64
 
-class Nip04Encoder(
+class EncryptedInfo(
     val ciphertext: ByteArray,
     val nonce: ByteArray,
 ) {
+    fun encodeToNIP04() = encode(ciphertext, nonce)
+
     companion object {
         const val V: Int = 0
-
-        fun decodePayload(payload: String): Nip04Encoder? {
-            return try {
-                val byteArray = Base64.getDecoder().decode(payload)
-                check(byteArray[0].toInt() == V)
-                return Nip04Encoder(
-                    nonce = byteArray.copyOfRange(1, 25),
-                    ciphertext = byteArray.copyOfRange(25, byteArray.size),
-                )
-            } catch (e: Exception) {
-                Log.w("NIP04", "Unable to Parse encrypted payload: $payload")
-                null
-            }
-        }
 
         fun isNIP04(encoded: String): Boolean {
             // cleaning up some bug from some client.
@@ -56,11 +44,20 @@ class Nip04Encoder(
                 cleanedUp[l - 25] == '='
         }
 
-        fun decodeFromNIP04(payload: String): Nip04Encoder? =
+        fun encode(
+            ciphertext: ByteArray,
+            nonce: ByteArray,
+        ): String {
+            val nonceB64 = Base64.getEncoder().encodeToString(nonce)
+            val ciphertextB64 = Base64.getEncoder().encodeToString(ciphertext)
+            return "$ciphertextB64?iv=$nonceB64"
+        }
+
+        fun decode(payload: String): EncryptedInfo? =
             try {
                 // cleaning up some bug from some client.
                 val parts = payload.removeSuffix("-null").split("?iv=")
-                Nip04Encoder(
+                EncryptedInfo(
                     ciphertext = Base64.getDecoder().decode(parts[0]),
                     nonce = Base64.getDecoder().decode(parts[1]),
                 )
@@ -68,11 +65,5 @@ class Nip04Encoder(
                 Log.w("NIP04", "Unable to Parse encrypted payload: $payload")
                 null
             }
-    }
-
-    fun encodeToNIP04(): String {
-        val nonce = Base64.getEncoder().encodeToString(nonce)
-        val ciphertext = Base64.getEncoder().encodeToString(ciphertext)
-        return "$ciphertext?iv=$nonce"
     }
 }

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
@@ -35,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.verifySignature
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
@@ -171,7 +171,7 @@ class GiftWrapReceivingBenchmark {
 
         benchmarkRule.measureRepeated {
             assertNotNull(
-                CryptoUtils.decryptNIP44(
+                Nip44.decrypt(
                     wrap.content,
                     receiver.keyPair.privKey!!,
                     wrap.pubKey.hexToByteArray(),
@@ -188,7 +188,7 @@ class GiftWrapReceivingBenchmark {
         val wrap = createWrap(sender, receiver)
 
         val innerJson =
-            CryptoUtils.decryptNIP44(
+            Nip44.decrypt(
                 wrap.content,
                 receiver.keyPair.privKey!!,
                 wrap.pubKey.hexToByteArray(),
@@ -206,7 +206,7 @@ class GiftWrapReceivingBenchmark {
 
         benchmarkRule.measureRepeated {
             assertNotNull(
-                CryptoUtils.decryptNIP44(
+                Nip44.decrypt(
                     seal.content,
                     receiver.keyPair.privKey!!,
                     seal.pubKey.hexToByteArray(),
@@ -223,7 +223,7 @@ class GiftWrapReceivingBenchmark {
         val seal = createSeal(sender, receiver)
 
         val innerJson =
-            CryptoUtils.decryptNIP44(
+            Nip44.decrypt(
                 seal.content,
                 receiver.keyPair.privKey!!,
                 seal.pubKey.hexToByteArray(),

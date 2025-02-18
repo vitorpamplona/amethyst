@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip06KeyDerivation
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import fr.acinq.secp256k1.Secp256k1
 import junit.framework.TestCase.assertEquals
 import org.junit.Ignore
 import org.junit.Test
@@ -30,7 +29,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class Nip06Test {
-    val nip06 = Nip06(Secp256k1.get())
+    val nip06 = Nip06()
 
     // private key (hex): 7f7ff03d123792d6ac594bfa67bf6d0c0ab55b6b1fdb6249303fe861f1ccba9a
     // nsec: nsec10allq0gjx7fddtzef0ax00mdps9t2kmtrldkyjfs8l5xruwvh2dq0lhhkp

@@ -111,8 +111,8 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import fr.acinq.secp256k1.Hex
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -1753,7 +1753,6 @@ fun mockAccountViewModel(): AccountViewModel {
                 KeyPair(
                     privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
                     pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-                    forcePubKeyCheck = false,
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,
@@ -1771,7 +1770,6 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             keyPair =
                 KeyPair(
                     pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                    forcePubKeyCheck = false,
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,

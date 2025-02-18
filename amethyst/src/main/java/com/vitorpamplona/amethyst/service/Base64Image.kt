@@ -34,8 +34,8 @@ import coil3.key.Keyer
 import coil3.request.ImageRequest
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.base64contentPattern
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256
 import java.util.Base64
 
 @Stable
@@ -83,7 +83,7 @@ class Base64Fetcher(
             options: Options,
         ): String? =
             if (data.scheme == "data") {
-                CryptoUtils.sha256(data.toString().toByteArray()).toHexKey()
+                sha256(data.toString().toByteArray()).toHexKey()
             } else {
                 null
             }

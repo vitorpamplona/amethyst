@@ -30,9 +30,9 @@ import android.os.Build
 import android.util.Log
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.Blurhash
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.utils.sha256
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 
@@ -74,7 +74,7 @@ class FileHeader(
             dimPrecomputed: DimensionTag?,
         ): Result<FileHeader> =
             try {
-                val hash = CryptoUtils.sha256(data).toHexKey()
+                val hash = sha256(data).toHexKey()
                 val size = data.size
 
                 val (blurHash, dim) =

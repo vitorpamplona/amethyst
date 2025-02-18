@@ -67,7 +67,7 @@ import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed

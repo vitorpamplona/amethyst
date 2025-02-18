@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent

@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.PBKDF
-import com.vitorpamplona.quartz.utils.sha256Hash
+import com.vitorpamplona.quartz.utils.sha256
 
 // CODE FROM: https://github.com/ACINQ/bitcoin-kmp/
 
@@ -79,7 +79,7 @@ object Bip39Mnemonics {
         val databits = bits.subList(0, bitlength)
         val checksumbits = bits.subList(bitlength, bits.size)
         val data = group(databits, 8).map { fromBinary(it) }.map { it.toByte() }.toByteArray()
-        val check = toBinary(sha256Hash(data)).take(data.size / 4)
+        val check = toBinary(sha256(data)).take(data.size / 4)
         require(check == checksumbits) { "invalid checksum" }
     }
 
@@ -106,7 +106,7 @@ object Bip39Mnemonics {
         wordlist: Array<String>,
     ): List<String> {
         require(wordlist.size == 2048) { "invalid word list (size should be 2048)" }
-        val digits = toBinary(entropy) + toBinary(sha256Hash(entropy)).take(entropy.size / 4)
+        val digits = toBinary(entropy) + toBinary(sha256(entropy)).take(entropy.size / 4)
 
         return group(digits, 11).map(Bip39Mnemonics::fromBinary).map { wordlist[it] }
     }

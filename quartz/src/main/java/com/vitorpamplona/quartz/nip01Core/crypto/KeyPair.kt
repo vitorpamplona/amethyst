@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.crypto
 
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 
 class KeyPair(
     privKey: ByteArray? = null,
     pubKey: ByteArray? = null,
-    forcePubKeyCheck: Boolean = true,
 ) {
     val privKey: ByteArray?
     val pubKey: ByteArray
@@ -35,8 +33,8 @@ class KeyPair(
         if (privKey == null) {
             if (pubKey == null) {
                 // create new, random keys
-                this.privKey = CryptoUtils.privkeyCreate()
-                this.pubKey = CryptoUtils.pubkeyCreate(this.privKey)
+                this.privKey = Nip01.privKeyCreate()
+                this.pubKey = Nip01.pubKeyCreate(this.privKey)
             } else {
                 // this is a read-only account
                 check(pubKey.size == 32)
@@ -46,12 +44,7 @@ class KeyPair(
         } else {
             // as private key is provided, ignore the public key and set keys according to private key
             this.privKey = privKey
-
-            if (pubKey == null || forcePubKeyCheck) {
-                this.pubKey = CryptoUtils.pubkeyCreate(privKey)
-            } else {
-                this.pubKey = pubKey
-            }
+            this.pubKey = Nip01.pubKeyCreate(privKey)
         }
     }
 

@@ -104,7 +104,7 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent

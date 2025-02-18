@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.R
-
 public fun arrayOfNotNull(vararg elements: String?) = removeTrailingNullsAndEmptyOthers(*elements)
 
 public fun removeTrailingNullsAndEmptyOthers(vararg elements: String?): Array<String> {

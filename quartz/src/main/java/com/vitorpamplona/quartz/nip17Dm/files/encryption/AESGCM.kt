@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip17Dm.files.encryption
 
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.utils.RandomInstance
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 class AESGCM(
-    val keyBytes: ByteArray = CryptoUtils.random(32),
-    val nonce: ByteArray = CryptoUtils.random(16),
+    val keyBytes: ByteArray = RandomInstance.bytes(32),
+    val nonce: ByteArray = RandomInstance.bytes(16),
 ) : NostrCipher {
     private fun newCipher() = Cipher.getInstance("AES/GCM/NoPadding")
 

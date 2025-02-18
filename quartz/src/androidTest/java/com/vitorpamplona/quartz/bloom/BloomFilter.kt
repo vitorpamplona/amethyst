@@ -21,9 +21,10 @@
 package com.vitorpamplona.quartz.bloom
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.utils.RandomInstance
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
@@ -41,7 +42,7 @@ class BloomFilter(
     private val size: Int,
     private val rounds: Int,
     private val bits: BitSet = BitSet(size),
-    private val salt: ByteArray = CryptoUtils.random(8),
+    private val salt: ByteArray = RandomInstance.bytes(8),
 ) {
     private val hash = MessageDigest.getInstance("SHA-256")
     private val lock = ReentrantReadWriteLock()
@@ -135,7 +136,7 @@ class BloomFilterTest {
 
         var failureCounter = 0
         for (seed in 0..1000000) {
-            if (bloomFilter.mightContains(CryptoUtils.pubkeyCreate(CryptoUtils.privkeyCreate()))) {
+            if (bloomFilter.mightContains(Nip01.pubKeyCreate(Nip01.privKeyCreate()))) {
                 failureCounter++
             }
         }

@@ -20,45 +20,23 @@
  */
 package com.vitorpamplona.quartz.nip01Core.crypto
 
-import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.utils.nextBytes
-import com.vitorpamplona.quartz.utils.sha256Hash
-import fr.acinq.secp256k1.Secp256k1
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.Secp256k1Instance
 
-class Nip01(
-    val secp256k1: Secp256k1,
-    val random: SecureRandom,
-) {
-    /** Provides a 32B "private key" aka random number */
-    fun privkeyCreate() = random.nextBytes(32)
+object Nip01 {
+    fun privKeyCreate() = RandomInstance.bytes(32)
 
-    fun compressedPubkeyCreate(privKey: ByteArray) = secp256k1.pubKeyCompress(secp256k1.pubkeyCreate(privKey))
-
-    fun pubkeyCreate(privKey: ByteArray) = compressedPubkeyCreate(privKey).copyOfRange(1, 33)
+    fun pubKeyCreate(privKey: ByteArray) = Secp256k1Instance.compressedPubKeyFor(privKey).copyOfRange(1, 33)
 
     fun sign(
         data: ByteArray,
         privKey: ByteArray,
-        nonce: ByteArray? = random.nextBytes(32),
-    ): ByteArray = secp256k1.signSchnorr(data, privKey, nonce)
-
-    fun signDeterministic(
-        data: ByteArray,
-        privKey: ByteArray,
-    ): ByteArray = secp256k1.signSchnorr(data, privKey, null)
+        nonce: ByteArray? = RandomInstance.bytes(32),
+    ): ByteArray = Secp256k1Instance.signSchnorr(data, privKey, nonce)
 
     fun verify(
         signature: ByteArray,
         hash: ByteArray,
         pubKey: ByteArray,
-    ): Boolean = secp256k1.verifySchnorr(signature, hash, pubKey)
-
-    fun sha256(data: ByteArray) = sha256Hash(data)
-
-    fun signString(
-        message: String,
-        privKey: ByteArray,
-        nonce: ByteArray = random.nextBytes(32),
-    ): ByteArray = sign(CryptoUtils.sha256(message.toByteArray()), privKey, nonce)
+    ): Boolean = Secp256k1Instance.verifySchnorr(signature, hash, pubKey)
 }

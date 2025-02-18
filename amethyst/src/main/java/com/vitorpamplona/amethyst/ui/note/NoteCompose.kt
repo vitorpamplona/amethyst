@@ -160,7 +160,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull

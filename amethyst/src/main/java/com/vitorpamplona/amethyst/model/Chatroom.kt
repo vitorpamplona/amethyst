@@ -24,7 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.utils.TimeUtils
 

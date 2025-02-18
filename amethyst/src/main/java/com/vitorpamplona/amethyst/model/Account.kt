@@ -102,8 +102,8 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactTag
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip04Dm.reply
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.reply
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags

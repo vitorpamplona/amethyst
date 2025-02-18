@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed

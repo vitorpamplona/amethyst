@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip04Dm.Nip04Encryption
+import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
@@ -78,7 +78,7 @@ abstract class NostrSigner(
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        if (Nip04Encryption.isNIP04(encryptedContent)) {
+        if (EncryptedInfo.isNIP04(encryptedContent)) {
             nip04Decrypt(encryptedContent, fromPublicKey, onReady)
         } else {
             nip44Decrypt(encryptedContent, fromPublicKey, onReady)

@@ -27,18 +27,17 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256Hash
-import fr.acinq.secp256k1.Secp256k1
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.sha256
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertNull
 import junit.framework.TestCase.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.security.SecureRandom
 
 @RunWith(AndroidJUnit4::class)
-class NIP44v2Test {
+class Nip44v2Test {
     private val vectors: VectorFile =
         jacksonObjectMapper()
             .readValue(
@@ -46,9 +45,7 @@ class NIP44v2Test {
                 VectorFile::class.java,
             )
 
-    private val random = SecureRandom()
-    private val nip44v2 = Nip44v2(Secp256k1.get(), random)
-    private val nip01 = Nip01(Secp256k1.get(), random)
+    private val nip44v2 = Nip44v2()
 
     @Test
     fun conversationKeyTest() {
@@ -73,8 +70,8 @@ class NIP44v2Test {
         val privateKeyA = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
         val privateKeyB = "65f039136f8da8d3e87b4818746b53318d5481e24b2673f162815144223a0b5a".hexToByteArray()
 
-        val publicKeyA = nip01.pubkeyCreate(privateKeyA)
-        val publicKeyB = nip01.pubkeyCreate(privateKeyB)
+        val publicKeyA = Nip01.pubKeyCreate(privateKeyA)
+        val publicKeyB = Nip01.pubKeyCreate(privateKeyB)
 
         assertEquals(
             nip44v2.getConversationKey(privateKeyA, publicKeyB).toHexKey(),
@@ -87,8 +84,8 @@ class NIP44v2Test {
         val privateKeyA = "f410f88bcec6cbfda04d6a273c7b1dd8bba144cd45b71e87109cfa11dd7ed561".hexToByteArray()
         val privateKeyB = "e6159851715b4aa6190c22b899b0c792847de0a4435ac5b678f35738351c43b0".hexToByteArray()
 
-        val publicKeyA = nip01.pubkeyCreate(privateKeyA)
-        val publicKeyB = nip01.pubkeyCreate(privateKeyB)
+        val publicKeyA = Nip01.pubKeyCreate(privateKeyA)
+        val publicKeyB = Nip01.pubKeyCreate(privateKeyB)
 
         assertEquals(
             nip44v2.getConversationKey(privateKeyA, publicKeyB).toHexKey(),
@@ -149,8 +146,7 @@ class NIP44v2Test {
     @Test
     fun invalidMessageLengths() {
         for (v in vectors.v2?.invalid?.encryptMsgLengths!!) {
-            val key = ByteArray(32)
-            random.nextBytes(key)
+            val key = RandomInstance.bytes(32)
             try {
                 nip44v2.encrypt("a".repeat(v), key)
                 fail("Should Throw for $v")
@@ -185,5 +181,5 @@ class NIP44v2Test {
         }
     }
 
-    private fun sha256Hex(data: ByteArray) = sha256Hash(data).toHexKey()
+    private fun sha256Hex(data: ByteArray) = sha256(data).toHexKey()
 }

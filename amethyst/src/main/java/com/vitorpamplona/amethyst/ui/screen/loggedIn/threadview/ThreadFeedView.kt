@@ -175,7 +175,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent

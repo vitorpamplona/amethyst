@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.utils
 
 import java.security.MessageDigest
 
-fun sha256Hash(data: ByteArray): ByteArray {
+fun sha256(data: ByteArray): ByteArray {
     // Creates a new buffer every time
     return MessageDigest.getInstance("SHA-256").digest(data)
 }

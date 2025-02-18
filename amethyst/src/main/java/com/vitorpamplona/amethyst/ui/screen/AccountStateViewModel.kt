@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -45,6 +44,7 @@ import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactTag
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
+import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
@@ -142,9 +143,9 @@ class AccountStateViewModel : ViewModel() {
                     transientAccount = transientAccount,
                     torSettings = TorSettingsFlow.build(torSettings),
                 )
-            } else if (key.contains(" ") && CryptoUtils.isValidMnemonic(key)) {
+            } else if (key.contains(" ") && Nip06().isValidMnemonic(key)) {
                 AccountSettings(
-                    keyPair = KeyPair(privKey = CryptoUtils.privateKeyFromMnemonic(key)),
+                    keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
                     transientAccount = transientAccount,
                     torSettings = TorSettingsFlow.build(torSettings),
                 )
@@ -206,7 +207,11 @@ class AccountStateViewModel : ViewModel() {
             if (key.startsWith("ncryptsec")) {
                 val newKey =
                     try {
-                        CryptoUtils.decryptNIP49(key, password)
+                        if (key.isEmpty() || password.isEmpty()) {
+                            null
+                        } else {
+                            Nip49().decrypt(key, password)
+                        }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         onError(e.message)

@@ -102,9 +102,9 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -444,7 +444,7 @@ private fun encryptCopyNSec(
         }
     } else {
         accountViewModel.account.settings.keyPair.privKey?.let {
-            val key = CryptoUtils.encryptNIP49(it.toHexKey(), password.value.text)
+            val key = runCatching { Nip49().encrypt(it.toHexKey(), password.value.text) }.getOrNull()
             if (key != null) {
                 clipboardManager.setText(AnnotatedString(key))
                 scope.launch {
@@ -540,7 +540,7 @@ private fun QrCodeButtonEncrypted(
         onDialogShow = {
             accountViewModel.account.settings.keyPair.privKey
                 ?.toHexKey()
-                ?.let { CryptoUtils.encryptNIP49(it, password.value.text) }
+                ?.let { Nip49().encrypt(it, password.value.text) }
         },
     )
 }

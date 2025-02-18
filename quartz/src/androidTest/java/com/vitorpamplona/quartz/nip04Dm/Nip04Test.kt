@@ -18,8 +18,40 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip04Dm
 
-import java.security.SecureRandom
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
 
-fun SecureRandom.nextBytes(size: Int) = ByteArray(size).also { nextBytes(it) }
+@RunWith(AndroidJUnit4::class)
+class Nip04Test {
+    @Test
+    fun encryptDecryptNIP4Test() {
+        val msg = "Hi"
+
+        val privateKey = Nip01.privKeyCreate()
+        val publicKey = Nip01.pubKeyCreate(privateKey)
+
+        val encrypted = Nip04.encrypt(msg, privateKey, publicKey)
+        val decrypted = Nip04.decrypt(encrypted, privateKey, publicKey)
+
+        assertEquals(msg, decrypted)
+    }
+
+    @Test
+    fun encryptSharedSecretDecryptNIP4Test() {
+        val msg = "Hi"
+
+        val privateKey = Nip01.privKeyCreate()
+        val publicKey = Nip01.pubKeyCreate(privateKey)
+
+        val encrypted = Nip04.encrypt(msg, privateKey, publicKey)
+        val decrypted = Nip04.decrypt(encrypted, privateKey, publicKey)
+
+        assertEquals(msg, decrypted)
+    }
+}

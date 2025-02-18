@@ -93,11 +93,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.utils.sha256
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -695,7 +695,7 @@ private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
     Amethyst.instance.coilCache.openSnapshot(content.url)?.use { snapshot ->
-        val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
+        val hash = sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
         Log.d("Image Hash Verification", "$hash == ${content.hash}")
 

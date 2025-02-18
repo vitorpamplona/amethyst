@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.utils.sha256Hash
+import com.vitorpamplona.quartz.utils.sha256
 
 class EventHasher {
     companion object {
@@ -61,7 +61,7 @@ class EventHasher {
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): ByteArray = sha256Hash(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
+        ): ByteArray = sha256(makeJsonForId(pubKey, createdAt, kind, tags, content).toByteArray())
 
         fun hashId(
             pubKey: HexKey,

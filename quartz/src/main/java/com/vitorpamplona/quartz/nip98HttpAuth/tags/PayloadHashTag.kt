@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip98HttpAuth.tags
 
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256Hash
+import com.vitorpamplona.quartz.utils.sha256
 
 class PayloadHashTag {
     companion object {
@@ -39,6 +39,6 @@ class PayloadHashTag {
         fun assemble(hash: HexKey) = arrayOf(TAG_NAME, hash)
 
         @JvmStatic
-        fun assemble(payload: ByteArray) = assemble(sha256Hash(payload).toHexKey())
+        fun assemble(payload: ByteArray) = assemble(sha256(payload).toHexKey())
     }
 }

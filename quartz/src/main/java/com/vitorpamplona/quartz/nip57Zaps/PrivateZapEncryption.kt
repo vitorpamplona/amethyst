@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps
 
-import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
+import com.vitorpamplona.quartz.utils.sha256
 import java.nio.charset.Charset
 import java.security.SecureRandom
 import javax.crypto.BadPaddingException
@@ -38,7 +39,7 @@ class PrivateZapEncryption {
         ): ByteArray {
             val str = privkey + id + createdAt.toString()
             val strbyte = str.toByteArray(Charset.forName("utf-8"))
-            return CryptoUtils.sha256(strbyte)
+            return sha256(strbyte)
         }
 
         fun encryptPrivateZapMessage(
@@ -46,7 +47,7 @@ class PrivateZapEncryption {
             privkey: ByteArray,
             pubkey: ByteArray,
         ): String {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privkey, pubkey)
+            val sharedSecret = Nip04.getSharedSecret(privkey, pubkey)
             val iv = ByteArray(16)
             SecureRandom().nextBytes(iv)
 
@@ -70,7 +71,7 @@ class PrivateZapEncryption {
             privkey: ByteArray,
             pubkey: ByteArray,
         ): String {
-            val sharedSecret = CryptoUtils.getSharedSecretNIP04(privkey, pubkey)
+            val sharedSecret = Nip04.getSharedSecret(privkey, pubkey)
             if (sharedSecret.size != 16 && sharedSecret.size != 32) {
                 throw IllegalArgumentException("Invalid shared secret size")
             }

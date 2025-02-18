@@ -65,11 +65,20 @@ class EventBenchmark {
     }
 
     @Test
-    fun eventFactoryPerformanceTest() {
+    fun eventFactoryKind1PerformanceTest() {
         val now = TimeUtils.now()
         val tags = arrayOf(arrayOf(""))
         benchmarkRule.measureRepeated {
             EventFactory.create("id", "pubkey", now, 1, tags, "content", "sig")
+        }
+    }
+
+    @Test
+    fun eventFactoryKind30818PerformanceTest() {
+        val now = TimeUtils.now()
+        val tags = arrayOf(arrayOf(""))
+        benchmarkRule.measureRepeated {
+            EventFactory.create("id", "pubkey", now, 30818, tags, "content", "sig")
         }
     }
 }

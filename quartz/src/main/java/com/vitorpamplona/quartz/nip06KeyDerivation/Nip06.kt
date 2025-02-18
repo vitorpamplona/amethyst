@@ -20,12 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
-import fr.acinq.secp256k1.Secp256k1
-
-class Nip06(
-    val secp256k1: Secp256k1,
-) {
-    val derivation = Bip32SeedDerivation(secp256k1)
+class Nip06 {
+    val derivation = Bip32SeedDerivation()
 
     // m/44'/1237'/<account>'/0/0
     private val nip6Base: KeyPath =

@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import android.util.Log
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.Hex
 
 fun Event.generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
@@ -34,7 +34,7 @@ fun Event.verifyId(): Boolean {
 
 fun Event.verifySignature(): Boolean {
     if (id.isEmpty() || sig.isEmpty()) return false
-    return CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+    return Nip01.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
 }
 
 /** Checks if the ID is correct and then if the pubKey's secret key signed the event. */

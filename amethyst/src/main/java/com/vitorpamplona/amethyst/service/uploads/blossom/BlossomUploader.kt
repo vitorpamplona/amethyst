@@ -35,10 +35,10 @@ import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -88,7 +88,7 @@ class BlossomUploader {
 
         checkNotNull(payload) { "Can't open the image input stream" }
 
-        val hash = CryptoUtils.sha256(payload).toHexKey()
+        val hash = sha256(payload).toHexKey()
 
         val imageInputStream = contentResolver.openInputStream(uri)
 
