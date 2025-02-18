@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.utils.sha256
 
-import java.security.MessageDigest
+val pool = Sha256Pool(5) // max parallel operations
 
-fun sha256(data: ByteArray): ByteArray {
-    // Creates a new buffer every time
-    return MessageDigest.getInstance("SHA-256").digest(data)
-}
+fun sha256(data: ByteArray) = pool.hash(data)

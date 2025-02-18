@@ -86,7 +86,7 @@ import com.vitorpamplona.amethyst.commons.robohash.parts.mouth7Happy
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth8Buttons
 import com.vitorpamplona.amethyst.commons.robohash.parts.mouth9Closed
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 val Black = SolidColor(Color.Black)
 val Gray = SolidColor(Color(0xFF6d6e70))

@@ -18,27 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip98HttpAuth.tags
+package com.vitorpamplona.quartz.utils.sha256
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import android.util.Log
+import java.security.MessageDigest
+import java.util.concurrent.ArrayBlockingQueue
 
-class PayloadHashTag {
-    companion object {
-        const val TAG_NAME = "payload"
-        const val TAG_SIZE = 2
+class Sha256Pool(
+    size: Int,
+) {
+    private val pool = ArrayBlockingQueue<MessageDigest>(size)
 
-        @JvmStatic
-        fun parse(tag: Array<String>): HexKey? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            return tag[1]
+    private fun digest() = MessageDigest.getInstance("SHA-256")
+
+    init {
+        repeat(size) {
+            pool.add(digest())
         }
+    }
 
-        @JvmStatic
-        fun assemble(hash: HexKey) = arrayOf(TAG_NAME, hash)
+    private fun acquire(): MessageDigest {
+        if (pool.size < 1) {
+            Log.w("SHA256Pool", "Pool running low in available digests")
+        }
+        return pool.take()
+    }
 
-        @JvmStatic
-        fun assemble(payload: ByteArray) = assemble(sha256(payload).toHexKey())
+    private fun release(digest: MessageDigest) {
+        digest.reset()
+        pool.put(digest)
+    }
+
+    fun hash(byteArray: ByteArray): ByteArray {
+        val digest = acquire()
+        try {
+            return digest.digest(byteArray)
+        } finally {
+            release(digest)
+        }
     }
 }

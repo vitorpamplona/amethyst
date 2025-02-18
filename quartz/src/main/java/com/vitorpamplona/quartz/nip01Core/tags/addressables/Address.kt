@@ -54,7 +54,6 @@ data class Address(
                     Address(parts[0].toInt(), parts[1], parts[2])
                 } else {
                     Log.w("AddressableId", "Error parsing. Pubkey is not hex: $addressId")
-                    throw RuntimeException("It shouldn't get here.")
                     null
                 }
             } catch (t: Throwable) {

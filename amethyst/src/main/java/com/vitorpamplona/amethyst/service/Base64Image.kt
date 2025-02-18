@@ -35,7 +35,7 @@ import coil3.request.ImageRequest
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.base64contentPattern
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.util.Base64
 
 @Stable

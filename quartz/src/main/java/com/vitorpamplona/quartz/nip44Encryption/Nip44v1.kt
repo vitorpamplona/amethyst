@@ -24,7 +24,7 @@ import android.util.Log
 import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.util.Base64
 
 class Nip44v1 {

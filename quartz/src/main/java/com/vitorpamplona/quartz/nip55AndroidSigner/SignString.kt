@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner
 
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 fun signString(
     message: String,

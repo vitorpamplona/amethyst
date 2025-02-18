@@ -20,40 +20,46 @@
  */
 package com.vitorpamplona.quartz.nip01Core
 
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 class EventHasher {
     companion object {
+        fun makeJsonObjectForId(
+            pubKey: HexKey,
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): ArrayNode {
+            val factory = JsonNodeFactory.instance
+            return factory.arrayNode(6).apply {
+                add(0)
+                add(pubKey)
+                add(createdAt)
+                add(kind)
+                add(
+                    factory.arrayNode(tags.size).apply {
+                        tags.forEach { tag ->
+                            add(
+                                factory.arrayNode(tag.size).apply { tag.forEach { add(it) } },
+                            )
+                        }
+                    },
+                )
+                add(content)
+            }
+        }
+
         fun makeJsonForId(
             pubKey: HexKey,
             createdAt: Long,
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): String {
-            val factory = JsonNodeFactory.instance
-            val rawEvent =
-                factory.arrayNode(6).apply {
-                    add(0)
-                    add(pubKey)
-                    add(createdAt)
-                    add(kind)
-                    add(
-                        factory.arrayNode(tags.size).apply {
-                            tags.forEach { tag ->
-                                add(
-                                    factory.arrayNode(tag.size).apply { tag.forEach { add(it) } },
-                                )
-                            }
-                        },
-                    )
-                    add(content)
-                }
-
-            return EventMapper.toJson(rawEvent)
-        }
+        ): String = EventMapper.toJson(makeJsonObjectForId(pubKey, createdAt, kind, tags, content))
 
         fun hashIdBytes(
             pubKey: HexKey,

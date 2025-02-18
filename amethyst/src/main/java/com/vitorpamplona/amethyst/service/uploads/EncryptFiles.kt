@@ -25,7 +25,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
 class EncryptFilesResult(

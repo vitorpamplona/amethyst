@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody

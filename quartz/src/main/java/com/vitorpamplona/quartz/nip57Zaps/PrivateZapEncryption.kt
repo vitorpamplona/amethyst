@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip57Zaps
 
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
-import com.vitorpamplona.quartz.utils.sha256
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.nio.charset.Charset
 import java.security.SecureRandom
 import javax.crypto.BadPaddingException
