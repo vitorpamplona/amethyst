@@ -24,14 +24,12 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
-import com.vitorpamplona.quartz.nip13Pow.pow
-import com.vitorpamplona.quartz.nip13Pow.powNonce
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -70,14 +68,9 @@ class PoWBenchmark {
 
     @Test
     fun generatePow() {
-        val signer = NostrSignerSync(KeyPair())
-        var template: EventTemplate<TextNoteEvent>? = null
         benchmarkRule.measureRepeated {
-            template = PoWMiner.run(baseTemplate, signer.pubKey, 5)
+            PoWMiner.run(baseTemplate, KeyPair().pubKey.toHexKey(), 5)
         }
-        val event = signer.sign(template!!)
-        assertEquals(5, event?.pow())
-        println("POW: " + event?.powNonce()?.nonce)
     }
 
     @Test
