@@ -103,5 +103,18 @@ class PoWRankEvaluator {
             }
             return rank
         }
+
+        @JvmStatic
+        fun atLeastPowRank(
+            id: ByteArray,
+            minPoW: Int,
+            emptyBytes: Int,
+        ): Boolean {
+            for (index in 0 until emptyBytes) {
+                if (id[index] != R8) return false
+            }
+
+            return calculatePowRankOf(id) >= minPoW
+        }
     }
 }

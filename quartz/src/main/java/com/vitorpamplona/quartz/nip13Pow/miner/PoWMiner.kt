@@ -32,8 +32,9 @@ class PoWMiner(
     val desiredPoW: Int,
 ) {
     val hasher = Sha256Hasher()
+    val emptyBytesForDesiredPoW = desiredPoW / 8
 
-    fun rank(byteArray: ByteArray) = PoWRankEvaluator.calculatePowRankOf(hasher.hash(byteArray))
+    fun reachedDesiredPoW(byteArray: ByteArray) = PoWRankEvaluator.atLeastPowRank(hasher.hash(byteArray), desiredPoW, emptyBytesForDesiredPoW)
 
     fun run() = runDigit(buffer.nonceStarts)
 
@@ -42,15 +43,17 @@ class PoWMiner(
             // replaces the background base by the nonce integers
             buffer.bytes[index] = testByte
 
-            if (rank(buffer.bytes) >= desiredPoW) return true
-
-            if (index + 1 < buffer.nonceEnds && runDigit(index + 1)) return true
+            if (index + 1 < buffer.nonceEnds) {
+                if (runDigit(index + 1)) return true
+            } else {
+                if (reachedDesiredPoW(buffer.bytes)) return true
+            }
         }
         return false
     }
 
     companion object {
-        private val STARTING_NONCE_SIZE = 5
+        private const val STARTING_NONCE_SIZE = 5
 
         // make sure these chars are not escaped by the JSON stringifier
         private val VALID_CHARS: List<Char> =

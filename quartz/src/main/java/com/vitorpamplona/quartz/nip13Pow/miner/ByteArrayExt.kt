@@ -37,13 +37,3 @@ fun ByteArray.indexOf(sequence: ByteArray): Int {
     }
     return -1
 }
-
-fun ByteArray.set(
-    value: ByteArray,
-    startIndex: Int,
-) {
-    var index = startIndex
-    for (byte in value) {
-        this[index++] = byte
-    }
-}
