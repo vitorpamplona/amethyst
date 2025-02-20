@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.bloom.BloomFilterMurMur3
  */
 class HintIndexer {
     private val eventHints = BloomFilterMurMur3(10_000_000, 5)
-    private val addressHints = BloomFilterMurMur3(1_000_000, 5)
+    private val addressHints = BloomFilterMurMur3(2_000_000, 5)
     private val pubKeyHints = BloomFilterMurMur3(10_000_000, 5)
     private val relayDB = mutableSetOf<String>()
 

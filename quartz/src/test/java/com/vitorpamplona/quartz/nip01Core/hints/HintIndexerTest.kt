@@ -50,9 +50,9 @@ class HintIndexerTest {
             }
 
         val addresses =
-            keys.take(10_000).map {
+            keys.take(100_000).map {
                 Address.assemble(
-                    RandomInstance.int(150_000),
+                    RandomInstance.int(65_000),
                     it,
                     randomChars(10),
                 )
