@@ -20,30 +20,84 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.bloom.BloomFilterMurMur3
 
 /**
- * Instead of having one bloom filter per relay, which could create many
- * large filters for very few events, this class uses only one mega bloom
- * filter and uses the hashcode of the relay uri as differentiator in salt.
+ * Instead of having one bloom filter per relay per type, which could create
+ * many large bloom filters for collections of very few items, this class uses
+ * only one mega bloom filter per type and uses the hashcode of the relay uri
+ * as seed differentiator in the hash function.
  */
-class HintIndexer(
-    size: Int = 10_000_000,
-    rounds: Int = 5,
-) {
-    private val bloomFilter = BloomFilterMurMur3(size, rounds)
+class HintIndexer {
+    private val eventHints = BloomFilterMurMur3(10_000_000, 5)
+    private val addressHints = BloomFilterMurMur3(1_000_000, 5)
+    private val pubKeyHints = BloomFilterMurMur3(10_000_000, 5)
     private val relayDB = hashSetOf<String>()
 
-    fun index(
+    private fun add(
         id: ByteArray,
         relay: String,
+        bloom: BloomFilterMurMur3,
     ) {
         relayDB.add(relay)
-        bloomFilter.add(id, relay.hashCode())
+        bloom.add(id, relay.hashCode())
     }
 
-    fun get(id: ByteArray): List<String> =
-        relayDB.filter {
-            bloomFilter.mightContain(id, it.hashCode())
-        }
+    private fun get(
+        id: ByteArray,
+        bloom: BloomFilterMurMur3,
+    ) = relayDB.filter { bloom.mightContain(id, it.hashCode()) }
+
+    // --------------------
+    // Event Host hints
+    // --------------------
+    fun addEvent(
+        eventId: ByteArray,
+        relay: String,
+    ) = add(eventId, relay, eventHints)
+
+    fun addEvent(
+        eventId: HexKey,
+        relay: String,
+    ) = addEvent(eventId.hexToByteArray(), relay)
+
+    fun getEvent(eventId: ByteArray) = get(eventId, eventHints)
+
+    fun getEvent(eventId: HexKey) = getEvent(eventId.hexToByteArray())
+
+    // --------------------
+    // PubKeys Outbox hints
+    // --------------------
+    fun addAddress(
+        addressId: ByteArray,
+        relay: String,
+    ) = add(addressId, relay, addressHints)
+
+    fun addAddress(
+        addressId: String,
+        relay: String,
+    ) = addAddress(addressId.toByteArray(), relay)
+
+    fun getAddress(addressId: ByteArray) = get(addressId, addressHints)
+
+    fun getAddress(addressId: String) = getAddress(addressId.toByteArray())
+
+    // --------------------
+    // PubKeys Outbox hints
+    // --------------------
+    fun addKey(
+        key: ByteArray,
+        relay: String,
+    ) = add(key, relay, pubKeyHints)
+
+    fun addKey(
+        key: HexKey,
+        relay: String,
+    ) = addKey(key.hexToByteArray(), relay)
+
+    fun getKey(key: ByteArray) = get(key, pubKeyHints)
+
+    fun getKey(key: HexKey) = getKey(key.hexToByteArray())
 }

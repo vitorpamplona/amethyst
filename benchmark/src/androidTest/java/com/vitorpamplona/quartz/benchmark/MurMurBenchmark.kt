@@ -23,70 +23,24 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.hints.bloom.MurmurHash3
 import com.vitorpamplona.quartz.utils.RandomInstance
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.nio.charset.Charset
 
 @RunWith(AndroidJUnit4::class)
-class HintIndexerBenchmark {
+class MurMurBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
-    companion object {
-        val keys =
-            mutableListOf<HexKey>().apply {
-                for (seed in 0..1_000_000) {
-                    add(RandomInstance.bytes(32).toHexKey())
-                }
-            }
-
-        val relays =
-            getInstrumentation()
-                .context.assets
-                .open("relayDB.txt")
-                .readBytes()
-                .toString(Charset.forName("utf-8"))
-                .split("\n")
-    }
-
     @Test
-    fun relayUriHashcode() {
-        benchmarkRule.measureRepeated {
-            "wss://relay.bitcoin.social".hashCode()
-        }
-    }
+    fun hash() {
+        val hasher = MurmurHash3()
 
-    @Test
-    fun getRelayHints() {
-        val indexer = HintIndexer()
-
-        keys.forEach { key ->
-            (0..5).map {
-                indexer.addKey(key, relays.random())
-            }
-        }
-
-        val key = keys.random()
+        val byteArray = RandomInstance.bytes(32)
 
         benchmarkRule.measureRepeated {
-            indexer.getKey(key)
-        }
-    }
-
-    @Test
-    fun buildIndexer() {
-        benchmarkRule.measureRepeated {
-            val indexer = HintIndexer()
-            keys.forEach { key ->
-                (0..5).map {
-                    indexer.addKey(key, relays.random())
-                }
-            }
+            hasher.hash(byteArray, 293)
         }
     }
 }
