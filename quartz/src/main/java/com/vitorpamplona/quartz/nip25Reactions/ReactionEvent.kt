@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip25Reactions
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag

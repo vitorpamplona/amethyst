@@ -49,13 +49,12 @@ class BloomFilter(
 
     fun add(value: HexKey) = add(value.hexToByteArray())
 
-    fun print(): String {
-        val builder = StringBuilder()
-        for (seed in 0 until bits.size()) {
-            builder.append(if (bits.get(seed)) "1" else "0")
+    fun print() =
+        buildString {
+            for (seed in 0 until bits.size()) {
+                append(if (bits.get(seed)) "1" else "0")
+            }
         }
-        return builder.toString()
-    }
 
     fun add(value: ByteArray) {
         lock.write {

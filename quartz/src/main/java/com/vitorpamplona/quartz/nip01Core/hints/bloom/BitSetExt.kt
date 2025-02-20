@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip01Core.hints.bloom
 
-import java.security.SecureRandom
+import java.util.BitSet
 
-object RandomInstance {
-    private val randomizer = SecureRandom()
-
-    fun int(bound: Int = Int.MAX_VALUE) = randomizer.nextInt(bound)
-
-    fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
-}
+fun BitSet.printBits() =
+    buildString {
+        for (seed in 0 until size()) {
+            append(if (this@printBits.get(seed)) "1" else "0")
+        }
+    }

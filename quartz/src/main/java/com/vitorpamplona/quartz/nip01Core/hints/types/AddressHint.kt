@@ -18,14 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip01Core.hints.types
 
-import java.security.SecureRandom
-
-object RandomInstance {
-    private val randomizer = SecureRandom()
-
-    fun int(bound: Int = Int.MAX_VALUE) = randomizer.nextInt(bound)
-
-    fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
+class AddressHint(
+    val addressId: String,
+    var relay: String? = null,
+) : Hint {
+    override fun id() = addressId.toByteArray(Charsets.UTF_8)
 }

@@ -18,14 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip01Core.hints
 
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.nip01Core.hints.bloom.BloomFilterMurMur3
 
-object RandomInstance {
-    private val randomizer = SecureRandom()
+/**
+ * Instead of having one bloom filter per relay, which could create many
+ * large filters for very few events, this class uses only one mega bloom
+ * filter and uses the hashcode of the relay uri as differentiator in salt.
+ */
+class HintIndexer(
+    size: Int = 10_000_000,
+    rounds: Int = 5,
+) {
+    private val bloomFilter = BloomFilterMurMur3(size, rounds)
+    private val relayDB = hashSetOf<String>()
 
-    fun int(bound: Int = Int.MAX_VALUE) = randomizer.nextInt(bound)
+    fun index(
+        id: ByteArray,
+        relay: String,
+    ) {
+        relayDB.add(relay)
+        bloomFilter.add(id, relay.hashCode())
+    }
 
-    fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
+    fun get(id: ByteArray): List<String> =
+        relayDB.filter {
+            bloomFilter.mightContain(id, it.hashCode())
+        }
 }

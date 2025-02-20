@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.quartz.nip01Core.hints.types
 
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 
-object RandomInstance {
-    private val randomizer = SecureRandom()
-
-    fun int(bound: Int = Int.MAX_VALUE) = randomizer.nextInt(bound)
-
-    fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
+class PubKeyHint(
+    val pubkey: HexKey,
+    var relay: String? = null,
+) : Hint {
+    override fun id() = pubkey.hexToByteArray()
 }

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip10Notes.tags
 
-import com.vitorpamplona.quartz.nip01Core.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 

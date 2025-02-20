@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip53LiveActivities.chat
 
-import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag

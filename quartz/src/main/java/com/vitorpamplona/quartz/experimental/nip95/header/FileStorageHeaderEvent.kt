@@ -22,11 +22,11 @@ package com.vitorpamplona.quartz.experimental.nip95.header
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.nip01Core.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
