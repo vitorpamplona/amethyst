@@ -34,7 +34,7 @@ class HintIndexer {
     private val eventHints = BloomFilterMurMur3(10_000_000, 5)
     private val addressHints = BloomFilterMurMur3(1_000_000, 5)
     private val pubKeyHints = BloomFilterMurMur3(10_000_000, 5)
-    private val relayDB = hashSetOf<String>()
+    private val relayDB = mutableSetOf<String>()
 
     private fun add(
         id: ByteArray,
