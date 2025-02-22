@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints.bloom
 
-import org.apache.commons.lang3.BooleanUtils.xor
-
 class MurmurHash3 {
     companion object {
-        val ROUND_DOWN = 0xFFFFFFFC.toInt()
-        val C1 = -0x3361d2af // 0xcc9e2d51
-        val C2 = 0x1b873593
+        const val ROUND_DOWN = 0xFFFFFFFC.toInt()
+        const val C1 = -0x3361d2af // 0xcc9e2d51
+        const val C2 = 0x1b873593
     }
 
     /**
