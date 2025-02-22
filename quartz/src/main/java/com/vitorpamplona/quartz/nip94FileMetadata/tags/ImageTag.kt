@@ -33,7 +33,7 @@ class ImageTag(
 
         @JvmStatic
         fun parse(tag: Array<String>): ImageTag? {
-            if (tag.size < TAG_SIZE || tag[0] != ThumbTag.TAG_NAME) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             return ImageTag(tag[1], tag.getOrNull(2))
         }
 
