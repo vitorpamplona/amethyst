@@ -38,9 +38,7 @@ object Hex {
 
     @JvmStatic
     fun isHex(hex: String?): Boolean {
-        if (hex == null) return false
-        if (hex.isEmpty()) return false
-        if (hex.length and 1 != 0) return false // must be even
+        if (hex.isNullOrEmpty() || hex.length and 1 != 0) return false
 
         try {
             for (c in hex.indices) {
