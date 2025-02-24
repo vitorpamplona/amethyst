@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -58,7 +58,7 @@ class ProfileGalleryEntryEvent(
 
     fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
 
-    fun hash() = tags.firstNotNullOfOrNull(HashTag::parse)
+    fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
     fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
 

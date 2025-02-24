@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip17Dm.base
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import kotlinx.collections.immutable.toImmutableSet
@@ -37,7 +38,10 @@ open class BaseDMGroupEvent(
     sig: HexKey,
 ) : WrappedEvent(id, pubKey, createdAt, kind, tags, content, sig),
     ChatroomKeyable,
-    NIP17Group {
+    NIP17Group,
+    PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
     /** Recipients intended to receive this conversation */
     fun recipients() = tags.mapNotNull(PTag::parse)
 

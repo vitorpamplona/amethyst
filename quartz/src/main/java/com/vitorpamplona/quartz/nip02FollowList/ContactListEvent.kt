@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip02FollowList
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -32,8 +34,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip02FollowList.tags.AddressFollowTag
+import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -45,7 +48,13 @@ class ContactListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
+
     /**
      * Returns a list of p-tags that are verified as hex keys.
      */
@@ -54,9 +63,9 @@ class ContactListEvent(
     /**
      * Returns a list of a-tags that are verified as correct.
      */
-    fun verifiedFollowAddressSet(): Set<HexKey> = tags.mapNotNullTo(HashSet(), ATag::parseValidAddress)
+    fun verifiedFollowAddressSet(): Set<HexKey> = tags.mapNotNullTo(HashSet(), AddressFollowTag::parseValidAddress)
 
-    fun unverifiedFollowKeySet() = tags.mapNotNull(PTag::parseKey)
+    fun unverifiedFollowKeySet() = tags.mapNotNull(ContactTag::parseKey)
 
     fun unverifiedFollowTagSet() = tags.hashtags()
 

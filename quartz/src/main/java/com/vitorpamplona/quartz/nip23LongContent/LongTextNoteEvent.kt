@@ -24,12 +24,17 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
@@ -47,7 +52,16 @@ class LongTextNoteEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressableEvent {
+    AddressableEvent,
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun eventHints() = tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(QTag::parseAddressAsHint)
+
     override fun dTag() = tags.dTag()
 
     override fun aTag(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)

@@ -18,38 +18,45 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip18Reposts.quotes
+package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
-
-interface QTag {
-    fun toTagArray(): Array<String>
-
+class HashtagTag {
     companion object {
-        const val TAG_NAME = "q"
+        const val TAG_NAME = "t"
         const val TAG_SIZE = 2
 
         @JvmStatic
-        fun parse(tag: Array<String>): QTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            return if (tag[1].length == 64) {
-                QEventTag.parse(tag)
+        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].isEmpty()) return null
+            return tag[1]
+        }
+
+        fun assemble(name: String) = arrayOf(TAG_NAME, name)
+
+        fun assembleDualCase(name: String): List<Array<String>> {
+            val lowercaseTag = name.lowercase()
+            return if (name != lowercaseTag) {
+                listOf(assemble(name), assemble(lowercaseTag))
             } else {
-                QAddressableTag.parse(tag)
+                listOf(assemble(name))
             }
         }
 
-        @JvmStatic
-        fun parseEventAsHint(tag: Array<String>): EventIdHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
-            return EventIdHint(tag[1], tag[2])
-        }
+        fun assemble(tags: List<String>): List<Array<String>> {
+            val uniqueTags = mutableSetOf<String>()
 
-        @JvmStatic
-        fun parseAddressAsHint(tag: Array<String>): AddressHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length == 64 || !tag[1].contains(':') || tag[2].isEmpty()) return null
-            return AddressHint(tag[1], tag[2])
+            tags.forEach { tag ->
+                uniqueTags.add(tag)
+                val lowercaseTag = tag.lowercase()
+                if (tag != lowercaseTag) {
+                    uniqueTags.add(lowercaseTag)
+                }
+            }
+
+            return uniqueTags.map { assemble(it) }
         }
     }
 }

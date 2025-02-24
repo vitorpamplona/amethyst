@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
 
 fun TagArrayBuilder<FileStorageHeaderEvent>.mimeType(mimeType: String) = add(MimeTypeTag.assemble(mimeType))
 
-fun TagArrayBuilder<FileStorageHeaderEvent>.hash(hash: HexKey) = add(HashTag.assemble(hash))
+fun TagArrayBuilder<FileStorageHeaderEvent>.hash(hash: HexKey) = add(HashSha256Tag.assemble(hash))
 
 fun TagArrayBuilder<FileStorageHeaderEvent>.fileSize(size: Int) = add(SizeTag.assemble(size))
 

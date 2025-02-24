@@ -26,9 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
 class MuteListEvent(
@@ -39,39 +36,16 @@ class MuteListEvent(
     content: String,
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
-
-    @Transient var publicAndPrivateWordCache: ImmutableSet<String>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (publicAndPrivateUserCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0) +
-            pointerSizeInBytes + (publicAndPrivateWordCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0)
-
     override fun dTag() = FIXED_D_TAG
 
     fun publicAndPrivateUsersAndWords(
         signer: NostrSigner,
         onReady: (PeopleListEvent.UsersAndWords) -> Unit,
     ) {
-        publicAndPrivateUserCache?.let { userList ->
-            publicAndPrivateWordCache?.let { wordList ->
-                onReady(PeopleListEvent.UsersAndWords(userList, wordList))
-                return
-            }
-        }
-
         privateTagsOrEmpty(signer) {
-            publicAndPrivateUserCache = filterTagList("p", it)
-            publicAndPrivateWordCache = filterTagList("word", it)
-
-            publicAndPrivateUserCache?.let { userList ->
-                publicAndPrivateWordCache?.let { wordList ->
-                    onReady(
-                        PeopleListEvent.UsersAndWords(userList, wordList),
-                    )
-                }
-            }
+            onReady(
+                PeopleListEvent.UsersAndWords(filterTagList("p", it), filterTagList("word", it)),
+            )
         }
     }
 

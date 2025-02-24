@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
@@ -68,6 +69,12 @@ class RootAddressTag(
 
         @JvmStatic
         fun parseAddress(tag: Array<String>) = tag.valueIfMatches(TAG_NAME, TAG_SIZE)
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length == 64 || !tag[1].contains(':') || tag[2].isEmpty()) return null
+            return AddressHint(tag[1], tag[2])
+        }
 
         @JvmStatic
         fun assemble(

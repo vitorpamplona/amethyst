@@ -18,17 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip01Core.hints
 
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 
-/** Makes the distinction between String and Hex * */
-typealias HexKey = String
+interface EventHintProvider {
+    fun eventHints(): List<EventIdHint>
+}
 
-fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
+interface AddressHintProvider {
+    fun addressHints(): List<AddressHint>
+}
 
-fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
-
-const val PUBKEY_LENGTH = 64
-
-const val EVENT_ID_LENGTH = 64
+interface PubKeyHintProvider {
+    fun pubKeyHints(): List<PubKeyHint>
+}

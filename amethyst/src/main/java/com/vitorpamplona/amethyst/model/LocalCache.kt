@@ -683,11 +683,11 @@ object LocalCache {
             is BadgeAwardEvent -> event.awardDefinition().map { getOrCreateAddressableNote(it) }
             is PrivateDmEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             is RepostEvent ->
-                event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+                event.boostedEventIds().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.boostedAddresses().map { getOrCreateAddressableNote(it) }
             is GenericRepostEvent ->
-                event.boostedPost().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+                event.boostedEventIds().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.boostedAddresses().map { getOrCreateAddressableNote(it) }
             is CommunityPostApprovalEvent ->
                 event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.approvedAddresses().map { getOrCreateAddressableNote(it) }

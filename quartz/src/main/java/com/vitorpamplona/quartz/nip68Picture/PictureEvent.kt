@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -68,7 +68,7 @@ class PictureEvent(
 
     private fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
 
-    private fun hash() = tags.firstNotNullOfOrNull(HashTag::parse)
+    private fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
     private fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
 

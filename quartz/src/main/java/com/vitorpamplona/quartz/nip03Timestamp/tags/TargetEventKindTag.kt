@@ -18,16 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.hints
+package com.vitorpamplona.quartz.nip03Timestamp.tags
 
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 
-interface HintProvider {
-    fun eventHints(): EventIdHint
-
-    fun addressIdHints(): AddressHint
-
-    fun pubKeyHints(): PubKeyHint
-}
+typealias TargetEventKindTag = KindTag

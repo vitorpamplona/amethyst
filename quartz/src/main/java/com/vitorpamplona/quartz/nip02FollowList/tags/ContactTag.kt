@@ -18,12 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip02FollowList
+package com.vitorpamplona.quartz.nip02FollowList.tags
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -62,13 +63,13 @@ data class ContactTag(
 
         @JvmStatic
         fun parse(tag: Array<String>): ContactTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
             return ContactTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
         @JvmStatic
         fun parseValid(tag: Array<String>): ContactTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
             return try {
                 ContactTag(decodePublicKey(tag[1]).toHexKey(), tag.getOrNull(2), tag.getOrNull(3))
             } catch (e: Exception) {
@@ -78,14 +79,26 @@ data class ContactTag(
         }
 
         @JvmStatic
+        fun parseKey(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            return tag[1]
+        }
+
+        @JvmStatic
         fun parseValidKey(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
             return try {
                 decodePublicKey(tag[1]).toHexKey()
             } catch (e: Exception) {
                 Log.w("ContactListEvent", "Can't parse contact list pubkey ${tag.joinToString(", ")}", e)
                 null
             }
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            return PubKeyHint(tag[1], tag[2])
         }
 
         @JvmStatic

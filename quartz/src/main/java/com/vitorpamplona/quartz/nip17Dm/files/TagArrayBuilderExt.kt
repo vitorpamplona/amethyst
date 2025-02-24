@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.OriginalHashTag
@@ -61,7 +61,7 @@ fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.encryptionNonce(nonce: 
 
 fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.mimeType(mimeType: String) = add(FileTypeTag.assemble(mimeType))
 
-fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.hash(hash: HexKey) = add(HashTag.assemble(hash))
+fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.hash(hash: HexKey) = add(HashSha256Tag.assemble(hash))
 
 fun TagArrayBuilder<ChatMessageEncryptedFileHeaderEvent>.fileSize(size: Int) = add(SizeTag.assemble(size))
 

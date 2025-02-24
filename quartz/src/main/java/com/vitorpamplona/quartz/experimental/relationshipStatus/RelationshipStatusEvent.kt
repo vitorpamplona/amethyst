@@ -30,8 +30,8 @@ import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip51Lists.Nip51PrivateTags
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -77,7 +77,7 @@ class RelationshipStatusEvent(
                     privateInitializer()
                 }
 
-            Nip51PrivateTags.encryptNip44(privateTags, signer) { content ->
+            PrivateTagsInContent.encryptNip44(privateTags, signer) { content ->
                 signer.sign(createdAt, KIND, publicTags, content, onReady)
             }
         }

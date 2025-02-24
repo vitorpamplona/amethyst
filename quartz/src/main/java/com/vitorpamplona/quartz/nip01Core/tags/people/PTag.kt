@@ -25,7 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.isNotName
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -59,19 +59,25 @@ data class PTag(
 
         @JvmStatic
         fun parse(tag: Tag): PTag? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             if (tag[1].length != 64) return null
             return PTag(tag[1], tag.getOrNull(2))
         }
 
         @JvmStatic
         fun parseKey(tag: Array<String>): HexKey? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             if (tag[1].length != 64) {
                 Log.w("PTag", "Invalid `$TAG_NAME` value ${tag.joinToString(", ")}")
                 return null
             }
             return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            return PubKeyHint(tag[1], tag[2])
         }
 
         @JvmStatic

@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.OriginalHashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -57,7 +57,7 @@ class ChatMessageEncryptedFileHeaderEvent(
 
     fun mimeType() = tags.firstNotNullOfOrNull(FileTypeTag::parse)
 
-    fun hash() = tags.firstNotNullOfOrNull(HashTag::parse)
+    fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
     fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
 

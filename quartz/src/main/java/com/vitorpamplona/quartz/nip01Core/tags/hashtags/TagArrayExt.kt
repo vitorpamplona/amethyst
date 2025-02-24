@@ -30,18 +30,18 @@ import com.vitorpamplona.quartz.nip01Core.core.isAnyLowercaseTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
-fun TagArray.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(HashTag.TAG_NAME, onEach)
+fun TagArray.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = this.forEachTagged(HashtagTag.TAG_NAME, onEach)
 
-fun TagArray.anyHashTag(onEach: (str: String) -> Boolean) = this.anyTagged(HashTag.TAG_NAME, onEach)
+fun TagArray.anyHashTag(onEach: (str: String) -> Boolean) = this.anyTagged(HashtagTag.TAG_NAME, onEach)
 
-fun TagArray.hasHashtags() = this.hasTagWithContent(HashTag.TAG_NAME)
+fun TagArray.hasHashtags() = this.hasTagWithContent(HashtagTag.TAG_NAME)
 
-fun TagArray.hashtags() = this.mapValues(HashTag.TAG_NAME)
+fun TagArray.hashtags() = this.mapValues(HashtagTag.TAG_NAME)
 
-fun TagArray.countHashtags() = this.count(HashTag::isTagged)
+fun TagArray.countHashtags() = this.count(HashtagTag::isTagged)
 
-fun TagArray.isTaggedHash(hashtag: String) = this.isTagged(HashTag.TAG_NAME, hashtag, true)
+fun TagArray.isTaggedHash(hashtag: String) = this.isTagged(HashtagTag.TAG_NAME, hashtag, true)
 
-fun TagArray.isTaggedHashes(hashtags: Set<String>) = this.isAnyLowercaseTagged(HashTag.TAG_NAME, hashtags)
+fun TagArray.isTaggedHashes(hashtags: Set<String>) = this.isAnyLowercaseTagged(HashtagTag.TAG_NAME, hashtags)
 
-fun TagArray.firstIsTaggedHashes(hashtags: Set<String>) = this.firstAnyLowercaseTaggedValue(HashTag.TAG_NAME, hashtags)
+fun TagArray.firstIsTaggedHashes(hashtags: Set<String>) = this.firstAnyLowercaseTaggedValue(HashtagTag.TAG_NAME, hashtags)

@@ -18,20 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip94FileMetadata.tags
+package com.vitorpamplona.quartz.nip03Timestamp.tags
 
-class HashTag {
-    companion object {
-        const val TAG_NAME = "x"
-        const val TAG_SIZE = 2
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 
-        @JvmStatic
-        fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            return tag[1]
-        }
-
-        @JvmStatic
-        fun assemble(hash: String) = arrayOf(TAG_NAME, hash)
-    }
-}
+typealias TargetEventTag = ETag

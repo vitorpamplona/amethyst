@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
@@ -69,6 +70,12 @@ class ReplyEventTag(
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             if (tag[1].length != 64) return null
             return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): EventIdHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            return EventIdHint(tag[1], tag[2])
         }
 
         @JvmStatic

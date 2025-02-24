@@ -25,7 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
@@ -53,7 +56,16 @@ class CommentEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    RootScope {
+    RootScope,
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(RootAuthorTag::parseAsHint) + tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+
+    override fun eventHints() = tags.mapNotNull(RootEventTag::parseAsHint) + tags.mapNotNull(ReplyEventTag::parseAsHint)
+
+    override fun addressHints() = tags.mapNotNull(RootAddressTag::parseAsHint) + tags.mapNotNull(ReplyAddressTag::parseAsHint)
+
     fun rootAuthor() = tags.firstNotNullOfOrNull(RootAuthorTag::parse)
 
     fun replyAuthor() = tags.firstNotNullOfOrNull(ReplyAuthorTag::parse)

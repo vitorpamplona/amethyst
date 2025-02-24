@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -42,7 +42,7 @@ fun TagArrayBuilder<ProfileGalleryEntryEvent>.url(url: String) = add(UrlTag.asse
 
 fun TagArrayBuilder<ProfileGalleryEntryEvent>.mimeType(mimeType: String) = add(MimeTypeTag.assemble(mimeType))
 
-fun TagArrayBuilder<ProfileGalleryEntryEvent>.hash(hash: HexKey) = add(HashTag.assemble(hash))
+fun TagArrayBuilder<ProfileGalleryEntryEvent>.hash(hash: HexKey) = add(HashSha256Tag.assemble(hash))
 
 fun TagArrayBuilder<ProfileGalleryEntryEvent>.fileSize(size: Int) = add(SizeTag.assemble(size))
 

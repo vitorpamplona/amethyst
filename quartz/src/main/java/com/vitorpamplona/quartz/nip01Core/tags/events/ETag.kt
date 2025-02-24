@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.tags.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -58,7 +59,7 @@ data class ETag(
         const val TAG_SIZE = 2
 
         @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].length == 64
 
         @JvmStatic
         fun isTagged(
@@ -68,14 +69,20 @@ data class ETag(
 
         @JvmStatic
         fun parse(tag: Array<String>): ETag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
             return ETag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
         @JvmStatic
         fun parseId(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
             return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): EventIdHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            return EventIdHint(tag[1], tag[2])
         }
 
         @JvmStatic

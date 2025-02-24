@@ -26,9 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
 class PeopleListEvent(
@@ -39,45 +36,6 @@ class PeopleListEvent(
     content: String,
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
-
-    @Transient var publicAndPrivateWordCache: ImmutableSet<String>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (publicAndPrivateUserCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0) +
-            pointerSizeInBytes + (publicAndPrivateWordCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0)
-
-    fun publicAndPrivateWords(
-        signer: NostrSigner,
-        onReady: (ImmutableSet<String>) -> Unit,
-    ) {
-        publicAndPrivateWordCache?.let {
-            onReady(it)
-            return
-        }
-
-        privateTagsOrEmpty(signer) {
-            publicAndPrivateWordCache = filterTagList("word", it)
-            publicAndPrivateWordCache?.let { onReady(it) }
-        }
-    }
-
-    fun publicAndPrivateUsers(
-        signer: NostrSigner,
-        onReady: (ImmutableSet<String>) -> Unit,
-    ) {
-        publicAndPrivateUserCache?.let {
-            onReady(it)
-            return
-        }
-
-        privateTagsOrEmpty(signer) {
-            publicAndPrivateUserCache = filterTagList("p", it)
-            publicAndPrivateUserCache?.let { onReady(it) }
-        }
-    }
-
     @Immutable
     class UsersAndWords(
         val users: Set<String> = setOf(),
@@ -88,24 +46,13 @@ class PeopleListEvent(
         signer: NostrSigner,
         onReady: (UsersAndWords) -> Unit,
     ) {
-        publicAndPrivateUserCache?.let { userList ->
-            publicAndPrivateWordCache?.let { wordList ->
-                onReady(UsersAndWords(userList, wordList))
-                return
-            }
-        }
-
         privateTagsOrEmpty(signer) {
-            publicAndPrivateUserCache = filterTagList("p", it)
-            publicAndPrivateWordCache = filterTagList("word", it)
-
-            publicAndPrivateUserCache?.let { userList ->
-                publicAndPrivateWordCache?.let { wordList ->
-                    onReady(
-                        UsersAndWords(userList, wordList),
-                    )
-                }
-            }
+            onReady(
+                UsersAndWords(
+                    filterTagList("p", it),
+                    filterTagList("word", it),
+                ),
+            )
         }
     }
 

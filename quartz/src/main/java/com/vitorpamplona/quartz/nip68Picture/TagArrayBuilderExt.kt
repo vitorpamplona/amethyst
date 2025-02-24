@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 
 fun TagArrayBuilder<PictureEvent>.title(title: String) = addUnique(TitleTag.assemble(title))
@@ -43,7 +43,7 @@ fun TagArrayBuilder<PictureEvent>.pictureIMeta(
 
 fun TagArrayBuilder<PictureEvent>.pictureIMeta(imeta: PictureMeta): TagArrayBuilder<PictureEvent> {
     add(imeta.toIMetaArray())
-    imeta.hash?.let { add(HashTag.assemble(it)) }
+    imeta.hash?.let { add(HashSha256Tag.assemble(it)) }
     imeta.mimeType?.let { add(MimeTypeTag.assemble(it)) }
     return this
 }

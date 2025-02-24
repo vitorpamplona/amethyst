@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.match
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
@@ -53,6 +54,12 @@ data class ReplyAuthorTag(
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             if (tag[1].length != 64) return null
             return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            return PubKeyHint(tag[1], tag[2])
         }
 
         @JvmStatic

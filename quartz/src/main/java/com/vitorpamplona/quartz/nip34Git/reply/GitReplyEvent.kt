@@ -23,13 +23,18 @@ package com.vitorpamplona.quartz.nip34Git.reply
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareMarkedETagsAsReplyTo
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -43,7 +48,16 @@ class GitReplyEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+
     fun repositoryHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 
     fun repository() = tags.firstNotNullOfOrNull(ATag::parse)

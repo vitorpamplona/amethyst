@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -47,7 +47,7 @@ fun IMetaTag.mimeType() = properties.get(MimeTypeTag.TAG_NAME)
 
 fun IMetaTag.alt() = properties.get(AltTag.TAG_NAME)
 
-fun IMetaTag.hash() = properties.get(HashTag.TAG_NAME)
+fun IMetaTag.hash() = properties.get(HashSha256Tag.TAG_NAME)
 
 fun IMetaTag.size() = properties.get(SizeTag.TAG_NAME)
 

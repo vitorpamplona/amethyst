@@ -23,6 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun <T : Event> TagArrayBuilder<T>.hashtag(tag: String) = addAll(HashTag.assembleDualCase(tag))
+fun <T : Event> TagArrayBuilder<T>.hashtag(tag: String) = addAll(HashtagTag.assembleDualCase(tag))
 
-fun <T : Event> TagArrayBuilder<T>.hashtags(tag: List<String>) = addAll(HashTag.assemble(tag))
+fun <T : Event> TagArrayBuilder<T>.hashtags(tag: List<String>) = addAll(HashtagTag.assemble(tag))

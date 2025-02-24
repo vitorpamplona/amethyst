@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.name
 import com.vitorpamplona.quartz.nip01Core.core.value
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -126,6 +127,12 @@ data class ATag(
         fun parseAddressId(tag: Array<String>): String? {
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || !tag[1].contains(':') || tag[2].isEmpty()) return null
+            return AddressHint(tag[1], tag[2])
         }
 
         @JvmStatic

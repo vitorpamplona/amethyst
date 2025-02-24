@@ -38,6 +38,6 @@ class EncryptionNonce {
         }
 
         @JvmStatic
-        fun assemble(nonce: ByteArray) = arrayOf(EncryptionKey.TAG_NAME, nonce.toHexKey())
+        fun assemble(nonce: ByteArray) = arrayOf(TAG_NAME, nonce.toHexKey())
     }
 }

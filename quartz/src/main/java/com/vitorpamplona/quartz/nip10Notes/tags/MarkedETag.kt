@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip10Notes.tags
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -179,6 +180,12 @@ data class MarkedETag(
             } else {
                 null
             }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): EventIdHint? {
+            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            return EventIdHint(tag[1], tag[2])
+        }
 
         @JvmStatic
         fun parseRoot(tag: Array<String>): MarkedETag? {

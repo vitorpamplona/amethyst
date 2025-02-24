@@ -18,17 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip02FollowList.tags
 
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 
-/** Makes the distinction between String and Hex * */
-typealias HexKey = String
-
-fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
-
-fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
-
-const val PUBKEY_LENGTH = 64
-
-const val EVENT_ID_LENGTH = 64
+typealias AddressFollowTag = ATag

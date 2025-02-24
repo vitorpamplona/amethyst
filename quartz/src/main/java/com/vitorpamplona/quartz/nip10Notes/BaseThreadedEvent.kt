@@ -23,12 +23,18 @@ package com.vitorpamplona.quartz.nip10Notes
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithEventsOrAddresses
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithPeople
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -48,7 +54,16 @@ open class BaseThreadedEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
     fun mentions() = taggedUsers()
 
     fun markedRoot() = tags.firstNotNullOfOrNull(MarkedETag::parseRoot)

@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -37,7 +39,10 @@ class ChannelCreateEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    override fun eventHints() = channelInfo().relays?.map { EventIdHint(id, it) } ?: emptyList()
+
     fun channelInfo() = ChannelData.parse(content) ?: ChannelData()
 
     companion object {

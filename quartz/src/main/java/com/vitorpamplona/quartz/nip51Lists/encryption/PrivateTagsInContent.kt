@@ -18,13 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip51Lists
+package com.vitorpamplona.quartz.nip51Lists.encryption
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 
-class Nip51PrivateTags {
+class PrivateTagsInContent {
     companion object {
         fun decode(content: String) = EventMapper.mapper.readValue<Array<Array<String>>>(content)
 

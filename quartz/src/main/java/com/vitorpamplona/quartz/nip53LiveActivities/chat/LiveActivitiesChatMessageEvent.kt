@@ -23,10 +23,16 @@ package com.vitorpamplona.quartz.nip53LiveActivities.chat
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -38,7 +44,16 @@ class LiveActivitiesChatMessageEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+
     private fun activityHex() = tags.firstNotNullOfOrNull(ATag::parseAddressId)
 
     fun activity() = tags.firstNotNullOfOrNull(ATag::parse)

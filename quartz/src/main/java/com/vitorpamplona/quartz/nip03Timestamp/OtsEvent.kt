@@ -26,10 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
-import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
+import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.Base64
@@ -42,10 +41,13 @@ class OtsEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    override fun eventHints() = tags.mapNotNull(TargetEventTag::parseAsHint)
+
     override fun isContentEncoded() = true
 
-    fun digestEventId() = tags.firstNotNullOfOrNull(ETag::parseId)
+    fun digestEventId() = tags.firstNotNullOfOrNull(TargetEventTag::parseId)
 
     fun otsByteArray(): ByteArray = decodeOtsState(content)
 
@@ -82,7 +84,7 @@ class OtsEvent(
             initializer: TagArrayBuilder<OtsEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, encodeOtsState(otsState), createdAt) {
             alt(ALT)
-            eTag(ETag(eventId))
+            targetEvent(TargetEventTag(eventId))
 
             initializer()
         }
@@ -95,8 +97,8 @@ class OtsEvent(
         ) = eventTemplate(KIND, encodeOtsState(otsState), createdAt) {
             alt(ALT)
 
-            eTag(event.toETag())
-            kind(event.event.kind)
+            targetEvent(event.toETag())
+            targetKind(event.event.kind)
 
             initializer()
         }

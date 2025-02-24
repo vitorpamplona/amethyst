@@ -23,15 +23,20 @@ package com.vitorpamplona.quartz.nip35Torrents
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.positionalMarkedTags
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -43,7 +48,16 @@ class TorrentCommentEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(QTag::parseAddressAsHint)
+
     fun torrent() = tags.firstNotNullOfOrNull(MarkedETag::parseRoot) ?: tags.firstNotNullOfOrNull(ETag::parse)
 
     fun torrentIds() = tags.firstNotNullOfOrNull(MarkedETag::parseRootId) ?: tags.firstNotNullOfOrNull(ETag::parseId)

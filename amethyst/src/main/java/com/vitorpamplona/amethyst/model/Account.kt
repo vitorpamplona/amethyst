@@ -99,8 +99,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip02FollowList.ContactTag
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
+import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.reply
@@ -3542,7 +3542,7 @@ class Account(
                 val event = (addressableNote.event as? PeopleListEvent)
                 event != null &&
                     event.pubKey == pubkey &&
-                    (event.hasAnyTaggedUser() || event.publicAndPrivateUserCache?.isNotEmpty() == true)
+                    (event.hasAnyTaggedUser() || event.cachedPrivateTags()?.isNotEmpty() == true)
             }
 
     fun markAsRead(

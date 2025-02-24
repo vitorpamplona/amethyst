@@ -18,17 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip03Timestamp
 
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventKindTag
+import com.vitorpamplona.quartz.nip03Timestamp.tags.TargetEventTag
 
-/** Makes the distinction between String and Hex * */
-typealias HexKey = String
+fun <T : Event> TagArrayBuilder<T>.targetEvent(tag: TargetEventTag) = add(tag.toTagArray())
 
-fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
+fun <T : Event> TagArrayBuilder<T>.targetEvents(tag: List<TargetEventTag>) = addAll(tag.map { it.toTagArray() })
 
-fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
+fun <T : Event> TagArrayBuilder<T>.targetKind(kind: Int) = add(TargetEventKindTag.assemble(kind))
 
-const val PUBKEY_LENGTH = 64
+fun <T : Event> TagArrayBuilder<T>.targetKinds(kinds: List<Int>) = addAll(TargetEventKindTag.assemble(kinds))
 
-const val EVENT_ID_LENGTH = 64
+fun <T : Event> TagArrayBuilder<T>.targetKinds(kinds: Set<Int>) = addAll(TargetEventKindTag.assemble(kinds))

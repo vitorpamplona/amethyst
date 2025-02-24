@@ -18,17 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip51Lists.tags
 
-import com.vitorpamplona.quartz.utils.Hex
+@Deprecated("Use NameTag Instead")
+class TitleTag {
+    companion object {
+        const val TAG_NAME = "title"
 
-/** Makes the distinction between String and Hex * */
-typealias HexKey = String
+        @JvmStatic
+        fun parse(tag: Array<String>): String? {
+            if (tag.size < 2 || tag[0] != TAG_NAME || tag[1].isEmpty()) return null
+            return tag[1]
+        }
 
-fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
-
-fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
-
-const val PUBKEY_LENGTH = 64
-
-const val EVENT_ID_LENGTH = 64
+        @JvmStatic
+        fun assemble(name: String) = arrayOf(TAG_NAME, name)
+    }
+}

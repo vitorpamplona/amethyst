@@ -22,6 +22,16 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 typealias Tag = Array<String>
 
+/**
+ * Returns if the Tag has at least $index elements.
+ */
+fun Tag.has(index: Int) = size > index
+
+/**
+ * Returns if the Tag has less than $index elements.
+ */
+fun Tag.lacks(index: Int) = size <= index
+
 fun Tag.name() = this[0]
 
 fun Tag.value() = this[1]

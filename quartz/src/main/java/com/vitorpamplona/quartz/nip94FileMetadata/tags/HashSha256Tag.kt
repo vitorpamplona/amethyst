@@ -18,17 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.core
+package com.vitorpamplona.quartz.nip94FileMetadata.tags
 
-import com.vitorpamplona.quartz.utils.Hex
+class HashSha256Tag {
+    companion object {
+        const val TAG_NAME = "x"
+        const val TAG_SIZE = 2
 
-/** Makes the distinction between String and Hex * */
-typealias HexKey = String
+        @JvmStatic
+        fun parse(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].isEmpty()) return null
+            return tag[1]
+        }
 
-fun ByteArray.toHexKey(): HexKey = Hex.encode(this)
-
-fun HexKey.hexToByteArray(): ByteArray = Hex.decode(this)
-
-const val PUBKEY_LENGTH = 64
-
-const val EVENT_ID_LENGTH = 64
+        @JvmStatic
+        fun assemble(hash: String) = arrayOf(TAG_NAME, hash)
+    }
+}

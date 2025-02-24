@@ -18,45 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.hashtags
+package com.vitorpamplona.quartz.nip51Lists.tags
 
-class HashTag {
+class NameTag {
     companion object {
-        const val TAG_NAME = "t"
-        const val TAG_SIZE = 2
-
-        @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        const val TAG_NAME = "name"
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            if (tag.size < 2 || tag[0] != TAG_NAME || tag[1].isEmpty()) return null
             return tag[1]
         }
 
+        @JvmStatic
         fun assemble(name: String) = arrayOf(TAG_NAME, name)
-
-        fun assembleDualCase(name: String): List<Array<String>> {
-            val lowercaseTag = name.lowercase()
-            return if (name != lowercaseTag) {
-                listOf(assemble(name), assemble(lowercaseTag))
-            } else {
-                listOf(assemble(name))
-            }
-        }
-
-        fun assemble(tags: List<String>): List<Array<String>> {
-            val uniqueTags = mutableSetOf<String>()
-
-            tags.forEach { tag ->
-                uniqueTags.add(tag)
-                val lowercaseTag = tag.lowercase()
-                if (tag != lowercaseTag) {
-                    uniqueTags.add(lowercaseTag)
-                }
-            }
-
-            return uniqueTags.map { assemble(it) }
-        }
     }
 }
