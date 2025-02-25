@@ -101,7 +101,7 @@ class HintIndexerTest {
     }
 
     val testSize = 1000
-    val testProb = 0.015f
+    val testProb = 0.02f
 
     fun assert99PercentSucess(success: () -> Boolean) {
         var failureCounter = 0
