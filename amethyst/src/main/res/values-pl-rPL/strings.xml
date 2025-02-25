@@ -128,7 +128,7 @@
     <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="uploading">Wgrywanie…</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać saty</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
     <string name="reply_here">"odpowiedz tutaj.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiuje ID wpisu do schowka w celu udostępnienia w Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiuj ID kanału (wpisu) do schowka</string>
@@ -452,7 +452,7 @@
     <string name="app_notification_dms_channel_description">Powiadamia Cię, gdy nadejdzie prywatna wiadomość</string>
     <string name="app_notification_zaps_channel_name">Otrzymano Zapy</string>
     <string name="app_notification_zaps_channel_description">Powiadamia Cię, gdy ktoś prześle ci zapy</string>
-    <string name="app_notification_zaps_channel_message">%1$s Satów</string>
+    <string name="app_notification_zaps_channel_message">%1$s Satsów</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
     <string name="reply_notify">Powiadom: </string>
@@ -473,7 +473,7 @@
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
-    <string name="zapraiser_explainer">Dodaje docelową liczbę satów do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
+    <string name="zapraiser_explainer">Dodaje docelową liczbę satsów do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
     <string name="zapraiser_target_amount_in_sats">Docelowa kwota w Satach</string>
     <string name="sats_to_complete">Zapraiser przy: %1$s. %2$s satach do celu</string>
     <string name="read_from_relay">Odczytaj z Transmitera</string>
@@ -636,7 +636,7 @@
     <string name="zap_split_search_and_add_user">Szukaj i dodaj użytkownika</string>
     <string name="zap_split_search_and_add_user_placeholder">Nick lub Login</string>
     <string name="missing_lud16">Brakująca konfiguracja LN</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać saty</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
     <string name="zap_split_weight">Procentowo</string>
     <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Podziel zapsy z</string>
@@ -664,7 +664,7 @@
     <string name="cashu_failed_redemption_explainer_error_msg">Mint dostarczył następujący komunikat błędu: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Tokeny Cashu zostały już wydane.</string>
     <string name="cashu_successful_redemption">Cashu odebrano</string>
-    <string name="cashu_successful_redemption_explainer">%1$s saty zostały wysłane do Twojego portfela. (opłata: %2$s satów)</string>
+    <string name="cashu_successful_redemption_explainer">%1$s satsy zostały wysłane do Twojego portfela. (opłata: %2$s satsów)</string>
     <string name="cashu_no_wallet_found">W systemie nie znaleziono kompatybilnego portfela Cashu</string>
     <string name="error_unable_to_fetch_invoice">Nie można pobrać faktury z serwerów odbiorcy</string>
     <string name="wallet_connect_pay_invoice_error_error">Twój dostawca połączenia z portfelem zwrócił następujący błąd: %1$s</string>
@@ -682,7 +682,7 @@
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Nie znaleziono zwrotnego adresu URL z odpowiedzi %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Wystąpił błąd podczas analizowania JSON z pobierania faktury z Lightning Adresu. Sprawdź konfigurację lightning użytkownika</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nieprawidłowa kwota faktury (%1$s satów) od %2$s. Powinieno być %3$s</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nieprawidłowa kwota faktury (%1$s satsów) od %2$s. Powinieno być %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nie można utworzyć faktury przed wysłaniem zapa. Portfel odbiorcy wysłał następujący błąd: %1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nie można utworzyć faktury przed wysłaniem zapa. Element pr nie został znaleziony w powstałym JSON.</string>
