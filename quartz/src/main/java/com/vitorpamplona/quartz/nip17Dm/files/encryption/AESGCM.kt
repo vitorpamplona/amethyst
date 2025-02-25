@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip17Dm.files.encryption
 
+import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
+import java.security.GeneralSecurityException
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -54,6 +56,14 @@ class AESGCM(
         with(newCipher()) {
             init(Cipher.DECRYPT_MODE, keySpec(), param())
             doFinal(bytesToDecrypt)
+        }
+
+    override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
+        try {
+            decrypt(bytesToDecrypt)
+        } catch (e: GeneralSecurityException) {
+            Log.w("AESGCM", "Failed to decrypt", e)
+            null
         }
 
     companion object {

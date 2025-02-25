@@ -26,4 +26,6 @@ interface NostrCipher {
     fun encrypt(bytesToEncrypt: ByteArray): ByteArray
 
     fun decrypt(bytesToDecrypt: ByteArray): ByteArray
+
+    fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray?
 }

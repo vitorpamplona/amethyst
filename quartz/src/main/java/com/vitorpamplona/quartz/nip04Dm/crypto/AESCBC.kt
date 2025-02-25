@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip04Dm.crypto
 
+import android.util.Log
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import com.vitorpamplona.quartz.utils.RandomInstance
+import java.security.GeneralSecurityException
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -48,6 +50,14 @@ class AESCBC(
         with(newCipher()) {
             init(Cipher.DECRYPT_MODE, keySpec(), param())
             doFinal(bytesToDecrypt)
+        }
+
+    override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
+        try {
+            decrypt(bytesToDecrypt)
+        } catch (e: GeneralSecurityException) {
+            Log.w("AESCBC", "Failed to decrypt", e)
+            null
         }
 
     companion object {

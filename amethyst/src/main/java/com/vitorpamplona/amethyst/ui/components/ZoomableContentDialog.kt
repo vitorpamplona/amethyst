@@ -308,6 +308,7 @@ private fun saveMediaToGallery(
 
         MediaSaverToDisk.downloadAndSave(
             content.url,
+            mimeType = content.mimeType,
             forceProxy = useTor,
             localContext,
             onSuccess = {

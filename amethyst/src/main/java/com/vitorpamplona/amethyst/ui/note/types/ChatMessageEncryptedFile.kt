@@ -113,13 +113,13 @@ fun RenderEncryptedFile(
     val algo = noteEvent.algo()
     val key = noteEvent.key()
     val nonce = noteEvent.nonce()
+    val mimeType = noteEvent.mimeType()
 
     if (algo == AESGCM.NAME && key != null && nonce != null) {
-        HttpClientManager.addCipherToCache(noteEvent.content, AESGCM(key, nonce))
+        HttpClientManager.addCipherToCache(noteEvent.content, AESGCM(key, nonce), mimeType)
 
         val content by remember(noteEvent) {
-            val isImage = noteEvent.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(noteEvent.content)
-            val mimeType = noteEvent.mimeType()
+            val isImage = mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(noteEvent.content)
 
             mutableStateOf<BaseMediaContent>(
                 if (isImage) {

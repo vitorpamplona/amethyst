@@ -124,5 +124,6 @@ object HttpClientManager {
     fun addCipherToCache(
         url: String,
         cipher: NostrCipher,
-    ) = cache.add(url, cipher)
+        expectedMimeType: String?,
+    ) = cache.add(url, cipher, expectedMimeType)
 }

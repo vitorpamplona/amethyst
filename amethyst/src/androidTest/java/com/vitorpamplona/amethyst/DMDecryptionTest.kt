@@ -18,58 +18,45 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip17Dm
+package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
 import junit.framework.TestCase.assertEquals
+import okhttp3.Request
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class AESGCMTest {
-    val decryptionNonce = "01e77c94bd5aba3e3cbb69594e7ba07c"
-    val decryptionKey = "c128ecffab90ee7810e3df08e7fb2cc39a8d40f24201f48b2b36e23b34ac50ee"
+class DMDecryptionTest {
+    val okHttp = HttpClientManager.getHttpClient(false)
 
-    val cipher = AESGCM(decryptionKey.hexToByteArray(), decryptionNonce.toByteArray(Charsets.UTF_8))
-
-    @Test
-    fun encryptDecrypt() {
-        val encrypted = cipher.encrypt("Testing".toByteArray(Charsets.UTF_8))
-        val decrypted = cipher.decrypt(encrypted)
-
-        assertEquals("Testing", String(decrypted))
-    }
+    val url = "https://cdn.satellite.earth/812fd4cf9d4d4b59c141ecd6a6c08c7571b5872237ad6477916cb2d119b5cacd"
+    val cipher =
+        AESGCM(
+            "7b184b3849e161027bab1aac9f2d96eb22bfe02c8dc34cad5d2cc436a64f191d".hexToByteArray(),
+            "3936923383652e3f0d72bfd40568b435".hexToByteArray(),
+        )
+    val decryptedSize = 1277122
+    val expectedMimeType = "video/mp4"
 
     @Test
-    fun imageTest() {
-        val image =
-            getInstrumentation().context.assets.open("ovxxk2vz.jpg").use {
-                it.readAllBytes()
-            }
+    fun runDownloadAndDecryptVideo() {
+        HttpClientManager.addCipherToCache(url, cipher, "video/mp4")
 
-        val decrypted = cipher.decrypt(image)
+        val request =
+            Request
+                .Builder()
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .url(url)
+                .get()
+                .build()
 
-        assertEquals(44201, decrypted.size)
-    }
-
-    @Test
-    fun videoTest2() {
-        val myCipher =
-            AESGCM(
-                "373d19850ebc8ed5b0fefcca5cd6f27fde9cb6ac54fd32f6b4fad9d68ebe8ee0".hexToByteArray(),
-                "95e67b6874784a54299b58b8990499bd".hexToByteArray(),
-            )
-
-        val encrypted =
-            getInstrumentation().context.assets.open("trouble_video").use {
-                it.readAllBytes()
-            }
-
-        val decrypted = myCipher.decrypt(encrypted)
-
-        assertEquals(1277122, decrypted.size)
+        okHttp.newCall(request).execute().use {
+            assertEquals(decryptedSize, it.body.bytes().size)
+            assertEquals(expectedMimeType, it.body.contentType().toString())
+        }
     }
 }

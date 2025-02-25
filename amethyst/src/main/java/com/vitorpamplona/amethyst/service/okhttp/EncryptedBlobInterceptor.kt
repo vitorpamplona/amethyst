@@ -20,51 +20,85 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.util.Log
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 
 class EncryptedBlobInterceptor(
     val cache: EncryptionKeyCache,
 ) : Interceptor {
-    fun Response.decrypt(cipher: NostrCipher): Response {
+    private fun Response.decryptOrNullWithErrorCorrection(info: DecryptInformation): Response? {
         val body = peekBody(Long.MAX_VALUE)
-        val decryptedBytes = cipher.decrypt(body.bytes())
-        val newBody = decryptedBytes.toResponseBody(body.contentType())
-        return newBuilder().body(newBody).build()
-    }
 
-    fun Response.decryptOrNull(cipher: NostrCipher): Response? =
-        try {
-            decrypt(cipher)
-        } catch (e: Exception) {
-            Log.w("EncryptedBlobInterceptor", "Failed to decrypt", e)
-            null
+        // Only tries to decrypt if the content-type is a byte array
+        if (body.contentType().toString() != "application/octet-stream") {
+            return null
         }
 
-    private fun Response.decryptOrNullWithErrorCorrection(cipher: NostrCipher): Response? {
-        return decryptOrNull(cipher) ?: return if (cipher is AESGCM) {
-            decryptOrNull(cipher.copyUsingUTF8Nonce())
-        } else {
-            null
+        val bytes = body.bytes()
+
+        // Tries the correct way first
+        // if it fails, tries to decrypt as UTF8 nonce, which was how
+        // 0xChat started encrypting
+        val decrypted =
+            info.cipher.decryptOrNull(bytes) ?: if (info.cipher is AESGCM) {
+                info.cipher.copyUsingUTF8Nonce().decryptOrNull(bytes)
+            } else {
+                null
+            }
+
+        if (decrypted == null) {
+            return null
         }
+
+        return newBuilder()
+            .apply {
+                body(
+                    decrypted.toResponseBody(
+                        info.mimeType?.toMediaTypeOrNull() ?: body.contentType(),
+                    ),
+                )
+                // removes hints that would make the app requrest partial byte arrays
+                // in videos, which are impossible to decrypt.
+                removeHeader("accept-ranges")
+                // Fixes the size of the body array
+                header("content-length", decrypted.size.toString())
+                // Trusts the mimetype from the event is better than the mimetype from the server
+                info.mimeType?.let { header("content-type", it) }
+            }.build()
     }
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val response = chain.proceed(request)
+        val encryptionKeys = cache.get(request.url.toString())
 
-        val cipher = cache.get(request.url.toString()) ?: return response
+        // We cannot use Range requests (partial byte arrays)
+        // in encrypted payloads because we won't be able to
+        // decrypt partial byte arrays.
+        val newRequest =
+            if (encryptionKeys != null) {
+                request
+                    .newBuilder()
+                    .removeHeader("Range")
+                    .build()
+            } else {
+                request
+            }
+
+        val response = chain.proceed(newRequest)
+
+        if (encryptionKeys == null) {
+            return response
+        }
 
         if (response.isSuccessful) {
-            return response.decryptOrNullWithErrorCorrection(cipher) ?: response
+            return response.decryptOrNullWithErrorCorrection(encryptionKeys) ?: response
         } else {
             // Log redirections to be able to use the cipher.
             response.header("Location")?.let {
-                cache.add(it, cipher)
+                cache.add(it, encryptionKeys)
             }
         }
         return response
