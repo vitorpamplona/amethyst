@@ -58,7 +58,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNIP19
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -260,7 +259,7 @@ fun DisplayEntryForNote(
             style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
         )
     } else {
-        DisplayEvent(noteEvent.id, noteEvent.kind, noteEvent.toNIP19(), null, accountViewModel, nav)
+        DisplayEvent(noteEvent.id, noteEvent.kind, note.toNostrUri(), null, accountViewModel, nav)
     }
 }
 

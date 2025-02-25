@@ -177,7 +177,6 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -878,7 +877,7 @@ fun ShowVideoStreaming(
                                         description = baseChannel.toBestDisplayName(),
                                         artworkUri = event.image(),
                                         authorName = baseChannel.creatorName(),
-                                        uri = event.toNostrUri(),
+                                        uri = baseChannel.toNAddr(),
                                     )
                                 }
 

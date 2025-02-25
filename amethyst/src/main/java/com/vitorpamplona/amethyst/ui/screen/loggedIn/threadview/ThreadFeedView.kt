@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -177,6 +178,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableK
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -564,6 +566,17 @@ private fun FullBleedNoteCompose(
                     )
                 } else if (noteEvent is ChatMessageRelayListEvent) {
                     DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is ChatMessageEncryptedFileHeaderEvent) {
+                    RenderChatMessageEncryptedFile(
+                        baseNote,
+                        false,
+                        canPreview,
+                        3,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                    )
                 } else if (noteEvent is AdvertisedRelayListEvent) {
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {

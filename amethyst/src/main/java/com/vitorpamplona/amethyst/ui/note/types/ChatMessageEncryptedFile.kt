@@ -129,7 +129,7 @@ fun RenderEncryptedFile(
                         hash = noteEvent.originalHash(),
                         blurhash = noteEvent.blurhash(),
                         dim = noteEvent.dimensions(),
-                        uri = noteEvent.toNostrUri(),
+                        uri = note.toNostrUri(),
                         mimeType = mimeType,
                         encryptionAlgo = algo,
                         encryptionKey = key,
