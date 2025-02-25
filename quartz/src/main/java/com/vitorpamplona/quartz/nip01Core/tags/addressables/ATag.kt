@@ -58,6 +58,9 @@ data class ATag(
         const val TAG_SIZE = 2
 
         @JvmStatic
+        fun isTagged(tag: Array<String>) = tag.size >= 2 && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
         fun isSameAddress(
             tag1: Array<String>,
             tag2: Array<String>,

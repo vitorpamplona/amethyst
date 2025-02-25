@@ -18,32 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 
-class UserProfileZapsFeedFilter(
-    val user: User,
-) : FeedFilter<ZapReqResponse>() {
-    override fun feedKey(): String = user.pubkeyHex
-
-    override fun feed(): List<ZapReqResponse> = forProfileFeed(user.zaps)
-
-    override fun limit() = 400
-
-    companion object {
-        fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {
-            if (zaps == null) return emptyList()
-
-            return (
-                zaps
-                    .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
-                    .reversed()
-            )
-        }
+@Composable
+fun ShowUserButton(onClick: () -> Unit) {
+    Button(
+        modifier = Modifier.padding(start = 3.dp),
+        onClick = onClick,
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringRes(R.string.unblock), color = Color.White)
     }
 }

@@ -18,32 +18,37 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks
 
-import com.vitorpamplona.amethyst.model.Note
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-class UserProfileZapsFeedFilter(
-    val user: User,
-) : FeedFilter<ZapReqResponse>() {
-    override fun feedKey(): String = user.pubkeyHex
+@Composable
+fun BookmarkTabHeader(baseUser: User) {
+    val userState by baseUser.live().bookmarks.observeAsState()
 
-    override fun feed(): List<ZapReqResponse> = forProfileFeed(user.zaps)
+    var userBookmarks by remember { mutableIntStateOf(0) }
 
-    override fun limit() = 400
+    LaunchedEffect(key1 = userState) {
+        launch(Dispatchers.IO) {
+            val newBookmarks = userState?.user?.latestBookmarkList?.countBookmarks() ?: 0
 
-    companion object {
-        fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {
-            if (zaps == null) return emptyList()
-
-            return (
-                zaps
-                    .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
-                    .reversed()
-            )
+            if (newBookmarks != userBookmarks) {
+                userBookmarks = newBookmarks
+            }
         }
     }
+
+    Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
 }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -36,6 +37,8 @@ class BookmarkListEvent(
     content: String,
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun countBookmarks() = tags.count(ETag::isTagged) + tags.count(ATag::isTagged)
+
     companion object {
         const val KIND = 30001
         const val ALT = "List of bookmarks"

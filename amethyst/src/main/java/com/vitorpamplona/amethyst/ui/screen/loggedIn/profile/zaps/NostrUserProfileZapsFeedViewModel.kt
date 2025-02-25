@@ -18,32 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
-import com.vitorpamplona.amethyst.model.Note
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 
-class UserProfileZapsFeedFilter(
-    val user: User,
-) : FeedFilter<ZapReqResponse>() {
-    override fun feedKey(): String = user.pubkeyHex
-
-    override fun feed(): List<ZapReqResponse> = forProfileFeed(user.zaps)
-
-    override fun limit() = 400
-
-    companion object {
-        fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {
-            if (zaps == null) return emptyList()
-
-            return (
-                zaps
-                    .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
-                    .reversed()
-            )
-        }
+class NostrUserProfileZapsFeedViewModel(
+    user: User,
+) : LnZapFeedViewModel(UserProfileZapsFeedFilter(user)) {
+    class Factory(
+        val user: User,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileZapsFeedViewModel>): NostrUserProfileZapsFeedViewModel = NostrUserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
     }
 }

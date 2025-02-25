@@ -18,32 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import kotlinx.collections.immutable.ImmutableList
 
-class UserProfileZapsFeedFilter(
-    val user: User,
-) : FeedFilter<ZapReqResponse>() {
-    override fun feedKey(): String = user.pubkeyHex
+@Immutable data class ZapReqResponse(
+    val zapRequest: Note,
+    val zapEvent: Note,
+)
 
-    override fun feed(): List<ZapReqResponse> = forProfileFeed(user.zaps)
+@Stable
+sealed class LnZapFeedState {
+    object Loading : LnZapFeedState()
 
-    override fun limit() = 400
+    class Loaded(
+        val feed: MutableState<ImmutableList<ZapReqResponse>>,
+    ) : LnZapFeedState()
 
-    companion object {
-        fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {
-            if (zaps == null) return emptyList()
+    object Empty : LnZapFeedState()
 
-            return (
-                zaps
-                    .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
-                    .reversed()
-            )
-        }
-    }
+    class FeedError(
+        val errorMessage: String,
+    ) : LnZapFeedState()
 }

@@ -18,32 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
 
-import com.vitorpamplona.amethyst.model.Note
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.amethyst.ui.stringRes
 
-class UserProfileZapsFeedFilter(
-    val user: User,
-) : FeedFilter<ZapReqResponse>() {
-    override fun feedKey(): String = user.pubkeyHex
+@Composable
+fun RelaysTabHeader(baseUser: User) {
+    val userState by baseUser.live().relays.observeAsState()
+    val userRelaysBeingUsed = remember(userState) { userState?.user?.relaysBeingUsed?.size ?: "--" }
 
-    override fun feed(): List<ZapReqResponse> = forProfileFeed(user.zaps)
-
-    override fun limit() = 400
-
-    companion object {
-        fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {
-            if (zaps == null) return emptyList()
-
-            return (
-                zaps
-                    .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
-                    .reversed()
-            )
+    val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
+    val userRelays =
+        remember(userStateRelayInfo) {
+            userStateRelayInfo
+                ?.user
+                ?.latestContactList
+                ?.relays()
+                ?.size ?: "--"
         }
-    }
+
+    Text(text = "$userRelaysBeingUsed / $userRelays ${stringRes(R.string.relays)}")
 }

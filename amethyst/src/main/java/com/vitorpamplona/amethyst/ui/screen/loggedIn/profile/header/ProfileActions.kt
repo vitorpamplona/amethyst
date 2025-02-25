@@ -18,32 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
-import com.vitorpamplona.amethyst.model.Note
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.WatchIsHiddenUser
 
-class UserProfileZapsFeedFilter(
-    val user: User,
-) : FeedFilter<ZapReqResponse>() {
-    override fun feedKey(): String = user.pubkeyHex
+@Composable
+fun ProfileActions(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val isMe by
+        remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
-    override fun feed(): List<ZapReqResponse> = forProfileFeed(user.zaps)
+    if (isMe) {
+        EditButton(nav)
+    }
 
-    override fun limit() = 400
-
-    companion object {
-        fun forProfileFeed(zaps: Map<Note, Note?>?): List<ZapReqResponse> {
-            if (zaps == null) return emptyList()
-
-            return (
-                zaps
-                    .mapNotNull { entry -> entry.value?.let { ZapReqResponse(entry.key, it) } }
-                    .sortedBy { (it.zapEvent.event as? LnZapEvent)?.amount() }
-                    .reversed()
-            )
+    WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
+        if (isHidden) {
+            ShowUserButton { accountViewModel.showUser(baseUser.pubkeyHex) }
+        } else {
+            DisplayFollowUnfollowButton(baseUser, accountViewModel)
         }
     }
 }

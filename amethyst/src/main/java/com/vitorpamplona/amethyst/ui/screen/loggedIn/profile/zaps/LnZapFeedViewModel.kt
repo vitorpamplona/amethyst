@@ -18,19 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
 import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileZapsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import kotlinx.collections.immutable.ImmutableList
@@ -41,16 +38,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-class NostrUserProfileZapsFeedViewModel(
-    user: User,
-) : LnZapFeedViewModel(UserProfileZapsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileZapsFeedViewModel>): NostrUserProfileZapsFeedViewModel = NostrUserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
-    }
-}
 
 @Stable
 open class LnZapFeedViewModel(

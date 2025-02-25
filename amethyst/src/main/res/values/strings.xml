@@ -146,6 +146,7 @@
     <string name="conversations">Conversations</string>
     <string name="notes">Notes</string>
     <string name="replies">Replies</string>
+    <string name="mutual">Yours</string>
     <string name="gallery">Gallery</string>
     <string name="follows">"Follows"</string>
     <string name="reports">"Reports"</string>
