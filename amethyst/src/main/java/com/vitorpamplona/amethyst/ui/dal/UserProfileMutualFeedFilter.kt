@@ -79,7 +79,8 @@ class UserProfileMutualFeedFilter(
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent ||
                     it.event is TorrentEvent
-            ) && it.event?.isTaggedUser(user.pubkeyHex) == true
+            ) &&
+            it.event?.isTaggedUser(user.pubkeyHex) == true
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 
