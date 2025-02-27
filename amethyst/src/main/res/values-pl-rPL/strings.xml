@@ -141,6 +141,7 @@
     <string name="conversations">Konwersacje</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
+    <string name="mutual">Twoje</string>
     <string name="gallery">Galeria</string>
     <string name="follows">"Obserwowani"</string>
     <string name="reports">"Zgłoszenia"</string>
@@ -205,13 +206,13 @@
     <string name="posts_received">odebranych wiadomości</string>
     <string name="remove">Usuń</string>
     <string name="translations_auto">Automatycznie</string>
-    <string name="translations_translated_from">przetłumaczono z</string>
-    <string name="translations_to">do</string>
-    <string name="translations_show_in_lang_first">Najpierw wyświetl język %1$s</string>
+    <string name="translations_translated_from">przetłumaczono język</string>
+    <string name="translations_to">na</string>
+    <string name="translations_show_in_lang_first">Najpierw pokaż język %1$s</string>
     <string name="chat_about_topic">Temat czatu: %1$s</string>
     <string name="community_about_topic">Temat dyskusji %1$s</string>
     <string name="translations_always_translate_to_lang">Zawsze tłumacz na %1$s</string>
-    <string name="translations_never_translate_from_lang">Język %1$s pokaż nietłumaczony</string>
+    <string name="translations_never_translate_from_lang">Pokaż oryginalny %1$s</string>
     <string name="nip_05">Adres Nostr</string>
     <string name="never">nigdy</string>
     <string name="now">teraz</string>
@@ -467,7 +468,7 @@
     <string name="content_warning_hide_all_sensitive_content">Zawsze ukrywaj wrażliwe treści</string>
     <string name="content_warning_show_all_sensitive_content">Zawsze pokazuj wrażliwą zawartość</string>
     <string name="content_warning_see_warnings">Zawsze pokazuj ostrzeżenia dotyczące zawartości</string>
-    <string name="recommended_apps">Zalecenia: </string>
+    <string name="recommended_apps">Polecane: </string>
     <string name="filter_spam_from_strangers">Filtruj spam z nieznajomych</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Ostrzegaj, gdy posty zostały zgłoszone przez osoby które obserwujesz</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
