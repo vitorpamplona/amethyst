@@ -20,15 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip39ExtIdentities
 
-class TelegramIdentity(
+class UnsupportedIdentity(
+    val platform: String,
     identity: String,
     proof: String,
 ) : IdentityClaimTag(identity, proof) {
-    override fun toProofUrl() = "https://t.me/$proof"
+    override fun toProofUrl() = "Unsupported Identity"
 
     override fun platform() = platform
-
-    companion object {
-        val platform = "telegram"
-    }
 }

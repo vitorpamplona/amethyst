@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip39ExtIdentities
 class GitHubIdentity(
     identity: String,
     proof: String,
-) : IdentityClaim(identity, proof) {
+) : IdentityClaimTag(identity, proof) {
     override fun toProofUrl() = "https://gist.github.com/$identity/$proof"
 
     override fun platform() = platform

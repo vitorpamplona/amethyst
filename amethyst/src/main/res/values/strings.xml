@@ -111,6 +111,7 @@
     <string name="global_feed">Global Feed</string>
     <string name="search_feed">Search Feed</string>
     <string name="add_a_relay">Add a Relay</string>
+    <string name="profile_name">Name</string>
     <string name="display_name">Display Name</string>
     <string name="my_display_name">My display name</string>
     <string name="my_awesome_name">Ostrich McAwesome</string>

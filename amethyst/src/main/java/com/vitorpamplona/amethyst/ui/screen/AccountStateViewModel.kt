@@ -285,7 +285,7 @@ class AccountStateViewModel : ViewModel() {
                 AccountSettings(
                     keyPair = keyPair,
                     transientAccount = false,
-                    backupUserMetadata = MetadataEvent.newUser(name, tempSigner),
+                    backupUserMetadata = tempSigner.sign(MetadataEvent.newUser(name)),
                     backupContactList =
                         ContactListEvent.createFromScratch(
                             followUsers = listOf(ContactTag(keyPair.pubKey.toHexKey(), null, null)),

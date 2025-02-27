@@ -18,17 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip39ExtIdentities
+package com.vitorpamplona.quartz.nip01Core.metadata.tags
 
-class TelegramIdentity(
-    identity: String,
-    proof: String,
-) : IdentityClaimTag(identity, proof) {
-    override fun toProofUrl() = "https://t.me/$proof"
+import com.vitorpamplona.quartz.utils.ensure
 
-    override fun platform() = platform
-
+class BannerTag {
     companion object {
-        val platform = "telegram"
+        const val TAG_NAME = "banner"
+
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.size > 1) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(name: String) = arrayOf(TAG_NAME, name)
     }
 }

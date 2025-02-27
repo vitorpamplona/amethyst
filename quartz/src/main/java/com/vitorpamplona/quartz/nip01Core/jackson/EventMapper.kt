@@ -41,10 +41,13 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorSerializer
 
 class EventMapper {
     companion object {
+        val defaultPrettyPrinter = InliningTagArrayPrettyPrinter()
+
         val mapper =
             jacksonObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature())
+                .setDefaultPrettyPrinter(defaultPrettyPrinter)
                 .registerModule(
                     SimpleModule()
                         .addSerializer(Event::class.java, EventSerializer())

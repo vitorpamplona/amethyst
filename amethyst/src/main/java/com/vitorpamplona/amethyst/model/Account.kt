@@ -1349,27 +1349,48 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        MetadataEvent.updateFromPast(
-            latest = userProfile().latestMetadata,
-            name = name,
-            picture = picture,
-            banner = banner,
-            website = website,
-            pronouns = pronouns,
-            about = about,
-            nip05 = nip05,
-            lnAddress = lnAddress,
-            lnURL = lnURL,
-            twitter = twitter,
-            mastodon = mastodon,
-            github = github,
-            signer = signer,
-        ) {
+        val latest = userProfile().latestMetadata
+
+        val template =
+            if (latest != null) {
+                MetadataEvent.updateFromPast(
+                    latest = latest,
+                    name = name,
+                    displayName = name,
+                    picture = picture,
+                    banner = banner,
+                    website = website,
+                    pronouns = pronouns,
+                    about = about,
+                    nip05 = nip05,
+                    lnAddress = lnAddress,
+                    lnURL = lnURL,
+                    twitter = twitter,
+                    mastodon = mastodon,
+                    github = github,
+                )
+            } else {
+                MetadataEvent.createNew(
+                    name = name,
+                    displayName = name,
+                    picture = picture,
+                    banner = banner,
+                    website = website,
+                    pronouns = pronouns,
+                    about = about,
+                    nip05 = nip05,
+                    lnAddress = lnAddress,
+                    lnURL = lnURL,
+                    twitter = twitter,
+                    mastodon = mastodon,
+                    github = github,
+                )
+            }
+
+        signer.sign(template) {
             Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }
-
-        return
     }
 
     fun reactionTo(

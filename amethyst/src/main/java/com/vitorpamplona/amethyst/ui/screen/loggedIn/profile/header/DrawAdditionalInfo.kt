@@ -68,7 +68,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
-import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaim
+import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
@@ -196,7 +196,7 @@ fun DrawAdditionalInfo(
 
     val identities = user.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
-        identities.forEach { identity: IdentityClaim ->
+        identities.forEach { identity: IdentityClaimTag ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
@@ -241,7 +241,7 @@ fun DrawAdditionalInfo(
     DisplayAppRecommendations(appRecommendations, accountViewModel, nav)
 }
 
-fun getIdentityClaimIcon(identity: IdentityClaim): Int =
+fun getIdentityClaimIcon(identity: IdentityClaimTag): Int =
     when (identity) {
         is TwitterIdentity -> R.drawable.x
         is TelegramIdentity -> R.drawable.telegram
@@ -250,7 +250,7 @@ fun getIdentityClaimIcon(identity: IdentityClaim): Int =
         else -> R.drawable.github
     }
 
-fun getIdentityClaimDescription(identity: IdentityClaim): Int =
+fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
     when (identity) {
         is TwitterIdentity -> R.string.twitter
         is TelegramIdentity -> R.string.telegram

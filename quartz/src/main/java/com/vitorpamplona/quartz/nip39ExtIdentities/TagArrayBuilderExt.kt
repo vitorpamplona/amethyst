@@ -20,15 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip39ExtIdentities
 
-class TelegramIdentity(
-    identity: String,
-    proof: String,
-) : IdentityClaimTag(identity, proof) {
-    override fun toProofUrl() = "https://t.me/$proof"
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 
-    override fun platform() = platform
+fun TagArrayBuilder<MetadataEvent>.claims(identities: List<IdentityClaimTag>) = addAll(identities.map { it.toTagArray() })
 
-    companion object {
-        val platform = "telegram"
-    }
-}
+fun TagArrayBuilder<MetadataEvent>.twitterClaim(twitter: TwitterIdentity) = add(twitter.toTagArray())
+
+fun TagArrayBuilder<MetadataEvent>.mastodonClaim(mastodon: MastodonIdentity) = add(mastodon.toTagArray())
+
+fun TagArrayBuilder<MetadataEvent>.githubClaim(github: GitHubIdentity) = add(github.toTagArray())
+
+fun TagArrayBuilder<MetadataEvent>.twitterClaim(twitterUrl: String) = TwitterIdentity.parseProofUrl(twitterUrl)?.let { twitterClaim(it) }
+
+fun TagArrayBuilder<MetadataEvent>.mastodonClaim(mastodonUrl: String) = MastodonIdentity.parseProofUrl(mastodonUrl)?.let { mastodonClaim(it) }
+
+fun TagArrayBuilder<MetadataEvent>.githubClaim(githubUrl: String) = GitHubIdentity.parseProofUrl(githubUrl)?.let { githubClaim(it) }

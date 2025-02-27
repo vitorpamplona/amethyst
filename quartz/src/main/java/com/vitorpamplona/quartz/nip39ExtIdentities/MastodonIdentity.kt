@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip39ExtIdentities
 class MastodonIdentity(
     identity: String,
     proof: String,
-) : IdentityClaim(identity, proof) {
+) : IdentityClaimTag(identity, proof) {
     override fun toProofUrl() = "https://$identity/$proof"
 
     override fun platform() = platform

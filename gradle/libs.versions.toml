@@ -121,6 +121,7 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc3986" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
+secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
 tor-android = { module = "info.guardianproject:tor-android", version.ref = "torAndroid" }
 unifiedpush = { group = "com.github.UnifiedPush", name = "android-connector", version.ref = "unifiedpush" }
 url-detector = { group = "io.github.url-detector", name = "url-detector", version.ref = "urlDetector" }

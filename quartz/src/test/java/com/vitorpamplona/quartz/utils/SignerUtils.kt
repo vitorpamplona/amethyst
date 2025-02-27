@@ -18,17 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip39ExtIdentities
+package com.vitorpamplona.quartz.utils
 
-class TelegramIdentity(
-    identity: String,
-    proof: String,
-) : IdentityClaimTag(identity, proof) {
-    override fun toProofUrl() = "https://t.me/$proof"
+import com.vitorpamplona.quartz.nip01Core.crypto.DeterministicSigner
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 
-    override fun platform() = platform
+fun String.nsecToKeyPair() = KeyPair(this.bechToBytes())
 
-    companion object {
-        val platform = "telegram"
-    }
-}
+fun String.nsecToSigner() = this.nsecToKeyPair().let { DeterministicSigner(it) }

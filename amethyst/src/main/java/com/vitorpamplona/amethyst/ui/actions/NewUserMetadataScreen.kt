@@ -142,7 +142,7 @@ fun NewUserMetadataScreen(
                 modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
             ) {
                 OutlinedTextField(
-                    label = { Text(text = stringRes(R.string.display_name)) },
+                    label = { Text(text = stringRes(R.string.profile_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     value = postViewModel.displayName.value,
                     onValueChange = { postViewModel.displayName.value = it },

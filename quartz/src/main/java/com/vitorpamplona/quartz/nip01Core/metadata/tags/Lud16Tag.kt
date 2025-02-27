@@ -18,35 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip39ExtIdentities
+package com.vitorpamplona.quartz.nip01Core.metadata.tags
 
-import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.utils.ensure
 
-@Stable
-abstract class IdentityClaim(
-    val identity: String,
-    val proof: String,
-) {
-    abstract fun toProofUrl(): String
-
-    abstract fun platform(): String
-
-    fun platformIdentity() = "${platform()}:$identity"
-
+class Lud16Tag {
     companion object {
-        fun create(
-            platformIdentity: String,
-            proof: String,
-        ): IdentityClaim {
-            val (platform, identity) = platformIdentity.split(':')
+        const val TAG_NAME = "lud16"
 
-            return when (platform.lowercase()) {
-                GitHubIdentity.platform -> GitHubIdentity(identity, proof)
-                TwitterIdentity.platform -> TwitterIdentity(identity, proof)
-                TelegramIdentity.platform -> TelegramIdentity(identity, proof)
-                MastodonIdentity.platform -> MastodonIdentity(identity, proof)
-                else -> throw IllegalArgumentException("Platform $platform not supported")
-            }
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.size > 1) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
         }
+
+        fun assemble(name: String) = arrayOf(TAG_NAME, name)
     }
 }

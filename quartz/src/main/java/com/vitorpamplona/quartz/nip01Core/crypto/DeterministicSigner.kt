@@ -18,17 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip39ExtIdentities
+package com.vitorpamplona.quartz.nip01Core.crypto
 
-class TelegramIdentity(
-    identity: String,
-    proof: String,
-) : IdentityClaimTag(identity, proof) {
-    override fun toProofUrl() = "https://t.me/$proof"
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 
-    override fun platform() = platform
+class DeterministicSigner(
+    val key: KeyPair,
+    val pubKey: HexKey = key.pubKey.toHexKey(),
+) {
+    fun <T : Event> sign(
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ): T = EventAssembler.hashAndSign(pubKey, createdAt, kind, tags, content, key.privKey!!, nonce = null)
 
-    companion object {
-        val platform = "telegram"
-    }
+    fun <T : Event> sign(ev: EventTemplate<T>): T = sign(ev.createdAt, ev.kind, ev.tags, ev.content)
 }
