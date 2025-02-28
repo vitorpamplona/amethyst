@@ -263,7 +263,7 @@ class SimpleClientRelay(
                 }
 
                 if (!msg.success) {
-                    stats.newNotice("Rejected event $msg.eventId: $msg.message")
+                    stats.newNotice("Rejected event ${msg.eventId}: ${msg.message}")
                 }
 
                 listener.onSendResponse(this@SimpleClientRelay, msg.eventId, msg.success, msg.message)
