@@ -141,6 +141,7 @@
     <string name="conversations">Beszélgetések</string>
     <string name="notes">Bejegyzések</string>
     <string name="replies">Válaszok</string>
+    <string name="mutual">Az Öné</string>
     <string name="gallery">Galéria</string>
     <string name="follows">"Követett"</string>
     <string name="reports">"Bejelentés"</string>
