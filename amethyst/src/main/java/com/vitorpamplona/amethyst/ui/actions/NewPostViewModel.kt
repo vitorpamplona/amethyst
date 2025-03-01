@@ -1680,20 +1680,3 @@ open class NewPostViewModel : ViewModel() {
         saveDraft()
     }
 }
-
-enum class GeohashPrecision(
-    val digits: Int,
-) {
-    KM_5000_X_5000(1), // 5,000km	×	5,000km
-    KM_1250_X_625(2), // 1,250km	×	625km
-    KM_156_X_156(3), //   156km	×	156km
-    KM_39_X_19(4), //  39.1km	×	19.5km
-    KM_5_X_5(5), //  4.89km	×	4.89km
-    M_1000_X_600(6), //  1.22km	×	0.61km
-    M_153_X_153(7), //    153m	×	153m
-    M_38_X_19(8), //   38.2m	×	19.1m
-    M_5_X_5(9), //   4.77m	×	4.77m
-    MM_1000_X_1000(10), //   1.19m	×	0.596m
-    MM_149_X_149(11), //   149mm	×	149mm
-    MM_37_X_18(12), //  37.2mm	×	18.6mm
-}
