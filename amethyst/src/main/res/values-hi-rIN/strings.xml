@@ -106,6 +106,7 @@
     <string name="global_feed">वैश्विक सूचनावली</string>
     <string name="search_feed">खोज सूचनावली</string>
     <string name="add_a_relay">पुनःप्रसारक जोडें</string>
+    <string name="profile_name">नाम</string>
     <string name="display_name">प्रदर्शन नाम</string>
     <string name="my_display_name">मेरा प्रदर्शन नाम</string>
     <string name="my_awesome_name">उष्ट्रपक्षी मक्बढिया</string>
@@ -141,6 +142,7 @@
     <string name="conversations">सम्वाद</string>
     <string name="notes">टीकाएँ</string>
     <string name="replies">प्रतिवचन</string>
+    <string name="mutual">आपका</string>
     <string name="gallery">चित्रालय</string>
     <string name="follows">"का अनुचरण"</string>
     <string name="reports">"सूचनाएँ"</string>

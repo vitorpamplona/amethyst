@@ -106,6 +106,7 @@
     <string name="global_feed">Kanał Ogólny</string>
     <string name="search_feed">Przeszukaj kanał</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
+    <string name="profile_name">Imię</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
     <string name="my_awesome_name">G Braun</string>
