@@ -78,11 +78,11 @@ import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.EndedFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.OfflineFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.EndedFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.LiveFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.OfflineFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists

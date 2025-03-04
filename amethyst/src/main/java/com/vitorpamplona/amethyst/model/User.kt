@@ -236,16 +236,13 @@ class User(
             }.flatten()
 
     @Synchronized
-    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom {
-        checkNotInMainThread()
-
-        return privateChatrooms[key]
+    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom =
+        privateChatrooms[key]
             ?: run {
                 val privateChatroom = Chatroom()
                 privateChatrooms = privateChatrooms + Pair(key, privateChatroom)
                 privateChatroom
             }
-    }
 
     private fun getOrCreatePrivateChatroom(user: User): Chatroom {
         val key = ChatroomKey(persistentSetOf(user.pubkeyHex))

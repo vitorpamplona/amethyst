@@ -86,6 +86,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip10Notes.tags.positionalMarkedTags
 import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
@@ -818,7 +819,6 @@ open class NewPostViewModel : ViewModel() {
                 message = tagger.message,
                 toUser = originalNote!!.author!!,
                 replyingTo = originalNote!!,
-                mentions = tagger.pTags,
                 zapReceiver = zapReceiver,
                 contentWarningReason = contentWarningReason,
                 zapRaiserAmount = localZapRaiserAmount,
@@ -827,7 +827,7 @@ open class NewPostViewModel : ViewModel() {
                 draftTag = localDraft,
             )
         } else if (originalNote?.event is NIP17Group) {
-            val replyHint = originalNote?.toEventHint<ChatMessageEvent>()
+            val replyHint = originalNote?.toEventHint<BaseDMGroupEvent>()
 
             val template =
                 if (replyHint == null) {
@@ -868,7 +868,7 @@ open class NewPostViewModel : ViewModel() {
             account?.sendNIP17PrivateMessage(template, localDraft)
         } else if (!dmUsers.isNullOrEmpty()) {
             if (nip17 || dmUsers.size > 1) {
-                val replyHint = originalNote?.toEventHint<ChatMessageEvent>()
+                val replyHint = originalNote?.toEventHint<BaseDMGroupEvent>()
                 val template =
                     if (replyHint == null) {
                         ChatMessageEvent.build(tagger.message, dmUsers.map { it.toPTag() }) {
@@ -910,7 +910,6 @@ open class NewPostViewModel : ViewModel() {
                     message = tagger.message,
                     toUser = dmUsers.first(),
                     replyingTo = originalNote,
-                    mentions = tagger.pTags,
                     contentWarningReason = contentWarningReason,
                     zapReceiver = zapReceiver,
                     zapRaiserAmount = localZapRaiserAmount,

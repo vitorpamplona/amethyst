@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -148,9 +148,8 @@ fun ChatFileUploadView(
                                 postViewModel.upload(
                                     onError = accountViewModel::toast,
                                     context = context,
-                                ) {
-                                    onClose
-                                }
+                                    onceUploaded = onClose,
+                                )
 
                                 postViewModel.selectedServer?.let {
                                     if (it.type != ServerType.NIP95) {

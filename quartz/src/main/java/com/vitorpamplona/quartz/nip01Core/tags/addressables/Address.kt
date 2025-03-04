@@ -50,7 +50,7 @@ data class Address(
         fun parse(addressId: String): Address? =
             try {
                 val parts = addressId.split(":", limit = 3)
-                if (parts[1].length == 64 && Hex.isHex(parts[1])) {
+                if (parts.size > 1 && parts[1].length == 64 && Hex.isHex(parts[1])) {
                     Address(parts[0].toInt(), parts[1], parts[2])
                 } else {
                     Log.w("AddressableId", "Error parsing. Pubkey is not hex: $addressId")

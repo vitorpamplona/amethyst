@@ -119,6 +119,9 @@ private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.05f)
 private val DarkChatBackground = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 private val LightChatBackground = LightColorPalette.onSurface.copy(alpha = 0.08f)
 
+private val DarkChatDraftBackground = DarkColorPalette.onSurface.copy(alpha = 0.15f)
+private val LightChatDraftBackground = LightColorPalette.onSurface.copy(alpha = 0.15f)
+
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
 
@@ -386,6 +389,9 @@ val ColorScheme.subtleBorder: Color
 
 val ColorScheme.chatBackground: Color
     get() = if (isLight) LightChatBackground else DarkChatBackground
+
+val ColorScheme.chatDraftBackground: Color
+    get() = if (isLight) LightChatDraftBackground else DarkChatDraftBackground
 
 val ColorScheme.subtleButton: Color
     get() = if (isLight) LightSubtleButton else DarkSubtleButton

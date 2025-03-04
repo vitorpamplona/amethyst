@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +53,6 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -80,11 +79,9 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -106,6 +103,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.DisplayRoomSubject
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.DisplayUserSetAsSubject
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -119,18 +121,10 @@ import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
-import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
-import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip92IMeta.imetas
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
@@ -144,6 +138,8 @@ import kotlinx.coroutines.launch
 fun ChatroomScreen(
     roomId: String?,
     draftMessage: String? = null,
+    replyToNote: HexKey? = null,
+    editFromDraft: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -157,7 +153,7 @@ fun ChatroomScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {
-            Chatroom(roomId, draftMessage, accountViewModel, nav)
+            Chatroom(roomId, draftMessage, replyToNote, editFromDraft, accountViewModel, nav)
         }
     }
 }
@@ -238,6 +234,8 @@ private fun RenderRoomTopBar(
 fun Chatroom(
     roomId: String?,
     draftMessage: String? = null,
+    replyToNote: HexKey? = null,
+    editFromDraft: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -248,6 +246,8 @@ fun Chatroom(
             PrepareChatroomViewModels(
                 room = it,
                 draftMessage = draftMessage,
+                replyToNote = replyToNote,
+                editFromDraft = editFromDraft,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -306,6 +306,8 @@ fun ChatroomByAuthor(
             PrepareChatroomViewModels(
                 room = it,
                 draftMessage = draftMessage,
+                replyToNote = null,
+                editFromDraft = null,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -356,6 +358,8 @@ fun LoadRoomByAuthor(
 fun PrepareChatroomViewModels(
     room: ChatroomKey,
     draftMessage: String?,
+    replyToNote: HexKey? = null,
+    editFromDraft: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -369,21 +373,36 @@ fun PrepareChatroomViewModels(
                 ),
         )
 
-    val newPostModel: NewPostViewModel = viewModel()
-    newPostModel.accountViewModel = accountViewModel
-    newPostModel.account = accountViewModel.account
-    newPostModel.requiresNIP17 = room.users.size > 1
+    val newPostModel: ChatNewMessageViewModel = viewModel()
+    newPostModel.init(accountViewModel)
+    newPostModel.load(room)
 
-    if (newPostModel.requiresNIP17) {
-        newPostModel.nip17 = true
-    } else {
-        if (room.users.size == 1) {
-            ObserveRelayListForDMs(pubkey = room.users.first(), accountViewModel = accountViewModel) {
-                if (it?.relays().isNullOrEmpty()) {
-                    newPostModel.nip17 = false
-                } else {
-                    newPostModel.nip17 = true
+    if (replyToNote != null) {
+        LaunchedEffect(key1 = replyToNote) {
+            accountViewModel.checkGetOrCreateNote(replyToNote) {
+                if (it != null) {
+                    newPostModel.reply(it)
                 }
+            }
+        }
+    }
+    if (editFromDraft != null) {
+        LaunchedEffect(key1 = replyToNote) {
+            accountViewModel.checkGetOrCreateNote(editFromDraft) {
+                if (it != null) {
+                    newPostModel.editFromDraft(it)
+                }
+            }
+        }
+    }
+
+    if (room.users.size == 1) {
+        // Activates NIP-17 if the user has DM relays
+        ObserveRelayListForDMs(pubkey = room.users.first(), accountViewModel = accountViewModel) {
+            if (it?.relays().isNullOrEmpty()) {
+                newPostModel.nip17 = false
+            } else {
+                newPostModel.nip17 = true
             }
         }
     }
@@ -391,7 +410,9 @@ fun PrepareChatroomViewModels(
     val imageUpload: ChatFileUploadModel = viewModel()
 
     if (draftMessage != null) {
-        LaunchedEffect(key1 = draftMessage) { newPostModel.updateMessage(TextFieldValue(draftMessage)) }
+        LaunchedEffect(key1 = draftMessage) {
+            newPostModel.updateMessage(TextFieldValue(draftMessage))
+        }
     }
 
     ChatroomScreen(
@@ -408,7 +429,7 @@ fun PrepareChatroomViewModels(
 fun ChatroomScreen(
     room: ChatroomKey,
     feedViewModel: NostrChatroomFeedViewModel,
-    newPostModel: NewPostViewModel,
+    newPostModel: ChatNewMessageViewModel,
     fileUpload: ChatFileUploadModel,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -444,7 +465,6 @@ fun ChatroomScreen(
     }
 
     Column(Modifier.fillMaxHeight()) {
-        val replyTo = remember { mutableStateOf<Note?>(null) }
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
 
         Column(
@@ -460,18 +480,14 @@ fun ChatroomScreen(
                 nav = nav,
                 routeForLastRead = "Room/${room.hashCode()}",
                 avoidDraft = newPostModel.draftTag,
-                onWantsToReply = {
-                    replyTo.value = it
-                },
-                onWantsToEditDraft = {
-                    newPostModel.load(accountViewModel, null, null, null, null, it)
-                },
+                onWantsToReply = newPostModel::reply,
+                onWantsToEditDraft = newPostModel::editFromDraft,
             )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { replyTo.value = null } }
+        newPostModel.replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { newPostModel.replyTo.value = null } }
 
         val scope = rememberCoroutineScope()
 
@@ -481,7 +497,7 @@ fun ChatroomScreen(
                     .receiveAsFlow()
                     .debounce(1000)
                     .collectLatest {
-                        innerSendPost(newPostModel, room, replyTo, accountViewModel, newPostModel.draftTag)
+                        newPostModel.sendDraft()
                     }
             }
         }
@@ -501,85 +517,29 @@ fun ChatroomScreen(
             accountViewModel,
             onSendNewMessage = {
                 scope.launch(Dispatchers.IO) {
-                    innerSendPost(newPostModel, room, replyTo, accountViewModel, null)
-
-                    accountViewModel.deleteDraft(newPostModel.draftTag)
-
-                    newPostModel.message = TextFieldValue("")
-
-                    replyTo.value = null
+                    newPostModel.sendPostSync()
                     feedViewModel.sendToTop()
                 }
             },
-            onSendNewMedia = {
-                fileUpload.load(it, room, accountViewModel.account)
+            onSendNewMedia = { list, isNip17 ->
+                fileUpload.load(list, room, isNip17, accountViewModel.account)
             },
-        )
-    }
-}
-
-private fun innerSendPost(
-    newPostModel: NewPostViewModel,
-    room: ChatroomKey,
-    replyTo: MutableState<Note?>,
-    accountViewModel: AccountViewModel,
-    dTag: String?,
-) {
-    val urls = findURLs(newPostModel.message.text)
-    val usedAttachments = newPostModel.iMetaAttachments.filter { it.url !in urls.toSet() }
-    val emojis = newPostModel.findEmoji(newPostModel.message.text, accountViewModel.account.myEmojis.value)
-
-    val message = newPostModel.message.text
-
-    if (newPostModel.nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
-        val replyHint = replyTo.value?.toEventHint<ChatMessageEvent>()
-        val template =
-            if (replyHint == null) {
-                ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
-                    hashtags(findHashtags(message))
-                    references(findURLs(message))
-                    quotes(findNostrUris(message))
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-            } else {
-                ChatMessageEvent.reply(message, replyHint) {
-                    hashtags(findHashtags(message))
-                    references(findURLs(message))
-                    quotes(findNostrUris(message))
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-            }
-
-        accountViewModel.account.sendNIP17PrivateMessage(template, dTag)
-    } else {
-        accountViewModel.account.sendPrivateMessage(
-            message = newPostModel.message.text,
-            toUser = room.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
-            replyingTo = replyTo.value,
-            mentions = null,
-            contentWarningReason = null,
-            imetas = usedAttachments,
-            draftTag = dTag,
         )
     }
 }
 
 @Composable
 fun PrivateMessageEditFieldRow(
-    channelScreenModel: NewPostViewModel,
+    channelScreenModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
     onSendNewMessage: () -> Unit,
-    onSendNewMedia: (ImmutableList<SelectedMedia>) -> Unit,
+    onSendNewMedia: (ImmutableList<SelectedMedia>, isNip17: Boolean) -> Unit,
 ) {
     Column(
         modifier = EditFieldModifier,
     ) {
         ShowUserSuggestionList(
-            channelScreenModel.userSuggestions,
+            channelScreenModel.userSuggestions.userSuggestions,
             channelScreenModel::autocompleteWithUser,
             accountViewModel,
         )
@@ -623,11 +583,10 @@ fun PrivateMessageEditFieldRow(
                     SelectFromGallery(
                         isUploading = channelScreenModel.isUploadingImage,
                         tint = MaterialTheme.colorScheme.placeholderText,
-                        modifier =
-                            Modifier
-                                .size(30.dp)
-                                .padding(start = 2.dp),
-                        onImageChosen = onSendNewMedia,
+                        modifier = Modifier.size(30.dp).padding(start = 2.dp),
+                        onImageChosen = {
+                            onSendNewMedia(it, channelScreenModel.nip17)
+                        },
                     )
 
                     var wantsToActivateNIP17 by remember { mutableStateOf(false) }

@@ -29,12 +29,14 @@ data class EmojiUrlTag(
 ) {
     fun encode(): String = ":$code:$url"
 
-    fun toContentEncode(): String = ":$code"
+    fun toContentEncode(): String = contentEncode(code)
 
     fun toTagArray() = arrayOf("emoji", code, url)
 
     companion object {
         const val TAG_NAME = "emoji"
+
+        fun contentEncode(code: String): String = ":$code:"
 
         fun decode(encodedEmojiSetup: String): EmojiUrlTag? {
             val emojiParts = encodedEmojiSetup.split(":", limit = 3)

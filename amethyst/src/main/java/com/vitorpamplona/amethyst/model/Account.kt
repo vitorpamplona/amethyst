@@ -2577,7 +2577,6 @@ class Account(
         message: String,
         toUser: User,
         replyingTo: Note? = null,
-        mentions: List<User>?,
         zapReceiver: List<ZapSplitSetup>? = null,
         contentWarningReason: String? = null,
         zapRaiserAmount: Long? = null,
@@ -2590,7 +2589,6 @@ class Account(
             message,
             toUser.toPTag(),
             replyingTo,
-            mentions,
             zapReceiver,
             contentWarningReason,
             zapRaiserAmount,
@@ -2605,7 +2603,6 @@ class Account(
         message: String,
         toUser: PTag,
         replyingTo: Note? = null,
-        mentions: List<User>?,
         zapReceiver: List<ZapSplitSetup>? = null,
         contentWarningReason: String? = null,
         zapRaiserAmount: Long? = null,
@@ -3183,10 +3180,16 @@ class Account(
     fun cachedDecryptContent(event: Event?): String? {
         if (event == null) return null
 
-        return if (event is PrivateDmEvent && isWriteable()) {
-            event.cachedContentFor(signer)
-        } else if (event is LnZapRequestEvent && event.isPrivateZap() && isWriteable()) {
-            event.cachedPrivateZap()?.content
+        return if (isWriteable()) {
+            if (event is PrivateDmEvent) {
+                event.cachedContentFor(signer)
+            } else if (event is LnZapRequestEvent && event.isPrivateZap()) {
+                event.cachedPrivateZap()?.content
+            } else if (event is DraftEvent) {
+                event.preCachedDraft(signer)?.content
+            } else {
+                event.content
+            }
         } else {
             event.content
         }

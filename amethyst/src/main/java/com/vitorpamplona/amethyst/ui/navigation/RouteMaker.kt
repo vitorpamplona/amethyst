@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -36,7 +38,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import kotlinx.collections.immutable.persistentSetOf
 import java.net.URLEncoder
 
 fun routeFor(
@@ -110,23 +111,71 @@ fun routeFor(
 fun routeToMessage(
     user: HexKey,
     draftMessage: String?,
+    replyId: HexKey? = null,
+    quoteId: HexKey? = null,
+    accountViewModel: AccountViewModel,
+): String =
+    routeToMessage(
+        setOf(user),
+        draftMessage,
+        replyId,
+        quoteId,
+        accountViewModel,
+    )
+
+fun routeToMessage(
+    users: Set<HexKey>,
+    draftMessage: String?,
+    replyId: HexKey? = null,
+    quoteId: HexKey? = null,
+    accountViewModel: AccountViewModel,
+) = routeToMessage(
+    ChatroomKey(users),
+    draftMessage,
+    replyId,
+    quoteId,
+    accountViewModel,
+)
+
+fun routeToMessage(
+    room: ChatroomKey,
+    draftMessage: String?,
+    replyId: HexKey? = null,
+    quoteId: HexKey? = null,
     accountViewModel: AccountViewModel,
 ): String {
-    val withKey = ChatroomKey(persistentSetOf(user))
-    accountViewModel.account.userProfile().createChatroom(withKey)
-    return if (draftMessage != null) {
-        val encodedMessage = URLEncoder.encode(draftMessage, "utf-8")
-        "Room/${withKey.hashCode()}?message=$encodedMessage"
-    } else {
-        "Room/${withKey.hashCode()}"
+    accountViewModel.account.userProfile().createChatroom(room)
+
+    val params =
+        listOfNotNull(
+            draftMessage?.let {
+                "message=${URLEncoder.encode(it, "utf-8")}"
+            },
+            replyId?.let {
+                "replyId=${URLEncoder.encode(it, "utf-8")}"
+            },
+            quoteId?.let {
+                "quoteId=${URLEncoder.encode(it, "utf-8")}"
+            },
+        )
+
+    return buildString {
+        append("Room/")
+        append(room.hashCode().toString())
+        if (params.isNotEmpty()) {
+            append("?")
+            append(params.joinToString("&"))
+        }
     }
 }
 
 fun routeToMessage(
     user: User,
     draftMessage: String?,
+    replyId: HexKey? = null,
+    quoteId: HexKey? = null,
     accountViewModel: AccountViewModel,
-): String = routeToMessage(user.pubkeyHex, draftMessage, accountViewModel)
+): String = routeToMessage(user.pubkeyHex, draftMessage, replyId, quoteId, accountViewModel)
 
 fun routeFor(note: Channel): String = "Channel/${note.idHex}"
 

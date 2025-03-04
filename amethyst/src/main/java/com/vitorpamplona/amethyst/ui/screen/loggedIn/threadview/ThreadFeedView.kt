@@ -52,7 +52,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -148,8 +147,8 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -213,7 +212,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
@@ -858,7 +856,6 @@ private fun RenderClassifiedsReaderForThread(
                     }
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
-                val scope = rememberCoroutineScope()
 
                 TextField(
                     value = message,
@@ -881,9 +878,13 @@ private fun RenderClassifiedsReaderForThread(
                             isActive = message.text.isNotBlank(),
                             modifier = EditFieldTrailingIconModifier,
                         ) {
-                            scope.launch(Dispatchers.IO) {
-                                note.author?.let {
-                                    nav.nav(routeToMessage(it, note.toNostrUri() + "\n\n" + msg, accountViewModel))
+                            note.author?.let {
+                                nav.nav {
+                                    routeToMessage(
+                                        it,
+                                        note.toNostrUri() + "\n\n" + msg,
+                                        accountViewModel = accountViewModel,
+                                    )
                                 }
                             }
                         }

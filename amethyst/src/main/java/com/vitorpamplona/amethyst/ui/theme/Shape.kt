@@ -266,7 +266,7 @@ val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
 
 val messageDetailsModifier = Modifier.height(Size25dp)
-val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp)
+val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 5.dp)
 
 val inlinePlaceholder =
     Placeholder(

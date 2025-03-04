@@ -27,10 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip14Subject.SubjectTag
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 
 fun TagArrayBuilder<ChatMessageEvent>.reply(msg: MarkedETag) = add(msg.toTagArray())
 
-fun TagArrayBuilder<ChatMessageEvent>.reply(msg: EventHintBundle<ChatMessageEvent>) = reply(msg.toMarkedETag(MarkedETag.MARKER.REPLY))
+fun TagArrayBuilder<ChatMessageEvent>.reply(msg: EventHintBundle<BaseDMGroupEvent>) = reply(msg.toMarkedETag(MarkedETag.MARKER.REPLY))
 
 fun TagArrayBuilder<ChatMessageEvent>.group(list: List<PTag>) = pTags(list)
 

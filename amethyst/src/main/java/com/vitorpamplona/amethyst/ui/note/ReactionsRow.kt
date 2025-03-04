@@ -111,6 +111,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -147,7 +148,9 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import kotlinx.collections.immutable.ImmutableList
@@ -209,13 +212,16 @@ private fun InnerReactionRow(
             )
         },
         three = {
-            BoostWithDialog(
-                baseNote,
-                editState,
-                MaterialTheme.colorScheme.placeholderText,
-                accountViewModel,
-                nav,
-            )
+            val isDM = baseNote.event is ChatroomKeyable
+            if (!isDM) {
+                BoostWithDialog(
+                    baseNote,
+                    editState,
+                    MaterialTheme.colorScheme.placeholderText,
+                    accountViewModel,
+                    nav,
+                )
+            }
         },
         four = {
             LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
@@ -558,56 +564,46 @@ private fun BoostWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
-    var wantsToFork by remember { mutableStateOf<Note?>(null) }
-
-    if (wantsToQuote != null) {
-        val route =
-            buildNewPostRoute(
-                quote = wantsToQuote?.idHex,
-                version =
-                    (editState.value as? GenericLoadable.Loaded)
-                        ?.loaded
-                        ?.modificationToShow
-                        ?.value
-                        ?.idHex,
-            )
-        nav.nav(route)
-    }
-
-    if (wantsToFork != null) {
-        val replyTo =
-            remember(wantsToFork) {
-                val forkEvent = wantsToFork?.event
-                if (forkEvent is BaseThreadedEvent) {
-                    val hex = forkEvent.replyingTo()
-                    wantsToFork?.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
-                } else {
-                    null
-                }
-            }
-
-        val route =
-            buildNewPostRoute(
-                quote = wantsToQuote?.idHex,
-                baseReplyTo = replyTo?.idHex,
-                fork = wantsToFork?.idHex,
-                version =
-                    (editState.value as? GenericLoadable.Loaded)
-                        ?.loaded
-                        ?.modificationToShow
-                        ?.value
-                        ?.idHex,
-            )
-        nav.nav(route)
-    }
-
     BoostReaction(
         baseNote,
         grayTint,
         accountViewModel,
-        onQuotePress = { wantsToQuote = baseNote },
-        onForkPress = { wantsToFork = baseNote },
+        onQuotePress = {
+            nav.nav {
+                buildNewPostRoute(
+                    quote = baseNote.idHex,
+                    version =
+                        (editState.value as? GenericLoadable.Loaded)
+                            ?.loaded
+                            ?.modificationToShow
+                            ?.value
+                            ?.idHex,
+                )
+            }
+        },
+        onForkPress = {
+            nav.nav {
+                val forkEvent = baseNote.event
+                val replyTo =
+                    if (forkEvent is BaseThreadedEvent) {
+                        val hex = forkEvent.replyingTo()
+                        baseNote.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
+                    } else {
+                        null
+                    }
+
+                buildNewPostRoute(
+                    baseReplyTo = replyTo?.idHex,
+                    fork = baseNote.idHex,
+                    version =
+                        (editState.value as? GenericLoadable.Loaded)
+                            ?.loaded
+                            ?.modificationToShow
+                            ?.value
+                            ?.idHex,
+                )
+            }
+        },
     )
 }
 
@@ -618,18 +614,37 @@ private fun ReplyReactionWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
-
-    if (wantsToReplyTo != null) {
-        val route =
-            buildNewPostRoute(
-                baseReplyTo = wantsToReplyTo?.idHex,
-                quote = null,
-            )
-        nav.nav(route)
+    ReplyReaction(baseNote, grayTint, accountViewModel) {
+        val noteEvent = baseNote.event
+        if (noteEvent is PrivateDmEvent) {
+            nav.nav {
+                routeToMessage(
+                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
+                    draftMessage = null,
+                    replyId = noteEvent.id,
+                    quoteId = null,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        } else if (noteEvent is ChatroomKeyable) {
+            nav.nav {
+                routeToMessage(
+                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
+                    draftMessage = null,
+                    replyId = noteEvent.id,
+                    quoteId = null,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        } else {
+            nav.nav {
+                buildNewPostRoute(
+                    baseReplyTo = baseNote.idHex,
+                    quote = null,
+                )
+            }
+        }
     }
-
-    ReplyReaction(baseNote, grayTint, accountViewModel) { wantsToReplyTo = baseNote }
 }
 
 @Composable

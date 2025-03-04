@@ -169,12 +169,22 @@ sealed class Route(
 
     object Room :
         Route(
-            route = "Room/{id}?message={message}",
+            route = "Room/{id}?message={message}&replyId={replyId}&draftId={draftId}",
             icon = R.drawable.ic_moments,
             arguments =
                 listOf(
                     navArgument("id") { type = NavType.StringType },
                     navArgument("message") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("replyId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("draftId") {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null

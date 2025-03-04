@@ -162,7 +162,7 @@ import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange

@@ -60,10 +60,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreenByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.ChatroomListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ChatroomScreenByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
@@ -91,6 +91,16 @@ fun NavBackStackEntry.id(): String? = arguments?.getString("id")
 
 fun NavBackStackEntry.message(): String? =
     arguments?.getString("message")?.let {
+        URLDecoder.decode(it, "utf-8")
+    }
+
+fun NavBackStackEntry.replyId(): String? =
+    arguments?.getString("replyId")?.let {
+        URLDecoder.decode(it, "utf-8")
+    }
+
+fun NavBackStackEntry.draftId(): String? =
+    arguments?.getString("draftId")?.let {
         URLDecoder.decode(it, "utf-8")
     }
 
@@ -219,6 +229,8 @@ fun AppNavigation(
                 ChatroomScreen(
                     roomId = it.id(),
                     draftMessage = it.message(),
+                    replyToNote = it.replyId(),
+                    editFromDraft = it.draftId(),
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

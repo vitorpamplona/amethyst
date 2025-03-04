@@ -50,8 +50,6 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun DisplayLNAddress(
@@ -71,9 +69,8 @@ fun DisplayLNAddress(
             title = stringRes(id = R.string.error_dialog_zap_error),
             textContent = showErrorMessageDialog ?: "",
             onClickStartMessage = {
-                scope.launch(Dispatchers.IO) {
-                    val route = routeToMessage(userHex, showErrorMessageDialog, accountViewModel)
-                    nav.nav(route)
+                nav.nav {
+                    routeToMessage(userHex, showErrorMessageDialog, accountViewModel = accountViewModel)
                 }
             },
             onDismiss = { showErrorMessageDialog = null },

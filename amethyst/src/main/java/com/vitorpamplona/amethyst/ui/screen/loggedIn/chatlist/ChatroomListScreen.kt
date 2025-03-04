@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -75,10 +75,13 @@ import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.Chatroom
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.Channel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -121,6 +124,7 @@ fun ChatroomListScreen(
 
 class TwoPaneNav(
     val nav: INav,
+    val scope: CoroutineScope,
 ) : INav {
     override val drawerState: DrawerState = nav.drawerState
 
@@ -131,6 +135,17 @@ class TwoPaneNav(
             innerNav.value = RouteId(route.substringBefore("/"), route.substringAfter("/"))
         } else {
             nav.nav(route)
+        }
+    }
+
+    override fun nav(routeMaker: suspend () -> String) {
+        scope.launch(Dispatchers.Default) {
+            val route = routeMaker()
+            if (route.startsWith("Room/") || route.startsWith("Channel/")) {
+                innerNav.value = RouteId(route.substringBefore("/"), route.substringAfter("/"))
+            } else {
+                nav.nav(route)
+            }
         }
     }
 
@@ -172,7 +187,8 @@ fun ChatroomListTwoPane(
     nav: INav,
 ) {
     /** The index of the currently selected word, or `null` if none is selected */
-    val twoPaneNav = remember { TwoPaneNav(nav) }
+    val scope = rememberCoroutineScope()
+    val twoPaneNav = remember { TwoPaneNav(nav, scope) }
 
     val strategy =
         remember {

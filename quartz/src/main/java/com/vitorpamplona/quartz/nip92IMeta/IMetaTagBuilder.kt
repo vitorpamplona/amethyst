@@ -35,3 +35,8 @@ class IMetaTagBuilder(
 
     fun build() = IMetaTag(url, properties)
 }
+
+fun imetaTagBuilder(
+    url: String,
+    init: IMetaTagBuilder.() -> Unit,
+) = IMetaTagBuilder(url).apply(init).build()

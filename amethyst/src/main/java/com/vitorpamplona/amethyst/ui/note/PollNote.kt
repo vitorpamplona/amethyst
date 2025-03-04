@@ -627,7 +627,11 @@ fun ZapVote(
                 title = toast.title,
                 textContent = toast.msg,
                 onClickStartMessage = {
-                    baseNote.author?.let { nav.nav(routeToMessage(it, toast.msg, accountViewModel)) }
+                    baseNote.author?.let {
+                        nav.nav {
+                            routeToMessage(it, toast.msg, accountViewModel = accountViewModel)
+                        }
+                    }
                 },
                 onDismiss = { showErrorMessageDialog = null },
             )

@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private
 
 import android.content.Context
 import androidx.compose.runtime.Stable
@@ -40,9 +40,11 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import kotlinx.collections.immutable.ImmutableList
@@ -53,6 +55,7 @@ import kotlinx.coroutines.launch
 open class ChatFileUploadModel : ViewModel() {
     var account: Account? = null
     var chatroom: ChatroomKey? = null
+    var isNip17: Boolean = false
 
     var isUploadingImage by mutableStateOf(false)
 
@@ -69,6 +72,7 @@ open class ChatFileUploadModel : ViewModel() {
     open fun load(
         uris: ImmutableList<SelectedMedia>,
         chatroom: ChatroomKey,
+        isNip17: Boolean,
         account: Account,
     ) {
         this.chatroom = chatroom
@@ -76,6 +80,7 @@ open class ChatFileUploadModel : ViewModel() {
         this.account = account
         this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()
+        this.isNip17 = isNip17
     }
 
     fun isImage(
@@ -84,6 +89,18 @@ open class ChatFileUploadModel : ViewModel() {
     ): Boolean = mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(url)
 
     fun upload(
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: () -> Unit,
+    ) {
+        if (isNip17) {
+            uploadNIP17(onError, context, onceUploaded)
+        } else {
+            uploadNIP04(onError, context, onceUploaded)
+        }
+    }
+
+    fun uploadNIP17(
         onError: (title: String, message: String) -> Unit,
         context: Context,
         onceUploaded: () -> Unit,
@@ -142,6 +159,65 @@ open class ChatFileUploadModel : ViewModel() {
 
                 onceUploaded()
                 cancelModel()
+            } else {
+                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+
+                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+            }
+
+            isUploadingImage = false
+        }
+    }
+
+    fun uploadNIP04(
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: () -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val myAccount = account ?: return@launch
+
+            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+
+            val mySelectedServer = selectedServer ?: return@launch
+            val myChatroom = chatroom ?: return@launch
+
+            isUploadingImage = true
+
+            val results =
+                myMultiOrchestrator.upload(
+                    viewModelScope,
+                    caption,
+                    if (sensitiveContent) "" else null,
+                    MediaCompressor.intToCompressorQuality(mediaQualitySlider),
+                    mySelectedServer,
+                    myAccount,
+                    context,
+                )
+
+            if (results.allGood) {
+                results.successful.forEach {
+                    if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        val iMetaAttachments = IMetaAttachments()
+                        iMetaAttachments.add(it.result, caption, if (sensitiveContent) "" else null)
+
+                        myAccount.sendPrivateMessage(
+                            message = it.result.url,
+                            toUser = myChatroom.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
+                            replyingTo = null,
+                            zapReceiver = null,
+                            contentWarningReason = null,
+                            zapRaiserAmount = null,
+                            geohash = null,
+                            imetas = iMetaAttachments.iMetaAttachments,
+                            emojis = null,
+                            draftTag = null,
+                        )
+                    }
+
+                    onceUploaded()
+                    cancelModel()
+                }
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 

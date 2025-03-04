@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -73,15 +72,15 @@ fun LoadDecryptedContentOrNull(
     accountViewModel: AccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val decryptedContent by
-        produceState(initialValue = accountViewModel.cachedDecrypt(note), key1 = note.event?.id) {
-            accountViewModel.decrypt(note) {
-                if (value != it) {
-                    value = it
-                }
+    var decryptedContent by remember(note.event?.id) { mutableStateOf(accountViewModel.cachedDecrypt(note)) }
+
+    LaunchedEffect(note.event?.id) {
+        accountViewModel.decrypt(note) {
+            if (decryptedContent != it) {
+                decryptedContent = it
             }
         }
+    }
 
     inner(decryptedContent)
 }

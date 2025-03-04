@@ -58,8 +58,8 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.LiveFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel

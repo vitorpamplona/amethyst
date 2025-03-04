@@ -18,19 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,30 +33,20 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -71,25 +56,19 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -141,6 +120,10 @@ import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -502,52 +485,6 @@ private suspend fun innerSendPost(
 }
 
 @Composable
-fun DisplayReplyingToNote(
-    replyingNote: Note?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onCancel: () -> Unit,
-) {
-    Row(
-        Modifier
-            .padding(horizontal = 10.dp)
-            .heightIn(max = 100.dp)
-            .verticalScroll(rememberScrollState())
-            .animateContentSize(),
-    ) {
-        if (replyingNote != null) {
-            Column(remember { Modifier.weight(1f) }) {
-                ChatroomMessageCompose(
-                    baseNote = replyingNote,
-                    null,
-                    innerQuote = true,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onWantsToReply = {},
-                    onWantsToEditDraft = {},
-                )
-            }
-
-            Column(Modifier.padding(start = 5.dp)) {
-                IconButton(
-                    modifier = Modifier.size(20.dp),
-                    onClick = onCancel,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cancel,
-                        null,
-                        modifier =
-                            Modifier
-                                .size(20.dp),
-                        tint = MaterialTheme.colorScheme.placeholderText,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun EditFieldRow(
     channelScreenModel: NewPostViewModel,
     accountViewModel: AccountViewModel,
@@ -620,113 +557,6 @@ fun EditFieldRow(
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
             visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MyTextField(
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    readOnly: Boolean = false,
-    textStyle: TextStyle = LocalTextStyle.current,
-    label: @Composable (() -> Unit)? = null,
-    placeholder: @Composable (() -> Unit)? = null,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    prefix: @Composable (() -> Unit)? = null,
-    suffix: @Composable (() -> Unit)? = null,
-    supportingText: @Composable (() -> Unit)? = null,
-    isError: Boolean = false,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    singleLine: Boolean = false,
-    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    minLines: Int = 1,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    shape: Shape = TextFieldDefaults.shape,
-    colors: TextFieldColors = TextFieldDefaults.colors(),
-    contentPadding: PaddingValues =
-        if (label == null) {
-            TextFieldDefaults.contentPaddingWithoutLabel(
-                start = 10.dp,
-                top = 12.dp,
-                end = 10.dp,
-                bottom = 12.dp,
-            )
-        } else {
-            TextFieldDefaults.contentPaddingWithLabel(
-                start = 10.dp,
-                top = 12.dp,
-                end = 10.dp,
-                bottom = 12.dp,
-            )
-        },
-) {
-    // COPIED FROM TEXT FIELD
-    // The only change is the contentPadding below
-    val textColor =
-        textStyle.color.takeOrElse {
-            val focused by interactionSource.collectIsFocusedAsState()
-
-            val targetValue =
-                when {
-                    !enabled -> MaterialTheme.colorScheme.placeholderText
-                    isError -> MaterialTheme.colorScheme.onSurface
-                    focused -> MaterialTheme.colorScheme.onSurface
-                    else -> MaterialTheme.colorScheme.onSurface
-                }
-
-            rememberUpdatedState(targetValue).value
-        }
-    val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
-
-    CompositionLocalProvider(LocalTextSelectionColors provides LocalTextSelectionColors.current) {
-        BasicTextField(
-            value = value,
-            modifier =
-                modifier.defaultMinSize(
-                    minWidth = TextFieldDefaults.MinWidth,
-                    minHeight = 36.dp,
-                ),
-            onValueChange = onValueChange,
-            enabled = enabled,
-            readOnly = readOnly,
-            textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            visualTransformation = visualTransformation,
-            keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions,
-            interactionSource = interactionSource,
-            singleLine = singleLine,
-            maxLines = maxLines,
-            minLines = minLines,
-            decorationBox =
-                @Composable { innerTextField ->
-                    TextFieldDefaults.DecorationBox(
-                        value = value.text,
-                        visualTransformation = visualTransformation,
-                        innerTextField = innerTextField,
-                        placeholder = placeholder,
-                        label = label,
-                        leadingIcon = leadingIcon,
-                        trailingIcon = trailingIcon,
-                        prefix = prefix,
-                        suffix = suffix,
-                        supportingText = supportingText,
-                        shape = shape,
-                        singleLine = singleLine,
-                        enabled = enabled,
-                        isError = isError,
-                        interactionSource = interactionSource,
-                        colors = colors,
-                        contentPadding = contentPadding,
-                    )
-                },
         )
     }
 }

@@ -60,11 +60,12 @@ class ChatMessageEvent(
 
         fun reply(
             msg: String,
-            reply: EventHintBundle<ChatMessageEvent>,
+            reply: EventHintBundle<BaseDMGroupEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChatMessageEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, msg, createdAt) {
             alt(ALT_DESCRIPTION)
+            reply(reply)
             group((reply.event.recipients() + reply.toPTag()).distinctBy { it.pubKey })
             initializer()
         }

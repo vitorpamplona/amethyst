@@ -1666,6 +1666,8 @@ class AccountViewModel(
         }
     }
 
+    suspend fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
+
     fun relayStatusFlow() = Amethyst.instance.client.relayStatusFlow()
 
     val draftNoteCache = CachedDraftNotes(this)
