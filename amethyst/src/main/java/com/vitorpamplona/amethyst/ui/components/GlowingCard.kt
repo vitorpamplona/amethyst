@@ -83,7 +83,7 @@ fun AnimatedBorderTextCornerRadius(
                             androidx.compose.ui.geometry
                                 .CornerRadius(6.dp.toPx()),
                     )
-                }.padding(2.dp),
+                }.padding(3.dp),
     )
 }
 
