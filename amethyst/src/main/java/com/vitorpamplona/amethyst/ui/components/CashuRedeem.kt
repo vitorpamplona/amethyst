@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -69,7 +68,7 @@ import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
@@ -151,11 +150,7 @@ fun CashuPreviewNew(
     val clipboardManager = LocalClipboardManager.current
 
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
-                .clip(shape = QuoteBorder),
+        modifier = CashuCardBorders,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

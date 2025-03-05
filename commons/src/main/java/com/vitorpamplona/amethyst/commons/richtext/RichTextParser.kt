@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -160,6 +161,7 @@ class RichTextParser {
             imagesForPagerWithBase64.values.toImmutableList(),
             emojiMap.toImmutableMap(),
             segments,
+            tags,
         )
     }
 
@@ -254,6 +256,8 @@ class RichTextParser {
         if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
 
         if (word.startsWith("#")) return parseHash(word, tags)
+
+        if (EmojiCoder.isCoded(word)) return SecretEmoji(word)
 
         if (word.contains("@")) {
             if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) return EmailSegment(word)

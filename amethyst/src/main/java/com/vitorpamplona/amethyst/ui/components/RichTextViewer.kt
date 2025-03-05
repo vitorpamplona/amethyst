@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
+import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.model.HashtagIcon
@@ -91,13 +93,17 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.text.Typography.paragraph
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -375,6 +381,7 @@ private fun RenderWordWithoutPreview(
         is WithdrawSegment -> Text(word.segmentText)
         is CashuSegment -> Text(word.segmentText)
         is EmailSegment -> ClickableEmail(word.segmentText)
+        is SecretEmoji -> Text(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
@@ -403,6 +410,7 @@ private fun RenderWordWithPreview(
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
+        is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)
@@ -507,6 +515,79 @@ fun DisplayFullNote(
         Text(
             it,
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DisplaySecretEmoji(
+    segment: SecretEmoji,
+    state: RichTextViewerState,
+    callbackUri: String?,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (canPreview && quotesLeft > 0) {
+        var secretContent by remember {
+            mutableStateOf<RichTextViewerState?>(null)
+        }
+
+        LaunchedEffect(segment) {
+            launch(Dispatchers.Default) {
+                secretContent =
+                    CachedRichTextParser.parseText(
+                        EmojiCoder.decode(segment.segmentText),
+                        state.tags,
+                    )
+            }
+        }
+
+        secretContent?.let {
+            if (it.paragraphs.size == 1) {
+                Text(segment.segmentText)
+                it.paragraphs[0].words.forEach { word ->
+                    RenderWordWithPreview(
+                        word,
+                        state,
+                        backgroundColor,
+                        quotesLeft,
+                        callbackUri,
+                        accountViewModel,
+                        nav,
+                    )
+                }
+            } else if (it.paragraphs.size > 1) {
+                val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+
+                Column(CashuCardBorders) {
+                    it.paragraphs.forEach { paragraph ->
+                        FlowRow(
+                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                        ) {
+                            paragraph.words.forEach { word ->
+                                RenderWordWithPreview(
+                                    word,
+                                    state,
+                                    backgroundColor,
+                                    quotesLeft,
+                                    callbackUri,
+                                    accountViewModel,
+                                    nav,
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text(segment.segmentText)
+            }
+        }
+    } else {
+        Text(segment.segmentText)
     }
 }
 
