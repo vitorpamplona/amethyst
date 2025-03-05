@@ -147,8 +147,8 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ThinSendButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness

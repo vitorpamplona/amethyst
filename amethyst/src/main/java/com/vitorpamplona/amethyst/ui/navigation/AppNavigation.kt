@@ -60,10 +60,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.ChatroomListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private.ChatroomScreenByAuthor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.public.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.MessagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ChatroomScreenByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
@@ -120,7 +120,7 @@ fun AppNavigation(
             exitTransition = { fadeOut(animationSpec = tween(200)) },
         ) {
             composable(Route.Home.route) { HomeScreen(accountViewModel, nav) }
-            composable(Route.Message.route) { ChatroomListScreen(accountViewModel, nav) }
+            composable(Route.Message.route) { MessagesScreen(accountViewModel, nav) }
             composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
             composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
             composable(Route.Notification.route) { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }

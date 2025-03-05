@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -106,7 +106,7 @@ private fun BubblePreview() {
 
         ChatBubbleLayout(
             isLoggedInUser = true,
-            isDraft = true,
+            isDraft = false,
             innerQuote = false,
             isComplete = true,
             hasDetailsToShow = true,
@@ -136,6 +136,40 @@ private fun BubblePreview() {
             detailRow = { Text("Relays and Actions") },
         ) { backgroundBubbleColor ->
             Text("This is a very long long loong note")
+        }
+
+        ChatBubbleLayout(
+            isLoggedInUser = true,
+            isDraft = true,
+            innerQuote = false,
+            isComplete = true,
+            hasDetailsToShow = true,
+            drawAuthorInfo = true,
+            parentBackgroundColor = backgroundBubbleColor,
+            onClick = { false },
+            onAuthorClick = {},
+            actionMenu = { onDismiss ->
+            },
+            drawAuthorLine = {
+                UserDisplayNameLayout(
+                    picture = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier =
+                                Modifier
+                                    .size(Size20dp)
+                                    .clip(CircleShape),
+                        )
+                    },
+                    name = {
+                        Text("Me", fontWeight = FontWeight.Bold)
+                    },
+                )
+            },
+            detailRow = { Text("Relays and Actions") },
+        ) { backgroundBubbleColor ->
+            Text("This is a draft note")
         }
 
         ChatBubbleLayout(

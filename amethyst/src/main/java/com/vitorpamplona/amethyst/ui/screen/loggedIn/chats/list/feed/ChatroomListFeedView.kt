@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.feed
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Row
@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
@@ -52,7 +53,9 @@ fun ChatroomListFeedView(
     nav: INav,
     markAsRead: MutableState<Boolean>,
 ) {
-    RefresheableBox(feedContentState, true) { CrossFadeState(feedContentState, accountViewModel, nav, markAsRead) }
+    RefresheableBox(feedContentState, true) {
+        CrossFadeState(feedContentState, accountViewModel, nav, markAsRead)
+    }
 }
 
 @Composable

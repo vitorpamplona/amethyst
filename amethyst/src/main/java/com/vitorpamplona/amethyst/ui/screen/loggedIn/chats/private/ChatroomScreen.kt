@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.private
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -103,11 +103,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.DisplayRoomSubject
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.DisplayUserSetAsSubject
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.LoadUser
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.DisplayReplyingToNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.MyTextField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.DisplayRoomSubject
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.DisplayUserSetAsSubject
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
