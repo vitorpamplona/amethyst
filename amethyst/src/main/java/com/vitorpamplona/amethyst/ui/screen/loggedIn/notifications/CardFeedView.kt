@@ -283,7 +283,7 @@ fun NoteCardCompose(
 ) {
     NoteCompose(
         baseNote = baseNote.note,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         routeForLastRead = routeForLastRead,
         isBoostedNote = isBoostedNote,
         isQuotedNote = isQuotedNote,
