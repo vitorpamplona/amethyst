@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -103,7 +104,6 @@ import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlin.text.Typography.paragraph
 
 fun isMarkdown(content: String): Boolean =
     content.startsWith("> ") ||
@@ -518,7 +518,6 @@ fun DisplayFullNote(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplaySecretEmoji(
     segment: SecretEmoji,
@@ -535,6 +534,10 @@ fun DisplaySecretEmoji(
             mutableStateOf<RichTextViewerState?>(null)
         }
 
+        var showPopup by remember {
+            mutableStateOf(false)
+        }
+
         LaunchedEffect(segment) {
             launch(Dispatchers.Default) {
                 secretContent =
@@ -545,49 +548,68 @@ fun DisplaySecretEmoji(
             }
         }
 
-        secretContent?.let {
-            if (it.paragraphs.size == 1) {
-                Text(segment.segmentText)
-                it.paragraphs[0].words.forEach { word ->
-                    RenderWordWithPreview(
-                        word,
-                        state,
-                        backgroundColor,
-                        quotesLeft,
-                        callbackUri,
-                        accountViewModel,
-                        nav,
-                    )
-                }
-            } else if (it.paragraphs.size > 1) {
-                val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+        val localSecretContent = secretContent
 
-                Column(CashuCardBorders) {
-                    it.paragraphs.forEach { paragraph ->
-                        FlowRow(
-                            modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
-                            horizontalArrangement = Arrangement.spacedBy(spaceWidth),
-                        ) {
-                            paragraph.words.forEach { word ->
-                                RenderWordWithPreview(
-                                    word,
-                                    state,
-                                    backgroundColor,
-                                    quotesLeft,
-                                    callbackUri,
-                                    accountViewModel,
-                                    nav,
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                Text(segment.segmentText)
-            }
+        AnimatedBorderTextCornerRadius(
+            segment.segmentText,
+            Modifier.clickable {
+                showPopup = !showPopup
+            },
+        )
+
+        if (localSecretContent != null && showPopup) {
+            CoreSecretMessage(localSecretContent, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     } else {
         Text(segment.segmentText)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CoreSecretMessage(
+    localSecretContent: RichTextViewerState,
+    callbackUri: String?,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (localSecretContent.paragraphs.size == 1) {
+        localSecretContent.paragraphs[0].words.forEach { word ->
+            RenderWordWithPreview(
+                word,
+                localSecretContent,
+                backgroundColor,
+                quotesLeft,
+                callbackUri,
+                accountViewModel,
+                nav,
+            )
+        }
+    } else if (localSecretContent.paragraphs.size > 1) {
+        val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
+
+        Column(CashuCardBorders) {
+            localSecretContent.paragraphs.forEach { paragraph ->
+                FlowRow(
+                    modifier = Modifier.align(if (paragraph.isRTL) Alignment.End else Alignment.Start),
+                    horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+                ) {
+                    paragraph.words.forEach { word ->
+                        RenderWordWithPreview(
+                            word,
+                            localSecretContent,
+                            backgroundColor,
+                            quotesLeft,
+                            callbackUri,
+                            accountViewModel,
+                            nav,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

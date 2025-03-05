@@ -53,6 +53,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assistant
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
@@ -61,6 +62,7 @@ import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Assistant
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -146,6 +148,7 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.components.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.navigation.Nav
@@ -162,7 +165,7 @@ import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatlist.utils.MyTextField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -173,6 +176,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -562,6 +566,20 @@ fun NewPostScreen(
                             }
                         }
 
+                        if (postViewModel.wantsSecretEmoji) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    SecretEmojiRequest {
+                                        postViewModel.insertAtCursor(it)
+                                        postViewModel.wantsSecretEmoji = false
+                                    }
+                                }
+                            }
+                        }
+
                         if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -641,10 +659,8 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             }
         }
 
-        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
-            AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
+        ForwardZapTo(postViewModel) {
+            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
 
         if (postViewModel.canAddZapRaiser) {
@@ -661,8 +677,14 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
         }
 
-        ForwardZapTo(postViewModel) {
-            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
+        AddSecretEmoji(postViewModel.wantsSecretEmoji) {
+            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
+        }
+
+        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
+            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
+            }
         }
     }
 }
@@ -1500,6 +1522,32 @@ private fun AddLnInvoiceButton(
                 imageVector = Icons.Default.CurrencyBitcoin,
                 contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
+                tint = BitcoinOrange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddSecretEmoji(
+    isSecretEmojiActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        if (!isSecretEmojiActive) {
+            Icon(
+                imageVector = Icons.Outlined.Assistant,
+                contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.Assistant,
+                contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
+                modifier = Size20Modifier,
                 tint = BitcoinOrange,
             )
         }

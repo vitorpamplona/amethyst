@@ -240,6 +240,8 @@ open class NewPostViewModel : ViewModel() {
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
+    var wantsSecretEmoji by mutableStateOf(false)
+
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
     var forwardZapTo by mutableStateOf<Split<User>>(Split())
