@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventUpdate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -47,7 +46,9 @@ class EmojiPackSelectionEvent(
     AddressHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    fun emojiPacks() = taggedATags()
+    fun emojiPacks() = tags.mapNotNull(ATag::parseAddress)
+
+    fun emojiPackIds() = tags.mapNotNull(ATag::parseAddressId)
 
     companion object {
         const val KIND = 10030

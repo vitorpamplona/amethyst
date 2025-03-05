@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -44,10 +45,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -77,6 +81,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -85,9 +90,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
@@ -157,7 +162,7 @@ fun UpdateReactionTypeDialog(
     UpdateReactionTypeDialog(postViewModel, onClose, accountViewModel, nav)
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateReactionTypeDialog(
     postViewModel: UpdateReactionTypeViewModel,
@@ -174,98 +179,112 @@ fun UpdateReactionTypeDialog(
                 decorFitsSystemWindows = false,
             ),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(10.dp).imePadding(),
+        SetDialogToEdgeToEdge()
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    actions = {
+                        SaveButton(
+                            onPost = {
+                                postViewModel.sendPost()
+                                onClose()
+                            },
+                            isActive = postViewModel.hasChanged(),
+                        )
+                        Spacer(modifier = StdHorzSpacer)
+                    },
+                    title = {},
+                    navigationIcon = {
+                        Row {
+                            Spacer(modifier = StdHorzSpacer)
+                            CloseButton(
+                                onPress = {
+                                    postViewModel.cancel()
+                                    onClose()
+                                },
+                            )
+                        }
+                    },
+                )
+            },
+        ) { pad ->
+            Surface(
+                modifier =
+                    Modifier
+                        .padding(pad)
+                        .consumeWindowInsets(pad)
+                        .imePadding(),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    modifier = Modifier.padding(10.dp),
                 ) {
-                    CloseButton(
-                        onPress = {
-                            postViewModel.cancel()
-                            onClose()
-                        },
-                    )
-
-                    SaveButton(
-                        onPost = {
-                            postViewModel.sendPost()
-                            onClose()
-                        },
-                        isActive = postViewModel.hasChanged(),
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.animateContentSize()) {
-                                FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                ) {
-                                    postViewModel.reactionSet.forEach { reactionType ->
-                                        RenderReactionOption(reactionType, postViewModel)
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()),
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.animateContentSize()) {
+                                    FlowRow(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        postViewModel.reactionSet.forEach { reactionType ->
+                                            RenderReactionOption(reactionType, postViewModel)
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
-                                value = postViewModel.nextChoice,
-                                onValueChange = { postViewModel.nextChoice = it },
-                                keyboardOptions =
-                                    KeyboardOptions.Default.copy(
-                                        capitalization = KeyboardCapitalization.None,
-                                        keyboardType = KeyboardType.Text,
-                                    ),
-                                placeholder = {
-                                    Text(
-                                        text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                    )
-                                },
-                                singleLine = true,
-                                modifier = Modifier.padding(end = 10.dp).weight(1f),
-                            )
-
-                            Button(
-                                onClick = { postViewModel.addChoice() },
-                                shape = ButtonBorder,
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(text = stringRes(R.string.add), color = Color.White)
+                                OutlinedTextField(
+                                    label = { Text(text = stringRes(R.string.new_reaction_symbol)) },
+                                    value = postViewModel.nextChoice,
+                                    onValueChange = { postViewModel.nextChoice = it },
+                                    keyboardOptions =
+                                        KeyboardOptions.Default.copy(
+                                            capitalization = KeyboardCapitalization.None,
+                                            keyboardType = KeyboardType.Text,
+                                        ),
+                                    placeholder = {
+                                        Text(
+                                            text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
+                                            color = MaterialTheme.colorScheme.placeholderText,
+                                        )
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier.padding(end = 10.dp).weight(1f),
+                                )
+
+                                Button(
+                                    onClick = { postViewModel.addChoice() },
+                                    shape = ButtonBorder,
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                        ),
+                                ) {
+                                    Text(text = stringRes(R.string.add), color = Color.White)
+                                }
                             }
                         }
                     }
-                }
 
-                EmojiSelector(
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                ) {
-                    postViewModel.addChoice(it)
+                    Spacer(StdVertSpacer)
+
+                    EmojiSelector(
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    ) {
+                        postViewModel.addChoice(it)
+                    }
                 }
             }
         }
@@ -348,11 +367,11 @@ private fun EmojiSelector(
                 usersEmojiList
                     .live()
                     .metadata
-                    .map { (it.note.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList() }
+                    .map { (it.note.event as? EmojiPackSelectionEvent)?.emojiPackIds()?.toImmutableList() }
                     .distinctUntilChanged()
                     .observeAsState(
                         (usersEmojiList.event as? EmojiPackSelectionEvent)
-                            ?.taggedAddresses()
+                            ?.emojiPackIds()
                             ?.toImmutableList(),
                     )
 
@@ -363,7 +382,7 @@ private fun EmojiSelector(
 
 @Composable
 fun EmojiCollectionGallery(
-    emojiCollections: ImmutableList<Address>,
+    emojiCollections: ImmutableList<String>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
