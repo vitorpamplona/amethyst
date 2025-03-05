@@ -101,11 +101,13 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
@@ -953,7 +955,16 @@ private fun RenderReactionType(
         when (reactionType) {
             "+" -> LikedIcon(iconSizeModifier)
             "-" -> Text(text = "\uD83D\uDC4E", maxLines = 1, fontSize = iconFontSize)
-            else -> Text(text = reactionType, maxLines = 1, fontSize = iconFontSize)
+            else -> {
+                if (EmojiCoder.isCoded(reactionType)) {
+                    AnimatedBorderTextCornerRadius(
+                        reactionType,
+                        fontSize = iconFontSize,
+                    )
+                } else {
+                    Text(text = reactionType, maxLines = 1, fontSize = iconFontSize)
+                }
+            }
         }
     }
 }
@@ -1501,6 +1512,7 @@ fun ReactionChoicePopupPeeview() {
                 "\uD83D\uDE31",
                 "\uD83E\uDD14",
                 "\uD83D\uDE31",
+                "\uD83D\uDE80\uDB40\uDD58\uDB40\uDD64\uDB40\uDD64\uDB40\uDD60\uDB40\uDD63\uDB40\uDD2A\uDB40\uDD1F\uDB40\uDD1F\uDB40\uDD53\uDB40\uDD54\uDB40\uDD5E\uDB40\uDD1E\uDB40\uDD63\uDB40\uDD51\uDB40\uDD64\uDB40\uDD55\uDB40\uDD5C\uDB40\uDD5C\uDB40\uDD59\uDB40\uDD64\uDB40\uDD55\uDB40\uDD1E\uDB40\uDD55\uDB40\uDD51\uDB40\uDD62\uDB40\uDD64\uDB40\uDD58\uDB40\uDD1F\uDB40\uDD29\uDB40\uDD24\uDB40\uDD27\uDB40\uDD55\uDB40\uDD24\uDB40\uDD51\uDB40\uDD52\uDB40\uDD22\uDB40\uDD54\uDB40\uDD23\uDB40\uDD21\uDB40\uDD21\uDB40\uDD25\uDB40\uDD52\uDB40\uDD55\uDB40\uDD25\uDB40\uDD26\uDB40\uDD25\uDB40\uDD51\uDB40\uDD24\uDB40\uDD29\uDB40\uDD53\uDB40\uDD56\uDB40\uDD25\uDB40\uDD54\uDB40\uDD52\uDB40\uDD20\uDB40\uDD22\uDB40\uDD25\uDB40\uDD25\uDB40\uDD29\uDB40\uDD56\uDB40\uDD23\uDB40\uDD21\uDB40\uDD20\uDB40\uDD53\uDB40\uDD51\uDB40\uDD20\uDB40\uDD51\uDB40\uDD26\uDB40\uDD54\uDB40\uDD54\uDB40\uDD56\uDB40\uDD54\uDB40\uDD54\uDB40\uDD52\uDB40\uDD54\uDB40\uDD24\uDB40\uDD52\uDB40\uDD54\uDB40\uDD28\uDB40\uDD53\uDB40\uDD52\uDB40\uDD55\uDB40\uDD53\uDB40\uDD24\uDB40\uDD24\uDB40\uDD29\uDB40\uDD29\uDB40\uDD25\uDB40\uDD53\uDB40\uDD22\uDB40\uDD55\uDB40\uDD27\uDB40\uDD1E\uDB40\uDD67\uDB40\uDD55\uDB40\uDD52\uDB40\uDD60",
             ),
             onClick = {},
             onChangeAmount = {},
@@ -1554,12 +1566,20 @@ fun RenderReaction(reactionType: String) {
                 )
             }
             else -> {
-                Text(
-                    reactionType,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    fontSize = 22.sp,
-                )
+                if (EmojiCoder.isCoded(reactionType)) {
+                    AnimatedBorderTextCornerRadius(
+                        reactionType,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 20.sp,
+                    )
+                } else {
+                    Text(
+                        reactionType,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        fontSize = 22.sp,
+                    )
+                }
             }
         }
     }

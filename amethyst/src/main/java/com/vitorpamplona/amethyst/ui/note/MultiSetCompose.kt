@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -53,15 +54,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -92,6 +102,7 @@ import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
 
@@ -212,12 +223,74 @@ fun RenderLikeGallery(
                     when (val shortReaction = reactionType) {
                         "+" -> LikedIcon(modifier.size(Size19dp))
                         "-" -> Text(text = "\uD83D\uDC4E", modifier = modifier)
-                        else -> Text(text = shortReaction, modifier = modifier)
+                        else -> {
+                            if (EmojiCoder.isCoded(shortReaction)) {
+                                DisplaySecretEmojiAsReaction(
+                                    shortReaction,
+                                    modifier,
+                                    accountViewModel,
+                                    nav,
+                                )
+                            } else {
+                                Text(text = shortReaction, modifier = modifier)
+                            }
+                        }
                     }
                 }
             }
 
             AuthorGallery(likeEvents, nav, accountViewModel)
+        }
+    }
+}
+
+@Composable
+fun DisplaySecretEmojiAsReaction(
+    reaction: String,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var secretContent by remember {
+        mutableStateOf<RichTextViewerState?>(null)
+    }
+
+    var showPopup by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(reaction) {
+        launch(Dispatchers.Default) {
+            secretContent =
+                CachedRichTextParser.parseText(
+                    EmojiCoder.decode(reaction),
+                    EmptyTagList,
+                )
+        }
+    }
+
+    val localSecretContent = secretContent
+
+    AnimatedBorderTextCornerRadius(
+        reaction,
+        modifier.clickable {
+            showPopup = !showPopup
+        },
+    )
+
+    if (localSecretContent != null && showPopup) {
+        val iconSizePx = with(LocalDensity.current) { -24.dp.toPx().toInt() }
+
+        Popup(
+            alignment = Alignment.TopCenter,
+            offset = IntOffset(0, -iconSizePx),
+            onDismissRequest = { showPopup = false },
+            properties = PopupProperties(focusable = true),
+        ) {
+            Surface(Modifier.padding(10.dp)) {
+                val color = remember { mutableStateOf(Color.Transparent) }
+                CoreSecretMessage(localSecretContent, null, 3, color, accountViewModel, nav)
+            }
         }
     }
 }

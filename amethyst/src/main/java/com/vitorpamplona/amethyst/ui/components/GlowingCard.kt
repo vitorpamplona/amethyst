@@ -38,14 +38,19 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
 fun AnimatedBorderTextCornerRadius(
     text: String,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
+    fontSize: TextUnit = 12.sp,
 ) {
     val infiniteTransition = rememberInfiniteTransition()
     val animatedFloatRestart =
@@ -61,7 +66,7 @@ fun AnimatedBorderTextCornerRadius(
 
     Text(
         text = text,
-        fontSize = 12.sp,
+        fontSize = fontSize,
         modifier =
             modifier
                 .drawBehind {
@@ -84,6 +89,8 @@ fun AnimatedBorderTextCornerRadius(
                                 .CornerRadius(6.dp.toPx()),
                     )
                 }.padding(3.dp),
+        color = color,
+        textAlign = textAlign,
     )
 }
 

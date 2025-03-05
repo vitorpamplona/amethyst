@@ -106,4 +106,27 @@ object EmojiCoder {
         val decodedArray = ByteArray(decoded.size) { decoded[it].toByte() }
         return String(decodedArray, Charsets.UTF_8)
     }
+
+    @JvmStatic
+    fun cropToFirstMessage(text: String): String {
+        val decoded = mutableListOf<Int>()
+
+        var i = 0
+        while (i < text.length) {
+            val codePoint = text.codePointAt(i)
+            val byte = fromVariationSelector(codePoint)
+
+            if (byte == null && decoded.isNotEmpty()) {
+                break
+            } else if (byte == null) {
+                i += Character.charCount(codePoint) // Advance index by correct number of chars
+                continue
+            }
+
+            decoded.add(byte)
+            i += Character.charCount(codePoint) // Advance index by correct number of chars
+        }
+
+        return text.substring(0, i)
+    }
 }

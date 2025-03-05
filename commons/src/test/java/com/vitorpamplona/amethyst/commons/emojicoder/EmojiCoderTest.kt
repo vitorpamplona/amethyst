@@ -38,6 +38,7 @@ class EmojiCoderTest {
             )
 
         val HELLO_WORLD = "\uD83D\uDE00\uDB40\uDD38\uDB40\uDD55\uDB40\uDD5C\uDB40\uDD5C\uDB40\uDD5F\uDB40\uDD1C\uDB40\uDD10\uDB40\uDD47\uDB40\uDD5F\uDB40\uDD62\uDB40\uDD5C\uDB40\uDD54\uDB40\uDD11"
+        val HELLO_WORLD_WITH_EXTRAS = HELLO_WORLD + "askfasdf"
     }
 
     @Test
@@ -53,6 +54,11 @@ class EmojiCoderTest {
     @Test
     fun testDecode() {
         assertEquals("Hello, World!", EmojiCoder.decode(HELLO_WORLD))
+    }
+
+    @Test
+    fun testCrop() {
+        assertEquals(HELLO_WORLD, EmojiCoder.cropToFirstMessage(HELLO_WORLD_WITH_EXTRAS))
     }
 
     @Test

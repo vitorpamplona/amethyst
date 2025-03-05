@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
@@ -123,6 +124,10 @@ fun String.firstFullCharOrEmoji(tags: ImmutableListOfLists<String>): String {
                 return ":$emojiName:$emojiUrl"
             }
         }
+    }
+
+    if (EmojiCoder.isCoded(this)) {
+        return EmojiCoder.cropToFirstMessage(this)
     }
 
     return firstFullChar()

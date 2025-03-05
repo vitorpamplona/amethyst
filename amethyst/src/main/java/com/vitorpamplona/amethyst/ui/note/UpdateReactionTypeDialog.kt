@@ -53,6 +53,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -77,9 +78,14 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.service.firstFullChar
+import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -115,7 +121,13 @@ class UpdateReactionTypeViewModel : ViewModel() {
     fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
 
     fun addChoice() {
-        val newValue = nextChoice.text.trim().firstFullChar()
+        val newValue =
+            if (EmojiCoder.isCoded(nextChoice.text)) {
+                EmojiCoder.cropToFirstMessage(nextChoice.text)
+            } else {
+                nextChoice.text.trim().firstFullChar()
+            }
+
         reactionSet = reactionSet + newValue
 
         nextChoice = TextFieldValue("")
@@ -341,14 +353,77 @@ private fun RenderReactionOption(
                         color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,
                     )
-                else ->
-                    Text(
-                        text = "$reactionType ✖",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Center,
+                else -> {
+                    if (EmojiCoder.isCoded(reactionType)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AnimatedBorderTextCornerRadius(
+                                reactionType,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                            )
+                            Text(
+                                text = " ✖",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "$reactionType ✖",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplaySecretEmoji(
+    text: String,
+    state: RichTextViewerState,
+    callbackUri: String?,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (canPreview && quotesLeft > 0) {
+        var secretContent by remember {
+            mutableStateOf<RichTextViewerState?>(null)
+        }
+
+        var showPopup by remember {
+            mutableStateOf(false)
+        }
+
+        LaunchedEffect(text) {
+            launch(Dispatchers.Default) {
+                secretContent =
+                    CachedRichTextParser.parseText(
+                        EmojiCoder.decode(text),
+                        state.tags,
                     )
             }
         }
+
+        val localSecretContent = secretContent
+
+        AnimatedBorderTextCornerRadius(
+            text,
+            Modifier.clickable {
+                showPopup = !showPopup
+            },
+        )
+
+        if (localSecretContent != null && showPopup) {
+            CoreSecretMessage(localSecretContent, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+    } else {
+        Text(text)
     }
 }
 
