@@ -1147,9 +1147,7 @@ class Account(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                runBlocking(Dispatchers.Default) {
-                    convertEmojiSelectionPack(getEmojiPackSelection())
-                },
+                convertEmojiSelectionPack(getEmojiPackSelection()),
             )
     }
 
@@ -1187,9 +1185,7 @@ class Account(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                runBlocking(Dispatchers.Default) {
-                    mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray())
-                },
+                mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
             )
     }
 
