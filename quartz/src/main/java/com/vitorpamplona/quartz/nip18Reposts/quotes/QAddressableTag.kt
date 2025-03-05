@@ -22,9 +22,11 @@ package com.vitorpamplona.quartz.nip18Reposts.quotes
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -61,7 +63,9 @@ data class QAddressableTag(
 
         @JvmStatic
         fun parse(tag: Array<String>): QAddressableTag? {
-            if (tag.size < TAG_SIZE || tag[0] != QTag.TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == QTag.TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             val address = Address.parse(tag[1]) ?: return null
             return QAddressableTag(address, tag.getOrNull(2))
         }

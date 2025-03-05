@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.experimental.interactiveStories.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 class StoryOptionTag(
     val option: String,
@@ -37,10 +39,10 @@ class StoryOptionTag(
 
         @JvmStatic
         fun parse(tag: Array<String>): StoryOptionTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             val address = Address.parse(tag[2]) ?: return null
-
             return StoryOptionTag(tag[1], address, tag.getOrNull(3))
         }
 
