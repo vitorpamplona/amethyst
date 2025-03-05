@@ -106,6 +106,7 @@
     <string name="global_feed">Feed Global</string>
     <string name="search_feed">Fonte de pesquisa</string>
     <string name="add_a_relay">Adicionar um Relay</string>
+    <string name="profile_name">Nome</string>
     <string name="display_name">Nome de Exibição</string>
     <string name="my_display_name">Meu nome de exibição</string>
     <string name="my_awesome_name">McAwesome Ostrich</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Conversas</string>
     <string name="notes">Notas</string>
     <string name="replies">Respostas</string>
+    <string name="mutual">Suas</string>
     <string name="gallery">Galeria</string>
     <string name="follows">"Seguindo"</string>
     <string name="reports">"Denúncias"</string>

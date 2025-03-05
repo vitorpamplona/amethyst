@@ -106,6 +106,7 @@
     <string name="global_feed">Globalt Flöde</string>
     <string name="search_feed">Sök i Flödet</string>
     <string name="add_a_relay">Lägg till Relä</string>
+    <string name="profile_name">Namn</string>
     <string name="display_name">Visningsnamn</string>
     <string name="my_display_name">Mitt visningsnamn</string>
     <string name="my_awesome_name">Struts McAwesome</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Konversationer</string>
     <string name="notes">Anteckningar</string>
     <string name="replies">Svar</string>
+    <string name="mutual">Dina</string>
     <string name="gallery">Galleri</string>
     <string name="follows">"Följer"</string>
     <string name="reports">"Rapporter"</string>
