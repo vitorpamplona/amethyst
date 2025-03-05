@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.GetMediaItem
 import com.vitorpamplona.amethyst.ui.components.GetVideoController
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
@@ -216,7 +217,9 @@ fun UrlImageView(
                                 defaultModifier,
                             )
                         } else {
-                            DisplayUrlWithLoadingSymbol(content)
+                            WaitAndDisplay {
+                                DisplayUrlWithLoadingSymbol(content)
+                            }
                         }
                     }
                     is AsyncImagePainter.State.Error -> {

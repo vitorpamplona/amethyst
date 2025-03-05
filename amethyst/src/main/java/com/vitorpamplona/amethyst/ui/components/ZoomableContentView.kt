@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
@@ -264,7 +265,9 @@ fun LocalImageView(
                                     )
                                 }
                             } else {
-                                DisplayUrlWithLoadingSymbol(content)
+                                WaitAndDisplay {
+                                    DisplayUrlWithLoadingSymbol(content)
+                                }
                             }
                         }
                         is AsyncImagePainter.State.Error -> {
@@ -370,7 +373,9 @@ fun UrlImageView(
                                 )
                             }
                         } else {
-                            DisplayUrlWithLoadingSymbol(content)
+                            WaitAndDisplay {
+                                DisplayUrlWithLoadingSymbol(content)
+                            }
                         }
                     }
                     is AsyncImagePainter.State.Error -> {
@@ -518,6 +523,27 @@ fun aspectRatio(dim: DimensionTag?): Float? {
     if (dim == null) return null
 
     return dim.width.toFloat() / dim.height.toFloat()
+}
+
+@Composable
+fun WaitAndDisplay(
+    content:
+        @Composable()
+        (AnimatedVisibilityScope.() -> Unit),
+) {
+    val visible = remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(200)
+        visible.value = true
+    }
+
+    AnimatedVisibility(
+        visible = visible.value,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        content = content,
+    )
 }
 
 @Composable
