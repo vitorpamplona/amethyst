@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
@@ -110,31 +111,43 @@ data class ATag(
 
         @JvmStatic
         fun parse(tag: Array<String>): ATag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return parse(tag[1], tag.getOrNull(2))
         }
 
         @JvmStatic
         fun parseValidAddress(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return Address.parse(tag[1])?.toValue()
         }
 
         @JvmStatic
         fun parseAddress(tag: Array<String>): Address? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return Address.parse(tag[1])
         }
 
         @JvmStatic
         fun parseAddressId(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): AddressHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || !tag[1].contains(':') || tag[2].isEmpty()) return null
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[1].contains(':')) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return AddressHint(tag[1], tag[2])
         }
 

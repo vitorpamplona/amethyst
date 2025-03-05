@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
@@ -66,15 +67,13 @@ data class RootSceneTag(
             dTag: String,
         ) = Address.assemble(kind, pubKeyHex, dTag)
 
-        fun parse(
-            aTagId: String,
-            relay: String?,
-        ) = Address.parse(aTagId)?.let { RootSceneTag(it.kind, it.pubKeyHex, it.dTag, relay) }
-
         @JvmStatic
         fun parse(tag: Array<String>): RootSceneTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            return parse(tag[1], tag.getOrNull(2))
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            val address = Address.parse(tag[1]) ?: return null
+            return RootSceneTag(address.kind, address.pubKeyHex, address.dTag, tag.getOrNull(2))
         }
 
         @JvmStatic

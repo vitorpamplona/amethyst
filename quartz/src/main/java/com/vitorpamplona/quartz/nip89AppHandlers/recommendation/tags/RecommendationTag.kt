@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.match
 import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class RecommendationTag(
@@ -44,7 +45,9 @@ class RecommendationTag(
 
         @JvmStatic
         fun parse(tag: Array<String>): RecommendationTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.size > 2) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             val address = Address.parse(tag[1]) ?: return null
             return RecommendationTag(address, tag.getOrNull(2), tag.getOrNull(3))
         }
