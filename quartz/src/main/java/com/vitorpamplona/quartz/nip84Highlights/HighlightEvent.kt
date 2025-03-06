@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -41,7 +42,8 @@ class HighlightEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
     fun inUrl() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 
     fun author() = firstTaggedUser()
