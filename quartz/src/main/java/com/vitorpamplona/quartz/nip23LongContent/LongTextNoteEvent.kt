@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
@@ -55,7 +56,8 @@ class LongTextNoteEvent(
     AddressableEvent,
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    RootScope {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun eventHints() = tags.mapNotNull(QTag::parseEventAsHint)
