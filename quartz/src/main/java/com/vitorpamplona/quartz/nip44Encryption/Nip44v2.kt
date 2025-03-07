@@ -21,30 +21,21 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import android.util.Log
-import com.goterl.lazysodium.LazySodiumAndroid
-import com.goterl.lazysodium.SodiumAndroid
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.Hex
-import fr.acinq.secp256k1.Secp256k1
+import com.vitorpamplona.quartz.utils.LibSodiumInstance
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.security.SecureRandom
 import java.util.Base64
 import kotlin.math.floor
 import kotlin.math.log2
 
-class Nip44v2(
-    val secp256k1: Secp256k1,
-    val random: SecureRandom,
-) {
+class Nip44v2 {
     private val sharedKeyCache = SharedKeyCache()
-
-    private val libSodium = SodiumAndroid()
-    private val lazySodium = LazySodiumAndroid(libSodium)
     private val hkdf = Hkdf()
 
-    private val h02 = Hex.decode("02")
     private val saltPrefix = "nip44-v2".toByteArray(Charsets.UTF_8)
     private val hashLength = 32
 
@@ -65,8 +56,7 @@ class Nip44v2(
         plaintext: String,
         conversationKey: ByteArray,
     ): EncryptedInfo {
-        val nonce = ByteArray(hashLength)
-        random.nextBytes(nonce)
+        val nonce = RandomInstance.bytes(hashLength)
         return encryptWithNonce(plaintext, conversationKey, nonce)
     }
 
@@ -78,15 +68,12 @@ class Nip44v2(
         val messageKeys = getMessageKeys(conversationKey, nonce)
         val padded = pad(plaintext)
 
-        val ciphertext = ByteArray(padded.size)
-
-        lazySodium.cryptoStreamChaCha20IetfXor(
-            ciphertext,
-            padded,
-            padded.size.toLong(),
-            messageKeys.chachaNonce,
-            messageKeys.chachaKey,
-        )
+        val ciphertext =
+            LibSodiumInstance.cryptoStreamChaCha20IetfXor(
+                padded,
+                messageKeys.chachaNonce,
+                messageKeys.chachaKey,
+            )
 
         val mac = hmacAad(messageKeys.hmacKey, ciphertext, nonce)
 
@@ -128,16 +115,12 @@ class Nip44v2(
             "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${decoded.mac.toHexKey()}"
         }
 
-        val mLen = decoded.ciphertext.size.toLong()
-        val padded = ByteArray(decoded.ciphertext.size)
-
-        lazySodium.cryptoStreamChaCha20IetfXor(
-            padded,
-            decoded.ciphertext,
-            mLen,
-            messageKey.chachaNonce,
-            messageKey.chachaKey,
-        )
+        val padded =
+            LibSodiumInstance.cryptoStreamChaCha20IetfXor(
+                decoded.ciphertext,
+                messageKey.chachaNonce,
+                messageKey.chachaKey,
+            )
 
         return unpad(padded)
     }
@@ -241,7 +224,7 @@ class Nip44v2(
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): ByteArray {
-        val sharedX = secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
+        val sharedX = Secp256k1Instance.pubKeyTweakMulCompact(pubKey, privateKey)
         return hkdf.extract(sharedX, saltPrefix)
     }
 

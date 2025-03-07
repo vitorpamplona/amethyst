@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.quartz.experimental.interactiveStories
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class InteractiveStorySceneEvent(
@@ -49,32 +51,20 @@ class InteractiveStorySceneEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dtag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
+        ): String = Address.assemble(KIND, pubKey, dtag)
 
-        fun create(
+        fun build(
             baseId: String,
             title: String,
             content: String,
-            options: List<StoryOption>,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            markAsSensitive: Boolean = false,
-            zapRaiserAmount: Long? = null,
-            geohash: String? = null,
-            imetas: List<IMetaTag>? = null,
-            signer: NostrSigner,
+            options: List<StoryOptionTag>,
             createdAt: Long = TimeUtils.now(),
-            isDraft: Boolean,
-            onReady: (InteractiveStorySceneEvent) -> Unit,
-        ) {
-            val tags =
-                makeTags(baseId, ALT + title, title, options = options) +
-                    generalTags(content, zapReceiver, markAsSensitive, zapRaiserAmount, geohash, imetas)
-
-            if (isDraft) {
-                signer.assembleRumor(createdAt, KIND, tags, content, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags, content, onReady)
-            }
+            initializer: TagArrayBuilder<InteractiveStorySceneEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, content, createdAt) {
+            dTag(baseId)
+            title(title)
+            options(options)
+            initializer()
         }
     }
 }

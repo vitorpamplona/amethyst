@@ -21,14 +21,21 @@
 package com.vitorpamplona.quartz.nip51Lists
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -41,17 +48,22 @@ abstract class GeneralListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun category() = dTag()
+) : PrivateTagArrayEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + (cachedPrivateTags()?.mapNotNull(ETag::parseAsHint) ?: emptyList())
 
-    fun bookmarkedPosts() = taggedEvents()
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + (cachedPrivateTags()?.mapNotNull(ATag::parseAsHint) ?: emptyList())
 
-    fun bookmarkedPeople() = taggedUsers()
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint) + (cachedPrivateTags()?.mapNotNull(PTag::parseAsHint) ?: emptyList())
 
-    fun name() = tags.firstOrNull { it.size > 1 && it[0] == "name" }?.get(1)
+    fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
+    @Deprecated("NIP-51 has deprecated Title. Use name instead", ReplaceWith("name()"))
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
+    fun nameOrTitle() = name() ?: title()
     fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
     fun nameOrTitle() = name()?.ifBlank { null } ?: title()?.ifBlank { null }
@@ -112,28 +124,27 @@ abstract class GeneralListEvent(
         onReady: (List<String>) -> Unit,
     ) = privateTags(signer) { onReady(filterEvents(it)) }
 
-    fun privateTaggedAddresses(
+    fun privateATags(
         signer: NostrSigner,
         onReady: (List<ATag>) -> Unit,
+    ) = privateTags(signer) { onReady(filterATags(it)) }
+
+    fun privateAddress(
+        signer: NostrSigner,
+        onReady: (List<Address>) -> Unit,
     ) = privateTags(signer) { onReady(filterAddresses(it)) }
 
-    fun filterUsers(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    fun filterUsers(tags: Array<Array<String>>): List<String> = tags.mapNotNull(PTag::parseKey)
 
-    fun filterHashtags(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "t" }.map { it[1] }
+    fun filterHashtags(tags: Array<Array<String>>): List<String> = tags.mapNotNull(HashtagTag::parse)
 
     fun filterGeohashes(tags: Array<Array<String>>): List<String> = tags.geohashes()
 
-    fun filterEvents(tags: Array<Array<String>>): List<String> = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    fun filterEvents(tags: Array<Array<String>>): List<String> = tags.mapNotNull(ETag::parseId)
 
-    fun filterAddresses(tags: Array<Array<String>>): List<ATag> =
-        tags
-            .filter { it.firstOrNull() == "a" }
-            .mapNotNull {
-                val aTagValue = it.getOrNull(1)
-                val relay = it.getOrNull(2)
+    fun filterATags(tags: Array<Array<String>>): List<ATag> = tags.mapNotNull(ATag::parse)
 
-                if (aTagValue != null) ATag.parse(aTagValue, relay) else null
-            }
+    fun filterAddresses(tags: Array<Array<String>>): List<Address> = tags.mapNotNull(ATag::parseAddress)
 
     companion object {
         fun createPrivateTags(

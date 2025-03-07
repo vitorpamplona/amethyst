@@ -34,6 +34,10 @@ fun Event.isTaggedAddressableKind(kind: Int) = tags.isTaggedAddressableKind(kind
 
 fun Event.getTagOfAddressableKind(kind: Int) = tags.getTagOfAddressableKind(kind)
 
+fun Event.taggedATags() = tags.taggedATags()
+
+fun Event.firstTaggedATag() = tags.firstTaggedATag()
+
 fun Event.taggedAddresses() = tags.taggedAddresses()
 
 fun Event.firstTaggedAddress() = tags.firstTaggedAddress()

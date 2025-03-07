@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.LruCache
-import com.vitorpamplona.quartz.nip17Dm.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 
 /**
  * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via
@@ -30,16 +30,27 @@ import com.vitorpamplona.quartz.nip17Dm.NostrCipher
  * This class serves as a key cache to decrypt the body of HTTP calls that need it.
  */
 class EncryptionKeyCache {
-    val cache = LruCache<String, NostrCipher>(100)
+    val cache = LruCache<String, DecryptInformation>(100)
+
+    fun add(
+        url: String?,
+        decryptInformation: DecryptInformation,
+    ) {
+        if (cache.get(url) == null) {
+            cache.put(url, decryptInformation)
+        }
+    }
 
     fun add(
         url: String?,
         cipher: NostrCipher,
-    ) {
-        if (cache.get(url) == null) {
-            cache.put(url, cipher)
-        }
-    }
+        expectedMimeType: String?,
+    ) = add(url, DecryptInformation(cipher, expectedMimeType))
 
-    fun get(url: String): NostrCipher? = cache.get(url)
+    fun get(url: String): DecryptInformation? = cache.get(url)
 }
+
+class DecryptInformation(
+    val cipher: NostrCipher,
+    val mimeType: String?,
+)

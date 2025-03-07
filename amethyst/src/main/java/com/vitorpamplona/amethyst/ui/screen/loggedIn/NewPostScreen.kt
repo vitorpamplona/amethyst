@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Assistant
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -146,6 +147,8 @@ import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.ui.components.SecretEmojiRequest
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.navigation.Nav
@@ -162,7 +165,6 @@ import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -173,6 +175,7 @@ import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
@@ -182,7 +185,7 @@ import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -193,6 +196,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.Math.round
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
@@ -325,8 +329,10 @@ fun NewPostScreen(
                         CloseButton(
                             onPress = {
                                 scope.launch {
-                                    postViewModel.sendDraftSync(relayList = relayList)
-                                    postViewModel.cancel()
+                                    withContext(Dispatchers.IO) {
+                                        postViewModel.sendDraftSync(relayList = relayList)
+                                        postViewModel.cancel()
+                                    }
                                     delay(100)
                                     nav.popBack()
                                 }
@@ -521,7 +527,7 @@ fun NewPostScreen(
                                     it,
                                     accountViewModel.account.settings.defaultFileServer,
                                     onAdd = { alt, server, sensitiveContent, mediaQuality ->
-                                        postViewModel.upload(alt, sensitiveContent, mediaQuality, false, server, accountViewModel::toast, context)
+                                        postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, false, server, accountViewModel::toast, context)
                                         if (server.type != ServerType.NIP95) {
                                             accountViewModel.account.settings.changeDefaultFileServer(server)
                                         }
@@ -554,6 +560,20 @@ fun NewPostScreen(
                                             onClose = { postViewModel.wantsInvoice = false },
                                             onError = { title, message -> accountViewModel.toast(title, message) },
                                         )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (postViewModel.wantsSecretEmoji) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    SecretEmojiRequest {
+                                        postViewModel.insertAtCursor(it)
+                                        postViewModel.wantsSecretEmoji = false
                                     }
                                 }
                             }
@@ -638,10 +658,8 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             }
         }
 
-        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
-            AddLnInvoiceButton(postViewModel.wantsInvoice) {
-                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
+        ForwardZapTo(postViewModel) {
+            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
         }
 
         if (postViewModel.canAddZapRaiser) {
@@ -658,8 +676,14 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
         }
 
-        ForwardZapTo(postViewModel) {
-            postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo
+        AddSecretEmoji(postViewModel.wantsSecretEmoji) {
+            postViewModel.wantsSecretEmoji = !postViewModel.wantsSecretEmoji
+        }
+
+        if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
+            AddLnInvoiceButton(postViewModel.wantsInvoice) {
+                postViewModel.wantsInvoice = !postViewModel.wantsInvoice
+            }
         }
     }
 }
@@ -712,7 +736,7 @@ private fun MessageField(postViewModel: NewPostViewModel) {
         }
     }
 
-    MyTextField(
+    ThinPaddingTextField(
         value = postViewModel.message,
         onValueChange = { postViewModel.updateMessage(it) },
         keyboardOptions =
@@ -826,7 +850,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.toUsers,
                 onValueChange = { postViewModel.updateToUsers(it) },
                 modifier = Modifier.fillMaxWidth(),
@@ -860,7 +884,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.subject,
                 onValueChange = { postViewModel.updateSubject(it) },
                 modifier = Modifier.fillMaxWidth(),
@@ -901,7 +925,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.title,
                 onValueChange = {
                     postViewModel.updateTitle(it)
@@ -937,7 +961,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = postViewModel.price,
                 onValueChange = {
@@ -977,22 +1001,22 @@ fun SellProduct(postViewModel: NewPostViewModel) {
             val conditionTypes =
                 listOf(
                     Triple(
-                        ClassifiedsEvent.CONDITION.NEW,
+                        ConditionTag.CONDITION.NEW,
                         stringRes(id = R.string.classifieds_condition_new),
                         stringRes(id = R.string.classifieds_condition_new_explainer),
                     ),
                     Triple(
-                        ClassifiedsEvent.CONDITION.USED_LIKE_NEW,
+                        ConditionTag.CONDITION.USED_LIKE_NEW,
                         stringRes(id = R.string.classifieds_condition_like_new),
                         stringRes(id = R.string.classifieds_condition_like_new_explainer),
                     ),
                     Triple(
-                        ClassifiedsEvent.CONDITION.USED_GOOD,
+                        ConditionTag.CONDITION.USED_GOOD,
                         stringRes(id = R.string.classifieds_condition_good),
                         stringRes(id = R.string.classifieds_condition_good_explainer),
                     ),
                     Triple(
-                        ClassifiedsEvent.CONDITION.USED_FAIR,
+                        ConditionTag.CONDITION.USED_FAIR,
                         stringRes(id = R.string.classifieds_condition_fair),
                         stringRes(id = R.string.classifieds_condition_fair_explainer),
                     ),
@@ -1014,7 +1038,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         .weight(1f)
                         .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
-                MyTextField(
+                ThinPaddingTextField(
                     value = TextFieldValue(currentOption),
                     onValueChange = {},
                     readOnly = true,
@@ -1080,7 +1104,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         .weight(1f)
                         .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
-                MyTextField(
+                ThinPaddingTextField(
                     value = TextFieldValue(currentOption),
                     onValueChange = {},
                     readOnly = true,
@@ -1107,7 +1131,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.locationText,
                 onValueChange = {
                     postViewModel.updateLocation(it)
@@ -1497,6 +1521,32 @@ private fun AddLnInvoiceButton(
                 imageVector = Icons.Default.CurrencyBitcoin,
                 contentDescription = stringRes(id = R.string.cancel_bitcoin_invoice),
                 modifier = Modifier.size(20.dp),
+                tint = BitcoinOrange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddSecretEmoji(
+    isSecretEmojiActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+    ) {
+        if (!isSecretEmojiActive) {
+            Icon(
+                imageVector = Icons.Outlined.Assistant,
+                contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.Assistant,
+                contentDescription = stringRes(id = R.string.secret_emoji_maker_explainer),
+                modifier = Size20Modifier,
                 tint = BitcoinOrange,
             )
         }

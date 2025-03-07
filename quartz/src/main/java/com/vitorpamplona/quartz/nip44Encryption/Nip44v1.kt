@@ -21,22 +21,14 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import android.util.Log
-import com.goterl.lazysodium.SodiumAndroid
-import com.goterl.lazysodium.utils.Key
-import com.vitorpamplona.quartz.nip44Encryption.crypto.cryptoStreamXChaCha20Xor
-import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256Hash
-import fr.acinq.secp256k1.Secp256k1
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.utils.LibSodiumInstance
+import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.util.Base64
 
-class Nip44v1(
-    val secp256k1: Secp256k1,
-    val random: SecureRandom,
-) {
+class Nip44v1 {
     private val sharedKeyCache = SharedKeyCache()
-    private val h02 = Hex.decode("02")
-    private val libSodium = SodiumAndroid()
 
     fun clearCache() {
         sharedKeyCache.clearCache()
@@ -55,15 +47,13 @@ class Nip44v1(
         msg: String,
         sharedSecret: ByteArray,
     ): EncryptedInfo {
-        val nonce = ByteArray(24)
-        random.nextBytes(nonce)
+        val nonce = RandomInstance.bytes(24)
 
         val cipher =
-            cryptoStreamXChaCha20Xor(
-                libSodium = libSodium,
+            LibSodiumInstance.cryptoStreamXChaCha20Xor(
                 messageBytes = msg.toByteArray(),
                 nonce = nonce,
-                key = Key.fromBytes(sharedSecret),
+                key = sharedSecret,
             )
 
         return EncryptedInfo(
@@ -102,12 +92,12 @@ class Nip44v1(
         encryptedInfo: EncryptedInfo,
         sharedSecret: ByteArray,
     ): String? =
-        cryptoStreamXChaCha20Xor(
-            libSodium = libSodium,
-            messageBytes = encryptedInfo.ciphertext,
-            nonce = encryptedInfo.nonce,
-            key = Key.fromBytes(sharedSecret),
-        )?.decodeToString()
+        LibSodiumInstance
+            .cryptoStreamXChaCha20Xor(
+                messageBytes = encryptedInfo.ciphertext,
+                nonce = encryptedInfo.nonce,
+                key = sharedSecret,
+            )?.decodeToString()
 
     fun getSharedSecret(
         privateKey: ByteArray,
@@ -126,8 +116,8 @@ class Nip44v1(
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): ByteArray =
-        sha256Hash(
-            secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33),
+        sha256(
+            Secp256k1Instance.pubKeyTweakMulCompact(pubKey, privateKey),
         )
 
     class EncryptedInfo(

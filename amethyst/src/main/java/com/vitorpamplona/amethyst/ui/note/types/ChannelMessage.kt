@@ -33,10 +33,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 @Composable
 fun RenderChannelMessage(
@@ -53,7 +53,7 @@ fun RenderChannelMessage(
     val showChannelInfo =
         remember(noteEvent) {
             if (noteEvent is ChannelMessageEvent) {
-                noteEvent.channel()
+                noteEvent.channelId()
             } else {
                 null
             }

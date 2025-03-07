@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.nip01Core.relays.RelayStat
+import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -21,6 +21,5 @@
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 
-fun Event.taggedEmojis() = tags.mapTagged("emoji") { EmojiUrl.parse(it) }
+fun Event.taggedEmojis() = tags.emojis()

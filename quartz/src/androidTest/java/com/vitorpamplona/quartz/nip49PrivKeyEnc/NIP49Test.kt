@@ -21,14 +21,12 @@
 package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.toHexKey
-import fr.acinq.secp256k1.Secp256k1
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.security.SecureRandom
 
 @RunWith(AndroidJUnit4::class)
 public class NIP49Test {
@@ -53,8 +51,7 @@ public class NIP49Test {
             )
     }
 
-    val random = SecureRandom()
-    val nip49 = Nip49(Secp256k1.get(), random)
+    val nip49 = Nip49()
 
     @Test
     fun decodeBech32() {

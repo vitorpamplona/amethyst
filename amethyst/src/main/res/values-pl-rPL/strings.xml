@@ -7,7 +7,7 @@
     <string name="scan_qr">Zeskanuj QR kod</string>
     <string name="show_anyway">Pokaż mimo wszystko</string>
     <string name="post_was_hidden">Ten post został ukryty, ponieważ dotyczy ukrytych użytkowników lub słów</string>
-    <string name="post_was_flagged_as_inappropriate_by">Post został wyciszony lub zgłoszony przez</string>
+    <string name="post_was_flagged_as_inappropriate_by">Wpis został ukryty lub zgłoszony przez</string>
     <string name="post_not_found">Wydarzenie jest wczytywane lub nie można go znaleźć na liście transmiterów</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Zdjęcie kanału</string>
@@ -80,7 +80,7 @@
     <string name="note_to_receiver">Wiadomość dla odbiorcy</string>
     <string name="thank_you_so_much">Dziękuję bardzo!</string>
     <string name="amount_in_sats">Kwota w Satsach</string>
-    <string name="send_sats">Wyślij Satsy</string>
+    <string name="send_sats">Wyślij</string>
     <string name="error_parsing_preview_for">"Błąd analizowania podglądu dla %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Podgląd obrazu karty dla %1$s"</string>
     <string name="new_channel">Nowy kanał</string>
@@ -106,6 +106,7 @@
     <string name="global_feed">Kanał Ogólny</string>
     <string name="search_feed">Przeszukaj kanał</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
+    <string name="profile_name">Imię</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
     <string name="my_awesome_name">G Braun</string>
@@ -128,7 +129,7 @@
     <string name="failed_to_save_the_video">Nie udało się zapisać filmu</string>
     <string name="upload_image">Dodaj zdjęcie</string>
     <string name="uploading">Wgrywanie…</string>
-    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać saty</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
     <string name="reply_here">"odpowiedz tutaj.. "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiuje ID wpisu do schowka w celu udostępnienia w Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiuj ID kanału (wpisu) do schowka</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Konwersacje</string>
     <string name="notes">Wpisy</string>
     <string name="replies">Odpowiedzi</string>
+    <string name="mutual">Twoje</string>
     <string name="gallery">Galeria</string>
     <string name="follows">"Obserwowani"</string>
     <string name="reports">"Zgłoszenia"</string>
@@ -205,13 +207,13 @@
     <string name="posts_received">odebranych wiadomości</string>
     <string name="remove">Usuń</string>
     <string name="translations_auto">Automatycznie</string>
-    <string name="translations_translated_from">przetłumaczono z</string>
-    <string name="translations_to">do</string>
-    <string name="translations_show_in_lang_first">Najpierw wyświetl język %1$s</string>
+    <string name="translations_translated_from">przetłumaczono język</string>
+    <string name="translations_to">na</string>
+    <string name="translations_show_in_lang_first">Najpierw pokaż język %1$s</string>
     <string name="chat_about_topic">Temat czatu: %1$s</string>
     <string name="community_about_topic">Temat dyskusji %1$s</string>
     <string name="translations_always_translate_to_lang">Zawsze tłumacz na %1$s</string>
-    <string name="translations_never_translate_from_lang">Język %1$s pokaż nietłumaczony</string>
+    <string name="translations_never_translate_from_lang">Pokaż oryginalny %1$s</string>
     <string name="nip_05">Adres Nostr</string>
     <string name="never">nigdy</string>
     <string name="now">teraz</string>
@@ -452,7 +454,7 @@
     <string name="app_notification_dms_channel_description">Powiadamia Cię, gdy nadejdzie prywatna wiadomość</string>
     <string name="app_notification_zaps_channel_name">Otrzymano Zapy</string>
     <string name="app_notification_zaps_channel_description">Powiadamia Cię, gdy ktoś prześle ci zapy</string>
-    <string name="app_notification_zaps_channel_message">%1$s Satów</string>
+    <string name="app_notification_zaps_channel_message">%1$s Satsów</string>
     <string name="app_notification_zaps_channel_message_from">Od %1$s</string>
     <string name="app_notification_zaps_channel_message_for">dla %1$s</string>
     <string name="reply_notify">Powiadom: </string>
@@ -467,13 +469,13 @@
     <string name="content_warning_hide_all_sensitive_content">Zawsze ukrywaj wrażliwe treści</string>
     <string name="content_warning_show_all_sensitive_content">Zawsze pokazuj wrażliwą zawartość</string>
     <string name="content_warning_see_warnings">Zawsze pokazuj ostrzeżenia dotyczące zawartości</string>
-    <string name="recommended_apps">Zalecenia: </string>
+    <string name="recommended_apps">Polecane: </string>
     <string name="filter_spam_from_strangers">Filtruj spam z nieznajomych</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Ostrzegaj, gdy posty zostały zgłoszone przez osoby które obserwujesz</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
-    <string name="zapraiser_explainer">Dodaje docelową liczbę satów do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
+    <string name="zapraiser_explainer">Dodaje docelową liczbę satsów do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
     <string name="zapraiser_target_amount_in_sats">Docelowa kwota w Satach</string>
     <string name="sats_to_complete">Zapraiser przy: %1$s. %2$s satach do celu</string>
     <string name="read_from_relay">Odczytaj z Transmitera</string>
@@ -539,6 +541,8 @@
     <string name="ui_feature_set_type_complete">Kompletny</string>
     <string name="ui_feature_set_type_simplified">Uproszczony</string>
     <string name="ui_feature_set_type_performance">Dynamiczny</string>
+    <string name="gallery_type_classic">Klasyczny</string>
+    <string name="gallery_type_modern">Nowoczesny</string>
     <string name="system">Automatyczny</string>
     <string name="light">Jasny</string>
     <string name="dark">Ciemny</string>
@@ -553,9 +557,11 @@
     <string name="automatically_hide_nav_bars_description">Ukrywa pasek przewijania</string>
     <string name="ui_style">Tryb interfejsu</string>
     <string name="ui_style_description">Wybierz styl wpisu</string>
+    <string name="gallery_style">Styl galerii</string>
+    <string name="gallery_style_description">Wybierz styl galerii</string>
     <string name="load_image">Załaduj obraz</string>
     <string name="spamming_users">Spamerzy</string>
-    <string name="muted_button">Wyciszone. Kliknij, aby wyłączyć wyciszenie</string>
+    <string name="muted_button">Wyciszone. Kliknij, aby włączyć dźwięk</string>
     <string name="mute_button">Dźwięk włączony. Kliknij, aby wyciszyć</string>
     <string name="search_button">Wyszukiwanie lokalne i zdalne</string>
     <string name="nip05_verified">Adres Nostr został zweryfikowany</string>
@@ -632,7 +638,7 @@
     <string name="zap_split_search_and_add_user">Szukaj i dodaj użytkownika</string>
     <string name="zap_split_search_and_add_user_placeholder">Nick lub Login</string>
     <string name="missing_lud16">Brakująca konfiguracja LN</string>
-    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać saty</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">Użytkownik %1$s nie ma skonfigurowanego adresu LN, aby odbierać satsy</string>
     <string name="zap_split_weight">Procentowo</string>
     <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">Podziel zapsy z</string>
@@ -660,7 +666,7 @@
     <string name="cashu_failed_redemption_explainer_error_msg">Mint dostarczył następujący komunikat błędu: %1$s</string>
     <string name="cashu_failed_redemption_explainer_already_spent">Tokeny Cashu zostały już wydane.</string>
     <string name="cashu_successful_redemption">Cashu odebrano</string>
-    <string name="cashu_successful_redemption_explainer">%1$s saty zostały wysłane do Twojego portfela. (opłata: %2$s satów)</string>
+    <string name="cashu_successful_redemption_explainer">%1$s satsy zostały wysłane do Twojego portfela. (opłata: %2$s satsów)</string>
     <string name="cashu_no_wallet_found">W systemie nie znaleziono kompatybilnego portfela Cashu</string>
     <string name="error_unable_to_fetch_invoice">Nie można pobrać faktury z serwerów odbiorcy</string>
     <string name="wallet_connect_pay_invoice_error_error">Twój dostawca połączenia z portfelem zwrócił następujący błąd: %1$s</string>
@@ -678,7 +684,7 @@
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">Nie znaleziono zwrotnego adresu URL z odpowiedzi %1$s</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">Wystąpił błąd podczas analizowania JSON z pobierania faktury z Lightning Adresu. Sprawdź konfigurację lightning użytkownika</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Błąd przetwarzania pliku JSON z pobierania faktury %1$s. Sprawdź konfigurację lightning użytkownika</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nieprawidłowa kwota faktury (%1$s satów) od %2$s. Powinieno być %3$s</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Nieprawidłowa kwota faktury (%1$s satsów) od %2$s. Powinieno być %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Nie można utworzyć faktury przed wysłaniem zapa. Portfel odbiorcy wysłał następujący błąd: %1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nie można utworzyć faktury. Wiadomość od %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">Nie można utworzyć faktury przed wysłaniem zapa. Element pr nie został znaleziony w powstałym JSON.</string>

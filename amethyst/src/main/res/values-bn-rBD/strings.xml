@@ -104,6 +104,7 @@
     <string name="website_url">ওয়েবসাইটের URL</string>
     <string name="ln_address">বিজলি-ঠিকানা</string>
     <string name="ln_url_outdated">বিজলি URL (অপ্রচলিত)</string>
+    <string name="save_to_gallery">গ্যালারিতে সংরক্ষণ করুন</string>
     <string name="image_saved_to_the_gallery">ছবিটি গ্যালারিতে সংরক্ষণ করা হয়েছে</string>
     <string name="failed_to_save_the_image">ছবিটি সফলভাবে সংরক্ষণ করা যায় নি</string>
     <string name="upload_image">ছবিটি আপলোড করুন</string>

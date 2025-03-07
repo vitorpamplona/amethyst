@@ -21,7 +21,7 @@
 package com.vitorpamplona.ammolite.relays.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 interface IPerRelayFilter {
     fun toRelay(forRelay: String): Filter

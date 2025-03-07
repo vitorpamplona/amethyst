@@ -106,6 +106,7 @@
     <string name="global_feed"> Globální kanál</string>
     <string name="search_feed">Kanál vyhledávání</string>
     <string name="add_a_relay">Přidat přeposílání</string>
+    <string name="profile_name">Jméno</string>
     <string name="display_name">Zobrazované jméno</string>
     <string name="my_display_name">Moje zobrazované jméno</string>
     <string name="my_awesome_name">Ostrich McAwesome</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Konverzace</string>
     <string name="notes">Poznámky</string>
     <string name="replies">Odpovědi</string>
+    <string name="mutual">Vaše</string>
     <string name="gallery">Galerie</string>
     <string name="follows">"Sleduje"</string>
     <string name="reports">"Zprávy"</string>
@@ -537,6 +539,8 @@
     <string name="ui_feature_set_type_complete">Hotovo</string>
     <string name="ui_feature_set_type_simplified">Zjednodušené</string>
     <string name="ui_feature_set_type_performance">Výkonost</string>
+    <string name="gallery_type_classic">Klasický</string>
+    <string name="gallery_type_modern">Moderní</string>
     <string name="system">Systém</string>
     <string name="light">Světlý</string>
     <string name="dark">Tmavý</string>
@@ -551,6 +555,8 @@
     <string name="automatically_hide_nav_bars_description">Skrýt navigační panely při rolování</string>
     <string name="ui_style">Režim UI</string>
     <string name="ui_style_description">Zvolte styl příspěvku</string>
+    <string name="gallery_style">Styl galerie profilu</string>
+    <string name="gallery_style_description">Zvolte styl galerie</string>
     <string name="load_image">Načíst obrázek</string>
     <string name="spamming_users">Spamovací uživatelé</string>
     <string name="muted_button">Ztlumené. Klikněte pro odztlumení</string>

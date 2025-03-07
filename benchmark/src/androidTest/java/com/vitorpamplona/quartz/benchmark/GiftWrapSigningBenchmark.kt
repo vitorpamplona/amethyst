@@ -23,11 +23,15 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -53,18 +57,18 @@ class GiftWrapSigningBenchmark {
         benchmarkRule.measureRepeated {
             val countDownLatch = CountDownLatch(1)
 
-            ChatMessageEvent.create(
-                msg = "Hi there! This is a test message",
-                to = listOf(receiver.pubKey),
-                subject = "Party Tonight",
-                replyTos = emptyList(),
-                mentions = emptyList(),
-                zapReceiver = null,
-                markAsSensitive = true,
-                zapRaiserAmount = 10000,
-                geohash = null,
-                isDraft = false,
-                signer = sender,
+            sender.sign(
+                ChatMessageEvent.build(
+                    msg = "Hi there! This is a test message",
+                    to =
+                        listOf(
+                            PTag(receiver.pubKey),
+                        ),
+                ) {
+                    changeSubject("Party Tonight")
+                    zapraiser(10000)
+                    contentWarning("nsfw")
+                },
             ) {
                 countDownLatch.countDown()
             }
@@ -82,18 +86,18 @@ class GiftWrapSigningBenchmark {
 
         var msg: ChatMessageEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Hi there! This is a test message",
-            to = listOf(receiver.pubKey),
-            subject = "Party Tonight",
-            replyTos = emptyList(),
-            mentions = emptyList(),
-            zapReceiver = null,
-            markAsSensitive = true,
-            zapRaiserAmount = 10000,
-            geohash = null,
-            isDraft = false,
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Hi there! This is a test message",
+                to =
+                    listOf(
+                        PTag(receiver.pubKey),
+                    ),
+            ) {
+                changeSubject("Party Tonight")
+                zapraiser(10000)
+                contentWarning("nsfw")
+            },
         ) {
             msg = it
             countDownLatch.countDown()
@@ -124,18 +128,18 @@ class GiftWrapSigningBenchmark {
 
         var seal: SealedRumorEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Hi there! This is a test message",
-            to = listOf(receiver.pubKey),
-            subject = "Party Tonight",
-            replyTos = emptyList(),
-            mentions = emptyList(),
-            zapReceiver = null,
-            markAsSensitive = true,
-            zapRaiserAmount = 10000,
-            geohash = null,
-            isDraft = false,
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Hi there! This is a test message",
+                to =
+                    listOf(
+                        PTag(receiver.pubKey),
+                    ),
+            ) {
+                changeSubject("Party Tonight")
+                zapraiser(10000)
+                contentWarning("nsfw")
+            },
         ) {
             SealedRumorEvent.create(
                 event = it,
@@ -170,18 +174,18 @@ class GiftWrapSigningBenchmark {
 
         var wrap: GiftWrapEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Hi there! This is a test message",
-            to = listOf(receiver.pubKey),
-            subject = "Party Tonight",
-            replyTos = emptyList(),
-            mentions = emptyList(),
-            zapReceiver = null,
-            markAsSensitive = true,
-            zapRaiserAmount = 10000,
-            geohash = null,
-            isDraft = false,
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Hi there! This is a test message",
+                to =
+                    listOf(
+                        PTag(receiver.pubKey),
+                    ),
+            ) {
+                changeSubject("Party Tonight")
+                zapraiser(10000)
+                contentWarning("nsfw")
+            },
         ) {
             SealedRumorEvent.create(
                 event = it,

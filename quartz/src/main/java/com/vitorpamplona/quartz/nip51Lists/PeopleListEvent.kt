@@ -21,13 +21,11 @@
 package com.vitorpamplona.quartz.nip51Lists
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
 class PeopleListEvent(
@@ -38,45 +36,6 @@ class PeopleListEvent(
     content: String,
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
-
-    @Transient var publicAndPrivateWordCache: ImmutableSet<String>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (publicAndPrivateUserCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0) +
-            pointerSizeInBytes + (publicAndPrivateWordCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0)
-
-    fun publicAndPrivateWords(
-        signer: NostrSigner,
-        onReady: (ImmutableSet<String>) -> Unit,
-    ) {
-        publicAndPrivateWordCache?.let {
-            onReady(it)
-            return
-        }
-
-        privateTagsOrEmpty(signer) {
-            publicAndPrivateWordCache = filterTagList("word", it)
-            publicAndPrivateWordCache?.let { onReady(it) }
-        }
-    }
-
-    fun publicAndPrivateUsers(
-        signer: NostrSigner,
-        onReady: (ImmutableSet<String>) -> Unit,
-    ) {
-        publicAndPrivateUserCache?.let {
-            onReady(it)
-            return
-        }
-
-        privateTagsOrEmpty(signer) {
-            publicAndPrivateUserCache = filterTagList("p", it)
-            publicAndPrivateUserCache?.let { onReady(it) }
-        }
-    }
-
     @Immutable
     class UsersAndWords(
         val users: Set<String> = setOf(),
@@ -87,24 +46,13 @@ class PeopleListEvent(
         signer: NostrSigner,
         onReady: (UsersAndWords) -> Unit,
     ) {
-        publicAndPrivateUserCache?.let { userList ->
-            publicAndPrivateWordCache?.let { wordList ->
-                onReady(UsersAndWords(userList, wordList))
-                return
-            }
-        }
-
         privateTagsOrEmpty(signer) {
-            publicAndPrivateUserCache = filterTagList("p", it)
-            publicAndPrivateWordCache = filterTagList("word", it)
-
-            publicAndPrivateUserCache?.let { userList ->
-                publicAndPrivateWordCache?.let { wordList ->
-                    onReady(
-                        UsersAndWords(userList, wordList),
-                    )
-                }
-            }
+            onReady(
+                UsersAndWords(
+                    filterTagList("p", it),
+                    filterTagList("word", it),
+                ),
+            )
         }
     }
 
@@ -126,6 +74,8 @@ class PeopleListEvent(
         const val KIND = 30000
         const val BLOCK_LIST_D_TAG = "mute"
         const val ALT = "List of people"
+
+        fun createBlockAddress(pubKey: HexKey) = Address(KIND, pubKey, BLOCK_LIST_D_TAG)
 
         fun blockListFor(pubKeyHex: HexKey): String = "30000:$pubKeyHex:$BLOCK_LIST_D_TAG"
 
@@ -277,65 +227,45 @@ class PeopleListEvent(
         fun removeWord(
             earlierVersion: PeopleListEvent,
             word: String,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "word", word, signer, createdAt, onReady)
 
         fun removeUser(
             earlierVersion: PeopleListEvent,
             pubKeyHex: String,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "p", pubKeyHex, signer, createdAt, onReady)
 
         fun removeTag(
             earlierVersion: PeopleListEvent,
             key: String,
             tag: String,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
         ) {
-            earlierVersion.isTagged(key, tag, isPrivate, signer) { isTagged ->
-                if (isTagged) {
-                    if (isPrivate) {
-                        earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
-                            encryptTags(
-                                privateTags =
-                                    privateTags
-                                        .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                                        .toTypedArray(),
-                                signer = signer,
-                            ) { encryptedTags ->
-                                create(
-                                    content = encryptedTags,
-                                    tags =
-                                        earlierVersion.tags
-                                            .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                                            .toTypedArray(),
-                                    signer = signer,
-                                    createdAt = createdAt,
-                                    onReady = onReady,
-                                )
-                            }
-                        }
-                    } else {
-                        create(
-                            content = earlierVersion.content,
-                            tags =
-                                earlierVersion.tags
-                                    .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                                    .toTypedArray(),
-                            signer = signer,
-                            createdAt = createdAt,
-                            onReady = onReady,
-                        )
-                    }
+            earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
+                encryptTags(
+                    privateTags =
+                        privateTags
+                            .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
+                            .toTypedArray(),
+                    signer = signer,
+                ) { encryptedTags ->
+                    create(
+                        content = encryptedTags,
+                        tags =
+                            earlierVersion.tags
+                                .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
+                                .toTypedArray(),
+                        signer = signer,
+                        createdAt = createdAt,
+                        onReady = onReady,
+                    )
                 }
             }
         }
@@ -351,7 +281,7 @@ class PeopleListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + AltTagSerializer.toTagArray(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)

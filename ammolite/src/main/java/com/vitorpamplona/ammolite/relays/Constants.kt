@@ -40,6 +40,7 @@ object Constants {
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.mom"), read = true, write = true, feedTypes = activeTypesGlobalChats),
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nos.lol"), read = true, write = true, feedTypes = activeTypesGlobalChats),
             // Paid relays
+            RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostrelites.org"), read = true, write = false, feedTypes = activeTypesGlobalChats),
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://nostr.wine"), read = true, write = false, feedTypes = activeTypesGlobalChats),
             // Supporting NIP-50
             RelaySetupInfo(RelayUrlFormatter.normalize("wss://relay.nostr.band"), read = true, write = false, feedTypes = activeTypesSearch),

@@ -21,14 +21,11 @@
 package com.vitorpamplona.quartz.nip51Lists
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent.Companion.FIXED_D_TAG
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
 class MuteListEvent(
@@ -39,45 +36,25 @@ class MuteListEvent(
     content: String,
     sig: HexKey,
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateUserCache: ImmutableSet<HexKey>? = null
-
-    @Transient var publicAndPrivateWordCache: ImmutableSet<String>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (publicAndPrivateUserCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0) +
-            pointerSizeInBytes + (publicAndPrivateWordCache?.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } ?: 0)
-
     override fun dTag() = FIXED_D_TAG
 
     fun publicAndPrivateUsersAndWords(
         signer: NostrSigner,
         onReady: (PeopleListEvent.UsersAndWords) -> Unit,
     ) {
-        publicAndPrivateUserCache?.let { userList ->
-            publicAndPrivateWordCache?.let { wordList ->
-                onReady(PeopleListEvent.UsersAndWords(userList, wordList))
-                return
-            }
-        }
-
         privateTagsOrEmpty(signer) {
-            publicAndPrivateUserCache = filterTagList("p", it)
-            publicAndPrivateWordCache = filterTagList("word", it)
-
-            publicAndPrivateUserCache?.let { userList ->
-                publicAndPrivateWordCache?.let { wordList ->
-                    onReady(
-                        PeopleListEvent.UsersAndWords(userList, wordList),
-                    )
-                }
-            }
+            onReady(
+                PeopleListEvent.UsersAndWords(filterTagList("p", it), filterTagList("word", it)),
+            )
         }
     }
 
     companion object {
         const val KIND = 10000
+        const val FIXED_D_TAG = ""
         const val ALT = "Mute List"
+
+        fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
         fun blockListFor(pubKeyHex: HexKey): String = "10000:$pubKeyHex:"
 
@@ -226,65 +203,45 @@ class MuteListEvent(
         fun removeWord(
             earlierVersion: MuteListEvent,
             word: String,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "word", word, signer, createdAt, onReady)
 
         fun removeUser(
             earlierVersion: MuteListEvent,
             pubKeyHex: String,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "p", pubKeyHex, signer, createdAt, onReady)
 
         fun removeTag(
             earlierVersion: MuteListEvent,
             key: String,
             tag: String,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (MuteListEvent) -> Unit,
         ) {
-            earlierVersion.isTagged(key, tag, isPrivate, signer) { isTagged ->
-                if (isTagged) {
-                    if (isPrivate) {
-                        earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
-                            encryptTags(
-                                privateTags =
-                                    privateTags
-                                        .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                                        .toTypedArray(),
-                                signer = signer,
-                            ) { encryptedTags ->
-                                create(
-                                    content = encryptedTags,
-                                    tags =
-                                        earlierVersion.tags
-                                            .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                                            .toTypedArray(),
-                                    signer = signer,
-                                    createdAt = createdAt,
-                                    onReady = onReady,
-                                )
-                            }
-                        }
-                    } else {
-                        create(
-                            content = earlierVersion.content,
-                            tags =
-                                earlierVersion.tags
-                                    .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                                    .toTypedArray(),
-                            signer = signer,
-                            createdAt = createdAt,
-                            onReady = onReady,
-                        )
-                    }
+            earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
+                encryptTags(
+                    privateTags =
+                        privateTags
+                            .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
+                            .toTypedArray(),
+                    signer = signer,
+                ) { encryptedTags ->
+                    create(
+                        content = encryptedTags,
+                        tags =
+                            earlierVersion.tags
+                                .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
+                                .toTypedArray(),
+                        signer = signer,
+                        createdAt = createdAt,
+                        onReady = onReady,
+                    )
                 }
             }
         }
@@ -300,7 +257,7 @@ class MuteListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + AltTagSerializer.toTagArray(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)

@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.nip57Zaps
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEncryption.Companion.createEncryptionPrivateKey
 import com.vitorpamplona.quartz.nip59GiftWraps.wait1SecondForResult
 import com.vitorpamplona.quartz.utils.Hex

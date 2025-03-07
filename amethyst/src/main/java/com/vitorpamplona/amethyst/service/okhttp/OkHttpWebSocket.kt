@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebSocket
-import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebSocketListener
-import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebsocketBuilderFactory
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilderFactory
 import okhttp3.Request
 import okhttp3.Response
 

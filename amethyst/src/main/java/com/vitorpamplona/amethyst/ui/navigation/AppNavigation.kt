@@ -60,10 +60,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChatroomScreenByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.MessagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
@@ -95,6 +95,16 @@ fun NavBackStackEntry.message(): String? =
         URLDecoder.decode(it, "utf-8")
     }
 
+fun NavBackStackEntry.replyId(): String? =
+    arguments?.getString("replyId")?.let {
+        URLDecoder.decode(it, "utf-8")
+    }
+
+fun NavBackStackEntry.draftId(): String? =
+    arguments?.getString("draftId")?.let {
+        URLDecoder.decode(it, "utf-8")
+    }
+
 @Composable
 fun AppNavigation(
     accountViewModel: AccountViewModel,
@@ -111,7 +121,7 @@ fun AppNavigation(
             exitTransition = { fadeOut(animationSpec = tween(200)) },
         ) {
             composable(Route.Home.route) { HomeScreen(accountViewModel, nav) }
-            composable(Route.Message.route) { ChatroomListScreen(accountViewModel, nav) }
+            composable(Route.Message.route) { MessagesScreen(accountViewModel, nav) }
             composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
             composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
             composable(Route.Notification.route) { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
@@ -228,6 +238,8 @@ fun AppNavigation(
                 ChatroomScreen(
                     roomId = it.id(),
                     draftMessage = it.message(),
+                    replyToNote = it.replyId(),
+                    editFromDraft = it.draftId(),
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -241,7 +253,7 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutHorizontallyToEnd },
             ) {
-                ChatroomScreenByAuthor(it.id(), null, accountViewModel, nav)
+                ChatroomByAuthorScreen(it.id(), null, accountViewModel, nav)
             }
 
             composable(

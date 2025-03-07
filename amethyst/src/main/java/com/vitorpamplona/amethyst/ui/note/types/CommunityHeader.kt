@@ -61,9 +61,9 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.JoinCommunityButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LeaveCommunityButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.NormalTimeAgo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.JoinCommunityButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.LeaveCommunityButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -75,11 +75,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
-import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import java.util.Locale
@@ -196,7 +196,7 @@ fun LongCommunityHeader(
 
     var participantUsers by
         remember(baseNote) {
-            mutableStateOf<ImmutableList<Pair<Participant, User>>>(
+            mutableStateOf<ImmutableList<Pair<ModeratorTag, User>>>(
                 persistentListOf(),
             )
         }
@@ -265,7 +265,7 @@ fun ShortCommunityHeader(
         noteEvent.image()?.let {
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
-                model = it,
+                model = it.imageUrl,
                 contentDescription = stringRes(R.string.profile_image),
                 contentScale = ContentScale.Crop,
                 modifier = HeaderPictureModifier,

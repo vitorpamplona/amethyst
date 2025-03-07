@@ -25,8 +25,8 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.generateId
-import com.vitorpamplona.quartz.nip01Core.hasCorrectIDHash
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.verifyId
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -49,7 +49,7 @@ class EventCmdHasherBenchmark {
 
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue(event.hasCorrectIDHash())
+            assertTrue(event.verifyId())
         }
     }
 
@@ -58,7 +58,7 @@ class EventCmdHasherBenchmark {
         val event = Event.fromJson(largeKind1Event)
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue(event.hasCorrectIDHash())
+            assertTrue(event.verifyId())
         }
     }
 

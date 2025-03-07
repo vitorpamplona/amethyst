@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Zeigen Sie auf den QR Code</string>
-    <string name="show_qr">QR Code anzeigen</string>
+    <string name="point_to_the_qr_code">Auf den QR-Code verweisen</string>
+    <string name="show_qr">QR-Code anzeigen</string>
     <string name="profile_image">Profilbild</string>
     <string name="your_profile_image">Dein Profilbild</string>
-    <string name="scan_qr">QR Code scannen</string>
+    <string name="scan_qr">QR-Code scannen</string>
     <string name="show_anyway">Trotzdem anzeigen</string>
     <string name="post_was_hidden">Dieser Beitrag wurde ausgeblendet, weil er Ihre ausgeblendeten Benutzer oder Wörter erwähnt</string>
     <string name="post_was_flagged_as_inappropriate_by">Der Beitrag wurde als unangemessen gekennzeichnet von</string>
@@ -106,6 +106,7 @@
     <string name="global_feed">Globale Feed</string>
     <string name="search_feed">Such-Feed</string>
     <string name="add_a_relay">Relay hinzufügen</string>
+    <string name="profile_name">Name</string>
     <string name="display_name">Anzeigename</string>
     <string name="my_display_name">Mein Anzeigename</string>
     <string name="my_awesome_name">Ostrich McAwesome</string>
@@ -143,6 +144,7 @@ erie gespeichert</string>
     <string name="conversations">Unterhaltungen</string>
     <string name="notes">Notizen</string>
     <string name="replies">Antworten</string>
+    <string name="mutual">Deine</string>
     <string name="gallery">Galerie</string>
     <string name="follows">"Folgt"</string>
     <string name="reports">"Berichte"</string>
@@ -542,6 +544,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ui_feature_set_type_complete">Fertig</string>
     <string name="ui_feature_set_type_simplified">Vereinfacht</string>
     <string name="ui_feature_set_type_performance">Leistung</string>
+    <string name="gallery_type_classic">Klassisch</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">System</string>
     <string name="light">Hell</string>
     <string name="dark">Dunkel</string>
@@ -556,6 +560,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="automatically_hide_nav_bars_description">Navigationsleisten beim Scrollen ausblenden</string>
     <string name="ui_style">UI-Modus</string>
     <string name="ui_style_description">Wählen Sie den Beitragsstil</string>
+    <string name="gallery_style">Profilgalerie-Stil</string>
+    <string name="gallery_style_description">Galeriestil auswählen</string>
     <string name="load_image">Bild laden</string>
     <string name="spamming_users">Spammer</string>
     <string name="muted_button">Stummgeschaltet. Drücken, um Ton einzuschalten</string>

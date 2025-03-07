@@ -54,11 +54,10 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNIP19
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -79,9 +78,9 @@ fun RenderHighlight(
     DisplayHighlight(
         highlight = noteEvent.quote(),
         context = noteEvent.context(),
-        authorHex = noteEvent.author(),
+        authorHex = noteEvent.pubKey,
         url = noteEvent.inUrl(),
-        postAddress = noteEvent.inPost(),
+        postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
         makeItShort = makeItShort,
         canPreview = canPreview,
@@ -99,7 +98,7 @@ fun DisplayHighlight(
     context: String?,
     authorHex: String?,
     url: String?,
-    postAddress: ATag?,
+    postAddress: Address?,
     postVersion: ETag?,
     makeItShort: Boolean,
     canPreview: Boolean,
@@ -149,7 +148,7 @@ private fun DisplayQuoteAuthor(
     highlightQuote: String,
     authorHex: String?,
     baseUrl: String?,
-    postAddress: ATag?,
+    postAddress: Address?,
     postVersion: ETag?,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -165,7 +164,7 @@ private fun DisplayQuoteAuthor(
     }
 
     var addressable by remember {
-        mutableStateOf<AddressableNote?>(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it.toTag()) })
+        mutableStateOf<AddressableNote?>(postAddress?.let { accountViewModel.getAddressableNoteIfExists(it) })
     }
 
     if (addressable == null && postAddress != null) {
@@ -247,7 +246,7 @@ fun DisplayEntryForNote(
         RenderUserAsClickableText(author, null, nav)
     }
 
-    val noteEvent = noteState?.note?.event as? BaseTextNoteEvent ?: return
+    val noteEvent = noteState?.note?.event as? BaseThreadedEvent ?: return
 
     val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
 
@@ -260,7 +259,7 @@ fun DisplayEntryForNote(
             style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
         )
     } else {
-        DisplayEvent(noteEvent.id, noteEvent.kind, noteEvent.toNIP19(), null, accountViewModel, nav)
+        DisplayEvent(noteEvent.id, noteEvent.kind, note.toNostrUri(), null, accountViewModel, nav)
     }
 }
 

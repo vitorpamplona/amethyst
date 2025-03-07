@@ -1,0 +1,92 @@
+/**
+ * Copyright (c) 2024 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
+
+@Composable
+fun DisplayFollowUnfollowButton(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val isLoggedInFollowingUser by
+        accountViewModel.account
+            .userProfile()
+            .live()
+            .follows
+            .map { it.user.isFollowing(baseUser) }
+            .distinctUntilChanged()
+            .observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
+
+    val isUserFollowingLoggedIn by
+        baseUser
+            .live()
+            .follows
+            .map { it.user.isFollowing(accountViewModel.account.userProfile()) }
+            .distinctUntilChanged()
+            .observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
+
+    if (isLoggedInFollowingUser) {
+        UnfollowButton {
+            if (!accountViewModel.isWriteable()) {
+                accountViewModel.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_unfollow,
+                )
+            } else {
+                accountViewModel.unfollow(baseUser)
+            }
+        }
+    } else {
+        if (isUserFollowingLoggedIn) {
+            FollowButton(R.string.follow_back) {
+                if (!accountViewModel.isWriteable()) {
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_follow,
+                    )
+                } else {
+                    accountViewModel.follow(baseUser)
+                }
+            }
+        } else {
+            FollowButton(R.string.follow) {
+                if (!accountViewModel.isWriteable()) {
+                    accountViewModel.toast(
+                        R.string.read_only_user,
+                        R.string.login_with_a_private_key_to_be_able_to_follow,
+                    )
+                } else {
+                    accountViewModel.follow(baseUser)
+                }
+            }
+        }
+    }
+}

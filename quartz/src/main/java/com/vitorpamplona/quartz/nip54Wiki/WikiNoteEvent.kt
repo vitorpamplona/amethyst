@@ -21,13 +21,15 @@
 package com.vitorpamplona.quartz.nip54Wiki
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -38,13 +40,15 @@ class WikiNoteEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressableEvent {
-    override fun dTag() = tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: ""
+    override fun dTag() = tags.dTag()
 
-    override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
+    override fun aTag(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 
-    override fun addressTag() = ATag.assembleATagId(kind, pubKey, dTag())
+    override fun address() = Address(kind, pubKey, dTag())
+
+    override fun addressTag() = Address.assemble(kind, pubKey, dTag())
 
     fun topics() = hashtags()
 
@@ -77,7 +81,7 @@ class WikiNoteEvent(
             replyTos?.forEach { tags.add(arrayOf("e", it)) }
             mentions?.forEach { tags.add(arrayOf("p", it)) }
             title?.let { tags.add(arrayOf("title", it)) }
-            tags.add(AltTagSerializer.toTagArray("Wiki Post: $title"))
+            tags.add(AltTag.assemble("Wiki Post: $title"))
             signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
         }
     }

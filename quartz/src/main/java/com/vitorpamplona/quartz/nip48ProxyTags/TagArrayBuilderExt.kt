@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.quartz.nip48ProxyTags
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun TagArrayBuilder.proxy(
+fun <T : Event> TagArrayBuilder<T>.proxy(
     id: String,
     pt: ProxyTag.Protocol,
 ) = add(ProxyTag.assemble(id, pt.code))
 
-fun TagArrayBuilder.proxy(
+fun <T : Event> TagArrayBuilder<T>.proxy(
     id: String,
     pt: String,
 ) = add(ProxyTag.assemble(id, pt))
 
-fun TagArrayBuilder.proxy(tag: ProxyTag) = add(tag.toTagArray())
+fun <T : Event> TagArrayBuilder<T>.proxy(tag: ProxyTag) = add(tag.toTagArray())

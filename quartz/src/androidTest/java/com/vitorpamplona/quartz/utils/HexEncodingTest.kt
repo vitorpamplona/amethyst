@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.utils
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.CryptoUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -56,7 +55,7 @@ class HexEncodingTest {
     @Test
     fun testRandoms() {
         for (i in 0..1000) {
-            val bytes = CryptoUtils.privkeyCreate()
+            val bytes = RandomInstance.bytes(32)
             val hex =
                 fr.acinq.secp256k1.Hex
                     .encode(bytes)
@@ -90,7 +89,7 @@ class HexEncodingTest {
     @Test
     fun testRandomsIsHex() {
         for (i in 0..10000) {
-            val bytes = CryptoUtils.privkeyCreate()
+            val bytes = RandomInstance.bytes(32)
             val hex = bytes.toHexString(HexFormat.Default)
             assertTrue(hex, Hex.isHex(hex))
             val hexUpper = bytes.toHexString(HexFormat.UpperCase)
@@ -102,7 +101,7 @@ class HexEncodingTest {
     @Test
     fun testRandomsUppercase() {
         for (i in 0..1000) {
-            val bytes = CryptoUtils.privkeyCreate()
+            val bytes = RandomInstance.bytes(32)
             val hex = bytes.toHexString(HexFormat.UpperCase)
             assertEquals(
                 bytes.toList(),

@@ -112,8 +112,8 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.ammolite.relays.RelayPoolStatus
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 @Composable
@@ -278,7 +278,7 @@ private fun EditStatusBoxes(
 @Composable
 fun StatusEditBar(
     savedStatus: String? = null,
-    tag: ATag? = null,
+    address: Address? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -311,10 +311,10 @@ fun StatusEditBar(
         keyboardActions =
             KeyboardActions(
                 onSend = {
-                    if (tag == null) {
+                    if (address == null) {
                         accountViewModel.createStatus(currentStatus.value)
                     } else {
-                        accountViewModel.updateStatus(tag, currentStatus.value)
+                        accountViewModel.updateStatus(address, currentStatus.value)
                     }
 
                     focusManager.clearFocus(true)
@@ -324,17 +324,17 @@ fun StatusEditBar(
         trailingIcon = {
             if (hasChanged.value) {
                 SendButton {
-                    if (tag == null) {
+                    if (address == null) {
                         accountViewModel.createStatus(currentStatus.value)
                     } else {
-                        accountViewModel.updateStatus(tag, currentStatus.value)
+                        accountViewModel.updateStatus(address, currentStatus.value)
                     }
                     focusManager.clearFocus(true)
                 }
             } else {
-                if (tag != null) {
+                if (address != null) {
                     UserStatusDeleteButton {
-                        accountViewModel.deleteStatus(tag)
+                        accountViewModel.deleteStatus(address)
                         focusManager.clearFocus(true)
                     }
                 }

@@ -21,17 +21,19 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.ImmutableSet
 
 @Immutable
-data class RichTextViewerState(
+class RichTextViewerState(
     val urlSet: ImmutableSet<String>,
     val imagesForPager: ImmutableMap<String, MediaUrlContent>,
     val imageList: ImmutableList<MediaUrlContent>,
     val customEmoji: ImmutableMap<String, String>,
     val paragraphs: ImmutableList<ParagraphState>,
+    val tags: ImmutableListOfLists<String>,
 )
 
 @Immutable
@@ -77,6 +79,10 @@ class CashuSegment(
 
 @Immutable
 class EmailSegment(
+    segment: String,
+) : Segment(segment)
+
+class SecretEmoji(
     segment: String,
 ) : Segment(segment)
 

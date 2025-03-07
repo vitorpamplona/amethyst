@@ -20,35 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
+import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip04Dm.Nip04
-import fr.acinq.secp256k1.Secp256k1
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
+import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import java.util.Base64
 
-class Nip44(
-    secp256k1: Secp256k1,
-    random: SecureRandom,
-    val nip04: Nip04,
-) {
-    public val v1 = Nip44v1(secp256k1, random)
-    public val v2 = Nip44v2(secp256k1, random)
+object Nip44 {
+    val v1 = Nip44v1()
+    val v2 = Nip44v2()
 
     fun clearCache() {
         v1.clearCache()
         v2.clearCache()
     }
-
-    /** NIP 44v2 Utils */
-    fun getSharedSecret(
-        privateKey: ByteArray,
-        pubKey: ByteArray,
-    ): ByteArray = v2.getConversationKey(privateKey, pubKey)
-
-    fun computeSharedSecret(
-        privateKey: ByteArray,
-        pubKey: ByteArray,
-    ): ByteArray = v2.computeConversationKey(privateKey, pubKey)
 
     fun encrypt(
         msg: String,
@@ -73,28 +58,28 @@ class Nip44(
         }
     }
 
-    class EncryptedInfoString(
-        val ciphertext: String,
-        val nonce: String,
-        val v: Int,
-        val mac: String?,
-    )
-
-    fun decryptNIP44FromJackson(
+    private fun decryptNIP44FromJackson(
         json: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): String? {
-        val info = EventMapper.mapper.readValue(json, EncryptedInfoString::class.java)
+        // Ignores if it is not a valid json
+        val info =
+            try {
+                EventMapper.mapper.readValue(json, EncryptedInfoString::class.java)
+            } catch (e: Exception) {
+                Log.e("NIP44", "Unable to parse json $json")
+                return null
+            }
 
         return when (info.v) {
-            Nip04.EncryptedInfo.V -> {
+            EncryptedInfo.V -> {
                 val encryptedInfo =
-                    Nip04.EncryptedInfo(
+                    EncryptedInfo(
                         ciphertext = Base64.getDecoder().decode(info.ciphertext),
                         nonce = Base64.getDecoder().decode(info.nonce),
                     )
-                nip04.decrypt(encryptedInfo, privateKey, pubKey)
+                Nip04.decrypt(encryptedInfo, privateKey, pubKey)
             }
 
             Nip44v1.EncryptedInfo.V -> {
@@ -120,17 +105,24 @@ class Nip44(
         }
     }
 
-    fun decryptNIP44FromBase64(
+    private fun decryptNIP44FromBase64(
         payload: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
     ): String? {
         if (payload.isEmpty()) return null
 
-        val byteArray = Base64.getDecoder().decode(payload)
+        // Ignores if it is not base64
+        val byteArray =
+            try {
+                Base64.getDecoder().decode(payload)
+            } catch (e: Exception) {
+                Log.e("NIP44", "Unable to parse base64 $payload")
+                return null
+            }
 
         return when (byteArray[0].toInt()) {
-            Nip04.EncryptedInfo.V -> nip04.decrypt(payload, privateKey, pubKey)
+            EncryptedInfo.V -> Nip04.decrypt(payload, privateKey, pubKey)
             Nip44v1.EncryptedInfo.V -> v1.decrypt(payload, privateKey, pubKey)
             Nip44v2.EncryptedInfo.V -> v2.decrypt(payload, privateKey, pubKey)
             else -> null

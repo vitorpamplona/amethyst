@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip78AppData
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class AppSpecificDataEvent(
@@ -38,6 +39,11 @@ class AppSpecificDataEvent(
     companion object {
         const val KIND = 30078
         const val ALT = "Arbitrary app data"
+
+        fun createAddress(
+            pubKey: HexKey,
+            dTag: String,
+        ) = Address(KIND, pubKey, dTag)
 
         fun createTag(
             pubkey: HexKey,
@@ -61,7 +67,7 @@ class AppSpecificDataEvent(
 
             val newTags =
                 if (withD.none { it.size > 0 && it[0] == "alt" }) {
-                    withD + AltTagSerializer.toTagArray(ALT)
+                    withD + AltTag.assemble(ALT)
                 } else {
                     withD
                 }

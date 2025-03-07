@@ -20,23 +20,12 @@
  */
 package com.vitorpamplona.quartz.experimental.interactiveStories
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
-import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 
 open class InteractiveStoryBaseEvent(
     id: HexKey,
@@ -47,75 +36,11 @@ open class InteractiveStoryBaseEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    fun title() = tags.firstTagValue("title")
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun summary() = tags.firstTagValue("summary")
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun image() = tags.firstTagValue("image")
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun options() =
-        tags
-            .filter { it.size > 2 && it[0] == "option" }
-            .mapNotNull { ATag.parse(it[2], it.getOrNull(3))?.let { aTag -> StoryOption(it[1], aTag) } }
-
-    companion object {
-        fun generalTags(
-            content: String,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            markAsSensitive: Boolean = false,
-            zapRaiserAmount: Long? = null,
-            geohash: String? = null,
-            imetas: List<IMetaTag>? = null,
-            emojis: List<EmojiUrl>? = null,
-        ): Array<Array<String>> {
-            val tags = mutableListOf<Array<String>>()
-
-            tags.addAll(buildHashtagTags(findHashtags(content)))
-            tags.addAll(buildUrlRefs(findURLs(content)))
-            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
-            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
-
-            if (markAsSensitive) {
-                tags.add(ContentWarningSerializer.toTagArray())
-            }
-
-            geohash?.let { tags.addAll(geohashMipMap(it)) }
-            imetas?.forEach {
-                tags.add(Nip92MediaAttachments.createTag(it))
-            }
-            emojis?.forEach { tags.add(it.toTagArray()) }
-            return tags.toTypedArray()
-        }
-
-        fun makeTags(
-            baseId: String,
-            alt: String,
-            title: String,
-            summary: String? = null,
-            image: String? = null,
-            options: List<StoryOption> = emptyList(),
-        ): Array<Array<String>> =
-            (
-                listOfNotNull(
-                    arrayOf("d", baseId),
-                    arrayOf("title", title),
-                    summary?.let { arrayOf("summary", it) },
-                    image?.let { arrayOf("image", it) },
-                    AltTagSerializer.toTagArray(alt),
-                ) +
-                    options.map {
-                        val relayUrl = it.address.relay
-                        if (relayUrl != null) {
-                            arrayOf("option", it.option, it.address.toTag(), relayUrl)
-                        } else {
-                            arrayOf("option", it.option, it.address.toTag())
-                        }
-                    }
-            ).toTypedArray()
-    }
+    fun options() = tags.mapNotNull(StoryOptionTag::parse)
 }
-
-class StoryOption(
-    val option: String,
-    val address: ATag,
-)

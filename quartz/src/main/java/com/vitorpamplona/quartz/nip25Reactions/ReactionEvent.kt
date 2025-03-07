@@ -21,11 +21,23 @@
 package com.vitorpamplona.quartz.nip25Reactions
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.aTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.emoji
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -36,69 +48,60 @@ class ReactionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun originalPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    fun originalAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    fun originalPost() = tags.mapNotNull(ETag::parseId)
+
+    fun originalAuthor() = tags.mapNotNull(PTag::parseKey)
 
     companion object {
         const val KIND = 7
+        const val LIKE = "+"
+        const val DISLIKE = "-"
 
-        fun createWarning(
-            originalNote: Event,
-            signer: NostrSigner,
+        fun like(
+            reactedTo: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ReactionEvent) -> Unit,
-        ) = create("\u26A0\uFE0F", originalNote, signer, createdAt, onReady)
+        ) = build(LIKE, reactedTo, createdAt)
 
-        fun createLike(
-            originalNote: Event,
-            signer: NostrSigner,
+        fun dislike(
+            reactedTo: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ReactionEvent) -> Unit,
-        ) = create("+", originalNote, signer, createdAt, onReady)
+        ) = build(DISLIKE, reactedTo, createdAt)
 
-        fun create(
-            content: String,
-            originalNote: Event,
-            signer: NostrSigner,
+        fun build(
+            reaction: String,
+            reactedTo: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ReactionEvent) -> Unit,
-        ) {
-            var tags =
-                listOf(
-                    arrayOf("e", originalNote.id),
-                    arrayOf("p", originalNote.pubKey),
-                    arrayOf("k", originalNote.kind.toString()),
-                )
-            if (originalNote is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
+        ) = eventTemplate<ReactionEvent>(KIND, reaction, createdAt) {
+            eTag(reactedTo.toETag())
+            if (reactedTo.event is AddressableEvent) {
+                aTag(reactedTo.event.aTag(reactedTo.relay))
             }
-
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            pTag(reactedTo.event.pubKey, reactedTo.relay)
+            kind(reactedTo.event.kind)
         }
 
-        fun create(
-            emojiUrl: EmojiUrl,
-            originalNote: Event,
-            signer: NostrSigner,
+        fun build(
+            reaction: EmojiUrlTag,
+            reactedTo: EventHintBundle<Event>,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ReactionEvent) -> Unit,
-        ) {
-            val content = ":${emojiUrl.code}:"
-
-            var tags =
-                arrayOf(
-                    arrayOf("e", originalNote.id),
-                    arrayOf("p", originalNote.pubKey),
-                    arrayOf("emoji", emojiUrl.code, emojiUrl.url),
-                )
-
-            if (originalNote is AddressableEvent) {
-                tags += arrayOf(arrayOf("a", originalNote.address().toTag()))
+        ) = eventTemplate<ReactionEvent>(KIND, reaction.toContentEncode(), createdAt) {
+            eTag(reactedTo.toETag())
+            if (reactedTo.event is AddressableEvent) {
+                aTag(reactedTo.event.aTag(reactedTo.relay))
             }
-
-            signer.sign(createdAt, KIND, tags, content, onReady)
+            pTag(reactedTo.event.pubKey, reactedTo.relay)
+            kind(reactedTo.event.kind)
+            emoji(reaction)
         }
     }
 }

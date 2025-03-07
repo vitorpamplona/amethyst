@@ -59,12 +59,14 @@ data class NEvent(
             idHex: String,
             author: String?,
             kind: Int?,
-            relay: String?,
+            vararg relays: String?,
         ): String =
             TlvBuilder()
                 .apply {
                     addHex(TlvTypes.SPECIAL, idHex)
-                    addStringIfNotNull(TlvTypes.RELAY, relay)
+                    relays.forEach {
+                        addStringIfNotNull(TlvTypes.RELAY, it)
+                    }
                     addHexIfNotNull(TlvTypes.AUTHOR, author)
                     addIntIfNotNull(TlvTypes.KIND, kind)
                 }.build()

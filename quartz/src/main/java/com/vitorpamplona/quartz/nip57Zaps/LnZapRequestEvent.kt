@@ -21,16 +21,16 @@
 package com.vitorpamplona.quartz.nip57Zaps
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.zapPolls.POLL_OPTION
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.KeyPair
+import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.mapValues
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
@@ -115,13 +115,13 @@ class LnZapRequestEvent(
                     arrayOf("e", originalNote.id),
                     arrayOf("p", toUserPubHex ?: originalNote.pubKey),
                     arrayOf("relays") + relays,
-                    AltTagSerializer.toTagArray(ALT),
+                    AltTag.assemble(ALT),
                 )
             if (originalNote is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", originalNote.address().toTag()))
+                tags = tags + listOf(arrayOf("a", originalNote.aTag().toTag()))
             }
             if (pollOption != null && pollOption >= 0) {
-                tags = tags + listOf(arrayOf(POLL_OPTION, pollOption.toString()))
+                tags = tags + listOf(arrayOf(PollOptionTag.TAG_NAME, pollOption.toString()))
             }
 
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {

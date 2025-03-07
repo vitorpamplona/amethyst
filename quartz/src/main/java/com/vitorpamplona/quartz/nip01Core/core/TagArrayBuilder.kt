@@ -20,23 +20,75 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-class TagArrayBuilder {
-    val tagList = mutableListOf<Array<String>>()
+class TagArrayBuilder<T : IEvent> {
+    /**
+     * keeps a tag list by tag names to treat tags that must be unique
+     */
+    private val tagList = mutableMapOf<String, MutableList<Tag>>()
 
-    fun add(tag: Array<String>): TagArrayBuilder {
-        tagList.add(tag)
+    fun remove(tagName: String): TagArrayBuilder<T> {
+        tagList.remove(tagName)
         return this
     }
 
-    fun addAll(tag: List<Array<String>>): TagArrayBuilder {
-        tagList.addAll(tag)
+    fun remove(
+        tagName: String,
+        tagValue: String,
+    ): TagArrayBuilder<T> {
+        tagList[tagName]?.removeIf { it.value() == tagValue }
+        if (tagList[tagName]?.isEmpty() == true) {
+            tagList.remove(tagName)
+        }
         return this
     }
 
-    fun addAll(tag: Array<Array<String>>): TagArrayBuilder {
-        tagList.addAll(tag)
+    fun removeIf(
+        predicate: (Tag, Tag) -> Boolean,
+        toCompare: Tag,
+    ): TagArrayBuilder<T> {
+        tagList[toCompare.name()]?.removeIf { predicate(it, toCompare) }
+        if (tagList[toCompare.name()]?.isEmpty() == true) {
+            tagList.remove(toCompare.name())
+        }
         return this
     }
 
-    fun build() = tagList.toTypedArray()
+    fun removeIf(
+        tagName: String,
+        tagValue: String,
+    ): TagArrayBuilder<T> {
+        tagList[tagName]?.removeIf { it.value() == tagValue }
+        if (tagList[tagName]?.isEmpty() == true) {
+            tagList.remove(tagName)
+        }
+        return this
+    }
+
+    fun add(tag: Array<String>): TagArrayBuilder<T> {
+        if (tag.isEmpty() || tag[0].isEmpty()) return this
+        tagList.getOrPut(tag[0], ::mutableListOf).add(tag)
+        return this
+    }
+
+    fun addUnique(tag: Array<String>): TagArrayBuilder<T> {
+        if (tag.isEmpty() || tag[0].isEmpty()) return this
+        tagList[tag[0]] = mutableListOf(tag)
+        return this
+    }
+
+    fun addAll(tag: List<Array<String>>): TagArrayBuilder<T> {
+        tag.forEach(::add)
+        return this
+    }
+
+    fun addAll(tag: Array<Array<String>>): TagArrayBuilder<T> {
+        tag.forEach(::add)
+        return this
+    }
+
+    fun toTypedArray() = tagList.flatMap { it.value }.toTypedArray()
+
+    fun build() = toTypedArray()
 }
+
+inline fun <T : Event> tagArray(initializer: TagArrayBuilder<T>.() -> Unit = {}): TagArray = TagArrayBuilder<T>().apply(initializer).build()

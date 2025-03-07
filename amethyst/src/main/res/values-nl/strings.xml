@@ -539,6 +539,8 @@
     <string name="ui_feature_set_type_complete">Voltooid</string>
     <string name="ui_feature_set_type_simplified">Vereenvoudigd</string>
     <string name="ui_feature_set_type_performance">Prestaties</string>
+    <string name="gallery_type_classic">Klassiek</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">Systeem</string>
     <string name="light">Licht</string>
     <string name="dark">Donker</string>
@@ -553,6 +555,8 @@
     <string name="automatically_hide_nav_bars_description">Navigatie verbergen bij scrollen</string>
     <string name="ui_style">UI modus</string>
     <string name="ui_style_description">Kies de stijl van het bericht</string>
+    <string name="gallery_style">Profielgalerij stijl</string>
+    <string name="gallery_style_description">Kies de galerijstijl</string>
     <string name="load_image">Afbeelding laden</string>
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Geen geluid. Klik om voor geluid</string>

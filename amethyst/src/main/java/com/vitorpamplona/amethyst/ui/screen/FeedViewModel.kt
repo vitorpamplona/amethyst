@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ThreadLevelCalculator
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPrivateFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.BookmarkPublicFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.ChannelFeedFilter
@@ -49,15 +48,10 @@ import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
 import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileAppRecommendationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileBookmarksFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileGalleryFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
 import kotlinx.coroutines.Dispatchers
@@ -111,34 +105,6 @@ class NostrThreadFeedViewModel(
     }
 }
 
-class NostrUserProfileNewThreadsFeedViewModel(
-    val user: User,
-    val account: Account,
-) : FeedViewModel(UserProfileNewThreadFeedFilter(user, account)) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileNewThreadsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileNewThreadsFeedViewModel>): NostrUserProfileNewThreadsFeedViewModel =
-            NostrUserProfileNewThreadsFeedViewModel(user, account)
-                as NostrUserProfileNewThreadsFeedViewModel
-    }
-}
-
-class NostrUserProfileConversationsFeedViewModel(
-    val user: User,
-    val account: Account,
-) : FeedViewModel(UserProfileConversationsFeedFilter(user, account)) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileConversationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileConversationsFeedViewModel>): NostrUserProfileConversationsFeedViewModel =
-            NostrUserProfileConversationsFeedViewModel(user, account)
-                as NostrUserProfileConversationsFeedViewModel
-    }
-}
-
 class NostrHashtagFeedViewModel(
     val hashtag: String,
     val account: Account,
@@ -172,44 +138,6 @@ class NostrCommunityFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         override fun <NostrCommunityFeedViewModel : ViewModel> create(modelClass: Class<NostrCommunityFeedViewModel>): NostrCommunityFeedViewModel = NostrCommunityFeedViewModel(note, account) as NostrCommunityFeedViewModel
-    }
-}
-
-class NostrUserProfileReportFeedViewModel(
-    val user: User,
-) : FeedViewModel(UserProfileReportsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileReportFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileReportFeedViewModel>): NostrUserProfileReportFeedViewModel = NostrUserProfileReportFeedViewModel(user) as NostrUserProfileReportFeedViewModel
-    }
-}
-
-class NostrUserProfileGalleryFeedViewModel(
-    val user: User,
-    val account: Account,
-) : FeedViewModel(UserProfileGalleryFeedFilter(user, account)) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileGalleryFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileGalleryFeedViewModel>): NostrUserProfileGalleryFeedViewModel =
-            NostrUserProfileGalleryFeedViewModel(user, account)
-                as NostrUserProfileGalleryFeedViewModel
-    }
-}
-
-class NostrUserProfileBookmarksFeedViewModel(
-    val user: User,
-    val account: Account,
-) : FeedViewModel(UserProfileBookmarksFeedFilter(user, account)) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileBookmarksFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileBookmarksFeedViewModel>): NostrUserProfileBookmarksFeedViewModel =
-            NostrUserProfileBookmarksFeedViewModel(user, account)
-                as NostrUserProfileBookmarksFeedViewModel
     }
 }
 
@@ -268,18 +196,6 @@ class NostrDraftEventsFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         override fun <NostrDraftEventsFeedViewModel : ViewModel> create(modelClass: Class<NostrDraftEventsFeedViewModel>): NostrDraftEventsFeedViewModel = NostrDraftEventsFeedViewModel(account) as NostrDraftEventsFeedViewModel
-    }
-}
-
-class NostrUserAppRecommendationsFeedViewModel(
-    val user: User,
-) : FeedViewModel(UserProfileAppRecommendationsFeedFilter(user)) {
-    class Factory(
-        val user: User,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserAppRecommendationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserAppRecommendationsFeedViewModel>): NostrUserAppRecommendationsFeedViewModel =
-            NostrUserAppRecommendationsFeedViewModel(user)
-                as NostrUserAppRecommendationsFeedViewModel
     }
 }
 

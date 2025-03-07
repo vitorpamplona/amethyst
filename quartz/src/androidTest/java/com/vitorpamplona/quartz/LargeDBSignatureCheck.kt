@@ -24,8 +24,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hasValidSignature
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.verify
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -48,7 +48,7 @@ class LargeDBSignatureCheck {
 
             var counter = 0
             eventArray.forEach {
-                assertTrue(it.hasValidSignature())
+                assertTrue(it.verify())
                 counter++
             }
 
@@ -69,7 +69,7 @@ class LargeDBSignatureCheck {
             var counter = 0
             eventArray.forEach {
                 if (it.sig != "") {
-                    assertTrue(it.hasValidSignature())
+                    assertTrue(it.verify())
                 }
                 counter++
             }

@@ -23,6 +23,10 @@ package com.vitorpamplona.quartz.nip10Notes.content
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import java.util.regex.Pattern
 
+/**
+ * this is the old way of linking an e tag on the content by [index] the tag
+ */
+
 val tagSearch = Pattern.compile("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 /**

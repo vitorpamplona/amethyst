@@ -34,13 +34,12 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
-import com.vitorpamplona.quartz.nip96FileStorage.AuthToken
-import com.vitorpamplona.quartz.nip96FileStorage.Nip96Result
-import com.vitorpamplona.quartz.nip96FileStorage.PartialEvent
-import com.vitorpamplona.quartz.nip96FileStorage.ResultParser
-import com.vitorpamplona.quartz.nip96FileStorage.ServerInfo
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip96FileStorage.actions.DeleteResult
+import com.vitorpamplona.quartz.nip96FileStorage.actions.PartialEvent
+import com.vitorpamplona.quartz.nip96FileStorage.actions.UploadResult
+import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
@@ -153,7 +152,7 @@ class Nip96Uploader {
                 .addFormDataPart("size", length.toString())
                 .also { body ->
                     alt?.ifBlank { null }?.let { body.addFormDataPart("alt", it) }
-                    sensitiveContent?.let { body.addFormDataPart(CONTENT_WARNING, it) }
+                    sensitiveContent?.let { body.addFormDataPart(ContentWarningTag.TAG_NAME, it) }
                     contentType?.let { body.addFormDataPart("content_type", it) }
                 }.addFormDataPart(
                     "file",
@@ -169,7 +168,7 @@ class Nip96Uploader {
                     },
                 ).build()
 
-        httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", AuthToken().encodeAuth(it)) }
+        httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", it.toAuthToken()) }
 
         requestBuilder
             .addHeader("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
@@ -181,7 +180,7 @@ class Nip96Uploader {
         client.newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 response.body.use { body ->
-                    val result = ResultParser().parseResults(body.string())
+                    val result = UploadResult.parse(body.string())
                     if (!result.processingUrl.isNullOrBlank()) {
                         return waitProcessing(result, server, forceProxy, onProgress)
                     } else if (result.status == "success") {
@@ -244,7 +243,7 @@ class Nip96Uploader {
                 ?.firstOrNull { it.size > 1 && it[0] == "dim" }
                 ?.get(1)
                 ?.ifBlank { null }
-                ?.let { Dimension.parse(it) }
+                ?.let { DimensionTag.parse(it) }
         val magnet =
             nip96.tags
                 ?.firstOrNull { it.size > 1 && it[0] == "magnet" }
@@ -265,7 +264,7 @@ class Nip96Uploader {
         contentType: String?,
         server: ServerInfo,
         forceProxy: (String) -> Boolean,
-        httpAuth: (String, String, ByteArray?) -> HTTPAuthorizationEvent,
+        httpAuth: (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
     ): Boolean {
         val extension =
@@ -275,7 +274,7 @@ class Nip96Uploader {
 
         val requestBuilder = Request.Builder()
 
-        httpAuth(server.apiUrl, "DELETE", null)?.let { requestBuilder.addHeader("Authorization", AuthToken().encodeAuth(it)) }
+        httpAuth(server.apiUrl, "DELETE", null)?.let { requestBuilder.addHeader("Authorization", it.toAuthToken()) }
 
         val request =
             requestBuilder
@@ -287,7 +286,7 @@ class Nip96Uploader {
         client.newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 response.body.use { body ->
-                    val result = ResultParser().parseDeleteResults(body.string())
+                    val result = DeleteResult.parse(body.string())
                     return result.status == "success"
                 }
             } else {
@@ -302,7 +301,7 @@ class Nip96Uploader {
     }
 
     private suspend fun waitProcessing(
-        result: Nip96Result,
+        result: UploadResult,
         server: ServerInfo,
         forceProxy: (String) -> Boolean,
         onProgress: (percentage: Float) -> Unit,
@@ -324,7 +323,7 @@ class Nip96Uploader {
             val client = HttpClientManager.getHttpClient(forceProxy(procUrl))
             client.newCall(request).execute().use {
                 if (it.isSuccessful) {
-                    it.body.use { currentResult = ResultParser().parseResults(it.string()) }
+                    it.body.use { currentResult = UploadResult.parse(it.string()) }
                 }
             }
 

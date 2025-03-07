@@ -91,4 +91,19 @@ class HexBenchmark {
     fun isHex() {
         r.measureRepeated { Hex.isHex(hex) }
     }
+
+    @Test
+    fun newIsHex() {
+        val isHexChar =
+            BooleanArray(256).apply {
+                "0123456789abcdefABCDEF".forEach { this[it.code] = true }
+            }
+
+        r.measureRepeated {
+            for (c in hex.indices) {
+                if (!isHexChar[hex[c].code]) return@measureRepeated
+            }
+            return@measureRepeated
+        }
+    }
 }

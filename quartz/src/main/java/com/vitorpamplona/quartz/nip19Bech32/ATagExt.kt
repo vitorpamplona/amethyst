@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.utils.Hex
 
 fun ATag.Companion.isATag(key: String): Boolean = key.startsWith("naddr1") || key.contains(":")
 
-fun ATag.Companion.parse(
+fun ATag.Companion.parseAny(
     address: String,
     relay: String?,
 ): ATag? =

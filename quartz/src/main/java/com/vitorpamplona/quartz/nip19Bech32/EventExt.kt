@@ -25,9 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 
-fun Event.toNIP19(): String =
+fun Event.toNIP19(relayHint: String? = null): String =
     if (this is AddressableEvent) {
-        ATag(kind, pubKey, dTag(), null).toNAddr()
+        ATag(kind, pubKey, dTag(), relayHint).toNAddr()
     } else {
-        NEvent.create(id, pubKey, kind, null)
+        NEvent.create(id, pubKey, kind, relayHint)
     }

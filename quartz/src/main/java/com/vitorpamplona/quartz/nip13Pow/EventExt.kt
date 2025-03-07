@@ -21,8 +21,13 @@
 package com.vitorpamplona.quartz.nip13Pow
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 
-fun Event.pow() = PoWRankProcessor.compute(id, tags.commitedPoW())
+fun Event.pow() = PoWRankEvaluator.compute(id, tags.commitedPoW())
+
+fun Event.powNonce() = tags.powTag()
+
+fun Event.powNonces() = tags.powTags()
 
 fun Event.hasPoWTag() = tags.hasPoW()
 
@@ -34,7 +39,7 @@ fun Event.hasPoWTag() = tags.hasPoW()
 fun Event.strongPoWOrNull(min: Int = 20): Int? {
     val commitment = tags.commitedPoW()
     if (commitment != null) {
-        val pow = PoWRankProcessor.compute(id, commitment)
+        val pow = PoWRankEvaluator.compute(id, commitment)
         if (pow >= min) {
             return pow
         }

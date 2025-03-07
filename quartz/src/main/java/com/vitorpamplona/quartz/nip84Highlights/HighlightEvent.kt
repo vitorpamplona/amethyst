@@ -21,14 +21,17 @@
 package com.vitorpamplona.quartz.nip84Highlights
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.firstTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.events.firstTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.firstTaggedUser
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,16 +42,19 @@ class HighlightEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun inUrl() = tags.firstTagValue("r")
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    RootScope {
+    fun inUrl() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 
     fun author() = firstTaggedUser()
 
     fun quote() = content
 
-    fun context() = tags.firstTagValue("context")
+    fun context() = tags.firstNotNullOfOrNull(ContextTag::parse)
 
-    fun inPost() = firstTaggedAddress()
+    fun inPost() = firstTaggedATag()
+
+    fun inPostAddress() = firstTaggedAddress()
 
     fun inPostVersion() = firstTaggedEvent()
 
@@ -62,7 +68,7 @@ class HighlightEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (HighlightEvent) -> Unit,
         ) {
-            signer.sign(createdAt, KIND, arrayOf(AltTagSerializer.toTagArray(ALT)), msg, onReady)
+            signer.sign(createdAt, KIND, arrayOf(AltTag.assemble(ALT)), msg, onReady)
         }
     }
 }

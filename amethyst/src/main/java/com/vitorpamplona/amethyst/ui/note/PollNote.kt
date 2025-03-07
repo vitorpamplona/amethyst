@@ -97,7 +97,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -124,7 +124,7 @@ fun PollNotePreview() {
                     arrayOf("poll_option", "2", "OP3"),
                     arrayOf("value_maximum", "2"),
                     arrayOf("value_minimum", "2"),
-                    AltTagSerializer.toTagArray("Poll event"),
+                    arrayOf("alt", "Poll event"),
                 ),
         )
 
@@ -196,7 +196,7 @@ fun PollNotePreview2() {
                     arrayOf("poll_option", "1", "Pesquisa em ingles"),
                     arrayOf("value_maximum", "2"),
                     arrayOf("value_minimum", "2"),
-                    AltTagSerializer.toTagArray("Poll event"),
+                    AltTag.assemble("Poll event"),
                 ),
         )
 
@@ -627,7 +627,11 @@ fun ZapVote(
                 title = toast.title,
                 textContent = toast.msg,
                 onClickStartMessage = {
-                    baseNote.author?.let { nav.nav(routeToMessage(it, toast.msg, accountViewModel)) }
+                    baseNote.author?.let {
+                        nav.nav {
+                            routeToMessage(it, toast.msg, accountViewModel = accountViewModel)
+                        }
+                    }
                 },
                 onDismiss = { showErrorMessageDialog = null },
             )

@@ -21,12 +21,21 @@
 package com.vitorpamplona.quartz.nip75ZapGoals
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.references.reference
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip75ZapGoals.tags.AmountTag
+import com.vitorpamplona.quartz.nip75ZapGoals.tags.ClosedAtTag
+import com.vitorpamplona.quartz.nip75ZapGoals.tags.RelayListTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -38,47 +47,48 @@ class GoalEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun topics() = hashtags()
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+
+    fun closedAt() = tags.firstNotNullOfOrNull(ClosedAtTag::parse)
+
+    fun amount() = tags.firstNotNullOfOrNull(AmountTag::parse)
+
+    fun relays() = tags.firstNotNullOfOrNull(RelayListTag::parse)
+
     companion object {
         const val KIND = 9041
-        const val ALT = "Zap Goal"
+        const val ALT_DESCRIPTION = "Zap Goal"
 
-        private const val SUMMARY = "summary"
-        private const val CLOSED_AT = "closed_at"
-        private const val IMAGE = "image"
-        private const val AMOUNT = "amount"
-
-        fun create(
+        fun build(
             description: String,
             amount: Long,
-            relays: Set<String>,
+            relays: List<String>,
             closedAt: Long? = null,
             image: String? = null,
             summary: String? = null,
             websiteUrl: String? = null,
-            linkedEvent: Event? = null,
-            signer: NostrSigner,
+            linkedEvent: EventHintBundle<Event>? = null,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GoalEvent) -> Unit,
-        ) {
-            val tags =
-                mutableListOf(
-                    arrayOf(AMOUNT, amount.toString()),
-                    arrayOf("relays") + relays,
-                    AltTagSerializer.toTagArray(ALT),
-                )
-
-            if (linkedEvent is AddressableEvent) {
-                tags.add(arrayOf("a", linkedEvent.address().toTag()))
-            } else if (linkedEvent is Event) {
-                tags.add(arrayOf("e", linkedEvent.id))
+            initializer: TagArrayBuilder<GoalEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            amount(amount)
+            relays(relays)
+            closedAt?.let { closedAt(it) }
+            image?.let { image(it) }
+            summary?.let { summary(it) }
+            websiteUrl?.let { reference(it) }
+            linkedEvent?.let {
+                if (it.event is AddressableEvent) {
+                    linked(it.toATag())
+                }
+                linked(it.toETag())
             }
-
-            closedAt?.let { tags.add(arrayOf(CLOSED_AT, it.toString())) }
-            summary?.let { tags.add(arrayOf(SUMMARY, it)) }
-            image?.let { tags.add(arrayOf(IMAGE, it)) }
-            websiteUrl?.let { tags.add(arrayOf("r", it)) }
-
-            signer.sign(createdAt, KIND, tags.toTypedArray(), description, onReady)
+            alt(ALT_DESCRIPTION)
+            initializer()
         }
     }
 }

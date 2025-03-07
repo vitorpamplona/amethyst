@@ -21,17 +21,18 @@
 package com.vitorpamplona.quartz.nip59GiftWraps
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.KeyPair
 import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Hex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -54,9 +55,11 @@ class GiftWrapEventTest {
         // Requires 3 tests
         val countDownLatch = CountDownLatch(3)
 
-        NIP17Factory().createMsgNIP17(
-            message,
-            listOf(receiver.pubKey),
+        NIP17Factory().createMessageNIP17(
+            ChatMessageEvent.build(
+                message,
+                listOf(PTag(receiver.pubKey, null)),
+            ),
             sender,
         ) { events ->
             countDownLatch.countDown()
@@ -114,9 +117,11 @@ class GiftWrapEventTest {
 
         val countDownLatch = CountDownLatch(receivers.size + 2)
 
-        NIP17Factory().createMsgNIP17(
-            message,
-            receivers.map { it.pubKey },
+        NIP17Factory().createMessageNIP17(
+            ChatMessageEvent.build(
+                message,
+                receivers.map { PTag(it.pubKey, null) },
+            ),
             sender,
         ) { events ->
             countDownLatch.countDown()
@@ -167,11 +172,11 @@ class GiftWrapEventTest {
         var giftWrapEventToSender: GiftWrapEvent? = null
         var giftWrapEventToReceiver: GiftWrapEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Hi There!",
-            isDraft = false,
-            to = listOf(receiver.pubKey),
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Hi There!",
+                to = listOf(PTag(receiver.pubKey, null)),
+            ),
         ) { senderMessage ->
             // MsgFor the Receiver
 
@@ -306,11 +311,11 @@ class GiftWrapEventTest {
         var giftWrapEventToReceiverA: GiftWrapEvent? = null
         var giftWrapEventToReceiverB: GiftWrapEvent? = null
 
-        ChatMessageEvent.create(
-            msg = "Who is going to the party tonight?",
-            isDraft = false,
-            to = listOf(receiverA.pubKey, receiverB.pubKey),
-            signer = sender,
+        sender.sign(
+            ChatMessageEvent.build(
+                msg = "Who is going to the party tonight?",
+                to = listOf(PTag(receiverA.pubKey), PTag(receiverB.pubKey)),
+            ),
         ) { senderMessage ->
             SealedRumorEvent.create(
                 event = senderMessage,

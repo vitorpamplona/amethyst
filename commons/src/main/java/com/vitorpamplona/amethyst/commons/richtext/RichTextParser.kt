@@ -24,13 +24,18 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip36SensitiveContent.CONTENT_WARNING
-import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -46,14 +51,15 @@ import kotlin.coroutines.cancellation.CancellationException
 class RichTextParser {
     fun createMediaContent(
         fullUrl: String,
-        eventTags: ImmutableListOfLists<String>,
+        eventTags: Map<String, IMetaTag>,
         description: String?,
         callbackUri: String? = null,
     ): MediaUrlContent? {
         val frags = Nip54InlineMetadata().parse(fullUrl)
-        val tags = Nip92MediaAttachments.parse(fullUrl, eventTags.lists)
 
-        val contentType = frags[FileHeaderEvent.MIME_TYPE] ?: tags[FileHeaderEvent.MIME_TYPE]
+        val tags = eventTags.get(fullUrl)?.properties ?: emptyMap()
+
+        val contentType = frags[MimeTypeTag.TAG_NAME] ?: tags[MimeTypeTag.TAG_NAME]?.firstOrNull()
 
         val isImage: Boolean
         val isVideo: Boolean
@@ -73,22 +79,22 @@ class RichTextParser {
         return if (isImage) {
             MediaUrlImage(
                 url = fullUrl,
-                description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
-                hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
-                blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
-                dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
-                contentWarning = frags[CONTENT_WARNING] ?: tags[CONTENT_WARNING],
+                description = description ?: frags[AltTag.TAG_NAME] ?: tags[AltTag.TAG_NAME]?.firstOrNull(),
+                hash = frags[HashSha256Tag.TAG_NAME] ?: tags[HashSha256Tag.TAG_NAME]?.firstOrNull(),
+                blurhash = frags[BlurhashTag.TAG_NAME] ?: tags[BlurhashTag.TAG_NAME]?.firstOrNull(),
+                dim = frags[DimensionTag.TAG_NAME]?.let { DimensionTag.parse(it) } ?: tags[DimensionTag.TAG_NAME]?.firstOrNull()?.let { DimensionTag.parse(it) },
+                contentWarning = frags[ContentWarningTag.TAG_NAME] ?: tags[ContentWarningTag.TAG_NAME]?.firstOrNull(),
                 uri = callbackUri,
                 mimeType = contentType,
             )
         } else if (isVideo) {
             MediaUrlVideo(
                 url = fullUrl,
-                description = description ?: frags[FileHeaderEvent.ALT] ?: tags[FileHeaderEvent.ALT],
-                hash = frags[FileHeaderEvent.HASH] ?: tags[FileHeaderEvent.HASH],
-                blurhash = frags[FileHeaderEvent.BLUR_HASH] ?: tags[FileHeaderEvent.BLUR_HASH],
-                dim = frags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) } ?: tags[FileHeaderEvent.DIMENSION]?.let { Dimension.parse(it) },
-                contentWarning = frags[CONTENT_WARNING] ?: tags[CONTENT_WARNING],
+                description = description ?: frags[AltTag.TAG_NAME] ?: tags[AltTag.TAG_NAME]?.firstOrNull(),
+                hash = frags[HashSha256Tag.TAG_NAME] ?: tags[HashSha256Tag.TAG_NAME]?.firstOrNull(),
+                blurhash = frags[BlurhashTag.TAG_NAME] ?: tags[BlurhashTag.TAG_NAME]?.firstOrNull(),
+                dim = frags[DimensionTag.TAG_NAME]?.let { DimensionTag.parse(it) } ?: tags[DimensionTag.TAG_NAME]?.firstOrNull()?.let { DimensionTag.parse(it) },
+                contentWarning = frags[ContentWarningTag.TAG_NAME] ?: tags[ContentWarningTag.TAG_NAME]?.firstOrNull(),
                 uri = callbackUri,
                 mimeType = contentType,
             )
@@ -131,10 +137,11 @@ class RichTextParser {
         tags: ImmutableListOfLists<String>,
         callbackUri: String?,
     ): RichTextViewerState {
+        val imetas = tags.lists.imetasByUrl()
         val urlSet = parseValidUrls(content)
 
         val imagesForPager =
-            urlSet.mapNotNull { fullUrl -> createMediaContent(fullUrl, tags, content, callbackUri) }.associateBy { it.url }
+            urlSet.mapNotNull { fullUrl -> createMediaContent(fullUrl, imetas, content, callbackUri) }.associateBy { it.url }
 
         val emojiMap = CustomEmoji.createEmojiMap(tags)
 
@@ -145,7 +152,7 @@ class RichTextParser {
         val imagesForPagerWithBase64 =
             imagesForPager +
                 base64Images
-                    .mapNotNull { createMediaContent(it.segmentText, tags, content, callbackUri) }
+                    .mapNotNull { createMediaContent(it.segmentText, emptyMap(), content, callbackUri) }
                     .associateBy { it.url }
 
         return RichTextViewerState(
@@ -154,6 +161,7 @@ class RichTextParser {
             imagesForPagerWithBase64.values.toImmutableList(),
             emojiMap.toImmutableMap(),
             segments,
+            tags,
         )
     }
 
@@ -248,6 +256,8 @@ class RichTextParser {
         if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
 
         if (word.startsWith("#")) return parseHash(word, tags)
+
+        if (EmojiCoder.isCoded(word)) return SecretEmoji(word)
 
         if (word.contains("@")) {
             if (Patterns.EMAIL_ADDRESS.matcher(word).matches()) return EmailSegment(word)

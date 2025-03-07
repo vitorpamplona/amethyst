@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.nip06KeyDerivation
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.RandomInstance
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.fail
@@ -69,7 +69,7 @@ class Bip39MnemonicsTest {
     fun validateMnemonicsValid() {
         for (i in 0..99) {
             for (length in listOf(16, 20, 24, 28, 32, 36, 40)) {
-                val mnemonics = Bip39Mnemonics.toMnemonics(CryptoUtils.random(length))
+                val mnemonics = Bip39Mnemonics.toMnemonics(RandomInstance.bytes(length))
                 Bip39Mnemonics.validate(mnemonics)
             }
         }

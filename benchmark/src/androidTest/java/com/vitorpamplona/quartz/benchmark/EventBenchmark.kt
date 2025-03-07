@@ -24,8 +24,10 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.hasValidSignature
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.verify
+import com.vitorpamplona.quartz.nip01Core.verifyId
+import com.vitorpamplona.quartz.nip01Core.verifySignature
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -43,6 +45,15 @@ class EventBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
+    fun parseComplete() {
+        benchmarkRule.measureRepeated {
+            val tree = EventMapper.mapper.readTree(reqResponseEvent)
+            val event = EventMapper.fromJson(tree[2])
+            assertTrue(event.verify())
+        }
+    }
+
+    @Test
     fun parseREQString() {
         benchmarkRule.measureRepeated { EventMapper.mapper.readTree(reqResponseEvent) }
     }
@@ -55,21 +66,40 @@ class EventBenchmark {
     }
 
     @Test
+    fun checkId() {
+        val msg = EventMapper.mapper.readTree(reqResponseEvent)
+        val event = EventMapper.fromJson(msg[2])
+        benchmarkRule.measureRepeated {
+            // Should pass
+            assertTrue(event.verifyId())
+        }
+    }
+
+    @Test
     fun checkSignature() {
         val msg = EventMapper.mapper.readTree(reqResponseEvent)
         val event = EventMapper.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
-            assertTrue(event.hasValidSignature())
+            assertTrue(event.verifySignature())
         }
     }
 
     @Test
-    fun eventFactoryPerformanceTest() {
+    fun eventFactoryKind1PerformanceTest() {
         val now = TimeUtils.now()
         val tags = arrayOf(arrayOf(""))
         benchmarkRule.measureRepeated {
             EventFactory.create("id", "pubkey", now, 1, tags, "content", "sig")
+        }
+    }
+
+    @Test
+    fun eventFactoryKind30818PerformanceTest() {
+        val now = TimeUtils.now()
+        val tags = arrayOf(arrayOf(""))
+        benchmarkRule.measureRepeated {
+            EventFactory.create("id", "pubkey", now, 30818, tags, "content", "sig")
         }
     }
 }

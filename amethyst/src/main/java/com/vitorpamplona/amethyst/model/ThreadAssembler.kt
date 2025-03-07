@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import kotlinx.collections.immutable.ImmutableSet
@@ -132,7 +132,7 @@ class ThreadAssembler {
 }
 
 class OnlyLatestVersionSet : MutableSet<Note> {
-    val map = hashMapOf<ATag, Long>()
+    val map = hashMapOf<Address, Long>()
     val set = hashSetOf<Note>()
 
     override fun add(element: Note): Boolean {
@@ -149,7 +149,7 @@ class OnlyLatestVersionSet : MutableSet<Note> {
     }
 
     private fun innerAdd(
-        address: ATag,
+        address: Address,
         element: Note,
         loadedCreatedAt: Long,
     ): Boolean {

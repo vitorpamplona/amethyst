@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip39ExtIdentities
 class TelegramIdentity(
     identity: String,
     proof: String,
-) : IdentityClaim(identity, proof) {
+) : IdentityClaimTag(identity, proof) {
     override fun toProofUrl() = "https://t.me/$proof"
 
     override fun platform() = platform

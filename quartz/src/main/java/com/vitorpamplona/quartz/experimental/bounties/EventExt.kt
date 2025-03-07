@@ -21,7 +21,15 @@
 package com.vitorpamplona.quartz.experimental.bounties
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstMapTagged
 import java.math.BigDecimal
 
-fun Event.getReward(): BigDecimal? = tags.firstMapTagged("reward") { runCatching { BigDecimal(it[1]) }.getOrNull() }
+fun Event.bountyBaseReward(): BigDecimal? = tags.bountyBaseReward()
+
+fun Event.hasAdditionalReward(): Boolean = tags.hasAdditionalReward()
+
+fun Event.addedRewardValue(): BigDecimal? =
+    if (hasAdditionalReward()) {
+        runCatching { BigDecimal(content) }.getOrNull()
+    } else {
+        null
+    }

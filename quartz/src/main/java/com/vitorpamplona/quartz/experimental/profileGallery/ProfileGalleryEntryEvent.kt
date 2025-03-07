@@ -21,12 +21,26 @@
 package com.vitorpamplona.quartz.experimental.profileGallery
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -38,97 +52,54 @@ class ProfileGalleryEntryEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
+    fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 
-    fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }
+    fun urls() = tags.mapNotNull(UrlTag::parse)
 
-    fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
+    fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
 
-    fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
+    fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
-    fun size() = tags.firstOrNull { it.size > 1 && it[0] == FILE_SIZE }?.get(1)
+    fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
 
-    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
+    fun dimensions() = tags.firstNotNullOfOrNull(DimensionTag::parse)
 
-    fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
+    fun magnetURI() = tags.firstNotNullOfOrNull(MagnetTag::parse)
 
-    fun magnetURI() = tags.firstOrNull { it.size > 1 && it[0] == MAGNET_URI }?.get(1)
+    fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
 
-    fun torrentInfoHash() = tags.firstOrNull { it.size > 1 && it[0] == TORRENT_INFOHASH }?.get(1)
+    fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
 
-    fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
+    fun thumb() = tags.firstNotNullOfOrNull(ThumbTag::parse)
 
-    fun fromEvent() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun service() = tags.firstNotNullOfOrNull(ServiceTag::parse)
 
-    fun hasFromEvent() = tags.any { it.size > 1 && it[0] == "e" }
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun isOneOf(mimeTypes: Set<String>) = tags.any { it.size > 1 && it[0] == MIME_TYPE && mimeTypes.contains(it[1]) }
+    fun fallback() = tags.firstNotNullOfOrNull(FallbackTag::parse)
+
+    fun hasUrl() = tags.any(UrlTag::isTag)
+
+    fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
+
+    fun fromEvent() = tags.firstNotNullOfOrNull(ETag::parseId)
+
+    fun hasFromEvent() = tags.any(ETag::isTagged)
 
     companion object {
         const val KIND = 1163
         const val ALT_DESCRIPTION = "Profile Gallery Entry"
 
-        const val URL = "url"
-        const val ENCRYPTION_KEY = "aes-256-gcm"
-        const val MIME_TYPE = "m"
-        const val FILE_SIZE = "size"
-        const val DIMENSION = "dim"
-        const val HASH = "x"
-        const val MAGNET_URI = "magnet"
-        const val TORRENT_INFOHASH = "i"
-        const val BLUR_HASH = "blurhash"
-        const val ORIGINAL_HASH = "ox"
-        const val ALT = "alt"
-
-        fun create(
+        fun build(
             url: String,
-            eventid: String? = null,
-            relayhint: String? = null,
-            magnetUri: String? = null,
-            mimeType: String? = null,
-            alt: String? = null,
-            hash: String? = null,
-            size: String? = null,
-            dimensions: Dimension? = null,
-            blurhash: String? = null,
-            originalHash: String? = null,
-            magnetURI: String? = null,
-            torrentInfoHash: String? = null,
-            sensitiveContent: Boolean? = null,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ProfileGalleryEntryEvent) -> Unit,
-        ) {
-            var etag = eventid?.let { arrayOf("e", it) }
-            relayhint?.let { etag = etag?.plus(it) }
-
-            val tags =
-                listOfNotNull(
-                    arrayOf(URL, url),
-                    eventid?.let { etag },
-                    magnetUri?.let { arrayOf(MAGNET_URI, it) },
-                    mimeType?.let { arrayOf(MIME_TYPE, it) },
-                    alt?.ifBlank { null }?.let { arrayOf(ALT, it) } ?: AltTagSerializer.toTagArray(ALT_DESCRIPTION),
-                    hash?.let { arrayOf(HASH, it) },
-                    size?.let { arrayOf(FILE_SIZE, it) },
-                    dimensions?.let { arrayOf(DIMENSION, it.toString()) },
-                    blurhash?.let { arrayOf(BLUR_HASH, it) },
-                    originalHash?.let { arrayOf(ORIGINAL_HASH, it) },
-                    magnetURI?.let { arrayOf(MAGNET_URI, it) },
-                    torrentInfoHash?.let { arrayOf(TORRENT_INFOHASH, it) },
-                    sensitiveContent?.let {
-                        if (it) {
-                            ContentWarningSerializer.toTagArray()
-                        } else {
-                            null
-                        }
-                    },
-                )
-
-            val content = alt ?: ""
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            initializer: TagArrayBuilder<ProfileGalleryEntryEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            url(url)
+            alt(ALT_DESCRIPTION)
+            initializer()
         }
     }
 }

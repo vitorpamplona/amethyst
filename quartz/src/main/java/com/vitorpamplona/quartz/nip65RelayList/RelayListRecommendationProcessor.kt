@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip65RelayList
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 class RelayListRecommendationProcessor {
     companion object {

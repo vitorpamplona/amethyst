@@ -101,16 +101,19 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -147,7 +150,9 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import kotlinx.collections.immutable.ImmutableList
@@ -209,13 +214,16 @@ private fun InnerReactionRow(
             )
         },
         three = {
-            BoostWithDialog(
-                baseNote,
-                editState,
-                MaterialTheme.colorScheme.placeholderText,
-                accountViewModel,
-                nav,
-            )
+            val isDM = baseNote.event is ChatroomKeyable
+            if (!isDM) {
+                BoostWithDialog(
+                    baseNote,
+                    editState,
+                    MaterialTheme.colorScheme.placeholderText,
+                    accountViewModel,
+                    nav,
+                )
+            }
         },
         four = {
             LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
@@ -558,56 +566,46 @@ private fun BoostWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var wantsToQuote by remember { mutableStateOf<Note?>(null) }
-    var wantsToFork by remember { mutableStateOf<Note?>(null) }
-
-    if (wantsToQuote != null) {
-        val route =
-            buildNewPostRoute(
-                quote = wantsToQuote?.idHex,
-                version =
-                    (editState.value as? GenericLoadable.Loaded)
-                        ?.loaded
-                        ?.modificationToShow
-                        ?.value
-                        ?.idHex,
-            )
-        nav.nav(route)
-    }
-
-    if (wantsToFork != null) {
-        val replyTo =
-            remember(wantsToFork) {
-                val forkEvent = wantsToFork?.event
-                if (forkEvent is BaseTextNoteEvent) {
-                    val hex = forkEvent.replyingTo()
-                    wantsToFork?.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
-                } else {
-                    null
-                }
-            }
-
-        val route =
-            buildNewPostRoute(
-                quote = wantsToQuote?.idHex,
-                baseReplyTo = replyTo?.idHex,
-                fork = wantsToFork?.idHex,
-                version =
-                    (editState.value as? GenericLoadable.Loaded)
-                        ?.loaded
-                        ?.modificationToShow
-                        ?.value
-                        ?.idHex,
-            )
-        nav.nav(route)
-    }
-
     BoostReaction(
         baseNote,
         grayTint,
         accountViewModel,
-        onQuotePress = { wantsToQuote = baseNote },
-        onForkPress = { wantsToFork = baseNote },
+        onQuotePress = {
+            nav.nav {
+                buildNewPostRoute(
+                    quote = baseNote.idHex,
+                    version =
+                        (editState.value as? GenericLoadable.Loaded)
+                            ?.loaded
+                            ?.modificationToShow
+                            ?.value
+                            ?.idHex,
+                )
+            }
+        },
+        onForkPress = {
+            nav.nav {
+                val forkEvent = baseNote.event
+                val replyTo =
+                    if (forkEvent is BaseThreadedEvent) {
+                        val hex = forkEvent.replyingTo()
+                        baseNote.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
+                    } else {
+                        null
+                    }
+
+                buildNewPostRoute(
+                    baseReplyTo = replyTo?.idHex,
+                    fork = baseNote.idHex,
+                    version =
+                        (editState.value as? GenericLoadable.Loaded)
+                            ?.loaded
+                            ?.modificationToShow
+                            ?.value
+                            ?.idHex,
+                )
+            }
+        },
     )
 }
 
@@ -618,18 +616,37 @@ private fun ReplyReactionWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var wantsToReplyTo by remember { mutableStateOf<Note?>(null) }
-
-    if (wantsToReplyTo != null) {
-        val route =
-            buildNewPostRoute(
-                baseReplyTo = wantsToReplyTo?.idHex,
-                quote = null,
-            )
-        nav.nav(route)
+    ReplyReaction(baseNote, grayTint, accountViewModel) {
+        val noteEvent = baseNote.event
+        if (noteEvent is PrivateDmEvent) {
+            nav.nav {
+                routeToMessage(
+                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
+                    draftMessage = null,
+                    replyId = noteEvent.id,
+                    quoteId = null,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        } else if (noteEvent is ChatroomKeyable) {
+            nav.nav {
+                routeToMessage(
+                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
+                    draftMessage = null,
+                    replyId = noteEvent.id,
+                    quoteId = null,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        } else {
+            nav.nav {
+                buildNewPostRoute(
+                    baseReplyTo = baseNote.idHex,
+                    quote = null,
+                )
+            }
+        }
     }
-
-    ReplyReaction(baseNote, grayTint, accountViewModel) { wantsToReplyTo = baseNote }
 }
 
 @Composable
@@ -938,7 +955,16 @@ private fun RenderReactionType(
         when (reactionType) {
             "+" -> LikedIcon(iconSizeModifier)
             "-" -> Text(text = "\uD83D\uDC4E", maxLines = 1, fontSize = iconFontSize)
-            else -> Text(text = reactionType, maxLines = 1, fontSize = iconFontSize)
+            else -> {
+                if (EmojiCoder.isCoded(reactionType)) {
+                    AnimatedBorderTextCornerRadius(
+                        reactionType,
+                        fontSize = iconFontSize,
+                    )
+                } else {
+                    Text(text = reactionType, maxLines = 1, fontSize = iconFontSize)
+                }
+            }
         }
     }
 }
@@ -1486,6 +1512,7 @@ fun ReactionChoicePopupPeeview() {
                 "\uD83D\uDE31",
                 "\uD83E\uDD14",
                 "\uD83D\uDE31",
+                "\uD83D\uDE80\uDB40\uDD58\uDB40\uDD64\uDB40\uDD64\uDB40\uDD60\uDB40\uDD63\uDB40\uDD2A\uDB40\uDD1F\uDB40\uDD1F\uDB40\uDD53\uDB40\uDD54\uDB40\uDD5E\uDB40\uDD1E\uDB40\uDD63\uDB40\uDD51\uDB40\uDD64\uDB40\uDD55\uDB40\uDD5C\uDB40\uDD5C\uDB40\uDD59\uDB40\uDD64\uDB40\uDD55\uDB40\uDD1E\uDB40\uDD55\uDB40\uDD51\uDB40\uDD62\uDB40\uDD64\uDB40\uDD58\uDB40\uDD1F\uDB40\uDD29\uDB40\uDD24\uDB40\uDD27\uDB40\uDD55\uDB40\uDD24\uDB40\uDD51\uDB40\uDD52\uDB40\uDD22\uDB40\uDD54\uDB40\uDD23\uDB40\uDD21\uDB40\uDD21\uDB40\uDD25\uDB40\uDD52\uDB40\uDD55\uDB40\uDD25\uDB40\uDD26\uDB40\uDD25\uDB40\uDD51\uDB40\uDD24\uDB40\uDD29\uDB40\uDD53\uDB40\uDD56\uDB40\uDD25\uDB40\uDD54\uDB40\uDD52\uDB40\uDD20\uDB40\uDD22\uDB40\uDD25\uDB40\uDD25\uDB40\uDD29\uDB40\uDD56\uDB40\uDD23\uDB40\uDD21\uDB40\uDD20\uDB40\uDD53\uDB40\uDD51\uDB40\uDD20\uDB40\uDD51\uDB40\uDD26\uDB40\uDD54\uDB40\uDD54\uDB40\uDD56\uDB40\uDD54\uDB40\uDD54\uDB40\uDD52\uDB40\uDD54\uDB40\uDD24\uDB40\uDD52\uDB40\uDD54\uDB40\uDD28\uDB40\uDD53\uDB40\uDD52\uDB40\uDD55\uDB40\uDD53\uDB40\uDD24\uDB40\uDD24\uDB40\uDD29\uDB40\uDD29\uDB40\uDD25\uDB40\uDD53\uDB40\uDD22\uDB40\uDD55\uDB40\uDD27\uDB40\uDD1E\uDB40\uDD67\uDB40\uDD55\uDB40\uDD52\uDB40\uDD60",
             ),
             onClick = {},
             onChangeAmount = {},
@@ -1539,12 +1566,20 @@ fun RenderReaction(reactionType: String) {
                 )
             }
             else -> {
-                Text(
-                    reactionType,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    fontSize = 22.sp,
-                )
+                if (EmojiCoder.isCoded(reactionType)) {
+                    AnimatedBorderTextCornerRadius(
+                        reactionType,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 20.sp,
+                    )
+                } else {
+                    Text(
+                        reactionType,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        fontSize = 22.sp,
+                    )
+                }
             }
         }
     }

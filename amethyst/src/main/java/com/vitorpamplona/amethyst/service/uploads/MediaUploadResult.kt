@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 data class MediaUploadResult(
     // A publicly accessible URL to the BUD-01 GET /<sha256> endpoint (optionally with a file extension)
@@ -35,7 +35,7 @@ data class MediaUploadResult(
     // upload time
     val uploaded: Long? = null,
     // dimensions
-    val dimension: Dimension? = null,
+    val dimension: DimensionTag? = null,
     // magnet link
     val magnet: String? = null,
     // info hash

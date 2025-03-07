@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service.uploads.nip96
 import android.util.Log
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.nip96FileStorage.ServerInfo
-import com.vitorpamplona.quartz.nip96FileStorage.ServerInfoParser
+import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
+import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfoParser
 import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 

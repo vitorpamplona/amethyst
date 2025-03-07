@@ -26,6 +26,10 @@ val pointerSizeInBytes = 4
 
 fun String.bytesUsedInMemory(): Long = (8 * (((this.length * 2L) + 45) / 8))
 
+fun Long.bytesUsedInMemory(): Long = 8
+
+fun Int.bytesUsedInMemory(): Long = 4
+
 fun Boolean.bytesUsedInMemory(): Long = 8
 
 fun String.containsIgnoreCase(term: String): Boolean {

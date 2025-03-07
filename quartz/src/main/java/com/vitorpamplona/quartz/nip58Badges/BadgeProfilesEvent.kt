@@ -21,9 +21,10 @@
 package com.vitorpamplona.quartz.nip58Badges
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 
@@ -44,6 +45,8 @@ class BadgeProfilesEvent(
         const val KIND = 30008
         private const val STANDARD_D_TAG = "profile_badges"
         private const val ALT = "List of accepted badges by the author"
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, STANDARD_D_TAG)
 
         fun createAddressTag(pubKey: HexKey): ATag = ATag(KIND, pubKey, STANDARD_D_TAG, null)
     }

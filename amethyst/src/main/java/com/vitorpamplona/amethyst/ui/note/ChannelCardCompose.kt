@@ -78,15 +78,14 @@ import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.EndedFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LiveFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.OfflineFlag
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ScheduledFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.EndedFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.LiveFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.OfflineFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ScheduledFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
@@ -102,16 +101,15 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.nip05
-import com.vitorpamplona.quartz.experimental.audio.Participant
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_ENDED
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_LIVE
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent.Companion.STATUS_PLANNED
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nip99Classifieds.Price
+import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -295,7 +293,7 @@ private fun RenderNoteRow(
 data class ClassifiedsThumb(
     val image: String?,
     val title: String?,
-    val price: Price?,
+    val price: PriceTag?,
 )
 
 @Composable
@@ -339,7 +337,7 @@ fun RenderClassifiedsThumbPreview() {
                 ClassifiedsThumb(
                     image = null,
                     title = "Like New",
-                    price = Price("800000", "SATS", null),
+                    price = PriceTag("800000", "SATS", null),
                 ),
             note = Note("hex"),
         )
@@ -387,7 +385,7 @@ fun InnerRenderClassifiedsThumb(
             card.price?.let {
                 val priceTag =
                     remember(card) {
-                        val newAmount = it.amount.toBigDecimalOrNull()?.let { showAmountAxis(it) } ?: it.amount
+                        val newAmount = it.amount.toBigDecimalOrNull()?.let { showAmountInteger(it) } ?: it.amount
 
                         if (it.frequency != null && it.currency != null) {
                             "$newAmount ${it.currency}/${it.frequency}"
@@ -416,7 +414,7 @@ data class LiveActivityCard(
     val media: String?,
     val subject: String?,
     val content: String?,
-    val participants: ImmutableList<Participant>,
+    val participants: ImmutableList<ParticipantTag>,
     val status: String?,
     val starts: Long?,
 )
@@ -485,7 +483,7 @@ fun RenderLiveActivityThumb(
             Box(Modifier.padding(10.dp)) {
                 CrossfadeIfEnabled(targetState = card.status, label = "RenderLiveActivityThumb", accountViewModel = accountViewModel) {
                     when (it) {
-                        STATUS_LIVE -> {
+                        StatusTag.STATUS.LIVE.code -> {
                             val url = card.media
                             if (url.isNullOrBlank()) {
                                 LiveFlag()
@@ -499,10 +497,10 @@ fun RenderLiveActivityThumb(
                                 }
                             }
                         }
-                        STATUS_ENDED -> {
+                        StatusTag.STATUS.ENDED.code -> {
                             EndedFlag()
                         }
-                        STATUS_PLANNED -> {
+                        StatusTag.STATUS.PLANNED.code -> {
                             ScheduledFlag(card.starts)
                         }
                         else -> {
@@ -544,7 +542,7 @@ data class CommunityCard(
     val name: String,
     val description: String?,
     val cover: String?,
-    val moderators: ImmutableList<Participant>,
+    val moderators: ImmutableList<HexKey>,
 )
 
 @Immutable
@@ -574,16 +572,16 @@ fun RenderCommunitiesThumb(
                 CommunityCard(
                     name = noteEvent?.dTag() ?: "",
                     description = noteEvent?.description(),
-                    cover = noteEvent?.image()?.ifBlank { null },
-                    moderators = noteEvent?.moderators()?.toImmutableList() ?: persistentListOf(),
+                    cover = noteEvent?.image()?.imageUrl,
+                    moderators = noteEvent?.moderatorKeys()?.toImmutableList() ?: persistentListOf(),
                 )
             }.distinctUntilChanged()
             .observeAsState(
                 CommunityCard(
                     name = noteEvent.dTag(),
                     description = noteEvent.description(),
-                    cover = noteEvent.image()?.ifBlank { null },
-                    moderators = noteEvent.moderators().toImmutableList(),
+                    cover = noteEvent.image()?.imageUrl,
+                    moderators = noteEvent.moderatorKeys().toImmutableList(),
                 ),
             )
 
@@ -655,7 +653,7 @@ fun RenderCommunitiesThumb(
 
 @Composable
 fun LoadModerators(
-    moderators: ImmutableList<Participant>,
+    moderators: ImmutableList<String>,
     baseNote: Note,
     accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<User>) -> Unit,
@@ -670,8 +668,8 @@ fun LoadModerators(
         launch(Dispatchers.IO) {
             val hosts =
                 moderators.mapNotNull { part ->
-                    if (part.key != baseNote.author?.pubkeyHex) {
-                        LocalCache.checkGetOrCreateUser(part.key)
+                    if (part != baseNote.author?.pubkeyHex) {
+                        LocalCache.checkGetOrCreateUser(part)
                     } else {
                         null
                     }
@@ -706,7 +704,7 @@ fun LoadModerators(
 
 @Composable
 private fun LoadParticipants(
-    participants: ImmutableList<Participant>,
+    participants: ImmutableList<ParticipantTag>,
     baseNote: Note,
     accountViewModel: AccountViewModel,
     inner: @Composable (ImmutableList<User>) -> Unit,
@@ -721,8 +719,8 @@ private fun LoadParticipants(
         launch(Dispatchers.IO) {
             val hosts =
                 participants.mapNotNull { part ->
-                    if (part.key != baseNote.author?.pubkeyHex) {
-                        LocalCache.checkGetOrCreateUser(part.key)
+                    if (part.pubKey != baseNote.author?.pubkeyHex) {
+                        LocalCache.checkGetOrCreateUser(part.pubKey)
                     } else {
                         null
                     }

@@ -58,8 +58,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
-import com.patrykandpatrick.vico.compose.style.ChartStyle
-import com.patrykandpatrick.vico.core.DefaultColors
+import com.patrykandpatrick.vico.compose.common.VicoTheme
+import com.patrykandpatrick.vico.compose.common.VicoTheme.CandlestickCartesianLayerColors
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 
@@ -118,6 +118,9 @@ private val LightSubtleBorder = LightColorPalette.onSurface.copy(alpha = 0.05f)
 
 private val DarkChatBackground = DarkColorPalette.onSurface.copy(alpha = 0.12f)
 private val LightChatBackground = LightColorPalette.onSurface.copy(alpha = 0.08f)
+
+private val DarkChatDraftBackground = DarkColorPalette.onSurface.copy(alpha = 0.15f)
+private val LightChatDraftBackground = LightColorPalette.onSurface.copy(alpha = 0.15f)
 
 private val DarkOverPictureBackground = DarkColorPalette.background.copy(0.62f)
 private val LightOverPictureBackground = LightColorPalette.background.copy(0.62f)
@@ -387,6 +390,9 @@ val ColorScheme.subtleBorder: Color
 val ColorScheme.chatBackground: Color
     get() = if (isLight) LightChatBackground else DarkChatBackground
 
+val ColorScheme.chatDraftBackground: Color
+    get() = if (isLight) LightChatDraftBackground else DarkChatDraftBackground
+
 val ColorScheme.subtleButton: Color
     get() = if (isLight) LightSubtleButton else DarkSubtleButton
 
@@ -441,22 +447,34 @@ val ColorScheme.largeRelayIconModifier: Modifier
 val ColorScheme.selectedReactionBoxModifier: Modifier
     get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
 
-val ColorScheme.chartStyle: ChartStyle
-    get() {
-        val defaultColors = if (isLight) DefaultColors.Light else DefaultColors.Dark
-        return ChartStyle.fromColors(
-            axisLabelColor = Color(defaultColors.axisLabelColor),
-            axisGuidelineColor = Color(defaultColors.axisGuidelineColor),
-            axisLineColor = Color(defaultColors.axisLineColor),
-            entityColors =
-                listOf(
-                    defaultColors.entity1Color,
-                    defaultColors.entity2Color,
-                    defaultColors.entity3Color,
-                ).map(::Color),
-            elevationOverlayColor = Color(defaultColors.elevationOverlayColor),
-        )
-    }
+val chartLightColors =
+    VicoTheme(
+        candlestickCartesianLayerColors =
+            CandlestickCartesianLayerColors(
+                Color(0xff0ac285),
+                Color(0xff000000),
+                Color(0xffe8304f),
+            ),
+        columnCartesianLayerColors = listOf(Color(0xff3287ff), Color(0xff0ac285), Color(0xffffab02)),
+        lineColor = Color(0xffbcbfc2),
+        textColor = Color(0xff000000),
+    )
+
+val chartDarkColors =
+    VicoTheme(
+        candlestickCartesianLayerColors =
+            CandlestickCartesianLayerColors(
+                Color(0xff0ac285),
+                Color(0xffffffff),
+                Color(0xffe8304f),
+            ),
+        columnCartesianLayerColors = listOf(Color(0xff3287ff), Color(0xff0ac285), Color(0xffffab02)),
+        lineColor = Color(0xff494c50),
+        textColor = Color(0xffffffff),
+    )
+
+val ColorScheme.chartStyle: VicoTheme
+    get() = if (isLight) chartLightColors else chartDarkColors
 
 @Composable
 fun AmethystTheme(

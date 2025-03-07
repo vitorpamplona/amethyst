@@ -21,15 +21,31 @@
 package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
-import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments.Companion.IMETA
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
-import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
+import com.vitorpamplona.quartz.nip71Video.tags.SegmentTag
+import com.vitorpamplona.quartz.nip92IMeta.imetas
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.FallbackTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ImageTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MagnetTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ServiceTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.UrlTag
 
 @Immutable
 abstract class VideoEvent(
@@ -42,35 +58,38 @@ abstract class VideoEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
     RootScope {
-    private fun url() = tags.firstOrNull { it.size > 1 && it[0] == URL }?.get(1)
+    /** old standard didnt use IMetas **/
+    private fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
 
-    private fun urls() = tags.filter { it.size > 1 && it[0] == URL }.map { it[1] }
+    private fun urls() = tags.mapNotNull(UrlTag::parse)
 
-    private fun mimeType() = tags.firstOrNull { it.size > 1 && it[0] == MIME_TYPE }?.get(1)
+    private fun mimeType() = tags.firstNotNullOfOrNull(MimeTypeTag::parse)
 
-    private fun hash() = tags.firstOrNull { it.size > 1 && it[0] == HASH }?.get(1)
+    private fun hash() = tags.firstNotNullOfOrNull(HashSha256Tag::parse)
 
-    private fun size() = tags.firstOrNull { it.size > 1 && it[0] == FILE_SIZE }?.get(1)
+    private fun size() = tags.firstNotNullOfOrNull(SizeTag::parse)
 
-    private fun dimensions() = tags.firstOrNull { it.size > 1 && it[0] == DIMENSION }?.get(1)?.let { Dimension.parse(it) }
+    private fun dimensions() = tags.firstNotNullOfOrNull(DimensionTag::parse)
 
-    private fun blurhash() = tags.firstOrNull { it.size > 1 && it[0] == BLUR_HASH }?.get(1)
+    private fun magnetURI() = tags.firstNotNullOfOrNull(MagnetTag::parse)
 
-    private fun image() = tags.filter { it.size > 1 && it[0] == IMAGE }.map { it[1] }
+    private fun torrentInfoHash() = tags.firstNotNullOfOrNull(TorrentInfoHash::parse)
 
-    private fun thumb() = tags.firstOrNull { it.size > 1 && it[0] == THUMB }?.get(1)
+    private fun blurhash() = tags.firstNotNullOfOrNull(BlurhashTag::parse)
 
-    fun alt() = tags.firstOrNull { it.size > 1 && it[0] == ALT }?.get(1)
+    private fun hasUrl() = tags.any(UrlTag::isTag)
 
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == TITLE }?.get(1)
+    private fun isOneOf(mimeTypes: Set<String>) = tags.any(MimeTypeTag::isIn, mimeTypes)
 
-    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == SUMMARY }?.get(1)
+    private fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun duration() = tags.firstOrNull { it.size > 1 && it[0] == DURATION }?.get(1)
+    private fun images() = tags.mapNotNull(ImageTag::parse)
 
-    fun hasUrl() = tags.any { it.size > 1 && it[0] == URL }
+    private fun thumb() = tags.firstNotNullOfOrNull(ThumbTag::parse)
 
-    fun isOneOf(mimeTypes: Set<String>) = tags.any { it.size > 1 && it[0] == FileHeaderEvent.MIME_TYPE && mimeTypes.contains(it[1]) }
+    private fun service() = tags.firstNotNullOfOrNull(ServiceTag::parse)
+
+    private fun fallbacks() = tags.mapNotNull(FallbackTag::parse)
 
     // hack to fix pablo's bug
     fun rootVideo() =
@@ -82,165 +101,30 @@ abstract class VideoEvent(
                 alt = alt(),
                 hash = hash(),
                 dimension = dimensions(),
-                size = size()?.toIntOrNull(),
-                service = null,
-                fallback = emptyList(),
-                image = image(),
+                size = size(),
+                service = service(),
+                fallback = fallbacks(),
+                image = images().map { it.imageUrl },
             )
         }
 
-    fun imetaTags() =
-        tags
-            .map { tagArray ->
-                if (tagArray.size > 1 && tagArray[0] == IMETA) {
-                    VideoMeta.parse(tagArray)
-                } else {
-                    null
-                }
-            }.plus(rootVideo())
-            .filterNotNull()
+    // ---------------
+    // current
+    // --------------
 
-    companion object {
-        private const val URL = "url"
-        private const val MIME_TYPE = "m"
-        private const val FILE_SIZE = "size"
-        private const val DIMENSION = "dim"
-        private const val HASH = "x"
-        private const val BLUR_HASH = "blurhash"
-        private const val ALT = "alt"
-        private const val TITLE = "title"
-        private const val SUMMARY = "summary"
-        private const val DURATION = "duration"
-        private const val IMAGE = "image"
-        private const val THUMB = "thumb"
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-        fun <T : VideoEvent> create(
-            kind: Int,
-            dTag: String,
-            url: String,
-            mimeType: String? = null,
-            alt: String? = null,
-            hash: String? = null,
-            size: Int? = null,
-            duration: Int? = null,
-            dimensions: Dimension? = null,
-            blurhash: String? = null,
-            sensitiveContent: Boolean? = null,
-            service: String? = null,
-            altDescription: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (T) -> Unit,
-        ) {
-            val video =
-                VideoMeta(
-                    url,
-                    mimeType,
-                    blurhash,
-                    dimensions,
-                    alt,
-                    hash,
-                    size,
-                    service,
-                    emptyList(),
-                    emptyList(),
-                )
+    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
-            val tags = mutableListOf<Array<String>>()
+    fun duration() = tags.firstNotNullOfOrNull(DurationTag::parse)
 
-            tags.add(arrayOf("d", dTag))
-            tags.add(arrayOf(ALT, altDescription))
-            if (sensitiveContent == true) {
-                tags.add(ContentWarningSerializer.toTagArray())
-            }
-            duration?.let { tags.add(arrayOf(DURATION, "duration")) }
+    fun textTrack() = tags.mapNotNull(ETag::parse)
 
-            tags.add(video.toIMetaArray())
+    fun segments() = tags.mapNotNull(SegmentTag::parse)
 
-            val content = alt ?: ""
-            signer.sign<T>(createdAt, kind, tags.toTypedArray(), content, onReady)
-        }
-    }
-}
+    fun participants() = tags.mapNotNull(PTag::parse)
 
-data class VideoMeta(
-    val url: String,
-    val mimeType: String?,
-    val blurhash: String?,
-    val dimension: Dimension?,
-    val alt: String?,
-    val hash: String?,
-    val size: Int?,
-    val service: String?,
-    val fallback: List<String>,
-    val image: List<String>,
-) {
-    fun toIMetaArray(): Array<String> =
-        (
-            listOfNotNull(
-                "imeta",
-                "$URL $url",
-                mimeType?.let { "$MIME_TYPE $it" },
-                alt?.let { "$ALT $it" },
-                hash?.let { "$HASH $it" },
-                size?.let { "$FILE_SIZE $it" },
-                dimension?.let { "$DIMENSION $it" },
-                blurhash?.let { "$BLUR_HASH $it" },
-                service?.let { "$SERVICE $it" },
-            ) +
-                fallback.map { "$FALLBACK $it" } +
-                image.map { "$IMAGE $it" }
+    fun hashtags() = tags.hashtags()
 
-        ).toTypedArray()
-
-    companion object {
-        const val URL = "url"
-        const val MIME_TYPE = "m"
-        const val FILE_SIZE = "size"
-        const val DIMENSION = "dim"
-        const val HASH = "x"
-        const val BLUR_HASH = "blurhash"
-        const val ALT = "alt"
-        const val FALLBACK = "fallback"
-        const val IMAGE = "image"
-        const val SERVICE = "service"
-
-        fun parse(tagArray: Array<String>): VideoMeta? {
-            var url: String? = null
-            var mimeType: String? = null
-            var blurhash: String? = null
-            var dim: Dimension? = null
-            var alt: String? = null
-            var hash: String? = null
-            var size: Int? = null
-            var service: String? = null
-            val fallback = mutableListOf<String>()
-            val images = mutableListOf<String>()
-
-            tagArray.forEach {
-                val parts = it.split(" ", limit = 2)
-                val key = parts[0]
-                val value = if (parts.size == 2) parts[1] else ""
-
-                if (value.isNotBlank()) {
-                    when (key) {
-                        URL -> url = value
-                        MIME_TYPE -> mimeType = value
-                        BLUR_HASH -> blurhash = value
-                        DIMENSION -> dim = Dimension.parse(value)
-                        ALT -> alt = value
-                        HASH -> hash = value
-                        FILE_SIZE -> size = value.toIntOrNull()
-                        SERVICE -> service = value
-                        FALLBACK -> fallback.add(value)
-                        IMAGE -> images.add(value)
-                    }
-                }
-            }
-
-            return url?.let {
-                VideoMeta(it, mimeType, blurhash, dim, alt, hash, size, service, fallback, images)
-            }
-        }
-    }
+    fun imetaTags() = imetas().map { VideoMeta.parse(it) }.plus(rootVideo()).filterNotNull()
 }

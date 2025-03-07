@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
 @Composable
 fun RenderPostApproval(
@@ -56,7 +56,7 @@ fun RenderPostApproval(
     val noteEvent = note.event as? CommunityPostApprovalEvent ?: return
 
     Column(Modifier.fillMaxWidth()) {
-        noteEvent.communities().forEach { tag ->
+        noteEvent.communityAddresses().forEach { tag ->
             LoadAddressableNote(tag, accountViewModel) { baseNote ->
                 baseNote?.let {
                     RenderCommunity(

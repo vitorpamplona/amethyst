@@ -21,12 +21,12 @@
 package com.vitorpamplona.quartz.nip72ModCommunities
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent.Companion.FIXED_D_TAG
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.parseAtag
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -270,7 +270,7 @@ class CommunityListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + AltTagSerializer.toTagArray(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)

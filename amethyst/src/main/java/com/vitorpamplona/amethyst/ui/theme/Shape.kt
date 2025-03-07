@@ -205,6 +205,8 @@ val VolumeBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val PinBottomIconSize = Modifier.size(70.dp).padding(10.dp)
 val NIP05IconSize = Modifier.size(13.dp).padding(top = 1.dp, start = 1.dp, end = 1.dp)
 
+val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = QuoteBorder)
+
 val EditFieldModifier =
     Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
 val EditFieldTrailingIconModifier = Modifier.height(26.dp).padding(start = 5.dp, end = 0.dp)
@@ -268,7 +270,7 @@ val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
 
 val messageDetailsModifier = Modifier.height(Size25dp)
-val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp)
+val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 5.dp)
 
 val inlinePlaceholder =
     Placeholder(

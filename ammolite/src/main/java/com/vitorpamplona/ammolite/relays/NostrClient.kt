@@ -23,8 +23,8 @@ package com.vitorpamplona.ammolite.relays
 import android.util.Log
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.RelayState
-import com.vitorpamplona.quartz.nip01Core.relays.sockets.WebsocketBuilderFactory
+import com.vitorpamplona.quartz.nip01Core.relay.RelayState
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilderFactory
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

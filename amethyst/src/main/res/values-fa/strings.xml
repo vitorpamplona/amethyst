@@ -346,6 +346,7 @@
     <string name="add_content">افزودن به پیام</string>
     <string name="add_caption">افزودن عنوان</string>
     <string name="add_caption_example">دوست عزیز من</string>
+    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
     <string name="content_description">توصیف محتوا</string>
     <string name="content_description_example">قایقی آبی در ساحل شنی سفید هنگام غروب</string>
     <string name="zap_type">نوع زپ</string>
@@ -537,6 +538,8 @@
     <string name="ui_feature_set_type_complete">کامل</string>
     <string name="ui_feature_set_type_simplified">ساده</string>
     <string name="ui_feature_set_type_performance">عملکرد</string>
+    <string name="gallery_type_classic">کلاسیک</string>
+    <string name="gallery_type_modern">مدرن</string>
     <string name="system">سیستم</string>
     <string name="light">روشن</string>
     <string name="dark">تاریک</string>
@@ -551,6 +554,8 @@
     <string name="automatically_hide_nav_bars_description">پنهان کردن نوار پیمایش هنگام مرور</string>
     <string name="ui_style">حالت رابط کاربر</string>
     <string name="ui_style_description">قیافه پست را انتخاب کن</string>
+    <string name="gallery_style">سبک گالری نمایه</string>
+    <string name="gallery_style_description">انتخاب سبک گالری</string>
     <string name="load_image">بارگیری تصویر</string>
     <string name="spamming_users">اسپمر</string>
     <string name="muted_button">بیصدا شده. برای لغو کلیک کنید</string>
@@ -904,6 +909,7 @@
     <string name="http_status_503">خدمت در دسترس نیست - این اغلب هنگامی که یک سرور بیش از حد شلوغ است یا برای تعمیرات تعطیل است پیش می آید</string>
     <string name="http_status_504">مهلت درگاه تمام شد - مهلت سرور در نقش یک درگاه یا پراکسی تمام شد، در انتظار پاسخ</string>
     <string name="http_status_505">نسخه HTTP پشتیبانی نمی شود - سرور ورژن HTTP درخواست را پشتیبانی نمی کند</string>
+    <string name="http_status_506">Variant Also Negotiates - سرور یک مشکل پیکربندی داخلی دارد</string>
     <string name="http_status_507">فضای ذخیره ناکافی - سرور فضای کافی برای پردازش موفق درخواست ندارد</string>
     <string name="http_status_508">حلقه دیده شد - سرور یک حلقه بینهایت در پردازش این درخواست شناسایی کرد</string>
     <string name="http_status_511">احراز هویت الزامی - کلاینت برای دسترسی به شبکه می بایست احراز هویت شده باشد</string>

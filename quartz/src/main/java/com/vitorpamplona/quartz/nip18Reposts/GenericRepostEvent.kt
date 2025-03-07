@@ -21,11 +21,24 @@
 package com.vitorpamplona.quartz.nip18Reposts
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.aTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -36,10 +49,29 @@ class GenericRepostEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun boostedPost() = tags.filter { it.firstOrNull() == "e" }.mapNotNull { it.getOrNull(1) }
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    fun originalAuthor() = tags.filter { it.firstOrNull() == "p" }.mapNotNull { it.getOrNull(1) }
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    fun boostedEvents() = tags.mapNotNull(ETag::parse)
+
+    fun boostedATags() = tags.mapNotNull(ATag::parse)
+
+    fun boostedAddresses() = tags.mapNotNull(ATag::parseAddress)
+
+    fun originalAuthors() = tags.mapNotNull(PTag::parse)
+
+    fun boostedEventIds() = tags.mapNotNull(ETag::parseId)
+
+    fun boostedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
+    fun originalAuthorKeys() = tags.mapNotNull(PTag::parseKey)
 
     fun containedPost() =
         try {
@@ -51,6 +83,25 @@ class GenericRepostEvent(
     companion object {
         const val KIND = 16
         const val ALT = "Generic repost"
+
+        fun build(
+            boostedPost: Event,
+            eventSourceRelay: String?,
+            authorHomeRelay: String?,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<GenericRepostEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, boostedPost.toJson(), createdAt) {
+            alt(ALT)
+
+            kind(boostedPost.kind)
+            pTag(PTag(boostedPost.pubKey, authorHomeRelay))
+            eTag(ETag(boostedPost.id, eventSourceRelay, boostedPost.pubKey))
+            if (boostedPost is AddressableEvent) {
+                aTag(boostedPost.aTag(eventSourceRelay))
+            }
+
+            initializer()
+        }
 
         fun create(
             boostedPost: Event,
@@ -67,11 +118,11 @@ class GenericRepostEvent(
                 )
 
             if (boostedPost is AddressableEvent) {
-                tags.add(arrayOf("a", boostedPost.address().toTag()))
+                tags.add(arrayOf("a", boostedPost.aTag().toTag()))
             }
 
             tags.add(arrayOf("k", "${boostedPost.kind}"))
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            tags.add(AltTag.assemble(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
         }

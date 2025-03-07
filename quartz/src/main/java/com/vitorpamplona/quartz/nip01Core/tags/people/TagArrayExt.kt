@@ -21,18 +21,21 @@
 package com.vitorpamplona.quartz.nip01Core.tags.people
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
 import com.vitorpamplona.quartz.nip01Core.core.isAnyTagged
 import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.TAG_NAME
 
-fun TagArray.isTaggedUser(idHex: String) = this.isTagged("p", idHex)
+fun TagArray.isTaggedUser(idHex: String) = this.isTagged(TAG_NAME, idHex)
 
-fun TagArray.isTaggedUsers(idHexes: Set<String>) = this.isAnyTagged("p", idHexes)
+fun TagArray.isTaggedUsers(idHexes: Set<String>) = this.isAnyTagged(TAG_NAME, idHexes)
 
-fun TagArray.taggedUsers() = this.mapValues("p")
+fun TagArray.taggedUsers() = this.mapNotNull(PTag::parse)
 
-fun TagArray.firstTaggedUser() = this.firstTagValue("p")
+fun TagArray.firstTaggedUser() = this.firstNotNullOfOrNull(PTag::parse)
 
-fun TagArray.hasAnyTaggedUser() = this.hasTagWithContent("p")
+fun TagArray.taggedUserIds() = this.mapNotNull(PTag::parseKey)
+
+fun TagArray.firstTaggedUserId() = this.firstNotNullOfOrNull(PTag::parseKey)
+
+fun TagArray.hasAnyTaggedUser() = this.hasTagWithContent(TAG_NAME)
