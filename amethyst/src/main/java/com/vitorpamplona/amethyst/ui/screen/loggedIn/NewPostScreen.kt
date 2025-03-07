@@ -53,7 +53,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assistant
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.LocationOff
@@ -149,6 +148,7 @@ import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SecretEmojiRequest
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.navigation.Nav
@@ -165,7 +165,6 @@ import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.ui.note.ZapSplitIcon
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -737,7 +736,7 @@ private fun MessageField(postViewModel: NewPostViewModel) {
         }
     }
 
-    MyTextField(
+    ThinPaddingTextField(
         value = postViewModel.message,
         onValueChange = { postViewModel.updateMessage(it) },
         keyboardOptions =
@@ -851,7 +850,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.toUsers,
                 onValueChange = { postViewModel.updateToUsers(it) },
                 modifier = Modifier.fillMaxWidth(),
@@ -885,7 +884,7 @@ fun SendDirectMessageTo(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.subject,
                 onValueChange = { postViewModel.updateSubject(it) },
                 modifier = Modifier.fillMaxWidth(),
@@ -926,7 +925,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.title,
                 onValueChange = {
                     postViewModel.updateTitle(it)
@@ -962,7 +961,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = postViewModel.price,
                 onValueChange = {
@@ -1039,7 +1038,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         .weight(1f)
                         .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
-                MyTextField(
+                ThinPaddingTextField(
                     value = TextFieldValue(currentOption),
                     onValueChange = {},
                     readOnly = true,
@@ -1105,7 +1104,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                         .weight(1f)
                         .padding(end = 5.dp, bottom = 1.dp),
             ) { currentOption, modifier ->
-                MyTextField(
+                ThinPaddingTextField(
                     value = TextFieldValue(currentOption),
                     onValueChange = {},
                     readOnly = true,
@@ -1132,7 +1131,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                 fontWeight = FontWeight.W500,
             )
 
-            MyTextField(
+            ThinPaddingTextField(
                 value = postViewModel.locationText,
                 onValueChange = {
                     postViewModel.updateLocation(it)

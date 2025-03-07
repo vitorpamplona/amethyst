@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -107,7 +108,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.DisplayRoomSubje
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.DisplayUserSetAsSubject
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -551,7 +551,7 @@ fun PrivateMessageEditFieldRow(
             accountViewModel,
         )
 
-        MyTextField(
+        ThinPaddingTextField(
             value = channelScreenModel.message,
             onValueChange = { channelScreenModel.updateMessage(it) },
             keyboardOptions =

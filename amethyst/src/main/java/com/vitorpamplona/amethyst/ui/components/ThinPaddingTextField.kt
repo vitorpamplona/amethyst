@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils
+package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -37,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -48,9 +47,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
+// COPIED FROM TEXT FIELD
+// The only change is the contentPadding below
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTextField(
+fun ThinPaddingTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
@@ -71,9 +73,10 @@ fun MyTextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     shape: Shape = TextFieldDefaults.shape,
     colors: TextFieldColors = TextFieldDefaults.colors(),
+    // new fields
     contentPadding: PaddingValues =
         if (label == null) {
             TextFieldDefaults.contentPaddingWithoutLabel(
@@ -91,37 +94,38 @@ fun MyTextField(
             )
         },
 ) {
-    // COPIED FROM TEXT FIELD
-    // The only change is the contentPadding below
+    @Suppress("NAME_SHADOWING")
+    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
+
+    // If color is not provided via the text style, use content color as a default
     val textColor =
         textStyle.color.takeOrElse {
             val focused by interactionSource.collectIsFocusedAsState()
 
-            val targetValue =
-                when {
-                    !enabled -> MaterialTheme.colorScheme.placeholderText
-                    isError -> MaterialTheme.colorScheme.onSurface
-                    focused -> MaterialTheme.colorScheme.onSurface
-                    else -> MaterialTheme.colorScheme.onSurface
-                }
-
-            rememberUpdatedState(targetValue).value
+            // this has changed, but only because of private access on the original
+            when {
+                !enabled -> MaterialTheme.colorScheme.placeholderText
+                isError -> MaterialTheme.colorScheme.onSurface
+                focused -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurface
+            }
         }
     val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
 
-    CompositionLocalProvider(LocalTextSelectionColors provides LocalTextSelectionColors.current) {
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         BasicTextField(
             value = value,
             modifier =
-                modifier.defaultMinSize(
-                    minWidth = TextFieldDefaults.MinWidth,
-                    minHeight = 36.dp,
-                ),
+                modifier
+                    .defaultMinSize(
+                        minWidth = TextFieldDefaults.MinWidth,
+                        minHeight = 36.dp, // this has changed
+                    ),
             onValueChange = onValueChange,
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary), // this has changed
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -148,7 +152,7 @@ fun MyTextField(
                         isError = isError,
                         interactionSource = interactionSource,
                         colors = colors,
-                        contentPadding = contentPadding,
+                        contentPadding = contentPadding, // this has changed
                     )
                 },
         )

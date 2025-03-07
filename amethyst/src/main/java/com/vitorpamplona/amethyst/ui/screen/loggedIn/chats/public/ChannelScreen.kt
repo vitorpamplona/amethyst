@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -122,7 +123,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.MyTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -171,7 +171,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -219,7 +218,6 @@ fun Channel(
     }
 }
 
-@OptIn(FlowPreview::class)
 @Composable
 fun PrepareChannelViewModels(
     baseChannel: Channel,
@@ -257,8 +255,6 @@ fun ChannelScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-
     NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -507,7 +503,7 @@ fun EditFieldRow(
             accountViewModel,
         )
 
-        MyTextField(
+        ThinPaddingTextField(
             value = channelScreenModel.message,
             onValueChange = { channelScreenModel.updateMessage(it) },
             keyboardOptions =
