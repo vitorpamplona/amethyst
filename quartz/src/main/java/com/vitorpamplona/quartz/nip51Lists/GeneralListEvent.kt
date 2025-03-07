@@ -64,6 +64,7 @@ abstract class GeneralListEvent(
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun nameOrTitle() = name() ?: title()
+
     fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
     fun nameOrTitle() = name()?.ifBlank { null } ?: title()?.ifBlank { null }
