@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ChatroomMessageCompose
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.messages.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 

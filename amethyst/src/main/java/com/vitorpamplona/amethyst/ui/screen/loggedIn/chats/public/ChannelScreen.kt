@@ -120,9 +120,9 @@ import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CrossfadeCheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes

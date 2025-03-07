@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -54,15 +53,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -71,9 +67,9 @@ import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
-import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -85,7 +81,6 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
-import kotlin.math.min
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -301,131 +296,6 @@ private fun UserRoomCompose(
         },
         onClick = { nav.nav(route) },
     )
-}
-
-@Composable
-fun RoomNameDisplay(
-    room: ChatroomKey,
-    modifier: Modifier,
-    accountViewModel: AccountViewModel,
-) {
-    val roomSubject by
-        accountViewModel
-            .userProfile()
-            .live()
-            .messages
-            .map { it.user.privateChatrooms[room]?.subject }
-            .distinctUntilChanged()
-            .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
-
-    CrossfadeIfEnabled(targetState = roomSubject, modifier, label = "RoomNameDisplay", accountViewModel = accountViewModel) {
-        if (!it.isNullOrBlank()) {
-            if (room.users.size > 1) {
-                DisplayRoomSubject(it)
-            } else {
-                DisplayUserAndSubject(room.users.first(), it, accountViewModel)
-            }
-        } else {
-            DisplayUserSetAsSubject(room, accountViewModel)
-        }
-    }
-}
-
-@Composable
-private fun DisplayUserAndSubject(
-    user: HexKey,
-    subject: String,
-    accountViewModel: AccountViewModel,
-) {
-    Row {
-        Text(
-            text = subject,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = " - ",
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-        )
-        LoadUser(baseUserHex = user, accountViewModel = accountViewModel) {
-            it?.let { UsernameDisplay(it, Modifier.weight(1f), accountViewModel = accountViewModel) }
-        }
-    }
-}
-
-@Composable
-fun DisplayUserSetAsSubject(
-    room: ChatroomKey,
-    accountViewModel: AccountViewModel,
-    fontWeight: FontWeight = FontWeight.Bold,
-) {
-    val userList = remember(room) { room.users.toList() }
-
-    if (userList.size == 1) {
-        // Regular Design
-        Row {
-            LoadUser(baseUserHex = userList[0], accountViewModel) {
-                it?.let { UsernameDisplay(it, Modifier.weight(1f), fontWeight = fontWeight, accountViewModel = accountViewModel) }
-            }
-        }
-    } else {
-        Row {
-            userList.take(4).forEachIndexed { index, value ->
-                LoadUser(baseUserHex = value, accountViewModel) {
-                    it?.let { ShortUsernameDisplay(baseUser = it, fontWeight = fontWeight, accountViewModel = accountViewModel) }
-                }
-
-                if (min(userList.size, 4) - 1 != index) {
-                    Text(
-                        text = ", ",
-                        fontWeight = fontWeight,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DisplayRoomSubject(
-    roomSubject: String,
-    fontWeight: FontWeight = FontWeight.Bold,
-) {
-    Row {
-        Text(
-            text = roomSubject,
-            fontWeight = fontWeight,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-fun ShortUsernameDisplay(
-    baseUser: User,
-    weight: Modifier = Modifier,
-    fontWeight: FontWeight = FontWeight.Bold,
-    accountViewModel: AccountViewModel,
-) {
-    val userName by
-        baseUser
-            .live()
-            .metadata
-            .map { it.user.toBestShortFirstName() }
-            .distinctUntilChanged()
-            .observeAsState(baseUser.toBestShortFirstName())
-
-    CrossfadeIfEnabled(targetState = userName, modifier = weight, accountViewModel = accountViewModel) {
-        CreateTextWithEmoji(
-            text = it,
-            tags = baseUser.info?.tags,
-            fontWeight = fontWeight,
-            maxLines = 1,
-        )
-    }
 }
 
 @Composable

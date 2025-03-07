@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ChatroomHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.ChatroomHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer

@@ -43,7 +43,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.ChannelFabColumn
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.Chatroom
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.Channel
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 

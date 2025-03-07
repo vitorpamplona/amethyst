@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.messages
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -59,6 +59,118 @@ import com.vitorpamplona.amethyst.ui.theme.chatBackground
 import com.vitorpamplona.amethyst.ui.theme.chatDraftBackground
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
 import com.vitorpamplona.amethyst.ui.theme.messageBubbleLimits
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ChatBubbleLayout(
+    isLoggedInUser: Boolean,
+    isDraft: Boolean,
+    innerQuote: Boolean,
+    isComplete: Boolean,
+    hasDetailsToShow: Boolean,
+    drawAuthorInfo: Boolean,
+    parentBackgroundColor: MutableState<Color>? = null,
+    onClick: () -> Boolean,
+    onAuthorClick: () -> Unit,
+    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
+    detailRow: @Composable () -> Unit,
+    drawAuthorLine: @Composable () -> Unit,
+    inner: @Composable (MutableState<Color>) -> Unit,
+) {
+    val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
+    val otherColors = MaterialTheme.colorScheme.chatBackground
+    val defaultBackground = MaterialTheme.colorScheme.background
+    val draftColor = MaterialTheme.colorScheme.chatDraftBackground
+
+    val backgroundBubbleColor =
+        remember {
+            if (isLoggedInUser) {
+                if (isDraft) {
+                    mutableStateOf(
+                        draftColor.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
+                    )
+                } else {
+                    mutableStateOf(
+                        loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
+                    )
+                }
+            } else {
+                mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
+            }
+        }
+
+    Row(
+        modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
+        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+    ) {
+        val popupExpanded = remember { mutableStateOf(false) }
+
+        val showDetails =
+            remember {
+                mutableStateOf(
+                    if (isComplete) {
+                        true
+                    } else {
+                        hasDetailsToShow
+                    },
+                )
+            }
+
+        val clickableModifier =
+            remember {
+                Modifier.combinedClickable(
+                    onClick = {
+                        if (!onClick()) {
+                            if (!isComplete) {
+                                showDetails.value = !showDetails.value
+                            }
+                        }
+                    },
+                    onLongClick = { popupExpanded.value = true },
+                )
+            }
+
+        Row(
+            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+            modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
+        ) {
+            Surface(
+                color = backgroundBubbleColor.value,
+                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
+                modifier = clickableModifier,
+            ) {
+                Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
+                    if (drawAuthorInfo) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
+                            modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
+                        ) {
+                            drawAuthorLine()
+                        }
+                    }
+
+                    inner(backgroundBubbleColor)
+
+                    if (showDetails.value) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = ReactionRowHeightChat,
+                        ) {
+                            detailRow()
+                        }
+                    }
+                }
+            }
+        }
+
+        if (popupExpanded.value) {
+            actionMenu {
+                popupExpanded.value = false
+            }
+        }
+    }
+}
 
 @Preview
 @Composable
@@ -204,118 +316,6 @@ private fun BubblePreview() {
             detailRow = { Text("Relays and Actions") },
         ) { backgroundBubbleColor ->
             Text("Short note")
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ChatBubbleLayout(
-    isLoggedInUser: Boolean,
-    isDraft: Boolean,
-    innerQuote: Boolean,
-    isComplete: Boolean,
-    hasDetailsToShow: Boolean,
-    drawAuthorInfo: Boolean,
-    parentBackgroundColor: MutableState<Color>? = null,
-    onClick: () -> Boolean,
-    onAuthorClick: () -> Unit,
-    actionMenu: @Composable (onDismiss: () -> Unit) -> Unit,
-    detailRow: @Composable () -> Unit,
-    drawAuthorLine: @Composable () -> Unit,
-    inner: @Composable (MutableState<Color>) -> Unit,
-) {
-    val loggedInColors = MaterialTheme.colorScheme.mediumImportanceLink
-    val otherColors = MaterialTheme.colorScheme.chatBackground
-    val defaultBackground = MaterialTheme.colorScheme.background
-    val draftColor = MaterialTheme.colorScheme.chatDraftBackground
-
-    val backgroundBubbleColor =
-        remember {
-            if (isLoggedInUser) {
-                if (isDraft) {
-                    mutableStateOf(
-                        draftColor.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
-                    )
-                } else {
-                    mutableStateOf(
-                        loggedInColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground),
-                    )
-                }
-            } else {
-                mutableStateOf(otherColors.compositeOver(parentBackgroundColor?.value ?: defaultBackground))
-            }
-        }
-
-    Row(
-        modifier = if (innerQuote) ChatPaddingInnerQuoteModifier else ChatPaddingModifier,
-        horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
-    ) {
-        val popupExpanded = remember { mutableStateOf(false) }
-
-        val showDetails =
-            remember {
-                mutableStateOf(
-                    if (isComplete) {
-                        true
-                    } else {
-                        hasDetailsToShow
-                    },
-                )
-            }
-
-        val clickableModifier =
-            remember {
-                Modifier.combinedClickable(
-                    onClick = {
-                        if (!onClick()) {
-                            if (!isComplete) {
-                                showDetails.value = !showDetails.value
-                            }
-                        }
-                    },
-                    onLongClick = { popupExpanded.value = true },
-                )
-            }
-
-        Row(
-            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
-            modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
-        ) {
-            Surface(
-                color = backgroundBubbleColor.value,
-                shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
-                modifier = clickableModifier,
-            ) {
-                Column(modifier = messageBubbleLimits, verticalArrangement = RowColSpacing5dp) {
-                    if (drawAuthorInfo) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = if (isLoggedInUser) Arrangement.End else Arrangement.Start,
-                            modifier = HalfHalfVertPadding.clickable(onClick = onAuthorClick),
-                        ) {
-                            drawAuthorLine()
-                        }
-                    }
-
-                    inner(backgroundBubbleColor)
-
-                    if (showDetails.value) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = ReactionRowHeightChat,
-                        ) {
-                            detailRow()
-                        }
-                    }
-                }
-            }
-        }
-
-        if (popupExpanded.value) {
-            actionMenu {
-                popupExpanded.value = false
-            }
         }
     }
 }

@@ -18,20 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
@@ -41,17 +38,14 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
-import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploadState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
@@ -101,6 +95,7 @@ open class ChatNewMessageViewModel : ViewModel() {
 
     val replyTo = mutableStateOf<Note?>(null)
 
+    var uploadState by mutableStateOf<ChatFileUploadState?>(null)
     val iMetaAttachments = IMetaAttachments()
 
     var message by mutableStateOf(TextFieldValue(""))
@@ -134,9 +129,6 @@ open class ChatNewMessageViewModel : ViewModel() {
     var toUsers by mutableStateOf(TextFieldValue(""))
     var subject by mutableStateOf(TextFieldValue(""))
 
-    // Images and Videos
-    var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
-
     // Invoices
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
@@ -168,8 +160,13 @@ open class ChatNewMessageViewModel : ViewModel() {
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
-        this.canAddInvoice = accountVM.userProfile().info?.lnAddress() != null
-        this.canAddZapRaiser = accountVM.userProfile().info?.lnAddress() != null
+        this.canAddInvoice = hasLnAddress()
+        this.canAddZapRaiser = hasLnAddress()
+
+        this.uploadState =
+            ChatFileUploadState(
+                account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0],
+            )
     }
 
     open fun load(room: ChatroomKey) {
@@ -285,11 +282,10 @@ open class ChatNewMessageViewModel : ViewModel() {
         urlPreview = findUrlInMessage()
     }
 
-    fun sendPost() {
+    fun sendPost(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            innerSendPost(null)
-            accountViewModel?.deleteDraft(draftTag)
-            cancel()
+            sendPostSync()
+            onDone()
         }
     }
 
@@ -310,6 +306,26 @@ open class ChatNewMessageViewModel : ViewModel() {
             account?.deleteDraft(draftTag)
         } else {
             innerSendPost(draftTag)
+        }
+    }
+
+    fun pickedMedia(list: ImmutableList<SelectedMedia>) {
+        uploadState?.load(list)
+    }
+
+    fun upload(
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: () -> Unit,
+    ) {
+        val room = room ?: return
+        val account = account ?: return
+        val uploadState = uploadState ?: return
+
+        if (nip17) {
+            ChatFileUploader(room, account).uploadNIP17(uploadState, viewModelScope, onError, context, onceUploaded)
+        } else {
+            ChatFileUploader(room, account).uploadNIP04(uploadState, viewModelScope, onError, context, onceUploaded)
         }
     }
 
@@ -370,54 +386,6 @@ open class ChatNewMessageViewModel : ViewModel() {
         }
     }
 
-    fun upload(
-        alt: String?,
-        contentWarningReason: String?,
-        mediaQuality: Int,
-        isPrivate: Boolean = false,
-        server: ServerName,
-        onError: (title: String, message: String) -> Unit,
-        context: Context,
-    ) {
-        viewModelScope.launch(Dispatchers.Default) {
-            val myAccount = account ?: return@launch
-
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
-
-            isUploadingImage = true
-
-            val results =
-                myMultiOrchestrator.upload(
-                    viewModelScope,
-                    alt,
-                    contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
-                    server,
-                    myAccount,
-                    context,
-                )
-
-            if (results.allGood) {
-                results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        iMetaAttachments.add(it.result, alt, contentWarningReason)
-
-                        message = message.insertUrlAtCursor(it.result.url)
-                        urlPreview = findUrlInMessage()
-                    }
-                }
-
-                multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            isUploadingImage = false
-        }
-    }
-
     open fun cancel() {
         message = TextFieldValue("")
         toUsers = TextFieldValue("")
@@ -425,9 +393,7 @@ open class ChatNewMessageViewModel : ViewModel() {
 
         replyTo.value = null
 
-        multiOrchestrator = null
         urlPreview = null
-        isUploadingImage = false
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -455,10 +421,6 @@ open class ChatNewMessageViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             accountViewModel?.deleteDraft(draftTag)
         }
-    }
-
-    fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
-        this.multiOrchestrator?.remove(selected)
     }
 
     open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
@@ -575,22 +537,16 @@ open class ChatNewMessageViewModel : ViewModel() {
         saveDraft()
     }
 
-    private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> = mutableStateMapOf(Pair(0, ""), Pair(1, ""))
-
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
-            !isUploadingImage &&
+            uploadState?.isUploadingImage != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount != null) &&
             (toUsers.text.isNotBlank()) &&
-            multiOrchestrator == null
+            uploadState?.multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
         message = message.insertUrlAtCursor(newElement)
-    }
-
-    fun selectImage(uris: ImmutableList<SelectedMedia>) {
-        multiOrchestrator = MultiOrchestrator(uris)
     }
 
     override fun onCleared() {

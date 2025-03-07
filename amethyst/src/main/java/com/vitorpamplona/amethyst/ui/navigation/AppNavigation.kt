@@ -61,8 +61,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.MessagesScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private.ChatroomScreenByAuthor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
@@ -244,7 +244,7 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutHorizontallyToEnd },
             ) {
-                ChatroomScreenByAuthor(it.id(), null, accountViewModel, nav)
+                ChatroomByAuthorScreen(it.id(), null, accountViewModel, nav)
             }
 
             composable(

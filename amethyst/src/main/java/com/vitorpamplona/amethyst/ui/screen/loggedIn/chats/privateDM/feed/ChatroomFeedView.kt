@@ -18,23 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.private
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.feed
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -49,12 +44,9 @@ import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.messages.ChatroomMessageCompose
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 
@@ -101,13 +93,10 @@ fun RenderChatroomFeedView(
 
     CrossfadeIfEnabled(targetState = feedState, animationSpec = tween(durationMillis = 100), accountViewModel = accountViewModel) { state ->
         when (state) {
-            is FeedState.Empty -> {
-                FeedEmpty { viewModel.invalidateData() }
-            }
-            is FeedState.FeedError -> {
-                FeedError(state.errorMessage) { viewModel.invalidateData() }
-            }
-            is FeedState.Loaded -> {
+            is FeedState.Loading -> LoadingFeed()
+            is FeedState.Empty -> FeedEmpty { viewModel.invalidateData() }
+            is FeedState.FeedError -> FeedError(state.errorMessage) { viewModel.invalidateData() }
+            is FeedState.Loaded ->
                 ChatroomFeedLoaded(
                     state,
                     accountViewModel,
@@ -118,10 +107,6 @@ fun RenderChatroomFeedView(
                     onWantsToEditDraft,
                     avoidDraft,
                 )
-            }
-            is FeedState.Loading -> {
-                LoadingFeed()
-            }
         }
     }
 }
@@ -163,14 +148,14 @@ fun ChatroomFeedLoaded(
                     onWantsToEditDraft = onWantsToEditDraft,
                 )
 
-                NewDateSubject(items.list.getOrNull(index + 1), item)
+                NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
             }
         }
     }
 }
 
 @Composable
-fun NewDateSubject(
+fun NewDateOrSubjectDivisor(
     previous: Note?,
     note: Note,
 ) {
@@ -194,25 +179,5 @@ fun NewDateSubject(
         if (subject != null) {
             ChatDivisor(subject)
         }
-    }
-}
-
-@Composable
-fun ChatDivisor(info: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = StdPadding) {
-        HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            thickness = DividerThickness,
-        )
-        Text(
-            text = info,
-            fontWeight = FontWeight.Bold,
-            fontSize = Font14SP,
-            modifier = HalfPadding,
-        )
-        HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            thickness = DividerThickness,
-        )
     }
 }
