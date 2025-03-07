@@ -51,9 +51,9 @@
     <string name="view_count">مشاهدة العد</string>
     <string name="boost">تعزيز</string>
     <string name="boosted">معزز</string>
-    <string name="edited">تم تعديلها</string>
+    <string name="edited">معدلة</string>
     <string name="edited_number">تعديل #%1$s</string>
-    <string name="original">الأصلية</string>
+    <string name="original">أصلية</string>
     <string name="quote">إقتباس</string>
     <string name="fork">أشتقاق</string>
     <string name="propose_an_edit">اقتراح تعديل</string>
@@ -348,9 +348,14 @@
     <string name="content_description_add_video">اضف فيديو</string>
     <string name="content_description_add_document">أضف مستند</string>
     <string name="add_content">أضف إلى الرسالة</string>
+    <string name="add_caption">إضافة شرح توضيحي</string>
+    <string name="add_caption_example">صديقي المميز</string>
+    <string name="use_direct_url">استخدام الرابط المباشر</string>
     <string name="content_description">وصف المحتوى/المحتويات</string>
     <string name="content_description_example">A blue boat in a white sandy beach at sunset
 (قارب أزرق في شاطئ رملي أبيض عند غروب الشمس)</string>
+    <string name="zap_type">نوع الزاب</string>
+    <string name="zap_type_explainer">نوع الزاب لكل الخيارات</string>
     <string name="zap_type_public">عام</string>
     <string name="zap_type_public_explainer">يستطيع الجميع رؤية المعاملة والرسالة</string>
     <string name="zap_type_private">خاص</string>
@@ -359,7 +364,9 @@
     <string name="zap_type_anonymous_explainer">المستقبل والجمهور لا يعرفان من الذي قام بإرسال الدفع</string>
     <string name="zap_type_nonzap_explainer">لا يوجد أثر في نوستر،  فقط على شبكة الLightning</string>
     <string name="file_server">خادم الملفات</string>
+    <string name="file_server_description">اختر خادم لرفع الملف به</string>
     <string name="zap_forward_lnAddress"> user@ او Lnaddres  </string>
+    <string name="media_servers">خوادم الوسائط</string>
     <string name="upload_server_relays_nip95">المرحلات الخاصة بك (NIP-95)</string>
     <string name="connect_via_tor_short">إعداد Tor/Orbot</string>
     <string name="connect_via_tor">الاتصال من خلال إعدادات Orbot الخاص بك</string>
@@ -371,6 +378,12 @@
     <string name="follow_list_kind3follows">جميع المتابعات</string>
     <string name="follow_list_global">العالمي</string>
     <string name="follow_list_mute_list">قائمة الحسابات المكتومة</string>
+    <string name="tor_use_onion_address">رابط/مرحل بصلي</string>
+    <string name="tor_use_dm_relays">مرحلات المحادثات الخاصة</string>
+    <string name="tor_use_dm_relays_explainer">استخدام Tor لإرسال و أستقبال الرسائل الخاصة</string>
+    <string name="tor_use_new_relays">مرحلات غير موثوقة</string>
+    <string name="tor_use_new_relays_explainer">أستخدام Tor لمرحلات الأحداث الواردة و المرسلة</string>
+    <string name="tor_use_trusted_relays">مرحلات موثوقة</string>
     <string name="tor_use_trusted_relays_explainer">أستخدام Tor للإتصال بالمرحلات</string>
     <string name="tor_use_profile_pictures">الصور الشخصية</string>
     <string name="tor_use_profile_pictures_explainer">أستخدام Tor عند تنزيل الصور الشخصية</string>
@@ -466,6 +479,7 @@
     <string name="are_you_sure_you_want_to_log_out">تسجيل الخروج سوف يؤدي الى جميع المعلومات المحلية الخاصة بك. تأكد من وجود نسخة احتياطية لمفاتحك السرية لتجنب فقدان حسابك.
  هل تريد الاستمرار؟</string>
     <string name="followed_tags">العلامات المُتابعة</string>
+    <string name="relay_setup">مرحلات</string>
     <string name="discover_community">مجتمع</string>
     <string name="discover_chat">االدردشات</string>
     <string name="community_approved_posts">المنشورات الموافق عليها</string>
@@ -497,6 +511,7 @@
     <string name="nip05_checking">التحقق من عنوان نوستر</string>
     <string name="select_deselect_all">تحديد/إلغاء تحديد الكل</string>
     <string name="default_relays">الافتراضي</string>
+    <string name="default_relays_longer">اعادة الوضع الافتراضى</string>
     <string name="select_a_relay_to_continue">اختر مرحل للإستمرار</string>
     <string name="geohash_title">عرض الموقع كـ </string>
     <string name="new_feature_nip17_might_not_be_available_title">ميزة جديدة</string>
@@ -534,6 +549,11 @@
     <string name="error_dialog_button_ok">موافق</string>
     <string name="relay_information_document_error_assemble_url">فشل الوصول إلى
 %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">فشل في تجميع رابط NIP-11 لـ %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">فشل الوصول إلى %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">فشل تحليل الرد من %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">المرحل رفض الطلب %1$s: %2$s</string>
+    <string name="relay_information_document_error_reach_server">فشل الوصول إلى %1$s: %2$s</string>
     <string name="relay_information_document_error_http_status">فشل %1$s مع الرمز %2$s</string>
     <string name="active_for">نشط لـ: </string>
     <string name="active_for_home">الصفحة الرئيسية</string>
