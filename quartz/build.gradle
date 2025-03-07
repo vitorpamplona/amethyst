@@ -77,6 +77,7 @@ dependencies {
     api libs.rfc3986.normalizer
 
     testImplementation libs.junit
+    testImplementation libs.secp256k1.kmp.jni.jvm
     androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core

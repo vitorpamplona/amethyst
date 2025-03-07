@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz.nip51Lists
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -52,7 +52,7 @@ class RelaySetEvent(
         ) {
             val tags = mutableListOf<Array<String>>()
             relays.forEach { tags.add(arrayOf("r", it)) }
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            tags.add(AltTag.assemble(ALT))
 
             signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
         }

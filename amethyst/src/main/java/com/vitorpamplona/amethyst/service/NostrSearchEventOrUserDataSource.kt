@@ -24,19 +24,19 @@ import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.KeyPair
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -44,19 +44,18 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import com.vitorpamplona.quartz.nip19Bech32.parse
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Hex
@@ -81,7 +80,7 @@ object NostrSearchEventOrUserDataSource : AmethystNostrDataSource("SearchEventFe
                     }
 
                 when (val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity) {
-                    is NSec -> KeyPair(privKey = parsed.hex.bechToBytes()).pubKey.toHexKey()
+                    is NSec -> Nip01.pubKeyCreate(parsed.hex.hexToByteArray()).toHexKey()
                     is NPub -> parsed.hex
                     is NProfile -> parsed.hex
                     is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> parsed.hex

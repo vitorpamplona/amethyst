@@ -26,7 +26,7 @@ import addString
 import addStringIfNotNull
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.tlv.Tlv
@@ -40,7 +40,7 @@ data class NAddress(
     val dTag: String,
     val relay: List<String>,
 ) : Entity {
-    fun aTag(): String = ATag.assembleATagId(kind, author, dTag)
+    fun aTag(): String = Address.assemble(kind, author, dTag)
 
     companion object {
         fun parse(naddr: String): NAddress? {
@@ -75,12 +75,14 @@ data class NAddress(
             kind: Int,
             pubKeyHex: String,
             dTag: String,
-            relay: String?,
+            vararg relays: String?,
         ): String =
             TlvBuilder()
                 .apply {
                     addString(TlvTypes.SPECIAL, dTag)
-                    addStringIfNotNull(TlvTypes.RELAY, relay)
+                    relays.forEach {
+                        addStringIfNotNull(TlvTypes.RELAY, it)
+                    }
                     addHex(TlvTypes.AUTHOR, pubKeyHex)
                     addInt(TlvTypes.KIND, kind)
                 }.build()

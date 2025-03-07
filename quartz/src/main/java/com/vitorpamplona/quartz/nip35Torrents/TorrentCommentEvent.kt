@@ -21,26 +21,23 @@
 package com.vitorpamplona.quartz.nip35Torrents
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.content.buildUrlRefs
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip10Notes.positionalMarkedTags
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
+import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip10Notes.tags.positionalMarkedTags
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -51,97 +48,57 @@ class TorrentCommentEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    private fun innerTorrent() =
-        tags.firstOrNull { it.size > 3 && it[0] == "e" && it[3] == "root" }
-            ?: tags.firstOrNull { it.size > 1 && it[0] == "e" }
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    fun torrent() = innerTorrent()?.getOrNull(1)
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(QTag::parseAddressAsHint)
+
+    fun torrent() = tags.firstNotNullOfOrNull(MarkedETag::parseRoot) ?: tags.firstNotNullOfOrNull(ETag::parse)
+
+    fun torrentIds() = tags.firstNotNullOfOrNull(MarkedETag::parseRootId) ?: tags.firstNotNullOfOrNull(ETag::parseId)
 
     companion object {
         const val KIND = 2004
-        const val ALT = "Comment for a Torrent file"
+        const val ALT_DESCRIPTION = "Comment for a Torrent file"
 
-        fun create(
+        fun build(
             message: String,
-            torrent: HexKey,
-            replyTos: List<String>? = null,
-            mentions: List<String>? = null,
-            addresses: List<ATag>? = null,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            signer: NostrSigner,
+            torrent: EventHintBundle<TorrentEvent>,
+            replyingTo: EventHintBundle<TorrentCommentEvent>?,
             createdAt: Long = TimeUtils.now(),
-            markAsSensitive: Boolean,
-            replyingTo: String? = null,
-            directMentions: Set<HexKey> = emptySet(),
-            zapRaiserAmount: Long?,
-            geohash: String? = null,
-            imetas: List<IMetaTag>? = null,
-            emojis: List<EmojiUrl>? = null,
-            forkedFrom: Event? = null,
-            isDraft: Boolean,
-            onReady: (TorrentCommentEvent) -> Unit,
-        ) {
-            val content = message
-
-            val tags = mutableListOf<Array<String>>()
-            replyTos?.let {
-                tags.addAll(
-                    it.positionalMarkedTags(
-                        tagName = "e",
-                        root = torrent,
-                        replyingTo = replyingTo,
-                        directMentions = directMentions,
-                        forkedFrom = forkedFrom?.id,
-                    ),
-                )
-            }
-            mentions?.forEach {
-                if (it in directMentions) {
-                    tags.add(arrayOf("p", it, "", "mention"))
+        ): EventTemplate<TorrentCommentEvent> {
+            val eTags =
+                if (replyingTo == null) {
+                    listOfNotNull(torrent.toETag())
                 } else {
-                    tags.add(arrayOf("p", it))
+                    replyingTo.event.taggedEvents() + replyingTo.toETag()
                 }
-            }
-            replyTos?.forEach {
-                if (it in directMentions) {
-                    tags.add(arrayOf("q", it))
-                }
-            }
-            addresses
-                ?.map { it.toTag() }
-                ?.let {
-                    tags.addAll(
-                        it.positionalMarkedTags(
-                            tagName = "a",
-                            root = torrent,
-                            replyingTo = replyingTo,
-                            directMentions = directMentions,
-                            forkedFrom = (forkedFrom as? AddressableEvent)?.address()?.toTag(),
-                        ),
-                    )
-                }
-            tags.addAll(buildHashtagTags(findHashtags(message)))
-            tags.addAll(buildUrlRefs(findURLs(message)))
 
-            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
-            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
+            // double check the order and erases older markers.
+            val sortedAndMarked =
+                eTags.positionalMarkedTags(
+                    root = torrent.toETag(),
+                    replyingTo = replyingTo?.toETag(),
+                    forkedFrom = null,
+                )
 
-            if (markAsSensitive) {
-                tags.add(ContentWarningSerializer.toTagArray())
+            return build(message, createdAt) {
+                eTags(sortedAndMarked)
             }
-            geohash?.let { tags.addAll(geohashMipMap(it)) }
-            imetas?.forEach {
-                tags.add(Nip92MediaAttachments.createTag(it))
-            }
-            emojis?.forEach { tags.add(it.toTagArray()) }
-            tags.add(AltTagSerializer.toTagArray(ALT))
+        }
 
-            if (isDraft) {
-                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), content, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
-            }
+        fun build(
+            post: String,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<TorrentCommentEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, post, createdAt) {
+            alt(ALT_DESCRIPTION)
+            initializer()
         }
     }
 }

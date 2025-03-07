@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.addressables
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.core.match
+import com.vitorpamplona.quartz.nip01Core.core.name
+import com.vitorpamplona.quartz.nip01Core.core.value
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
@@ -34,17 +38,9 @@ data class ATag(
     val kind: Int,
     val pubKeyHex: String,
     val dTag: String,
+    val relay: String? = null,
 ) {
-    var relay: String? = null
-
-    constructor(
-        kind: Int,
-        pubKeyHex: HexKey,
-        dTag: String,
-        relayHint: String?,
-    ) : this(kind, pubKeyHex, dTag) {
-        this.relay = relayHint
-    }
+    constructor(address: Address, relayHint: String? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
 
     fun countMemory(): Long =
         5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
@@ -53,7 +49,7 @@ data class ATag(
             dTag.bytesUsedInMemory() +
             (relay?.bytesUsedInMemory() ?: 0)
 
-    fun toTag() = assembleATagId(kind, pubKeyHex, dTag)
+    fun toTag() = Address.assemble(kind, pubKeyHex, dTag)
 
     fun toATagArray() = removeTrailingNullsAndEmptyOthers(TAG_NAME, toTag(), relay)
 
@@ -61,34 +57,99 @@ data class ATag(
 
     companion object {
         const val TAG_NAME = "a"
+        const val TAG_SIZE = 2
 
-        fun assembleATagId(
-            kind: Int,
-            pubKeyHex: HexKey,
-            dTag: String,
-        ) = "$kind:$pubKeyHex:$dTag"
+        @JvmStatic
+        fun isTagged(tag: Array<String>) = tag.size >= 2 && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
+        @JvmStatic
+        fun isSameAddress(
+            tag1: Array<String>,
+            tag2: Array<String>,
+        ) = tag1.match(tag2.name(), tag2.value(), TAG_SIZE)
+
+        @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            addressId: String,
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == addressId
+
+        @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            address: ATag,
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == address.toTag()
+
+        @JvmStatic
+        fun isIn(
+            tag: Array<String>,
+            addressIds: Set<String>,
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] in addressIds
+
+        @JvmStatic
+        fun isTaggedWithKind(
+            tag: Array<String>,
+            kind: String,
+        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && Address.isOfKind(tag[1], kind)
+
+        @JvmStatic
+        fun parseIfOfKind(
+            tag: Array<String>,
+            kind: String,
+        ) = if (isTaggedWithKind(tag, kind)) parse(tag[1], tag.getOrNull(2)) else null
+
+        @JvmStatic
+        fun parseIfIsIn(
+            tag: Array<String>,
+            addresses: Set<String>,
+        ) = if (isIn(tag, addresses)) parse(tag[1], tag.getOrNull(2)) else null
+
+        @JvmStatic
         fun parse(
             aTagId: String,
             relay: String?,
-        ): ATag? =
-            try {
-                val parts = aTagId.split(":", limit = 3)
-                if (Hex.isHex(parts[1])) {
-                    ATag(parts[0].toInt(), parts[1], parts[2], relay)
-                } else {
-                    Log.w("ATag", "Error parsing A Tag. Pubkey is not hex: $aTagId")
-                    null
-                }
-            } catch (t: Throwable) {
-                Log.w("ATag", "Error parsing A Tag: $aTagId: ${t.message}")
-                null
-            }
+        ) = Address.parse(aTagId)?.let { ATag(it.kind, it.pubKeyHex, it.dTag, relay) }
 
         @JvmStatic
-        fun parse(tags: Array<String>): ATag? {
-            require(tags[0] == TAG_NAME)
-            return parse(tags[1], tags.getOrNull(2))
+        fun parse(tag: Array<String>): ATag? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return parse(tag[1], tag.getOrNull(2))
+        }
+
+        @JvmStatic
+        fun parseValidAddress(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return Address.parse(tag[1])?.toValue()
+        }
+
+        @JvmStatic
+        fun parseAddress(tag: Array<String>): Address? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return Address.parse(tag[1])
+        }
+
+        @JvmStatic
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        @JvmStatic
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[1].contains(':')) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            return AddressHint(tag[1], tag[2])
         }
 
         @JvmStatic
@@ -100,9 +161,9 @@ data class ATag(
         @JvmStatic
         fun assemble(
             kind: Int,
-            pubKeyHex: String,
+            pubKey: String,
             dTag: String,
             relay: String?,
-        ) = arrayOfNotNull(TAG_NAME, assembleATagId(kind, pubKeyHex, dTag), relay)
+        ) = assemble(Address.assemble(kind, pubKey, dTag), relay)
     }
 }

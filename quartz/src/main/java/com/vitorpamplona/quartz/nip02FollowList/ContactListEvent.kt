@@ -20,32 +20,25 @@
  */
 package com.vitorpamplona.quartz.nip02FollowList
 
-import android.util.Log
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
-import com.vitorpamplona.quartz.nip19Bech32.parse
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip02FollowList.tags.AddressFollowTag
+import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-
-@Immutable data class Contact(
-    val pubKeyHex: String,
-    val relayUri: String?,
-)
 
 @Stable
 class ContactListEvent(
@@ -55,70 +48,34 @@ class ContactListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
+
     /**
      * Returns a list of p-tags that are verified as hex keys.
      */
-    fun verifiedFollowKeySet(): Set<HexKey> =
-        tags.mapNotNullTo(mutableSetOf()) {
-            if (it.size > 1 && it[0] == "p") {
-                try {
-                    decodePublicKey(it[1]).toHexKey()
-                } catch (e: Exception) {
-                    Log.w("ContactListEvent", "Can't parse p-tag $it in the contact list of $pubKey with id $id", e)
-                    null
-                }
-            } else {
-                null
-            }
-        }
+    fun verifiedFollowKeySet(): Set<HexKey> = tags.mapNotNullTo(HashSet(), ContactTag::parseValidKey)
 
     /**
      * Returns a list of a-tags that are verified as correct.
      */
-    fun verifiedFollowAddressSet(): Set<HexKey> =
-        tags
-            .mapNotNullTo(mutableSetOf()) {
-                if (it.size > 1 && it[0] == "a") {
-                    ATag.parse(it[1], null)?.toTag()
-                } else {
-                    null
-                }
-            }
+    fun verifiedFollowAddressSet(): Set<HexKey> = tags.mapNotNullTo(HashSet(), AddressFollowTag::parseValidAddress)
 
-    fun unverifiedFollowKeySet() = tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowKeySet() = tags.mapNotNull(ContactTag::parseKey)
 
-    fun unverifiedFollowTagSet() = tags.filter { it.size > 1 && it[0] == "t" }.mapNotNull { it.getOrNull(1) }
+    fun unverifiedFollowTagSet() = tags.hashtags()
 
-    fun countFollowTags() = tags.count { it.size > 1 && it[0] == "t" }
+    fun countFollowTags() = tags.countHashtags()
 
-    fun follows() =
-        tags.mapNotNull {
-            try {
-                if (it.size > 1 && it[0] == "p") {
-                    Contact(decodePublicKey(it[1]).toHexKey(), it.getOrNull(2))
-                } else {
-                    null
-                }
-            } catch (e: Exception) {
-                Log.w("ContactListEvent", "Can't parse tags as a follows: ${it[1]}", e)
-                null
-            }
-        }
+    fun follows() = tags.mapNotNull(ContactTag::parseValid)
 
     fun followsTags() = hashtags()
 
-    fun relays(): Map<String, ReadWrite>? =
-        try {
-            if (content.isNotEmpty()) {
-                EventMapper.mapper.readValue<Map<String, ReadWrite>>(content)
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            Log.w("ContactListEvent", "Can't parse content as relay lists: $content", e)
-            null
-        }
+    fun relays(): Map<String, ReadWrite>? = RelaySet.parse(content)
 
     companion object {
         const val KIND = 3
@@ -127,7 +84,7 @@ class ContactListEvent(
         fun blockListFor(pubKeyHex: HexKey): String = "3:$pubKeyHex:"
 
         fun createFromScratch(
-            followUsers: List<Contact> = emptyList(),
+            followUsers: List<ContactTag> = emptyList(),
             followTags: List<String> = emptyList(),
             followGeohashes: List<String> = emptyList(),
             followCommunities: List<ATag> = emptyList(),
@@ -136,18 +93,11 @@ class ContactListEvent(
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): ContactListEvent? {
-            val content =
-                if (relayUse != null) {
-                    EventMapper.mapper.writeValueAsString(relayUse)
-                } else {
-                    ""
-                }
+            val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
             val tags =
-                listOf(AltTagSerializer.toTagArray(ALT)) +
-                    followUsers.map {
-                        listOfNotNull("p", it.pubKeyHex, it.relayUri).toTypedArray()
-                    } +
+                listOf(AltTag.assemble(ALT)) +
+                    followUsers.map { it.toTagArray() } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
                     followCommunities.map { it.toATagArray() } +
@@ -157,7 +107,7 @@ class ContactListEvent(
         }
 
         fun createFromScratch(
-            followUsers: List<Contact>,
+            followUsers: List<ContactTag>,
             followTags: List<String>,
             followGeohashes: List<String>,
             followCommunities: List<ATag>,
@@ -167,21 +117,10 @@ class ContactListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ContactListEvent) -> Unit,
         ) {
-            val content =
-                if (relayUse != null) {
-                    EventMapper.mapper.writeValueAsString(relayUse)
-                } else {
-                    ""
-                }
+            val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
             val tags =
-                followUsers.map {
-                    if (it.relayUri != null) {
-                        arrayOf("p", it.pubKeyHex, it.relayUri)
-                    } else {
-                        arrayOf("p", it.pubKeyHex)
-                    }
-                } +
+                followUsers.map { it.toTagArray() } +
                     followTags.map { arrayOf("t", it) } +
                     followEvents.map { arrayOf("e", it) } +
                     followCommunities.map { it.toATagArray() } +
@@ -387,12 +326,7 @@ class ContactListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (ContactListEvent) -> Unit,
         ) {
-            val content =
-                if (relayUse != null) {
-                    EventMapper.mapper.writeValueAsString(relayUse)
-                } else {
-                    ""
-                }
+            val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
             return create(
                 content = content,
@@ -414,23 +348,10 @@ class ContactListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + AltTagSerializer.toTagArray(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)
         }
     }
-
-    data class ReadWrite(
-        val read: Boolean,
-        val write: Boolean,
-    )
 }
-
-@Stable class ImmutableListOfLists<T>(
-    val lists: Array<Array<T>>,
-)
-
-val EmptyTagList = ImmutableListOfLists<String>(emptyArray())
-
-fun Array<Array<String>>.toImmutableListOfLists(): ImmutableListOfLists<String> = ImmutableListOfLists(this)

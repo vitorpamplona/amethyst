@@ -27,10 +27,10 @@ import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,

@@ -21,8 +21,5 @@
 package com.vitorpamplona.quartz.nip31Alts
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 
-val ALT_TAG = "alt"
-
-fun Event.alt() = tags.firstTagValue(ALT_TAG)
+fun Event.alt() = tags.alt()

@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.getTagOfAddressableKind
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 @Composable
 fun DisplayFollowingCommunityInPost(

@@ -34,9 +34,9 @@ import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.KeyPair
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
 import kotlinx.coroutines.CoroutineScope
@@ -81,7 +81,7 @@ class ImageUploadTesting {
 
     private suspend fun testBlossom(server: ServerName) {
         val paylod = getBitmap()
-        val initialHash = CryptoUtils.sha256(paylod).toHexKey()
+        val initialHash = sha256(paylod).toHexKey()
         val inputStream = paylod.inputStream()
         val result =
             BlossomUploader()
@@ -111,7 +111,7 @@ class ImageUploadTesting {
                     return
                 }
 
-        val downloadedHash = CryptoUtils.sha256(imageData).toHexKey()
+        val downloadedHash = sha256(imageData).toHexKey()
         assertEquals(initialHash, downloadedHash)
     }
 

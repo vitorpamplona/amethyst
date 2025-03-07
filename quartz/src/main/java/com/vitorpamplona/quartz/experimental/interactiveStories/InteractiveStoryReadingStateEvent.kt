@@ -21,15 +21,23 @@
 package com.vitorpamplona.quartz.experimental.interactiveStories
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.ReadStatusTag
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.RootSceneTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.firstTag
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.builder
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
 @Immutable
 class InteractiveStoryReadingStateEvent(
@@ -40,22 +48,27 @@ class InteractiveStoryReadingStateEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun title() = tags.firstTagValue("title")
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun summary() = tags.firstTagValue("summary")
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun image() = tags.firstTagValue("image")
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun status() = tags.firstTagValue("status")
+    fun status() = tags.firstNotNullOfOrNull(StatusTag::parse)
 
-    fun root() = tags.firstTag("A")?.let { ATag.parse(it[1], it.getOrNull(2)) }
+    fun root() = tags.firstNotNullOfOrNull(RootSceneTag::parse)
 
-    fun currentScene() = tags.firstTag("a")?.let { ATag.parse(it[1], it.getOrNull(2)) }
+    fun currentScene() = tags.firstNotNullOfOrNull(ATag::parseAddress)
 
     companion object {
         const val KIND = 30298
         const val ALT1 = "Interactive Story Reading state"
         const val ALT2 = "The reading state of "
+
+        fun createAddress(
+            pubKey: HexKey,
+            dtag: String,
+        ): Address = Address(KIND, pubKey, dtag)
 
         fun createAddressATag(
             pubKey: HexKey,
@@ -65,77 +78,66 @@ class InteractiveStoryReadingStateEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dtag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
+        ): String = Address.assemble(KIND, pubKey, dtag)
 
         fun update(
             base: InteractiveStoryReadingStateEvent,
             currentScene: InteractiveStoryBaseEvent,
             currentSceneRelay: String?,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (InteractiveStoryReadingStateEvent) -> Unit,
-        ) {
+        ): EventTemplate<InteractiveStoryReadingStateEvent> {
             val rootTag = base.dTag()
-            val sceneTag = currentScene.addressTag()
+            val sceneTag = currentScene.aTag(currentSceneRelay)
 
             val status =
-                if (rootTag == sceneTag) {
-                    "new"
+                if (rootTag == sceneTag.toTag()) {
+                    ReadStatusTag.STATUS.NEW
                 } else if (currentScene.options().isEmpty()) {
-                    "done"
+                    ReadStatusTag.STATUS.DONE
                 } else {
-                    "reading"
+                    ReadStatusTag.STATUS.READING
                 }
 
-            val tags =
-                base.tags.filter { it[0] != "a" && it[0] != "status" } +
-                    listOf(
-                        removeTrailingNullsAndEmptyOthers("a", sceneTag, currentSceneRelay),
-                        arrayOf("status", status),
-                    )
+            val updatedTags =
+                base.tags.builder {
+                    currentScene(sceneTag)
+                    status(status)
+                }
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            return EventTemplate(createdAt, KIND, updatedTags, "")
         }
 
-        fun create(
+        fun build(
             root: InteractiveStoryBaseEvent,
             rootRelay: String?,
             currentScene: InteractiveStoryBaseEvent,
             currentSceneRelay: String?,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (InteractiveStoryReadingStateEvent) -> Unit,
-        ) {
-            val rootTag = root.addressTag()
-            val sceneTag = currentScene.addressTag()
+            initializer: TagArrayBuilder<InteractiveStoryReadingStateEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            val rootTag = root.aTag(rootRelay)
+            val sceneTag = currentScene.aTag(currentSceneRelay)
             val status =
                 if (rootTag == sceneTag) {
-                    "new"
+                    ReadStatusTag.STATUS.NEW
                 } else if (currentScene.options().isEmpty()) {
-                    "done"
+                    ReadStatusTag.STATUS.DONE
                 } else {
-                    "reading"
+                    ReadStatusTag.STATUS.READING
                 }
 
-            val tags =
-                listOfNotNull(
-                    arrayOf("d", rootTag),
-                    AltTagSerializer.toTagArray(root.title()?.let { ALT2 + it } ?: ALT1),
-                    root.title()?.let { arrayOf("title", it) },
-                    root.summary()?.let { arrayOf("summary", it) },
-                    root.image()?.let { arrayOf("image", it) },
-                    removeTrailingNullsAndEmptyOthers("A", rootTag, rootRelay),
-                    removeTrailingNullsAndEmptyOthers("a", sceneTag, currentSceneRelay),
-                    arrayOf("status", status),
-                ).toTypedArray()
+            dTag(rootTag.toTag())
+            alt(root.title()?.let { ALT2 + it } ?: ALT1)
 
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            rootScene(rootTag)
+            currentScene(sceneTag)
+            status(status)
+
+            root.title()?.let { storyTitle(it) }
+            root.summary()?.let { storyImage(it) }
+            root.image()?.let { storySummary(it) }
+
+            initializer()
         }
-    }
-
-    enum class ReadingStatus {
-        NEW,
-        READING,
-        DONE,
     }
 }

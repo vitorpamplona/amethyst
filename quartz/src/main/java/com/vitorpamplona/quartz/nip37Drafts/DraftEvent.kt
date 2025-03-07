@@ -23,17 +23,17 @@ package com.vitorpamplona.quartz.nip37Drafts
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip34Git.GitReplyEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
@@ -125,7 +125,7 @@ class DraftEvent(
         fun createAddressTag(
             pubKey: HexKey,
             dTag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dTag)
+        ): String = Address.assemble(KIND, pubKey, dTag)
 
         fun create(
             dTag: String,
@@ -175,7 +175,7 @@ class DraftEvent(
             onReady: (DraftEvent) -> Unit,
         ) {
             val tags = mutableListOf<Array<String>>()
-            originalNote.channel()?.let { tags.add(arrayOf("e", it)) }
+            originalNote.channelId()?.let { tags.add(arrayOf("e", it)) }
 
             create(dTag, originalNote, tags, signer, createdAt, onReady)
         }
@@ -216,7 +216,7 @@ class DraftEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (DraftEvent) -> Unit,
         ) {
-            val tagsWithMarkers = originalNote.getRootScopes() + originalNote.getDirectReplies()
+            val tagsWithMarkers = originalNote.rootScopes() + originalNote.directReplies()
 
             create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
         }

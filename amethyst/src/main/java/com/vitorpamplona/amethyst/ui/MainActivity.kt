@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -55,12 +55,12 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.Note
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers

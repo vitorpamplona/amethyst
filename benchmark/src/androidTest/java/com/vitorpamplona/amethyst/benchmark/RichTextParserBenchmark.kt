@@ -48,7 +48,7 @@ class RichTextParserBenchmark {
             assertNull(
                 RichTextParser().createMediaContent(
                     "https://github.com/vitorpamplona/amethyst/releases/download/v0.83.10/amethyst-googleplay-universal-v0.83.10.apk",
-                    EmptyTagList,
+                    emptyMap(),
                     null,
                 ),
             )

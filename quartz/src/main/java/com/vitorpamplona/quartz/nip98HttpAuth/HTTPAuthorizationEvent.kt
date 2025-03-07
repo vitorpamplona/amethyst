@@ -21,12 +21,15 @@
 package com.vitorpamplona.quartz.nip98HttpAuth
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip98HttpAuth.tags.MethodTag
+import com.vitorpamplona.quartz.nip98HttpAuth.tags.PayloadHashTag
+import com.vitorpamplona.quartz.nip98HttpAuth.tags.UrlTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.Base64
 
 @Immutable
 class HTTPAuthorizationEvent(
@@ -37,28 +40,30 @@ class HTTPAuthorizationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun method() = tags.firstNotNullOfOrNull(MethodTag::parse)
+
+    fun payloadHash() = tags.firstNotNullOfOrNull(PayloadHashTag::parse)
+
+    fun url() = tags.firstNotNullOfOrNull(UrlTag::parse)
+
+    fun rawToken() = Base64.getEncoder().encodeToString(toJson().toByteArray())
+
+    fun toAuthToken() = "Nostr ${rawToken()}"
+
     companion object {
         const val KIND = 27235
 
-        fun create(
+        fun build(
             url: String,
             method: String,
             file: ByteArray? = null,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (HTTPAuthorizationEvent) -> Unit,
-        ) {
-            var hash = ""
-            file?.let { hash = CryptoUtils.sha256(file).toHexKey() }
-
-            val tags =
-                listOfNotNull(
-                    arrayOf("u", url),
-                    arrayOf("method", method),
-                    arrayOf("payload", hash),
-                )
-
-            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            initializer: TagArrayBuilder<HTTPAuthorizationEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            url(url)
+            method(method)
+            file?.let { payload(it) }
+            initializer()
         }
     }
 }

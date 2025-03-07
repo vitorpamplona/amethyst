@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
@@ -93,11 +94,11 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -264,7 +265,9 @@ fun LocalImageView(
                                     )
                                 }
                             } else {
-                                DisplayUrlWithLoadingSymbol(content)
+                                WaitAndDisplay {
+                                    DisplayUrlWithLoadingSymbol(content)
+                                }
                             }
                         }
                         is AsyncImagePainter.State.Error -> {
@@ -370,7 +373,9 @@ fun UrlImageView(
                                 )
                             }
                         } else {
-                            DisplayUrlWithLoadingSymbol(content)
+                            WaitAndDisplay {
+                                DisplayUrlWithLoadingSymbol(content)
+                            }
                         }
                     }
                     is AsyncImagePainter.State.Error -> {
@@ -514,10 +519,31 @@ fun ShowHash(content: MediaUrlContent) {
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
 
-fun aspectRatio(dim: Dimension?): Float? {
+fun aspectRatio(dim: DimensionTag?): Float? {
     if (dim == null) return null
 
     return dim.width.toFloat() / dim.height.toFloat()
+}
+
+@Composable
+fun WaitAndDisplay(
+    content:
+        @Composable()
+        (AnimatedVisibilityScope.() -> Unit),
+) {
+    val visible = remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(200)
+        visible.value = true
+    }
+
+    AnimatedVisibility(
+        visible = visible.value,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        content = content,
+    )
 }
 
 @Composable
@@ -641,7 +667,7 @@ fun ShareImageAction(
     videoUri: String?,
     postNostrUri: String?,
     blurhash: String?,
-    dim: Dimension?,
+    dim: DimensionTag?,
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,
@@ -679,7 +705,7 @@ fun ShareImageAction(
                     if (videoUri != null) {
                         val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                         if (n19 != null) {
-                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay[0], blurhash, dim, hash, mimeType) // TODO Whole list or first?
+                            accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType) // TODO Whole list or first?
                             accountViewModel.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                         }
                     }
@@ -695,7 +721,7 @@ private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
     Amethyst.instance.coilCache.openSnapshot(content.url)?.use { snapshot ->
-        val hash = CryptoUtils.sha256(snapshot.data.toFile().readBytes()).toHexKey()
+        val hash = sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
         Log.d("Image Hash Verification", "$hash == ${content.hash}")
 

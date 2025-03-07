@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip17Dm.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -124,5 +124,6 @@ object HttpClientManager {
     fun addCipherToCache(
         url: String,
         cipher: NostrCipher,
-    ) = cache.add(url, cipher)
+        expectedMimeType: String?,
+    ) = cache.add(url, cipher, expectedMimeType)
 }

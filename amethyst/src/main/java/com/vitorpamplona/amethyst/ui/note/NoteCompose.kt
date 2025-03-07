@@ -123,12 +123,11 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.RenderChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.RenderChannelHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
@@ -149,36 +148,36 @@ import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.normalWithTopMarginNoteModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.bounties.getReward
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.forks.isAFork
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
-import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip13Pow.pow
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
-import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
@@ -186,8 +185,8 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
@@ -198,10 +197,10 @@ import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -963,7 +962,7 @@ fun SecondUserInfoRow(
         verticalAlignment = CenterVertically,
         modifier = UserNameMaxRowHeight,
     ) {
-        if (noteEvent is BaseTextNoteEvent && noteEvent.isAFork()) {
+        if (noteEvent is BaseThreadedEvent && noteEvent.isAFork()) {
             ShowForkInformation(noteEvent, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
         } else {
             ObserveDisplayNip05Status(noteAuthor, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
@@ -975,7 +974,7 @@ fun SecondUserInfoRow(
             DisplayLocation(geo, nav)
         }
 
-        val baseReward = remember(noteEvent) { noteEvent.getReward()?.let { Reward(it) } }
+        val baseReward = remember(noteEvent) { noteEvent.bountyBaseReward()?.let { Reward(it) } }
         if (baseReward != null) {
             Spacer(StdHorzSpacer)
             DisplayReward(baseReward, note, accountViewModel, nav)
@@ -1022,7 +1021,7 @@ fun DisplayDraftChat() {
     Text(
         "Draft",
         color = MaterialTheme.colorScheme.placeholderText,
-        modifier = HalfEndPadding,
+        modifier = Modifier,
         fontWeight = FontWeight.Bold,
         fontSize = Font12SP,
         maxLines = 1,

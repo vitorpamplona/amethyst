@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
-import com.vitorpamplona.quartz.nip35Torrents.TorrentFile
+import com.vitorpamplona.quartz.nip35Torrents.tags.FileTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -177,7 +177,7 @@ fun RenderTorrent(
 
 @Composable
 fun DisplayFileList(
-    files: ImmutableList<TorrentFile>,
+    files: ImmutableList<FileTag>,
     name: String,
     description: String?,
     link: () -> String,

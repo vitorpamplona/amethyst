@@ -23,13 +23,14 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.EventHasher
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.utils.sha256Hash
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.security.MessageDigest
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -43,13 +44,37 @@ class Sha256Benchmark {
     val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun sha256() {
+    fun sha256Pool() {
         val event = Event.fromJson(largeKind1Event)
         val byteArray = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content).toByteArray()
 
         benchmarkRule.measureRepeated {
             // Should pass
-            assertNotNull(sha256Hash(byteArray))
+            assertNotNull(sha256(byteArray))
+        }
+    }
+
+    @Test
+    fun sha256NewEachTime() {
+        val event = Event.fromJson(largeKind1Event)
+        val byteArray = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content).toByteArray()
+
+        benchmarkRule.measureRepeated {
+            val digest = MessageDigest.getInstance("SHA-256")
+            assertNotNull(digest.digest(byteArray))
+        }
+    }
+
+    @Test
+    fun sha256Reuse() {
+        val event = Event.fromJson(largeKind1Event)
+        val byteArray = EventHasher.makeJsonForId(event.pubKey, event.createdAt, event.kind, event.tags, event.content).toByteArray()
+
+        val digest = MessageDigest.getInstance("SHA-256")
+
+        benchmarkRule.measureRepeated {
+            assertNotNull(digest.digest(byteArray))
+            digest.reset()
         }
     }
 }

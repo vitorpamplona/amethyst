@@ -24,7 +24,7 @@ class ZapSplitSetupParser {
     companion object {
         @JvmStatic
         fun parse(tags: Array<String>): BaseZapSplitSetup? {
-            require(tags[0] == "zap")
+            require(tags[0] == BaseZapSplitSetup.TAG_NAME)
 
             val isLnAddress = tags[1].contains("@") || tags[1].startsWith("LNURL", true)
             val weight = if (isLnAddress) 1.0 else (tags.getOrNull(3)?.toDoubleOrNull() ?: 0.0)

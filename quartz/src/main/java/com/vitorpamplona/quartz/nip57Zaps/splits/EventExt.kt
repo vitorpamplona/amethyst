@@ -21,9 +21,7 @@
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 
-fun Event.hasZapSplitSetup() = tags.hasTagWithContent("zap")
+fun Event.hasZapSplitSetup() = tags.hasZapSplitSetup()
 
-fun Event.zapSplitSetup(): List<BaseZapSplitSetup> = tags.mapTagged("zap") { ZapSplitSetupParser.parse(it) }
+fun Event.zapSplitSetup(): List<BaseZapSplitSetup> = tags.zapSplitSetup()

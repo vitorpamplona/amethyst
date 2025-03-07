@@ -99,7 +99,7 @@ open class NewMediaModel : ViewModel() {
                 myMultiOrchestrator.upload(
                     viewModelScope,
                     caption,
-                    sensitiveContent,
+                    if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQualitySlider),
                     serverToUse,
                     myAccount,
@@ -140,7 +140,7 @@ open class NewMediaModel : ViewModel() {
                         viewModelScope.launch(Dispatchers.IO) {
                             withTimeoutOrNull(30000) {
                                 suspendCancellableCoroutine { continuation ->
-                                    account?.createNip95(it.bytes, headerInfo = it.fileHeader, caption, sensitiveContent) { nip95 ->
+                                    account?.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null) { nip95 ->
                                         account?.consumeAndSendNip95(nip95.first, nip95.second, relayList)
                                         continuation.resume(true)
                                     }
@@ -160,7 +160,7 @@ open class NewMediaModel : ViewModel() {
                                         it.magnet,
                                         it.fileHeader,
                                         caption,
-                                        sensitiveContent,
+                                        if (sensitiveContent) "" else null,
                                         it.uploadedHash,
                                         relayList,
                                     ) {
@@ -180,7 +180,7 @@ open class NewMediaModel : ViewModel() {
                                         account?.sendAllAsOnePictureEvent(
                                             imageUrls,
                                             caption,
-                                            sensitiveContent,
+                                            if (sensitiveContent) "" else null,
                                             relayList,
                                         ) {
                                             continuation.resume(true)

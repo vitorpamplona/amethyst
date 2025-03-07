@@ -43,16 +43,16 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Nav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -134,11 +134,11 @@ fun redirect(
             event is LiveActivitiesChatMessageEvent ||
             event is LiveActivitiesEvent
         ) {
-            (event as? ChannelMessageEvent)?.channel()
-                ?: (event as? ChannelMetadataEvent)?.channel()
+            (event as? ChannelMessageEvent)?.channelId()
+                ?: (event as? ChannelMetadataEvent)?.channelId()
                 ?: (event as? ChannelCreateEvent)?.id
                 ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
-                ?: (event as? LiveActivitiesEvent)?.address()?.toTag()
+                ?: (event as? LiveActivitiesEvent)?.aTag()?.toTag()
         } else {
             null
         }

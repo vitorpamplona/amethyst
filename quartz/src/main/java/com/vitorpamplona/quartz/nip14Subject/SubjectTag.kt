@@ -20,24 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip14Subject
 
-import com.vitorpamplona.quartz.nip01Core.tags.dTags.DTag
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-
-class SubjectTag(
-    val subject: String,
-) {
-    fun countMemory(): Long = 1 * pointerSizeInBytes + subject.bytesUsedInMemory()
-
-    fun toTagArray() = assemble(subject)
-
+class SubjectTag {
     companion object {
         const val TAG_NAME = "subject"
+        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun parse(tags: Array<String>): DTag {
-            require(tags[0] == TAG_NAME)
-            return DTag(tags[1])
+        fun hasTagWithContent(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tag: Array<String>): String? {
+            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            return tag[1]
         }
 
         @JvmStatic

@@ -24,4 +24,8 @@ sealed interface BaseZapSplitSetup {
     val weight: Double
 
     fun mainId(): String
+
+    companion object {
+        const val TAG_NAME = "zap"
+    }
 }

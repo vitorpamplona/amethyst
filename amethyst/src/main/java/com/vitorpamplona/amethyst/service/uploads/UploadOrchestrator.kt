@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.quartz.nip17Dm.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlin.coroutines.cancellation.CancellationException
@@ -132,7 +132,7 @@ class UploadOrchestrator {
         contentType: String?,
         size: Long?,
         alt: String?,
-        sensitiveContent: Boolean,
+        contentWarningReason: String?,
         serverBaseUrl: String,
         contentTypeForResult: String?,
         originalHash: String?,
@@ -147,7 +147,7 @@ class UploadOrchestrator {
                     contentType = contentType,
                     size = size,
                     alt = alt,
-                    sensitiveContent = if (sensitiveContent) "" else null,
+                    sensitiveContent = contentWarningReason,
                     serverBaseUrl = serverBaseUrl,
                     forceProxy = account::shouldUseTorForNIP96,
                     onProgress = { percent: Float ->
@@ -175,7 +175,7 @@ class UploadOrchestrator {
         contentType: String?,
         size: Long?,
         alt: String?,
-        sensitiveContent: Boolean,
+        contentWarningReason: String?,
         serverBaseUrl: String,
         contentTypeForResult: String?,
         originalHash: String?,
@@ -191,7 +191,7 @@ class UploadOrchestrator {
                         contentType = contentType,
                         size = size,
                         alt = alt,
-                        sensitiveContent = if (sensitiveContent) "" else null,
+                        sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
                         forceProxy = account::shouldUseTorForNIP96,
                         httpAuth = account::createBlossomUploadAuth,
@@ -292,7 +292,7 @@ class UploadOrchestrator {
         uri: Uri,
         mimeType: String?,
         alt: String?,
-        sensitiveContent: Boolean,
+        contentWarningReason: String?,
         compressionQuality: CompressorQuality,
         server: ServerName,
         account: Account,
@@ -302,8 +302,8 @@ class UploadOrchestrator {
 
         return when (server.type) {
             ServerType.NIP95 -> uploadNIP95(compressed.uri, compressed.contentType, null, null, context)
-            ServerType.NIP96 -> uploadNIP96(compressed.uri, compressed.contentType, compressed.size, alt, sensitiveContent, server.baseUrl, null, null, account, context)
-            ServerType.Blossom -> uploadBlossom(compressed.uri, compressed.contentType, compressed.size, alt, sensitiveContent, server.baseUrl, null, null, account, context)
+            ServerType.NIP96 -> uploadNIP96(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+            ServerType.Blossom -> uploadBlossom(compressed.uri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
         }
     }
 
@@ -311,7 +311,7 @@ class UploadOrchestrator {
         uri: Uri,
         mimeType: String?,
         alt: String?,
-        sensitiveContent: Boolean,
+        contentWarningReason: String?,
         compressionQuality: CompressorQuality,
         encrypt: NostrCipher,
         server: ServerName,
@@ -323,8 +323,8 @@ class UploadOrchestrator {
 
         return when (server.type) {
             ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
-            ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, sensitiveContent, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
-            ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, sensitiveContent, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+            ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+            ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
         }
     }
 }

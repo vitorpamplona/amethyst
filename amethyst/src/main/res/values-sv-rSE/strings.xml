@@ -106,6 +106,7 @@
     <string name="global_feed">Globalt Flöde</string>
     <string name="search_feed">Sök i Flödet</string>
     <string name="add_a_relay">Lägg till Relä</string>
+    <string name="profile_name">Namn</string>
     <string name="display_name">Visningsnamn</string>
     <string name="my_display_name">Mitt visningsnamn</string>
     <string name="my_awesome_name">Struts McAwesome</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Konversationer</string>
     <string name="notes">Anteckningar</string>
     <string name="replies">Svar</string>
+    <string name="mutual">Dina</string>
     <string name="gallery">Galleri</string>
     <string name="follows">"Följer"</string>
     <string name="reports">"Rapporter"</string>
@@ -536,6 +538,8 @@
     <string name="ui_feature_set_type_complete">Slutförd</string>
     <string name="ui_feature_set_type_simplified">Förenklad</string>
     <string name="ui_feature_set_type_performance">Prestanda</string>
+    <string name="gallery_type_classic">Klassisk</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">System</string>
     <string name="light">Ljus</string>
     <string name="dark">Mörk</string>
@@ -550,6 +554,8 @@
     <string name="automatically_hide_nav_bars_description">Dölj navigeringsfält vid bläddring</string>
     <string name="ui_style">UI läge</string>
     <string name="ui_style_description">Välj stilen för inlägg</string>
+    <string name="gallery_style">Profilgalleri stil</string>
+    <string name="gallery_style_description">Välj galleriets stil</string>
     <string name="load_image">Ladda bild</string>
     <string name="spamming_users">Spammare</string>
     <string name="muted_button">Ljud avstängt. Klicka för att ta bort ljudlöst</string>

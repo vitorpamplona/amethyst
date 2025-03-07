@@ -51,12 +51,12 @@ data class NProfile(
 
         fun create(
             authorPubKeyHex: String,
-            relay: List<String>,
+            relays: List<String>,
         ): String =
             TlvBuilder()
                 .apply {
                     addHex(TlvTypes.SPECIAL, authorPubKeyHex)
-                    relay.forEach {
+                    relays.forEach {
                         addStringIfNotNull(TlvTypes.RELAY, it)
                     }
                 }.build()

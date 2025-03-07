@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip17Dm
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.collections.immutable.persistentSetOf
 import org.junit.Assert.assertEquals
 import org.junit.Test

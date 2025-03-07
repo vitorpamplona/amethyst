@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 data class ZapSplitSetup(
     val pubKeyHex: HexKey,

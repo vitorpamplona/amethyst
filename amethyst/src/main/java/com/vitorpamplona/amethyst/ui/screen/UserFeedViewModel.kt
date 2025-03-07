@@ -34,8 +34,6 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HiddenAccountsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.SpammerAccountsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowersFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.UserProfileFollowsFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
@@ -47,34 +45,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-class NostrUserProfileFollowsUserFeedViewModel(
-    val user: User,
-    val account: Account,
-) : UserFeedViewModel(UserProfileFollowsFeedFilter(user, account)) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileFollowsUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowsUserFeedViewModel>): NostrUserProfileFollowsUserFeedViewModel =
-            NostrUserProfileFollowsUserFeedViewModel(user, account)
-                as NostrUserProfileFollowsUserFeedViewModel
-    }
-}
-
-class NostrUserProfileFollowersUserFeedViewModel(
-    val user: User,
-    val account: Account,
-) : UserFeedViewModel(UserProfileFollowersFeedFilter(user, account)) {
-    class Factory(
-        val user: User,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileFollowersUserFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileFollowersUserFeedViewModel>): NostrUserProfileFollowersUserFeedViewModel =
-            NostrUserProfileFollowersUserFeedViewModel(user, account)
-                as NostrUserProfileFollowersUserFeedViewModel
-    }
-}
 
 class NostrHiddenAccountsFeedViewModel(
     val account: Account,

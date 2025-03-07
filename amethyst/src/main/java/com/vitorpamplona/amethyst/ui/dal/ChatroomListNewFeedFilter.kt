@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.updated
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 
 class ChatroomListNewFeedFilter(
     val account: Account,

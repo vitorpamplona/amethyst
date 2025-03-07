@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -39,7 +38,7 @@ import com.vitorpamplona.amethyst.service.CachedGeoLocations
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -73,15 +72,15 @@ fun LoadDecryptedContentOrNull(
     accountViewModel: AccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val decryptedContent by
-        produceState(initialValue = accountViewModel.cachedDecrypt(note), key1 = note.event?.id) {
-            accountViewModel.decrypt(note) {
-                if (value != it) {
-                    value = it
-                }
+    var decryptedContent by remember(note.event?.id) { mutableStateOf(accountViewModel.cachedDecrypt(note)) }
+
+    LaunchedEffect(note.event?.id) {
+        accountViewModel.decrypt(note) {
+            if (decryptedContent != it) {
+                decryptedContent = it
             }
         }
+    }
 
     inner(decryptedContent)
 }
@@ -112,20 +111,20 @@ fun LoadAddressableNote(
 
 @Composable
 fun LoadAddressableNote(
-    aTag: ATag,
+    address: Address,
     accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
     var note by
-        remember(aTag) {
-            mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTag.toTag()))
+        remember(address) {
+            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address.toValue()))
         }
 
     if (note == null) {
-        LaunchedEffect(key1 = aTag) {
+        LaunchedEffect(key1 = address) {
             val newNote =
                 withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateAddressableNote(aTag)
+                    accountViewModel.getOrCreateAddressableNote(address)
                 }
             if (note != newNote) {
                 note = newNote

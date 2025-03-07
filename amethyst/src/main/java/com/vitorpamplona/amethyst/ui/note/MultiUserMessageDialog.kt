@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -74,7 +73,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
@@ -202,15 +200,14 @@ fun ErrorRow(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         errorState.user?.let {
-            val scope = rememberCoroutineScope()
             Column(Modifier.width(Size40dp), horizontalAlignment = Alignment.Start) {
                 UserPicture(errorState.user, Size30dp, Modifier, accountViewModel, nav)
                 Spacer(StdVertSpacer)
                 IconButton(
                     modifier = Size30Modifier,
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            nav.nav(routeToMessage(it, errorState.error, accountViewModel))
+                        nav.nav {
+                            routeToMessage(it, errorState.error, accountViewModel = accountViewModel)
                         }
                     },
                 ) {

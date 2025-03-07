@@ -21,40 +21,26 @@
 package com.vitorpamplona.quartz.nip01Core.tags.addressables
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstMapTagged
-import com.vitorpamplona.quartz.nip01Core.core.isAnyTagged
-import com.vitorpamplona.quartz.nip01Core.core.isTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
+import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.core.firstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
-import com.vitorpamplona.quartz.nip19Bech32.parse
 
 fun <R> TagArray.mapTaggedAddress(map: (address: String) -> R) = this.mapValueTagged(ATag.TAG_NAME, map)
 
-fun TagArray.firstIsTaggedAddressableNote(addressableNotes: Set<String>) =
-    this
-        .firstOrNull { it.size > 1 && it[0] == ATag.TAG_NAME && it[1] in addressableNotes }
-        ?.getOrNull(1)
+fun TagArray.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = this.firstNotNullOfOrNull(ATag::parseIfIsIn, addressableNotes)
 
-fun TagArray.isTaggedAddressableNote(idHex: String) = this.isTagged(ATag.TAG_NAME, idHex)
+fun TagArray.isTaggedAddressableNote(addressId: String) = this.any(ATag::isTagged, addressId)
 
-fun TagArray.isTaggedAddressableNotes(idHexes: Set<String>) = this.isAnyTagged(ATag.TAG_NAME, idHexes)
+fun TagArray.isTaggedAddressableNotes(addressIds: Set<String>) = this.any(ATag::isIn, addressIds)
 
-fun TagArray.isTaggedAddressableKind(kind: Int): Boolean {
-    val kindStr = kind.toString()
-    return this.any { it.size > 1 && it[0] == ATag.TAG_NAME && it[1].startsWith(kindStr) }
-}
+fun TagArray.isTaggedAddressableKind(kind: Int) = this.any(ATag::isTaggedWithKind, kind.toString())
 
-fun TagArray.getTagOfAddressableKind(kind: Int): ATag? {
-    val kindStr = kind.toString()
-    val aTag =
-        this
-            .firstOrNull { it.size > 1 && it[0] == ATag.TAG_NAME && it[1].startsWith(kindStr) }
-            ?.getOrNull(1)
-            ?: return null
+fun TagArray.getTagOfAddressableKind(kind: Int) = this.firstNotNullOfOrNull(ATag::parseIfOfKind, kind.toString())
 
-    return ATag.parse(aTag, null)
-}
+fun TagArray.taggedATags() = this.mapNotNull(ATag::parse)
 
-fun TagArray.taggedAddresses() = this.mapTagged(ATag.TAG_NAME) { ATag.parse(it) }
+fun TagArray.firstTaggedATag() = this.firstNotNullOfOrNull(ATag::parse)
 
-fun TagArray.firstTaggedAddress() = this.firstMapTagged(ATag.TAG_NAME) { ATag.parse(it) }
+fun TagArray.taggedAddresses() = this.mapNotNull(ATag::parseAddress)
+
+fun TagArray.firstTaggedAddress() = this.firstNotNullOfOrNull(ATag::parseAddress)

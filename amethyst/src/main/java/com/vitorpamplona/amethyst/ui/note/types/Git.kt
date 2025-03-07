@@ -66,9 +66,9 @@ import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 @Composable
 fun RenderGitPatchEvent(
@@ -137,10 +137,10 @@ private fun RenderGitPatchEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val repository = remember(noteEvent) { noteEvent.repository() }
+    val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
 
     if (repository != null) {
-        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+        LoadAddressableNote(repository, accountViewModel) {
             if (it != null) {
                 RenderShortRepositoryHeader(it, accountViewModel, nav)
                 Spacer(modifier = DoubleVertSpacer)
@@ -242,10 +242,10 @@ private fun RenderGitIssueEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val repository = remember(noteEvent) { noteEvent.repository() }
+    val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
 
     if (repository != null) {
-        LoadAddressableNote(aTag = repository, accountViewModel = accountViewModel) {
+        LoadAddressableNote(repository, accountViewModel) {
             if (it != null) {
                 RenderShortRepositoryHeader(it, accountViewModel, nav)
                 Spacer(modifier = DoubleVertSpacer)

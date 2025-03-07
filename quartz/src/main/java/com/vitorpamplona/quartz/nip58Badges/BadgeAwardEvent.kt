@@ -21,9 +21,10 @@
 package com.vitorpamplona.quartz.nip58Badges
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 
 @Immutable
@@ -36,6 +37,8 @@ class BadgeAwardEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun awardees() = taggedUsers()
+
+    fun awardeeIds() = taggedUserIds()
 
     fun awardDefinition() = taggedAddresses()
 

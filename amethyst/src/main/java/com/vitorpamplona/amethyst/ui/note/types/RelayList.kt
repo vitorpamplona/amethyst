@@ -55,7 +55,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent

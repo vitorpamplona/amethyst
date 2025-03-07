@@ -34,6 +34,7 @@ import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_DISTANCE
 import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_TIME
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -125,7 +126,7 @@ class LocationState(
                         (context)
                         .get(MIN_TIME, MIN_DISTANCE)
                         .map {
-                            LocationResult.Success(it.toGeoHash(com.vitorpamplona.amethyst.ui.actions.GeohashPrecision.KM_5_X_5.digits)) as LocationResult
+                            LocationResult.Success(it.toGeoHash(GeohashPrecision.KM_5_X_5.digits)) as LocationResult
                         }.onEach {
                             latestLocation = it
                         }.catch { e ->

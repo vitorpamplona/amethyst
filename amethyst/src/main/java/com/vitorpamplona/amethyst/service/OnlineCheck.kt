@@ -25,7 +25,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.quartz.CryptoUtils
+import com.vitorpamplona.quartz.utils.RandomInstance
 import okhttp3.EventListener
 import okhttp3.Protocol
 import okhttp3.Request
@@ -70,7 +70,7 @@ object OnlineChecker {
                             .url(url.replace("wss+livekit://", "wss://"))
                             .header("Upgrade", "websocket")
                             .header("Connection", "Upgrade")
-                            .header("Sec-WebSocket-Key", CryptoUtils.random(16).toByteString().base64())
+                            .header("Sec-WebSocket-Key", RandomInstance.bytes(16).toByteString().base64())
                             .header("Sec-WebSocket-Version", "13")
                             .header("Sec-WebSocket-Extensions", "permessage-deflate")
                             .build()

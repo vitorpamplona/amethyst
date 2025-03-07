@@ -54,14 +54,14 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
     LoadAddressableNote(
-        EmojiPackSelectionEvent.createAddressATag(accountViewModel.userProfile().pubkeyHex),
+        EmojiPackSelectionEvent.createAddress(accountViewModel.userProfile().pubkeyHex),
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
@@ -73,7 +73,7 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
                 .observeAsState((usersEmojiList.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList())
 
             collections?.forEach {
-                LoadAddressableNote(aTag = it, accountViewModel) {
+                LoadAddressableNote(it, accountViewModel) {
                     it?.live()?.metadata?.observeAsState()
                 }
             }

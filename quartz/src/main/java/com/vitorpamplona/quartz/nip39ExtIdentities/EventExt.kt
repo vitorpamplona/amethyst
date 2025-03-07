@@ -20,26 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip39ExtIdentities
 
-import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 
-fun MetadataEvent.identityClaims() =
-    tags.mapTagged("i") {
-        try {
-            IdentityClaim.create(it[1], it[2])
-        } catch (e: Exception) {
-            Log.e("MetadataEvent", "Can't parse identity [${it.joinToString { "," }}]", e)
-            null
-        }
-    }
+fun MetadataEvent.identityClaims() = tags.mapNotNull(IdentityClaimTag::parse)
 
-fun MetadataEvent.updateClaims(
+fun MetadataEvent.replaceClaims(
     twitter: String?,
     mastodon: String?,
     github: String?,
-): TagArray {
+): List<IdentityClaimTag> {
     var claims = identityClaims()
 
     // null leave as is. blank deletes it.
@@ -68,5 +57,5 @@ fun MetadataEvent.updateClaims(
         }
     }
 
-    return claims.map { arrayOf("i", it.platformIdentity(), it.proof) }.toTypedArray()
+    return claims
 }

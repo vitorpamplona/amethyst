@@ -22,10 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -39,7 +38,7 @@ open class Event(
     val tags: TagArray,
     val content: String,
     val sig: HexKey,
-) {
+) : IEvent {
     open fun isContentEncoded() = false
 
     open fun countMemory(): Long =
@@ -53,16 +52,19 @@ open class Event(
 
     fun toJson(): String = EventManualSerializer.toJson(id, pubKey, createdAt, kind, tags, content, sig)
 
+    /**
+     * For debug purposes only
+     */
+    fun toPrettyJson(): String = EventManualSerializer.toPrettyJson(id, pubKey, createdAt, kind, tags, content, sig)
+
     companion object {
         fun fromJson(json: String): Event = EventMapper.fromJson(json)
 
-        fun create(
-            signer: NostrSigner,
+        fun build(
             kind: Int,
-            tags: Array<Array<String>> = emptyArray(),
             content: String = "",
             createdAt: Long = TimeUtils.now(),
-            onReady: (Event) -> Unit,
-        ) = signer.sign(createdAt, kind, tags, content, onReady)
+            initializer: TagArrayBuilder<Event>.() -> Unit = {},
+        ) = eventTemplate(kind, content, createdAt, initializer)
     }
 }

@@ -21,15 +21,14 @@
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.toHexKey
-import fr.acinq.secp256k1.Secp256k1
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class Bip32SeedDerivationTest {
-    val seedDerivation = Bip32SeedDerivation(Secp256k1.get())
+    val seedDerivation = Bip32SeedDerivation()
 
     val masterBitcoin =
         seedDerivation.generate(

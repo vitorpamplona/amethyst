@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MessageSetCard
+import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -53,7 +54,7 @@ fun MessageSetCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val baseNote = remember { messageSetCard.note }
+    val baseNote = messageSetCard.note
 
     val popupExpanded = remember { mutableStateOf(false) }
     val enablePopup = remember { { popupExpanded.value = true } }
@@ -90,15 +91,9 @@ fun MessageSetCompose(
 
     Column(columnModifier) {
         Row(Modifier.fillMaxWidth()) {
-            Box(
-                modifier = remember { Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp) },
-            ) {
-                MessageIcon(
-                    remember { Modifier.size(16.dp).align(Alignment.TopEnd) },
-                )
-            }
+            MessageIconBox()
 
-            Column(modifier = remember { Modifier.padding(start = 10.dp) }) {
+            Column(modifier = StdStartPadding) {
                 NoteCompose(
                     baseNote = baseNote,
                     routeForLastRead = null,
@@ -115,5 +110,12 @@ fun MessageSetCompose(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MessageIconBox() {
+    Box(Modifier.width(55.dp).padding(top = 5.dp, end = 5.dp)) {
+        MessageIcon(Modifier.size(16.dp).align(Alignment.TopEnd))
     }
 }

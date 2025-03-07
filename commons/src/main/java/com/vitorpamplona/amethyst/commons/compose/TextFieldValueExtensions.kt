@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.compose
 
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import kotlin.math.max
+import kotlin.math.min
 
 fun TextFieldValue.insertUrlAtCursor(url: String): TextFieldValue {
     var toInsert = url.trim()
@@ -40,4 +42,55 @@ fun TextFieldValue.insertUrlAtCursor(url: String): TextFieldValue {
         text.replaceRange(selection.start, selection.end, toInsert),
         TextRange(endOfUrlIndex, endOfUrlIndex),
     )
+}
+
+fun TextFieldValue.replaceCurrentWord(wordToInsert: String): TextFieldValue {
+    val lastWordStart = currentWordStartIdx()
+    val lastWordEnd = currentWordEndIdx()
+    val cursor = lastWordStart + wordToInsert.length
+    return TextFieldValue(
+        text.replaceRange(lastWordStart, lastWordEnd, wordToInsert),
+        TextRange(cursor, cursor),
+    )
+}
+
+fun TextFieldValue.currentWordStartIdx(): Int {
+    val previousNewLine = text.lastIndexOf('\n', selection.start - 1)
+    val previousSpace = text.lastIndexOf(' ', selection.start - 1)
+
+    return max(
+        previousNewLine,
+        previousSpace,
+    ) + 1
+}
+
+fun TextFieldValue.currentWordEndIdx(): Int {
+    val nextNewLine = text.indexOf('\n', selection.end)
+    val nextSpace = text.indexOf(' ', selection.end)
+
+    if (nextSpace < 0 && nextNewLine < 0) return selection.end
+    if (nextSpace > 0 && nextNewLine > 0) {
+        return min(
+            nextNewLine,
+            nextSpace,
+        )
+    }
+    if (nextSpace > 0) {
+        return nextSpace
+    }
+    return nextNewLine
+}
+
+fun TextFieldValue.currentWord(): String {
+    if (selection.end != selection.start) return ""
+
+    val start = currentWordStartIdx()
+    val end = currentWordEndIdx()
+
+    return if (start < end) {
+        val word = text.substring(start, end)
+        word
+    } else {
+        ""
+    }
 }

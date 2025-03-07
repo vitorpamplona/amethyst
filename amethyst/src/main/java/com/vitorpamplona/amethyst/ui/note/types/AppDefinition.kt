@@ -72,8 +72,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppMetadata
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

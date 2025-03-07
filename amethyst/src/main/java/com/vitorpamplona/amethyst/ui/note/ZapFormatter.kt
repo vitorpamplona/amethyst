@@ -74,3 +74,10 @@ fun showAmount(amount: BigDecimal?): String {
         else -> dfN.get().format(amount)
     }
 }
+
+fun showAmountWithZero(amount: BigDecimal?): String {
+    if (amount == null) return "0"
+    if (amount.abs() < BigDecimal(0.01)) return "0"
+
+    return showAmount(amount)
+}

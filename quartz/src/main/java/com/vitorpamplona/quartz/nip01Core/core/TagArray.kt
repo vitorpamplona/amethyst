@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-
 typealias TagArray = Array<Array<String>>
+
+fun <T : Event> TagArray.builder(initializer: TagArrayBuilder<T>.() -> Unit = {}) = TagArrayBuilder<T>().addAll(this).apply(initializer).build()
 
 /**
  * Performs the given [action] on each tag that matches the given [tagName].
@@ -109,7 +109,7 @@ fun TagArray.mapValues(tagName: String) =
  * Returns the first non-null value produced by [transform] function being applied to all tags
  * that match the [tagName]
  */
-fun <R> TagArray.firstMapTagged(
+fun <R> TagArray.firstMappedTag(
     tagName: String,
     transform: (tagValue: Array<String>) -> R,
 ) = this.firstNotNullOfOrNull {
@@ -161,7 +161,8 @@ fun TagArray.firstTagValueFor(vararg tagNames: String) = this.firstOrNull { it.s
 fun TagArray.isTagged(
     tagName: String,
     tagValue: String,
-) = this.any { it.size > 1 && it[0] == tagName && it[1] == tagValue }
+    ignoreCase: Boolean = false,
+) = this.any { it.size > 1 && it[0] == tagName && it[1].equals(tagValue, ignoreCase) }
 
 /**
  * Returns `true` if at least one tag matches the given [tagName] and is in [tagValues]
@@ -171,6 +172,51 @@ fun TagArray.isAnyTagged(
     tagValues: Set<String>,
 ) = this.any { it.size > 1 && it[0] == tagName && it[1] in tagValues }
 
+fun <U> TagArray.any(
+    predicate: (Array<String>, U) -> Boolean,
+    extras: U,
+): Boolean {
+    for (element in this) if (predicate(element, extras)) return true
+    return false
+}
+
+public inline fun <T, U, R : Any> Array<out T>.firstNotNullOfOrNull(
+    transform: (T, U) -> R?,
+    extras: U,
+): R? {
+    for (element in this) {
+        val result = transform(element, extras)
+        if (result != null) {
+            return result
+        }
+    }
+    return null
+}
+
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and is in [tagValues]
+ */
+fun TagArray.firstAnyLowercaseTaggedValue(
+    tagName: String,
+    tagValues: Set<String>,
+) = this.firstOrNull { it.size > 1 && it[0] == tagName && it[1].lowercase() in tagValues }?.getOrNull(1)
+
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and is in [tagValues]
+ */
+fun TagArray.isAnyLowercaseTagged(
+    tagName: String,
+    tagValues: Set<String>,
+) = this.any { it.size > 1 && it[0] == tagName && it[1].lowercase() in tagValues }
+
+/**
+ * Returns `true` if at least one tag matches the given [tagName] and is in [tagValues]
+ */
+fun TagArray.firstAnyTaggedValue(
+    tagName: String,
+    tagValues: Set<String>,
+) = this.firstOrNull { it.size > 1 && it[0] == tagName && it[1] in tagValues }?.getOrNull(1)
+
 /**
  * Returns `true` if at least one tag has value that contains [text]
  */
@@ -178,3 +224,15 @@ fun TagArray.tagValueContains(
     text: String,
     ignoreCase: Boolean = false,
 ) = this.any { it.size > 1 && it[1].contains(text, ignoreCase) }
+
+fun TagArray.containsAllTagNamesWithValues(names: Set<String>): Boolean {
+    val remaining = names.toMutableSet()
+
+    this.forEach {
+        if (it.size > 1) {
+            remaining.remove(it[0])
+        }
+    }
+
+    return remaining.isEmpty()
+}

@@ -21,24 +21,15 @@
 package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
 import android.util.Log
-import com.goterl.lazysodium.LazySodiumAndroid
-import com.goterl.lazysodium.SodiumAndroid
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
-import fr.acinq.secp256k1.Secp256k1
-import java.security.SecureRandom
+import com.vitorpamplona.quartz.utils.LibSodiumInstance
+import com.vitorpamplona.quartz.utils.RandomInstance
 import java.text.Normalizer
 
-class Nip49(
-    val secp256k1: Secp256k1,
-    val random: SecureRandom,
-) {
-    private val libSodium = SodiumAndroid()
-    private val lazySodium = LazySodiumAndroid(libSodium)
-
+class Nip49 {
     fun decrypt(
         nCryptSec: String,
         password: String,
@@ -56,14 +47,11 @@ class Nip49(
         val key = SCrypt.scrypt(normalizedPassword, encryptedInfo.salt, n, 8, 1, 32)
         val m = ByteArray(32)
 
-        lazySodium.cryptoAeadXChaCha20Poly1305IetfDecrypt(
+        LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfDecrypt(
             m,
-            longArrayOf(32L),
             key,
             encryptedInfo.encryptedKey,
-            encryptedInfo.encryptedKey.size.toLong(),
             byteArrayOf(encryptedInfo.keySecurity),
-            1,
             encryptedInfo.nonce,
             key,
         )
@@ -87,11 +75,8 @@ class Nip49(
         ksb: Byte,
     ): String {
         check(secretKey.size == 32) { "invalid secret key" }
-        val salt = ByteArray(16)
-        random.nextBytes(salt)
-
-        val nonce = ByteArray(24)
-        random.nextBytes(nonce)
+        val salt = RandomInstance.bytes(16)
+        val nonce = RandomInstance.bytes(24)
 
         val normalizedPassword = Normalizer.normalize(password, Normalizer.Form.NFKC).toByteArray(Charsets.UTF_8)
         val n = Math.pow(2.0, logn.toDouble()).toInt()
@@ -102,13 +87,10 @@ class Nip49(
         // byte[] m, long mLen,
         // byte[] ad, long adLen,
         // byte[] nSec, byte[] nPub, byte[] k
-        lazySodium.cryptoAeadXChaCha20Poly1305IetfEncrypt(
+        LibSodiumInstance.cryptoAeadXChaCha20Poly1305IetfEncrypt(
             ciphertext,
-            longArrayOf(48),
             secretKey,
-            secretKey.size.toLong(),
             byteArrayOf(ksb),
-            1,
             key,
             nonce,
             key,
@@ -166,13 +148,8 @@ class Nip49(
 
         // ln(n.toDouble()).toInt().toByte(),
         fun encodePayload(): String =
-            Bech32.encodeBytes(
-                hrp = "ncryptsec",
-                byteArrayOf(
-                    version,
-                    logn,
-                ) + salt + nonce + keySecurity + encryptedKey,
-                Bech32.Encoding.Bech32,
-            )
+            (
+                byteArrayOf(version, logn) + salt + nonce + keySecurity + encryptedKey
+            ).toNCryptSec()
     }
 }

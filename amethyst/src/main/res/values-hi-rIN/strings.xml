@@ -106,6 +106,7 @@
     <string name="global_feed">वैश्विक सूचनावली</string>
     <string name="search_feed">खोज सूचनावली</string>
     <string name="add_a_relay">पुनःप्रसारक जोडें</string>
+    <string name="profile_name">नाम</string>
     <string name="display_name">प्रदर्शन नाम</string>
     <string name="my_display_name">मेरा प्रदर्शन नाम</string>
     <string name="my_awesome_name">उष्ट्रपक्षी मक्बढिया</string>
@@ -141,6 +142,7 @@
     <string name="conversations">सम्वाद</string>
     <string name="notes">टीकाएँ</string>
     <string name="replies">प्रतिवचन</string>
+    <string name="mutual">आपका</string>
     <string name="gallery">चित्रालय</string>
     <string name="follows">"का अनुचरण"</string>
     <string name="reports">"सूचनाएँ"</string>
@@ -539,6 +541,8 @@
     <string name="ui_feature_set_type_complete">सम्पूर्ण</string>
     <string name="ui_feature_set_type_simplified">सरलीकृत</string>
     <string name="ui_feature_set_type_performance">वेगवान</string>
+    <string name="gallery_type_classic">प्राचीन</string>
+    <string name="gallery_type_modern">आधुनिक</string>
     <string name="system">यन्त्रव्यवस्था</string>
     <string name="light">प्रकाशवान</string>
     <string name="dark">अन्धकारमय</string>
@@ -553,6 +557,8 @@
     <string name="automatically_hide_nav_bars_description">मार्गदर्शनपट्टियों को छिपाएँ पृष्ठघुमाव करने पर</string>
     <string name="ui_style">प्रयोगमाध्यम शैली</string>
     <string name="ui_style_description">पत्र प्रकाशन शैली का चयन करें</string>
+    <string name="gallery_style">परिचय चित्रालय शैली</string>
+    <string name="gallery_style_description">चित्रालय शैली चुनें</string>
     <string name="load_image">चित्र प्राप्त करें</string>
     <string name="spamming_users">कचरालेख प्रेषक</string>
     <string name="muted_button">मौन किया गया। अमौन करने के लिए टाँकें</string>

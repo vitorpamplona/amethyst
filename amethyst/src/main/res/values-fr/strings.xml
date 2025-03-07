@@ -141,6 +141,7 @@
     <string name="conversations">Conversations</string>
     <string name="notes">Notes</string>
     <string name="replies">Réponses</string>
+    <string name="mutual">Les vôtres</string>
     <string name="gallery">Galerie</string>
     <string name="follows">"Suivis"</string>
     <string name="reports">"Signalements"</string>
@@ -539,6 +540,8 @@
     <string name="ui_feature_set_type_complete">Complet</string>
     <string name="ui_feature_set_type_simplified">Simplifié</string>
     <string name="ui_feature_set_type_performance">Performance</string>
+    <string name="gallery_type_classic">Classique</string>
+    <string name="gallery_type_modern">Moderne</string>
     <string name="system">Système</string>
     <string name="light">Clair</string>
     <string name="dark">Sombre</string>
@@ -553,6 +556,8 @@
     <string name="automatically_hide_nav_bars_description">Masquer les barres de navigation lors du défilement</string>
     <string name="ui_style">Mode UI</string>
     <string name="ui_style_description">Choisir le style du message</string>
+    <string name="gallery_style">Style de la galerie de profil</string>
+    <string name="gallery_style_description">Choisissez le style de la galerie</string>
     <string name="load_image">Charger l\'image</string>
     <string name="spamming_users">Spammeurs</string>
     <string name="muted_button">Silencieux. Cliquer pour réactiver le son</string>

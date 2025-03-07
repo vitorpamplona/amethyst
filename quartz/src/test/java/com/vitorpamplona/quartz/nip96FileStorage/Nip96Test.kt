@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip96FileStorage
 
+import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfoParser
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
 

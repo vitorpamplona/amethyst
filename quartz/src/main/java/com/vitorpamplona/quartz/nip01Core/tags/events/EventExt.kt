@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.events
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 fun Event.forEachTaggedEventId(onEach: (eventId: HexKey) -> Unit) = tags.forEachTaggedEventId(onEach)
 

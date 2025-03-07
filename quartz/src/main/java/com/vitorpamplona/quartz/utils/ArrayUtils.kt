@@ -39,3 +39,13 @@ fun Array<String>.startsWith(startsWith: Array<String>): Boolean {
     }
     return true
 }
+
+public inline fun <T, R> Array<out T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {
+    for (index in this.indices.reversed()) {
+        val result = transform(this[index])
+        if (result != null) {
+            return result
+        }
+    }
+    return null
+}

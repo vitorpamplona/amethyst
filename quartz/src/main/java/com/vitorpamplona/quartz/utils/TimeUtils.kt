@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.CryptoUtils
-
 object TimeUtils {
     const val ONE_MINUTE = 60
     const val FIVE_MINUTES = 5 * ONE_MINUTE
@@ -57,5 +55,5 @@ object TimeUtils {
 
     fun oneMonthAgo() = now() - ONE_MONTH
 
-    fun randomWithTwoDays() = System.currentTimeMillis() / 1000 - CryptoUtils.randomInt(twoDays())
+    fun randomWithTwoDays() = now() - RandomInstance.int(twoDays())
 }

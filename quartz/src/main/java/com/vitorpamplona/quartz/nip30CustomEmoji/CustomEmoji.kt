@@ -36,7 +36,7 @@ class CustomEmoji {
             allTags: ImmutableListOfLists<String>?,
         ): Boolean {
             if (allTags == null) return false
-            if (allTags.lists.any { it.size > 2 && it[0] == "emoji" }) return true
+            if (allTags.lists.any { it.size > 2 && it[0] == EmojiUrlTag.TAG_NAME }) return true
             return input.contains(":")
         }
 
@@ -48,7 +48,7 @@ class CustomEmoji {
             return input.contains(":")
         }
 
-        fun createEmojiMap(tags: ImmutableListOfLists<String>): Map<String, String> = tags.lists.filter { it.size > 2 && it[0] == "emoji" }.associate { ":${it[1]}:" to it[2] }
+        fun createEmojiMap(tags: ImmutableListOfLists<String>): Map<String, String> = tags.lists.filter { it.size > 2 && it[0] == EmojiUrlTag.TAG_NAME }.associate { ":${it[1]}:" to it[2] }
 
         fun findAllEmojis(input: String): List<String> {
             val matcher = customEmojiPattern.matcher(input)

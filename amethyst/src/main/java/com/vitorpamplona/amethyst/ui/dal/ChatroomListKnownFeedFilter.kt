@@ -25,9 +25,9 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.relays.updated
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 class ChatroomListKnownFeedFilter(
     val account: Account,

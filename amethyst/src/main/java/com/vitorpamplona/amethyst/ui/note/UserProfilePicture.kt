@@ -44,9 +44,9 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 @Composable
 fun NoteAuthorPicture(

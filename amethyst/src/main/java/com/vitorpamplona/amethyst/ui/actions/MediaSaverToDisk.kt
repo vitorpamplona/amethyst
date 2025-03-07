@@ -58,17 +58,18 @@ object MediaSaverToDisk {
         if (videoUri != null) {
             if (!videoUri.startsWith("file")) {
                 downloadAndSave(
+                    url = videoUri,
+                    mimeType = mimeType,
                     context = localContext,
                     forceProxy = forceProxy,
-                    url = videoUri,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
             } else {
                 save(
-                    context = localContext,
                     localFile = videoUri.toUri().toFile(),
                     mimeType = mimeType,
+                    context = localContext,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
@@ -83,6 +84,7 @@ object MediaSaverToDisk {
      */
     fun downloadAndSave(
         url: String,
+        mimeType: String?,
         forceProxy: Boolean,
         context: Context,
         onSuccess: () -> Any?,
@@ -121,9 +123,16 @@ object MediaSaverToDisk {
                                 val contentType = response.header("Content-Type")
                                 checkNotNull(contentType) { "Can't find out the content type" }
 
+                                val realType =
+                                    if (mimeType != null && contentType == "application/octet-stream") {
+                                        mimeType
+                                    } else {
+                                        contentType
+                                    }
+
                                 saveContentQ(
                                     displayName = File(url).nameWithoutExtension,
-                                    contentType = contentType,
+                                    contentType = realType,
                                     contentSource = response.body.source(),
                                     contentResolver = context.contentResolver,
                                 )

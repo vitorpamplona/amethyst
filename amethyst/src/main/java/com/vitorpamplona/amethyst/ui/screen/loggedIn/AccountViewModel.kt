@@ -64,29 +64,29 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.showAmountAxis
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.quartz.experimental.audio.Participant
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.KeyPair
-import com.vitorpamplona.quartz.nip01Core.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -105,14 +105,14 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip94FileMetadata.Dimension
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import fr.acinq.secp256k1.Hex
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -536,7 +536,7 @@ class AccountViewModel(
                                 it.request.event
                                     ?.content
                                     ?.ifBlank { null },
-                                showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                                showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                             )
                     }.toMutableMap()
 
@@ -569,7 +569,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
-                            showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -577,7 +577,7 @@ class AccountViewModel(
                             it.request.event
                                 ?.content
                                 ?.ifBlank { null },
-                            showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                         )
                     }
                 } else {
@@ -586,7 +586,7 @@ class AccountViewModel(
                         it.request.event
                             ?.content
                             ?.ifBlank { null },
-                        showAmountAxis((it.response.event as? LnZapEvent)?.amount),
+                        showAmountInteger((it.response.event as? LnZapEvent)?.amount),
                     )
                 }
             }.toImmutableList()
@@ -603,7 +603,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
                             cachedPrivateRequest.content.ifBlank { null },
-                            showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -611,7 +611,7 @@ class AccountViewModel(
                             it.first.event
                                 ?.content
                                 ?.ifBlank { null },
-                            showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                            showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                         )
                     }
                 } else {
@@ -620,7 +620,7 @@ class AccountViewModel(
                         it.first.event
                             ?.content
                             ?.ifBlank { null },
-                        showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                        showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                     )
                 }
             }.toImmutableList()
@@ -642,7 +642,7 @@ class AccountViewModel(
                                 it.first.event
                                     ?.content
                                     ?.ifBlank { null },
-                                showAmountAxis((it.second?.event as? LnZapEvent)?.amount),
+                                showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                             )
                     }.toMutableMap()
 
@@ -687,7 +687,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             newAuthor,
                             decryptedContent.content.ifBlank { null },
-                            showAmountAxis(amount),
+                            showAmountInteger(amount),
                         ),
                     )
                 }
@@ -698,7 +698,7 @@ class AccountViewModel(
                         ZapAmountCommentNotification(
                             zapRequest.author,
                             zapRequest.event?.content?.ifBlank { null },
-                            showAmountAxis(amount),
+                            showAmountInteger(amount),
                         ),
                     )
                 }
@@ -769,9 +769,9 @@ class AccountViewModel(
 
     fun addEmojiPack(
         usersEmojiList: Note,
-        emojiList: Note,
+        emojiPack: Note,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiList) }
+        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiPack) }
     }
 
     fun addMediaToGallery(
@@ -779,7 +779,7 @@ class AccountViewModel(
         url: String,
         relay: String?,
         blurhash: String?,
-        dim: Dimension?,
+        dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
     ) {
@@ -987,17 +987,17 @@ class AccountViewModel(
     }
 
     fun updateStatus(
-        it: ATag,
+        address: Address,
         newStatus: String,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.updateStatus(LocalCache.getOrCreateAddressableNote(it), newStatus)
+            account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
         }
     }
 
-    fun deleteStatus(it: ATag) {
+    fun deleteStatus(address: Address) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.deleteStatus(LocalCache.getOrCreateAddressableNote(it))
+            account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
         }
     }
 
@@ -1124,16 +1124,18 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
     }
 
-    suspend fun getOrCreateAddressableNote(key: ATag): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
+    suspend fun getOrCreateAddressableNote(key: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
 
     fun getOrCreateAddressableNote(
-        key: ATag,
+        key: Address,
         onResult: (AddressableNote?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) { onResult(getOrCreateAddressableNote(key)) }
     }
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
+
+    fun getAddressableNoteIfExists(key: Address): AddressableNote? = LocalCache.getAddressableNoteIfExists(key)
 
     suspend fun findStatusesForUser(
         myUser: User,
@@ -1179,15 +1181,15 @@ class AccountViewModel(
 
     fun getChannelIfExists(hex: HexKey): Channel? = LocalCache.getChannelIfExists(hex)
 
-    fun loadParticipants(
-        participants: List<Participant>,
-        onReady: (ImmutableList<Pair<Participant, User>>) -> Unit,
+    fun <T : PubKeyReferenceTag> loadParticipants(
+        participants: List<T>,
+        onReady: (ImmutableList<Pair<T, User>>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val participantUsers =
                 participants
                     .mapNotNull { part ->
-                        checkGetOrCreateUser(part.key)?.let {
+                        checkGetOrCreateUser(part.pubKey)?.let {
                             Pair(
                                 part,
                                 it,
@@ -1221,7 +1223,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.Default) {
             account.decryptPeopleList(event) { privateTagList ->
                 onReady(
-                    (event.taggedUsers() + event.filterUsers(privateTagList))
+                    (event.taggedUserIds() + event.filterUsers(privateTagList))
                         .toSet()
                         .mapNotNull { hex -> checkGetOrCreateUser(hex) }
                         .sortedBy { account.isFollowing(it) }
@@ -1598,7 +1600,7 @@ class AccountViewModel(
             AdvertisedRelayListEvent.createAddressTag(user.pubkeyHex),
         )
 
-    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddressATag(account.signer.pubKey, dATag))
+    fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
 
     fun updateInteractiveStoryReadingState(
         root: InteractiveStoryBaseEvent,
@@ -1663,6 +1665,8 @@ class AccountViewModel(
             }
         }
     }
+
+    suspend fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
 
     fun relayStatusFlow() = Amethyst.instance.client.relayStatusFlow()
 
@@ -1751,7 +1755,6 @@ fun mockAccountViewModel(): AccountViewModel {
                 KeyPair(
                     privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
                     pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
-                    forcePubKeyCheck = false,
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,
@@ -1769,7 +1772,6 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             keyPair =
                 KeyPair(
                     pubKey = Hex.decode("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"),
-                    forcePubKeyCheck = false,
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,

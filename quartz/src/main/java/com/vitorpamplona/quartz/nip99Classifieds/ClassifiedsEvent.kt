@@ -21,23 +21,24 @@
 package com.vitorpamplona.quartz.nip99Classifieds
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashMipMap
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.buildHashtagTags
-import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrl
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningSerializer
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupSerializer
-import com.vitorpamplona.quartz.nip57Zaps.zapraiser.ZapRaiserSerializer
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip92IMeta.Nip92MediaAttachments
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.containsAllTagNamesWithValues
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
+import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.UUID
 
 @Immutable
 class ClassifiedsEvent(
@@ -48,164 +49,57 @@ class ClassifiedsEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun condition() = tags.firstOrNull { it.size > 1 && it[0] == "condition" }?.get(1)
+    fun condition() = tags.firstNotNullOfOrNull(ConditionTag::parse)
 
-    fun images() = tags.filter { it.size > 1 && it[0] == "image" }.map { it[1] }
+    fun images() = tags.mapNotNull(ImageTag::parse)
 
-    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
+    fun status() = tags.firstNotNullOfOrNull(StatusTag::parse)
 
-    fun price() =
-        tags
-            .firstOrNull { it.size > 1 && it[0] == "price" }
-            ?.let { Price(it[1], it.getOrNull(2), it.getOrNull(3)) }
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun location() = tags.firstOrNull { it.size > 1 && it[0] == "location" }?.get(1)
+    fun price() = tags.firstNotNullOfOrNull(PriceTag::parse)
 
-    fun isWellFormed(): Boolean {
-        var hasImage = false
-        var hasTitle = false
-        var hasPrice = false
+    fun location() = tags.firstNotNullOfOrNull(LocationTag::parse)
 
-        tags.forEach {
-            if (it.size > 1) {
-                if (it[0] == "image") {
-                    hasImage = true
-                } else if (it[0] == "title") {
-                    hasTitle = true
-                } else if (it[0] == "price") {
-                    hasPrice = true
-                }
-            }
-        }
+    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
-        return hasImage && hasPrice && hasTitle
-    }
+    fun categories() = tags.hashtags()
 
-    fun publishedAt() =
-        try {
-            tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
-        } catch (_: Exception) {
-            null
-        }
-
-    enum class CONDITION(
-        val value: String,
-    ) {
-        NEW("new"),
-        USED_LIKE_NEW("like new"),
-        USED_GOOD("good"),
-        USED_FAIR("fair"),
-    }
+    fun isWellFormed() = tags.containsAllTagNamesWithValues(REQUIRED_FIELDS)
 
     companion object {
         const val KIND = 30402
-        private val imageExtensions = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        const val ALT = "Classifieds listing"
+        const val ALT_DESCRIPTION = "Classifieds listing"
 
-        fun create(
-            dTag: String,
-            title: String?,
-            image: String?,
-            summary: String?,
-            message: String,
-            price: Price?,
-            location: String?,
-            category: String?,
-            condition: CONDITION?,
-            publishedAt: Long? = TimeUtils.now(),
-            replyTos: List<String>?,
-            addresses: List<ATag>?,
-            mentions: List<String>?,
-            directMentions: Set<HexKey>,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            markAsSensitive: Boolean,
-            zapRaiserAmount: Long?,
-            geohash: String? = null,
-            imetas: List<IMetaTag>? = null,
-            emojis: List<EmojiUrl>? = null,
-            signer: NostrSigner,
+        val REQUIRED_FIELDS = setOf(TitleTag.TAG_NAME, PriceTag.TAG_NAME, ImageTag.TAG_NAME)
+
+        fun build(
+            title: String,
+            price: PriceTag,
+            description: String,
+            location: String? = null,
+            condition: ConditionTag.CONDITION? = null,
+            images: List<String>? = null,
+            status: StatusTag.STATUS = StatusTag.STATUS.ACTIVE,
+            dTag: String = UUID.randomUUID().toString(),
             createdAt: Long = TimeUtils.now(),
-            isDraft: Boolean,
-            onReady: (ClassifiedsEvent) -> Unit,
-        ) {
-            val tags = mutableListOf<Array<String>>()
+            initializer: TagArrayBuilder<ClassifiedsEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            dTag(dTag)
+            title(title)
+            price(price)
+            status(status)
 
-            replyTos?.forEach {
-                if (it in directMentions) {
-                    tags.add(arrayOf("e", it, "", "mention"))
-                } else {
-                    tags.add(arrayOf("e", it))
-                }
-            }
-            mentions?.forEach {
-                if (it in directMentions) {
-                    tags.add(arrayOf("p", it, "", "mention"))
-                } else {
-                    tags.add(arrayOf("p", it))
-                }
-            }
-            addresses?.forEach {
-                val aTag = it.toTag()
-                if (aTag in directMentions) {
-                    tags.add(arrayOf("a", aTag, "", "mention"))
-                } else {
-                    tags.add(arrayOf("a", aTag))
-                }
-            }
+            condition?.let { condition(it) }
+            location?.let { location(it) }
+            images?.let { images(images) }
 
-            tags.add(arrayOf("d", dTag))
-            title?.let { tags.add(arrayOf("title", it)) }
-            image?.let { tags.add(arrayOf("image", it)) }
-            summary?.let { tags.add(arrayOf("summary", it)) }
-            price?.let {
-                if (it.frequency != null && it.currency != null) {
-                    tags.add(arrayOf("price", it.amount, it.currency, it.frequency))
-                } else if (it.currency != null) {
-                    tags.add(arrayOf("price", it.amount, it.currency))
-                } else {
-                    tags.add(arrayOf("price", it.amount))
-                }
-            }
-            category?.let { tags.add(arrayOf("t", it)) }
-            location?.let { tags.add(arrayOf("location", it)) }
-            publishedAt?.let { tags.add(arrayOf("publishedAt", it.toString())) }
-            condition?.let { tags.add(arrayOf("condition", it.value)) }
-            tags.addAll(buildHashtagTags(findHashtags(message)))
-            zapReceiver?.forEach { tags.add(ZapSplitSetupSerializer.toTagArray(it)) }
-            zapRaiserAmount?.let { tags.add(ZapRaiserSerializer.toTagArray(it)) }
-
-            findURLs(message).forEach {
-                val removedParamsFromUrl =
-                    if (it.contains("?")) {
-                        it.split("?")[0].lowercase()
-                    } else if (it.contains("#")) {
-                        it.split("#")[0].lowercase()
-                    } else {
-                        it
-                    }
-
-                if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                    tags.add(arrayOf("image", it))
-                }
-                tags.add(arrayOf("r", it))
-            }
-            if (markAsSensitive) {
-                tags.add(ContentWarningSerializer.toTagArray())
-            }
-            geohash?.let { tags.addAll(geohashMipMap(it)) }
-            imetas?.forEach { tags.add(Nip92MediaAttachments.createTag(it)) }
-            emojis?.forEach { tags.add(it.toTagArray()) }
-            tags.add(AltTagSerializer.toTagArray(ALT))
-
-            if (isDraft) {
-                signer.assembleRumor(createdAt, KIND, tags.toTypedArray(), message, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady)
-            }
+            alt(ALT_DESCRIPTION)
+            initializer()
         }
     }
 }

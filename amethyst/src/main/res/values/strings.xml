@@ -86,6 +86,15 @@
     <string name="thank_you_so_much">Thank you so much!</string>
     <string name="amount_in_sats">Amount in Sats</string>
     <string name="send_sats">Send Sats</string>
+
+    <string name="secret_emoji_maker">Secret Emoji Maker</string>
+    <string name="secret_emoji_maker_explainer">Add an emoji with hidden message to post</string>
+    <string name="secret_note_to_receiver">Secret Note to Receiver</string>
+    <string name="secret_note_to_receiver_placeholder">My hidden message</string>
+    <string name="secret_visible_text">Visible Prefix</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Add to Post</string>
+
     <string name="error_parsing_preview_for">"Error parsing preview for %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Preview Card Image for %1$s"</string>
     <string name="new_channel">New Channel</string>
@@ -111,6 +120,7 @@
     <string name="global_feed">Global Feed</string>
     <string name="search_feed">Search Feed</string>
     <string name="add_a_relay">Add a Relay</string>
+    <string name="profile_name">Name</string>
     <string name="display_name">Display Name</string>
     <string name="my_display_name">My display name</string>
     <string name="my_awesome_name">Ostrich McAwesome</string>
@@ -146,6 +156,7 @@
     <string name="conversations">Conversations</string>
     <string name="notes">Notes</string>
     <string name="replies">Replies</string>
+    <string name="mutual">Yours</string>
     <string name="gallery">Gallery</string>
     <string name="follows">"Follows"</string>
     <string name="reports">"Reports"</string>
@@ -634,6 +645,9 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_performance">Performance</string>
 
+    <string name="gallery_type_classic">Classic</string>
+    <string name="gallery_type_modern">Modern</string>
+
     <string name="system">System</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
@@ -649,6 +663,9 @@
 
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
+
+    <string name="gallery_style">Profile Gallery Style</string>
+    <string name="gallery_style_description">Choose the gallery style</string>
 
     <string name="load_image">Load Image</string>
 

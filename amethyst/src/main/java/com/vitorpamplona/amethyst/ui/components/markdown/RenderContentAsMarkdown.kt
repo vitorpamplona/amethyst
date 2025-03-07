@@ -49,10 +49,11 @@ import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.markdownStyle
 import com.vitorpamplona.amethyst.ui.uriToRoute
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -93,7 +94,7 @@ fun RenderContentAsMarkdown(
             remember(content) {
                 MarkdownMediaRenderer(
                     startOfText = content.take(100),
-                    tags = tags,
+                    imetaByUrl = tags?.lists?.imetasByUrl() ?: emptyMap(),
                     canPreview = canPreview,
                     quotesLeft = quotesLeft,
                     backgroundColor = backgroundColor,

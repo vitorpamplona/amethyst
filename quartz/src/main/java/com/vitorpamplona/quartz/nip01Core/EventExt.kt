@@ -21,25 +21,26 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import android.util.Log
-import com.vitorpamplona.quartz.CryptoUtils
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.utils.Hex
 
 fun Event.generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
 
-fun Event.hasCorrectIDHash(): Boolean {
+fun Event.verifyId(): Boolean {
     if (id.isEmpty()) return false
     return id == generateId()
 }
 
-fun Event.hasVerifiedSignature(): Boolean {
+fun Event.verifySignature(): Boolean {
     if (id.isEmpty() || sig.isEmpty()) return false
-    return CryptoUtils.verifySignature(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
+    return Nip01.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
 }
 
 /** Checks if the ID is correct and then if the pubKey's secret key signed the event. */
 fun Event.checkSignature() {
-    if (!hasCorrectIDHash()) {
+    if (!verifyId()) {
         throw Exception(
             """
             |Unexpected ID.
@@ -49,14 +50,14 @@ fun Event.checkSignature() {
             """.trimIndent(),
         )
     }
-    if (!hasVerifiedSignature()) {
+    if (!verifySignature()) {
         throw Exception("""Bad signature!""")
     }
 }
 
-fun Event.hasValidSignature(): Boolean =
+fun Event.verify(): Boolean =
     try {
-        hasCorrectIDHash() && hasVerifiedSignature()
+        verifyId() && verifySignature()
     } catch (e: Exception) {
         Log.w("Event", "Event $id does not have a valid signature: ${toJson()}", e)
         false

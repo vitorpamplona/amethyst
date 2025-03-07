@@ -106,6 +106,7 @@
     <string name="global_feed">Feed Global</string>
     <string name="search_feed">Fonte de pesquisa</string>
     <string name="add_a_relay">Adicionar um Relay</string>
+    <string name="profile_name">Nome</string>
     <string name="display_name">Nome de Exibição</string>
     <string name="my_display_name">Meu nome de exibição</string>
     <string name="my_awesome_name">McAwesome Ostrich</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Conversas</string>
     <string name="notes">Notas</string>
     <string name="replies">Respostas</string>
+    <string name="mutual">Suas</string>
     <string name="gallery">Galeria</string>
     <string name="follows">"Seguindo"</string>
     <string name="reports">"Denúncias"</string>
@@ -366,7 +368,7 @@
     <string name="no_nip96_server_message">Você não tem nenhum servidor NIP-96. Você pode usar a lista de Amethyst, ou adicionar um abaixo ↓</string>
     <string name="no_blossom_server_message">Você não tem nenhum servidor de Blossom configurado. Você pode usar a lista de Amethyst, ou adicionar um abaixo ↓</string>
     <string name="built_in_media_servers_title">Servidores de Mídia Integrados</string>
-    <string name="built_in_servers_description">Lista padrão do Ametite. Você pode adicioná-los individualmente ou adicionar a lista.</string>
+    <string name="built_in_servers_description">Lista padrão do Amethyst. Você pode adicioná-los individualmente ou adicionar a lista.</string>
     <string name="use_default_servers">Usar Lista Padrão</string>
     <string name="add_media_server">Adicionar servidor de mídia</string>
     <string name="delete_media_server">Apagar servidor de mídia</string>
@@ -537,6 +539,8 @@
     <string name="ui_feature_set_type_complete">Concluído</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
     <string name="ui_feature_set_type_performance">Desempenho</string>
+    <string name="gallery_type_classic">Clássico</string>
+    <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
@@ -551,6 +555,8 @@
     <string name="automatically_hide_nav_bars_description">Ocultar as barras de navegação ao rolar</string>
     <string name="ui_style">Modo de interface</string>
     <string name="ui_style_description">Escolha o estilo da publicação</string>
+    <string name="gallery_style">Estilo da Galeria de Perfil</string>
+    <string name="gallery_style_description">Escolha o estilo da galeria</string>
     <string name="load_image">Carregar imagem</string>
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Clique para ativar o som</string>

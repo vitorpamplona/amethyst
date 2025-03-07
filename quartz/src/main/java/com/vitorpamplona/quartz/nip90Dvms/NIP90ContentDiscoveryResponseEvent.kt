@@ -23,12 +23,12 @@ package com.vitorpamplona.quartz.nip90Dvms
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
-import com.vitorpamplona.quartz.nip89AppHandlers.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -84,7 +84,7 @@ class NIP90ContentDiscoveryResponseEvent(
         ) {
             val tags =
                 arrayOf(
-                    AltTagSerializer.toTagArray(ALT),
+                    AltTag.assemble(ALT),
                 )
             signer.sign(createdAt, KIND, tags, "", onReady)
         }

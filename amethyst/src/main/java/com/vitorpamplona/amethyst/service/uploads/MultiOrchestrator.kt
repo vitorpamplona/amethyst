@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
-import com.vitorpamplona.quartz.nip17Dm.NostrCipher
+import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
@@ -49,7 +49,7 @@ class MultiOrchestrator(
     suspend fun upload(
         scope: CoroutineScope,
         alt: String?,
-        sensitiveContent: Boolean,
+        contentWarningReason: String?,
         mediaQuality: CompressorQuality,
         server: ServerName,
         account: Account,
@@ -62,7 +62,7 @@ class MultiOrchestrator(
                         item.media.uri,
                         item.media.mimeType,
                         alt,
-                        sensitiveContent,
+                        contentWarningReason,
                         mediaQuality,
                         server,
                         account,
@@ -79,7 +79,7 @@ class MultiOrchestrator(
     suspend fun uploadEncrypted(
         scope: CoroutineScope,
         alt: String?,
-        sensitiveContent: Boolean,
+        contentWarningReason: String?,
         mediaQuality: CompressorQuality,
         cipher: NostrCipher,
         server: ServerName,
@@ -93,7 +93,7 @@ class MultiOrchestrator(
                         item.media.uri,
                         item.media.mimeType,
                         alt,
-                        sensitiveContent,
+                        contentWarningReason,
                         mediaQuality,
                         cipher,
                         server,
@@ -126,5 +126,5 @@ class MultiOrchestrator(
 
     fun size() = list.size
 
-    fun get(index: Int) = list.get(index)
+    fun get(index: Int) = list[index]
 }

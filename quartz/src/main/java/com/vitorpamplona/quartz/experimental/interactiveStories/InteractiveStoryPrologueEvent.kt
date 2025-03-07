@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.quartz.experimental.interactiveStories
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class InteractiveStoryPrologueEvent(
@@ -39,44 +42,31 @@ class InteractiveStoryPrologueEvent(
     RootScope {
     companion object {
         const val KIND = 30296
-        const val ALT = "The prologue of an interative story called "
+        const val ALT = "The prologue of an interactive story called "
+
+        fun createAddress(
+            pubKey: HexKey,
+            dtag: String,
+        ): String = Address.assemble(KIND, pubKey, dtag)
 
         fun createAddressATag(
             pubKey: HexKey,
             dtag: String,
         ): ATag = ATag(KIND, pubKey, dtag, null)
 
-        fun createAddressTag(
-            pubKey: HexKey,
-            dtag: String,
-        ): String = ATag.assembleATagId(KIND, pubKey, dtag)
-
-        fun create(
+        fun build(
             baseId: String,
             title: String,
             content: String,
-            options: List<StoryOption>,
-            summary: String? = null,
-            image: String? = null,
-            zapReceiver: List<ZapSplitSetup>? = null,
-            markAsSensitive: Boolean = false,
-            zapRaiserAmount: Long? = null,
-            geohash: String? = null,
-            imetas: List<IMetaTag>? = null,
-            signer: NostrSigner,
+            options: List<StoryOptionTag>,
             createdAt: Long = TimeUtils.now(),
-            isDraft: Boolean,
-            onReady: (InteractiveStoryPrologueEvent) -> Unit,
-        ) {
-            val tags =
-                makeTags(baseId, ALT + title, title, summary, image, options) +
-                    generalTags(content, zapReceiver, markAsSensitive, zapRaiserAmount, geohash, imetas)
-
-            if (isDraft) {
-                signer.assembleRumor(createdAt, KIND, tags, content, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags, content, onReady)
+            initializer: TagArrayBuilder<InteractiveStoryPrologueEvent>.() -> Unit = {},
+        ): EventTemplate<InteractiveStoryPrologueEvent> =
+            eventTemplate(KIND, content, createdAt) {
+                dTag(baseId)
+                title(title)
+                options(options)
+                initializer()
             }
-        }
     }
 }

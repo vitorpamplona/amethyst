@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import com.vitorpamplona.quartz.nip01Core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 class ParticipantListBuilder {
     private fun addFollowsThatDirectlyParticipateOnToSet(

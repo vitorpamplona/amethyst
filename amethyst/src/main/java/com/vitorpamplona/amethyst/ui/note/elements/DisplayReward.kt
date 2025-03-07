@@ -177,24 +177,19 @@ class AddBountyAmountViewModel : ViewModel() {
     }
 
     fun sendPost() {
-        val newValue = nextAmount.text.trim().toLongOrNull()
+        val newValue = nextAmount.text.trim().toBigDecimalOrNull()
 
         if (newValue != null) {
             viewModelScope.launch {
-                account?.let {
-                    it.sendPost(
-                        message = newValue.toString(),
-                        replyTo = listOfNotNull(bounty),
-                        mentions = listOfNotNull(bounty?.author),
-                        tags = listOf("bounty-added-reward"),
-                        wantsToMarkAsSensitive = false,
-                        replyingTo = null,
-                        root = null,
-                        directMentions = setOf(),
-                        forkedFrom = null,
-                        draftTag = null,
-                        relayList = it.activeWriteRelays().toImmutableList(),
-                    )
+                account?.let { myAccount ->
+                    bounty?.let { bountyInner ->
+                        myAccount.sendAddBounty(
+                            newValue,
+                            bountyInner,
+                            draftTag = null,
+                            relayList = myAccount.activeWriteRelays().toImmutableList(),
+                        )
+                    }
                 }
 
                 nextAmount = TextFieldValue("")

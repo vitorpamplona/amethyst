@@ -35,21 +35,21 @@ import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.HexKey
-import com.vitorpamplona.quartz.nip01Core.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.GitReplyEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
@@ -64,12 +64,12 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.GiftWrapEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip96FileStorage.FileServersEvent
+import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 // TODO: Migrate this to a property of AccountVi

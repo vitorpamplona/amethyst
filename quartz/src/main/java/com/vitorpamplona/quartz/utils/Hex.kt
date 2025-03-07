@@ -21,29 +21,33 @@
 package com.vitorpamplona.quartz.utils
 
 object Hex {
-    private val lowerCaseHex = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
-    private val upperCaseHex = arrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
+    private const val LOWER_CASE_HEX = "0123456789abcdef"
+    private const val UPPER_CASE_HEX = "0123456789ABCDEF"
 
     private val hexToByte: IntArray =
         IntArray(256) { -1 }.apply {
-            lowerCaseHex.forEachIndexed { index, char -> this[char.code] = index }
-            upperCaseHex.forEachIndexed { index, char -> this[char.code] = index }
+            LOWER_CASE_HEX.forEachIndexed { index, char -> this[char.code] = index }
+            UPPER_CASE_HEX.forEachIndexed { index, char -> this[char.code] = index }
         }
 
     // Encodes both chars in a single Int variable
     private val byteToHex =
         IntArray(256) {
-            (lowerCaseHex[(it shr 4)].code shl 8) or lowerCaseHex[(it and 0xF)].code
+            (LOWER_CASE_HEX[(it shr 4)].code shl 8) or LOWER_CASE_HEX[(it and 0xF)].code
         }
 
     @JvmStatic
     fun isHex(hex: String?): Boolean {
-        if (hex == null) return false
-        if (hex.isEmpty()) return false
-        if (hex.length and 1 != 0) return false // must be even
+        if (hex.isNullOrEmpty()) return false
+        if (hex.length and 1 != 0) return false
 
-        for (c in hex.indices) {
-            if (hexToByte[hex[c].code] < 0) return false
+        try {
+            for (c in hex.indices) {
+                if (hexToByte[hex[c].code] < 0) return false
+            }
+        } catch (e: IllegalArgumentException) {
+            // there are p tags with emoji's which makes the hex[c].code > 256
+            return false
         }
 
         return true

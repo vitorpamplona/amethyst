@@ -21,15 +21,28 @@
 package com.vitorpamplona.quartz.nip23LongContent
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip22Comments.RootScope
+import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
+import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.UUID
 
 @Immutable
 class LongTextNoteEvent(
@@ -39,47 +52,58 @@ class LongTextNoteEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseTextNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    AddressableEvent {
+) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressableEvent,
+    EventHintProvider,
+    PubKeyHintProvider,
+    AddressHintProvider,
+    RootScope {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun eventHints() = tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(QTag::parseAddressAsHint)
+
     override fun dTag() = tags.dTag()
 
-    override fun address(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
+    override fun aTag(relayHint: String?) = ATag(kind, pubKey, dTag(), relayHint)
 
-    override fun addressTag() = ATag.assembleATagId(kind, pubKey, dTag())
+    override fun address() = Address(kind, pubKey, dTag())
+
+    override fun addressTag() = Address.assemble(kind, pubKey, dTag())
 
     fun topics() = hashtags()
 
-    fun title() = tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
+    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun image() = tags.firstOrNull { it.size > 1 && it[0] == "image" }?.get(1)
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun summary() = tags.firstOrNull { it.size > 1 && it[0] == "summary" }?.get(1)
+    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun publishedAt() =
-        try {
-            tags.firstOrNull { it.size > 1 && it[0] == "published_at" }?.get(1)?.toLongOrNull()
-        } catch (_: Exception) {
-            null
-        }
+    fun publishedAt() = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 
     companion object {
         const val KIND = 30023
 
-        fun create(
-            msg: String,
-            title: String?,
-            replyTos: List<String>?,
-            mentions: List<String>?,
-            signer: NostrSigner,
+        fun build(
+            description: String,
+            title: String,
+            summary: String? = null,
+            image: String? = null,
+            publishedAt: Long? = null,
+            dTag: String = UUID.randomUUID().toString(),
             createdAt: Long = TimeUtils.now(),
-            onReady: (LongTextNoteEvent) -> Unit,
-        ) {
-            val tags = mutableListOf<Array<String>>()
-            replyTos?.forEach { tags.add(arrayOf("e", it)) }
-            mentions?.forEach { tags.add(arrayOf("p", it)) }
-            title?.let { tags.add(arrayOf("title", it)) }
-            tags.add(AltTagSerializer.toTagArray("Blog post: $title"))
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            initializer: TagArrayBuilder<LongTextNoteEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, description, createdAt) {
+            dTag(dTag)
+            alt("Blog post: $title")
+
+            title(title)
+            summary?.let { summary(it) }
+            image?.let { image(it) }
+            publishedAt?.let { publishedAt(it) }
+
+            initializer()
         }
     }
 }

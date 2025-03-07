@@ -34,8 +34,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -47,10 +47,10 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.persistentListOf
@@ -127,7 +127,7 @@ class FollowListState(
         checkNotInMainThread()
 
         val hasNewList =
-            newNotes.any {
+            newNotes.any { it ->
                 val noteEvent = it.event
 
                 noteEvent?.pubKey == account.userProfile().pubkeyHex &&

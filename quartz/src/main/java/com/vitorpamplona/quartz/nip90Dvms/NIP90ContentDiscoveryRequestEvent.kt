@@ -22,10 +22,10 @@ package com.vitorpamplona.quartz.nip90Dvms
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Stable
@@ -53,7 +53,7 @@ class NIP90ContentDiscoveryRequestEvent(
             val content = ""
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("p", dvmPublicKey))
-            tags.add(AltTagSerializer.toTagArray(ALT))
+            tags.add(AltTag.assemble(ALT))
             tags.add(arrayOf("relays") + relays.toTypedArray())
             tags.add(arrayOf("param", "max_results", "200"))
             tags.add(arrayOf("param", "user", forUser))

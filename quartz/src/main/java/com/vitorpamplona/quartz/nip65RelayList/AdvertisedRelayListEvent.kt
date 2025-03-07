@@ -21,12 +21,13 @@
 package com.vitorpamplona.quartz.nip65RelayList
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTagSerializer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -85,9 +86,11 @@ class AdvertisedRelayListEvent(
         const val KIND = 10002
         const val ALT = "Relay list to discover the user's content"
 
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
+
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
 
-        fun createAddressTag(pubKey: HexKey): String = ATag.assembleATagId(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
         fun updateRelayList(
             earlierVersion: AdvertisedRelayListEvent,
@@ -125,7 +128,7 @@ class AdvertisedRelayListEvent(
         fun createTagArray(relays: List<AdvertisedRelayInfo>): Array<Array<String>> =
             relays
                 .map(Companion::createRelayTag)
-                .plusElement(AltTagSerializer.toTagArray(ALT))
+                .plusElement(AltTag.assemble(ALT))
                 .toTypedArray()
 
         fun create(

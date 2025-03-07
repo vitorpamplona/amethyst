@@ -25,8 +25,8 @@ class ZapSplitSetupSerializer {
         @JvmStatic
         fun toTagArray(zapSplit: BaseZapSplitSetup): Array<String> =
             when (zapSplit) {
-                is ZapSplitSetupLnAddress -> arrayOf("zap", zapSplit.lnAddress)
-                is ZapSplitSetup -> arrayOf("zap", zapSplit.pubKeyHex, zapSplit.relay ?: "", zapSplit.weight.toString())
+                is ZapSplitSetupLnAddress -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.lnAddress)
+                is ZapSplitSetup -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay ?: "", zapSplit.weight.toString())
             }
     }
 }

@@ -21,12 +21,9 @@
 package com.vitorpamplona.quartz.nip14Subject
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
-fun TagArray.subject() = this.firstTagValue(SubjectTag.TAG_NAME)
+fun TagArray.subject() = this.firstNotNullOfOrNull(SubjectTag::parse)
 
-fun TagArray.subjects() = this.mapValues(SubjectTag.TAG_NAME)
+fun TagArray.subjects() = this.mapNotNull(SubjectTag::parse)
 
-fun TagArray.hasSubject() = this.hasTagWithContent(SubjectTag.TAG_NAME)
+fun TagArray.hasSubject() = this.any(SubjectTag::hasTagWithContent)

@@ -45,11 +45,13 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.nip05
-import com.vitorpamplona.quartz.nip10Notes.BaseTextNoteEvent
+import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
+import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 
 @Composable
 fun ShowForkInformation(
-    noteEvent: BaseTextNoteEvent,
+    noteEvent: BaseThreadedEvent,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -57,16 +59,13 @@ fun ShowForkInformation(
     val forkedAddress = remember(noteEvent) { noteEvent.forkFromAddress() }
     val forkedEvent = remember(noteEvent) { noteEvent.forkFromVersion() }
     if (forkedAddress != null) {
-        LoadAddressableNote(
-            aTag = forkedAddress,
-            accountViewModel = accountViewModel,
-        ) { addressableNote ->
+        LoadAddressableNote(forkedAddress, accountViewModel) { addressableNote ->
             if (addressableNote != null) {
                 ForkInformationRowLightColor(addressableNote, modifier, accountViewModel, nav)
             }
         }
     } else if (forkedEvent != null) {
-        LoadNote(forkedEvent, accountViewModel = accountViewModel) { event ->
+        LoadNote(forkedEvent.eventId, accountViewModel) { event ->
             if (event != null) {
                 ForkInformationRowLightColor(event, modifier, accountViewModel, nav)
             }

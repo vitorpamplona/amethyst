@@ -23,7 +23,7 @@ package com.vitorpamplona.ammolite.relays
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relays.RelayState
+import com.vitorpamplona.quartz.nip01Core.relay.RelayState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow

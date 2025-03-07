@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.dTags
 
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun TagArrayBuilder.dTag(name: String) = add(DTag.assemble(name))
+fun <T : AddressableEvent> TagArrayBuilder<T>.dTag(name: String) = addUnique(DTag.assemble(name))

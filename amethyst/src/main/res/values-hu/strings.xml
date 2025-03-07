@@ -53,7 +53,7 @@
     <string name="zaps">Zap</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megtolás</string>
-    <string name="boosted">Megtolva</string>
+    <string name="boosted">megtolta</string>
     <string name="edited">szerkesztve</string>
     <string name="edited_number">#%1$s szerkesztése</string>
     <string name="original">eredeti</string>
@@ -106,6 +106,7 @@
     <string name="global_feed">Globális hírfolyam</string>
     <string name="search_feed">Keresési hírfolyam</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
+    <string name="profile_name">Név</string>
     <string name="display_name">Megjelenítendő név</string>
     <string name="my_display_name">Saját megjelenítendő név</string>
     <string name="my_awesome_name">Strucc McNagyszerű</string>
@@ -141,6 +142,7 @@
     <string name="conversations">Beszélgetések</string>
     <string name="notes">Bejegyzések</string>
     <string name="replies">Válaszok</string>
+    <string name="mutual">Az Öné</string>
     <string name="gallery">Galéria</string>
     <string name="follows">"Követett"</string>
     <string name="reports">"Bejelentés"</string>
@@ -539,6 +541,8 @@
     <string name="ui_feature_set_type_complete">Teljes</string>
     <string name="ui_feature_set_type_simplified">Egyszerűsített</string>
     <string name="ui_feature_set_type_performance">Teljesítmény</string>
+    <string name="gallery_type_classic">Klasszikus</string>
+    <string name="gallery_type_modern">Modern</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
@@ -553,6 +557,8 @@
     <string name="automatically_hide_nav_bars_description">Navigációs sáv elrejtése görgetéskor</string>
     <string name="ui_style">Felhasználói felület módja</string>
     <string name="ui_style_description">Bejegyzés stílusának kiválasztása</string>
+    <string name="gallery_style">Profilgaléria stílusa</string>
+    <string name="gallery_style_description">Válassza ki a galéria stílusát</string>
     <string name="load_image">Kép betöltése</string>
     <string name="spamming_users">Spamelők</string>
     <string name="muted_button">Némítva. Koppintson a némitás megszüntetéséhez</string>

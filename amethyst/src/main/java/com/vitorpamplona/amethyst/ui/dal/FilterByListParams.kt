@@ -24,14 +24,14 @@ import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNotes
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class FilterByListParams(
@@ -68,10 +68,10 @@ class FilterByListParams(
         }
     }
 
-    fun isATagInList(aTag: ATag): Boolean {
+    fun isAuthorInFollows(address: Address): Boolean {
         if (followLists == null) return false
 
-        return aTag.pubKeyHex in followLists.authors
+        return address.pubKeyHex in followLists.authors
     }
 
     fun match(
@@ -81,10 +81,10 @@ class FilterByListParams(
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
         isNotInTheFuture(noteEvent)
 
-    fun match(aTag: ATag?) =
-        aTag != null &&
-            (isGlobal || isATagInList(aTag)) &&
-            (isHiddenList || isNotHidden(aTag.pubKeyHex))
+    fun match(address: Address?) =
+        address != null &&
+            (isGlobal || isAuthorInFollows(address)) &&
+            (isHiddenList || isNotHidden(address.pubKeyHex))
 
     companion object {
         fun showHiddenKey(

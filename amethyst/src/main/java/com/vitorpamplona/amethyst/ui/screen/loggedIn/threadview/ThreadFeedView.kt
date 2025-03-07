@@ -52,7 +52,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -127,6 +126,7 @@ import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
@@ -147,8 +147,8 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chatrooms.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -163,32 +163,33 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
-import com.vitorpamplona.quartz.experimental.audio.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.bounties.getReward
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
-import com.vitorpamplona.quartz.experimental.nip95.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
-import com.vitorpamplona.quartz.nip04Dm.PrivateDmEvent
-import com.vitorpamplona.quartz.nip13Pow.pow
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
-import com.vitorpamplona.quartz.nip17Dm.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiPackEvent
-import com.vitorpamplona.quartz.nip34Git.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.GitPatchEvent
-import com.vitorpamplona.quartz.nip34Git.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
@@ -196,22 +197,21 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
@@ -474,7 +474,7 @@ private fun FullBleedNoteCompose(
                         DisplayLocation(geo, nav)
                     }
 
-                    val baseReward = remember { noteEvent.getReward()?.let { Reward(it) } }
+                    val baseReward = remember { noteEvent.bountyBaseReward()?.let { Reward(it) } }
                     if (baseReward != null) {
                         DisplayReward(baseReward, baseNote, accountViewModel, nav)
                     }
@@ -564,6 +564,17 @@ private fun FullBleedNoteCompose(
                     )
                 } else if (noteEvent is ChatMessageRelayListEvent) {
                     DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is ChatMessageEncryptedFileHeaderEvent) {
+                    RenderChatMessageEncryptedFile(
+                        baseNote,
+                        false,
+                        canPreview,
+                        3,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                    )
                 } else if (noteEvent is AdvertisedRelayListEvent) {
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {
@@ -845,7 +856,6 @@ private fun RenderClassifiedsReaderForThread(
                     }
 
                 var message by remember { mutableStateOf(TextFieldValue(msg)) }
-                val scope = rememberCoroutineScope()
 
                 TextField(
                     value = message,
@@ -868,9 +878,13 @@ private fun RenderClassifiedsReaderForThread(
                             isActive = message.text.isNotBlank(),
                             modifier = EditFieldTrailingIconModifier,
                         ) {
-                            scope.launch(Dispatchers.IO) {
-                                note.author?.let {
-                                    nav.nav(routeToMessage(it, note.toNostrUri() + "\n\n" + msg, accountViewModel))
+                            note.author?.let {
+                                nav.nav {
+                                    routeToMessage(
+                                        it,
+                                        note.toNostrUri() + "\n\n" + msg,
+                                        accountViewModel = accountViewModel,
+                                    )
                                 }
                             }
                         }
@@ -1004,7 +1018,7 @@ private fun RenderWikiHeaderForThread(
             }
 
             forkedAddress?.let {
-                LoadAddressableNote(aTag = it, accountViewModel = accountViewModel) { originalVersion ->
+                LoadAddressableNote(it, accountViewModel) { originalVersion ->
                     if (originalVersion != null) {
                         ForkInformationRow(originalVersion, Modifier.fillMaxWidth(), accountViewModel, nav)
                     }

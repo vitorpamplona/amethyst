@@ -51,6 +51,12 @@ object Bech32 {
     const val ALPHABET: String = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
     const val ALPHABET_UPPERCASE: String = "QPZRY9X8GF2TVDW0S3JN54KHCE6MUA7L"
 
+    private const val GEN0 = 0x3b6a57b2
+    private const val GEN1 = 0x26508e6d
+    private const val GEN2 = 0x1ea119fa
+    private const val GEN3 = 0x3d4233dd
+    private const val GEN4 = 0x2a1462b3
+
     enum class Encoding(
         val constant: Int,
     ) {
@@ -74,16 +80,16 @@ object Bech32 {
     fun expand(hrp: String): Array<Int5> {
         val half = hrp.length + 1
         val size = half + hrp.length
+        val firstPart = hrp.indices
+        val secondPart = half until size
         return Array<Int5>(size) {
             when (it) {
-                in hrp.indices -> hrp[it].code.shr(5).toByte()
-                in half until size -> (hrp[it - half].code and 31).toByte()
+                in firstPart -> hrp[it].code.shr(5).toByte()
+                in secondPart -> (hrp[it - half].code and 31).toByte()
                 else -> 0
             }
         }
     }
-
-    private val GEN = arrayOf(0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
 
     fun polymod(
         values: Array<Int5>,
@@ -93,16 +99,20 @@ object Bech32 {
         values.forEach { v ->
             val b = chk shr 25
             chk = ((chk and 0x1ffffff) shl 5) xor v.toInt()
-            for (i in 0..4) {
-                if (((b shr i) and 1) != 0) chk = chk xor GEN[i]
-            }
+            if (((b shr 0) and 1) != 0) chk = chk xor GEN0
+            if (((b shr 1) and 1) != 0) chk = chk xor GEN1
+            if (((b shr 2) and 1) != 0) chk = chk xor GEN2
+            if (((b shr 3) and 1) != 0) chk = chk xor GEN3
+            if (((b shr 4) and 1) != 0) chk = chk xor GEN4
         }
         values1.forEach { v ->
             val b = chk shr 25
             chk = ((chk and 0x1ffffff) shl 5) xor v.toInt()
-            for (i in 0..4) {
-                if (((b shr i) and 1) != 0) chk = chk xor GEN[i]
-            }
+            if (((b shr 0) and 1) != 0) chk = chk xor GEN0
+            if (((b shr 1) and 1) != 0) chk = chk xor GEN1
+            if (((b shr 2) and 1) != 0) chk = chk xor GEN2
+            if (((b shr 3) and 1) != 0) chk = chk xor GEN3
+            if (((b shr 4) and 1) != 0) chk = chk xor GEN4
         }
         return chk
     }
@@ -128,8 +138,7 @@ object Bech32 {
                 else -> addChecksum(hrp, int5s, encoding)
             }
 
-        val charArray =
-            CharArray(dataWithChecksum.size) { ALPHABET[dataWithChecksum[it].toInt()] }.concatToString()
+        val charArray = CharArray(dataWithChecksum.size) { ALPHABET[dataWithChecksum[it].toInt()] }.concatToString()
 
         return hrp + "1" + charArray
     }
@@ -231,8 +240,8 @@ object Bech32 {
     @JvmStatic
     public fun eight2five(input: ByteArray): ArrayList<Int5> {
         var buffer = 0L
-        val output =
-            ArrayList<Int5>(input.size * 2) // larger array on purpose. Checksum is added later.
+        // larger array on purpose. Checksum is added later.
+        val output = ArrayList<Int5>(input.size * 2)
         var count = 0
         input.forEach { b ->
             buffer = (buffer shl 8) or (b.toLong() and 0xff)

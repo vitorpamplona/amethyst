@@ -54,6 +54,8 @@ interface INav {
 
     fun nav(route: String)
 
+    fun nav(computeRoute: suspend () -> String)
+
     fun newStack(route: String)
 
     fun popBack()
@@ -85,6 +87,15 @@ class Nav(
 
     override fun nav(route: String) {
         scope.launch {
+            if (getRouteWithArguments(controller) != route) {
+                controller.navigate(route)
+            }
+        }
+    }
+
+    override fun nav(computeRoute: suspend () -> String) {
+        scope.launch {
+            val route = computeRoute()
             if (getRouteWithArguments(controller) != route) {
                 controller.navigate(route)
             }
@@ -135,6 +146,9 @@ object EmptyNav : INav {
     override fun nav(route: String) {
     }
 
+    override fun nav(computeRoute: suspend () -> String) {
+    }
+
     override fun newStack(route: String) {
     }
 
@@ -159,6 +173,11 @@ class ObservableNavigate(
     override fun nav(route: String) {
         onNavigate()
         nav.nav(route)
+    }
+
+    override fun nav(computeRoute: suspend () -> String) {
+        onNavigate()
+        nav.nav(computeRoute)
     }
 
     override fun newStack(route: String) {

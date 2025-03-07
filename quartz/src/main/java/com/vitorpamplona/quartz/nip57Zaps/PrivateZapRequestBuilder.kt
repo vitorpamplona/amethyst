@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.nip57Zaps
 
 import android.util.Log
-import com.vitorpamplona.quartz.CryptoUtils
-import com.vitorpamplona.quartz.nip01Core.KeyPair
-import com.vitorpamplona.quartz.nip01Core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip01Core.toHexKey
 
 class PrivateZapRequestBuilder {
     fun <T> signPrivateZapRequest(
@@ -105,7 +105,7 @@ class PrivateZapRequestBuilder {
 
                 try {
                     if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                        val altPubKeyFromPrivate = CryptoUtils.pubkeyCreate(altPrivateKeyToUse).toHexKey()
+                        val altPubKeyFromPrivate = Nip01.pubKeyCreate(altPrivateKeyToUse).toHexKey()
 
                         if (altPubKeyFromPrivate == event.pubKey) {
                             val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)

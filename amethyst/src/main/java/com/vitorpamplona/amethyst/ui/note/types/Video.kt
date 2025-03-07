@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
 @Composable

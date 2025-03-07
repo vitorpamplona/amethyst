@@ -44,7 +44,7 @@ abstract class AmethystNostrDataSource(
         val note = LocalCache.getNoteIfExists(eventId)
         val noteEvent = note?.event
         if (noteEvent is AddressableEvent) {
-            LocalCache.getAddressableNoteIfExists(noteEvent.address().toTag())?.addRelay(relay)
+            LocalCache.getAddressableNoteIfExists(noteEvent.aTag().toTag())?.addRelay(relay)
         } else {
             note?.addRelay(relay)
         }

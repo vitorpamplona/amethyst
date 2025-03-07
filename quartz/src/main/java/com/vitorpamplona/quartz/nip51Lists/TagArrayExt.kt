@@ -27,9 +27,9 @@ inline fun TagArray.filterToArray(predicate: (Array<String>) -> Boolean): TagArr
 
 inline fun TagArray.remove(predicate: (Array<String>) -> Boolean): TagArray = filterNotTo(ArrayList(this.size), predicate).toTypedArray()
 
-inline fun TagArray.remove(startsWith: Array<String>): TagArray = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).toTypedArray()
+fun TagArray.remove(startsWith: Array<String>): TagArray = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).toTypedArray()
 
-inline fun TagArray.replaceAll(
+fun TagArray.replaceAll(
     startsWith: Array<String>,
     newElement: Array<String>,
 ): TagArray = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).plusElement(newElement).toTypedArray()
