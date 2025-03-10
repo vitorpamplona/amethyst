@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip73ExternalIds
 
 import com.vitorpamplona.quartz.utils.toStringNoFragment
-import com.vitorpamplona.quartz.utils.toStringSchemeHost
 import org.czeal.rfc3986.URIReference
 
 class UrlId(
@@ -37,6 +36,6 @@ class UrlId(
     companion object {
         fun toScope(url: String) = URIReference.parse(url).normalize().toStringNoFragment()
 
-        fun toKind(url: String) = URIReference.parse(url).normalize().toStringSchemeHost()
+        fun toKind(url: String) = "web"
     }
 }
