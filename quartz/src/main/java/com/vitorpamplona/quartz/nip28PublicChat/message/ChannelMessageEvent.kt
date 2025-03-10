@@ -23,14 +23,17 @@ package com.vitorpamplona.quartz.nip28PublicChat.message
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.markedETag
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
 import com.vitorpamplona.quartz.nip28PublicChat.base.reply
+import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -42,7 +45,8 @@ class ChannelMessageEvent(
     content: String,
     sig: HexKey,
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    IsInPublicChatChannel {
+    IsInPublicChatChannel,
+    ExposeInDraft {
     override fun channel() = markedRoot() ?: unmarkedRoot()
 
     override fun channelId() = channel()?.eventId
@@ -50,6 +54,12 @@ class ChannelMessageEvent(
     override fun markedReplyTos() = super.markedReplyTos().filter { it != channelId() }
 
     override fun unmarkedReplyTos() = super.unmarkedReplyTos().filter { it != channelId() }
+
+    override fun exposeInDraft() =
+        tagArray<ChannelMessageEvent> {
+            channel()?.let { markedETag(it) }
+            reply()?.let { markedETag(it) }
+        }
 
     companion object {
         const val KIND = 42

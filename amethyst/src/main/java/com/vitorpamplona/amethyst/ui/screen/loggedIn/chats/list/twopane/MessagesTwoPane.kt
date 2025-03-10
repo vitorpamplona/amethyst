@@ -44,7 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.Channel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelView
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 
 @Composable
@@ -113,7 +113,7 @@ fun MessagesTwoPane(
                         }
 
                         if (it.route == "Channel") {
-                            Channel(
+                            ChannelView(
                                 channelId = it.id,
                                 accountViewModel = accountViewModel,
                                 nav = nav,

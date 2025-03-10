@@ -18,33 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils
+package com.vitorpamplona.quartz.nip37Drafts
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-@Composable
-fun ThinSendButton(
-    isActive: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    IconButton(
-        enabled = isActive,
-        // modifier = modifier,
-        onClick = onClick,
-    ) {
-        Icon(
-            imageVector = Icons.Default.Send,
-            contentDescription = stringRes(id = R.string.accessibility_send),
-            modifier = Size20Modifier,
-        )
-    }
+interface ExposeInDraft {
+    fun exposeInDraft(): TagArray
 }

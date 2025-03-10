@@ -79,6 +79,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -860,6 +861,14 @@ class AccountViewModel(
         account.decryptZapContentAuthor(note, onReady)
     }
 
+    fun follow(channel: Channel) {
+        viewModelScope.launch(Dispatchers.IO) { account.follow(channel) }
+    }
+
+    fun unfollow(channel: Channel) {
+        viewModelScope.launch(Dispatchers.IO) { account.unfollow(channel) }
+    }
+
     fun follow(user: User) {
         viewModelScope.launch(Dispatchers.IO) { account.follow(user) }
     }
@@ -1053,6 +1062,8 @@ class AccountViewModel(
                 )
         }
     }
+
+    fun <T : Event> createRumor(template: EventTemplate<T>) = account.signer.assembleRumor<T>(template)
 
     fun retrieveRelayDocument(
         dirtyUrl: String,

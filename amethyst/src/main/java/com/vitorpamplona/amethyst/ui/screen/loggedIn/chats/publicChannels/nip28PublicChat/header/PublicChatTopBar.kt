@@ -18,33 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ThinSendButton(
-    isActive: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
+fun PublicChatTopBar(
+    baseChannel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    IconButton(
-        enabled = isActive,
-        // modifier = modifier,
-        onClick = onClick,
-    ) {
-        Icon(
-            imageVector = Icons.Default.Send,
-            contentDescription = stringRes(id = R.string.accessibility_send),
-            modifier = Size20Modifier,
-        )
-    }
+    TopBarExtensibleWithBackButton(
+        title = {
+            ShortPublicChatChannelHeader(
+                baseChannel = baseChannel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        },
+        extendableRow = {
+            LongPublicChatChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
+        },
+        popBack = nav::popBack,
+    )
 }

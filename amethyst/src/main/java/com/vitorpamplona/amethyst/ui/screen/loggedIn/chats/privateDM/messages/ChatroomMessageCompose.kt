@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5Modifier
@@ -379,7 +380,7 @@ private fun RenderDraftEvent(
     nav: INav,
 ) {
     ObserveDraftEvent(note, accountViewModel) {
-        Column {
+        Column(verticalArrangement = RowColSpacing5dp) {
             RenderReplyRow(
                 note = it,
                 innerQuote = innerQuote,

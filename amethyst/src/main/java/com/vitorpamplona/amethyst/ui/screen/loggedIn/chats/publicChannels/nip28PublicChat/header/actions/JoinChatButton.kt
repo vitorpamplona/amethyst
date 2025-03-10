@@ -18,33 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
+import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
 
 @Composable
-fun ThinSendButton(
-    isActive: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
+fun JoinChatButton(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    IconButton(
-        enabled = isActive,
-        // modifier = modifier,
-        onClick = onClick,
+    Button(
+        modifier = HalfHalfHorzModifier,
+        onClick = { accountViewModel.follow(channel) },
+        contentPadding = ButtonPadding,
     ) {
-        Icon(
-            imageVector = Icons.Default.Send,
-            contentDescription = stringRes(id = R.string.accessibility_send),
-            modifier = Size20Modifier,
-        )
+        Text(text = stringRes(R.string.join), color = Color.White)
     }
 }

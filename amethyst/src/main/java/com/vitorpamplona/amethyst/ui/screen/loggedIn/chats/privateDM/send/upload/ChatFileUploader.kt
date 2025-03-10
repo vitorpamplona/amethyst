@@ -59,7 +59,7 @@ class ChatFileUploader(
                 orchestrator.uploadEncrypted(
                     scope,
                     viewState.caption,
-                    if (viewState.sensitiveContent) "" else null,
+                    viewState.contentWarningReason,
                     MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
                     cipher,
                     viewState.selectedServer,
@@ -88,9 +88,7 @@ class ChatFileUploader(
                                     alt(viewState.caption)
                                 }
 
-                                if (viewState.sensitiveContent) {
-                                    contentWarning("")
-                                }
+                                viewState.contentWarningReason?.let { contentWarning(it) }
                             }
 
                         account.sendNIP17EncryptedFile(template)
@@ -125,7 +123,7 @@ class ChatFileUploader(
                 orchestrator.upload(
                     scope,
                     viewState.caption,
-                    if (viewState.sensitiveContent) "" else null,
+                    viewState.contentWarningReason,
                     MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
                     viewState.selectedServer,
                     account,
@@ -136,7 +134,7 @@ class ChatFileUploader(
                 results.successful.forEach {
                     if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMetaAttachments = IMetaAttachments()
-                        iMetaAttachments.add(it.result, viewState.caption, if (viewState.sensitiveContent) "" else null)
+                        iMetaAttachments.add(it.result, viewState.caption, viewState.contentWarningReason)
 
                         account.sendPrivateMessage(
                             message = it.result.url,

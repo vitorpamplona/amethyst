@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
