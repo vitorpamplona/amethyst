@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">Obrigado!</string>
     <string name="amount_in_sats">Quantidade em Sats</string>
     <string name="send_sats">Enviar Sats</string>
+    <string name="secret_emoji_maker">Criador de Emoji Secreto</string>
+    <string name="secret_emoji_maker_explainer">Adicionar um emoji com mensagem oculta na postagem</string>
+    <string name="secret_note_to_receiver">Nota Secreta para o Receptor</string>
+    <string name="secret_note_to_receiver_placeholder">Minha mensagem oculta</string>
+    <string name="secret_visible_text">Prefixo Visível</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Adicionar à postagem</string>
     <string name="error_parsing_preview_for">"Erro ao analisar a visualização para %1$s: %2$s"</string>
     <string name="preview_card_image_for">"Visualize a imagem do cartão para %1$s"</string>
     <string name="new_channel">Novo Canal</string>
