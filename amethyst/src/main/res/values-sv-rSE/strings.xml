@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">Tack så mycket!</string>
     <string name="amount_in_sats">Summa i Sats</string>
     <string name="send_sats">Skicka Sats</string>
+    <string name="secret_emoji_maker">Hemlig emoji-skapare</string>
+    <string name="secret_emoji_maker_explainer">Lägg till en emoji med dolt meddelande</string>
+    <string name="secret_note_to_receiver">Hemlig anteckning till mottagaren</string>
+    <string name="secret_note_to_receiver_placeholder">Mitt dolda inlägg</string>
+    <string name="secret_visible_text">Synligt Prefix</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Lägg till inlägg</string>
     <string name="error_parsing_preview_for">"Fel vid analys av förhandsvisning för %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Förhandsgranska kortbild för %1$s"</string>
     <string name="new_channel">Ny kanal</string>

@@ -53,6 +53,12 @@ object Nip19Parser {
             Pattern.CASE_INSENSITIVE,
         )
 
+    val nip19regexEvents: Pattern =
+        Pattern.compile(
+            "(nostr:)?@?(nevent1|naddr1|note1|nrelay1|nembed1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
+            Pattern.CASE_INSENSITIVE,
+        )
+
     @Immutable
     data class ParseReturn(
         val entity: Entity,
@@ -130,8 +136,11 @@ object Nip19Parser {
             null
         }
 
-    fun parseAll(content: String): List<Entity> {
-        val matcher2 = nip19regex.matcher(content)
+    fun parseAll(
+        content: String,
+        regex: Pattern,
+    ): List<Entity> {
+        val matcher2 = regex.matcher(content)
         val returningList = mutableListOf<Entity>()
         while (matcher2.find()) {
             val type = matcher2.group(2) // npub1
@@ -139,7 +148,7 @@ object Nip19Parser {
             val additionalChars = matcher2.group(4) // additional chars
 
             if (type != null) {
-                val parsed = Nip19Parser.parseComponents(type, key, additionalChars)?.entity
+                val parsed = parseComponents(type, key, additionalChars)?.entity
 
                 if (parsed != null) {
                     returningList.add(parsed)
@@ -148,6 +157,10 @@ object Nip19Parser {
         }
         return returningList
     }
+
+    fun parseAll(content: String): List<Entity> = parseAll(content, nip19regex)
+
+    fun parseAllEvents(content: String): List<Entity> = parseAll(content, nip19regexEvents)
 }
 
 fun decodePublicKey(key: String): ByteArray =

@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.UserSuggestions
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploadState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
@@ -262,6 +262,8 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         message = TextFieldValue(draftEvent.content)
 
+        iMetaAttachments.addAll(draftEvent.imetas())
+
         urlPreview = findUrlInMessage()
     }
 
@@ -307,6 +309,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
     fun upload(
         onError: (title: String, message: String) -> Unit,
         context: Context,
+        onceUploaded: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val myAccount = account ?: return@launch
@@ -349,6 +352,8 @@ open class ChannelNewMessageViewModel : ViewModel() {
                 }
 
                 uploadState.reset()
+                onceUploaded()
+                saveDraft()
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
@@ -493,6 +498,8 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         userSuggestions.reset()
         userSuggestionsMainMessage = null
+
+        iMetaAttachments.reset()
 
         if (emojiSearch.value.isNotEmpty()) {
             emojiSearch.tryEmit("")

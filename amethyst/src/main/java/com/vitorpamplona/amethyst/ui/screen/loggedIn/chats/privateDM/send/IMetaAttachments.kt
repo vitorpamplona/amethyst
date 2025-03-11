@@ -67,6 +67,12 @@ class IMetaAttachments {
         }
     }
 
+    fun addAll(imetas: List<IMetaTag>) {
+        imetas.forEach {
+            replace(it.url, it)
+        }
+    }
+
     fun remove(url: String) {
         iMetaAttachments = iMetaAttachments.filter { it.url != url }
     }
@@ -100,5 +106,9 @@ class IMetaAttachments {
         replace(iMeta.url, iMeta)
     }
 
-    fun filterIsIn(urls: Set<String>) = iMetaAttachments.filter { it.url !in urls }
+    fun filterIsIn(urls: Set<String>) = iMetaAttachments.filter { it.url in urls }
+
+    fun reset() {
+        iMetaAttachments = emptyList()
+    }
 }
