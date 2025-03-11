@@ -100,5 +100,5 @@ class IMetaAttachments {
         replace(iMeta.url, iMeta)
     }
 
-    fun filterIsIn(urls: Set<String>) = iMetaAttachments.filter { it.url !in urls }
+    fun filterIsIn(urls: Set<String>) = iMetaAttachments.filter { it.url in urls }
 }
