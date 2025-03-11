@@ -68,7 +68,9 @@ class IMetaAttachments {
     }
 
     fun addAll(imetas: List<IMetaTag>) {
-        iMetaAttachments = iMetaAttachments + imetas
+        imetas.forEach {
+            replace(it.url, it)
+        }
     }
 
     fun remove(url: String) {
