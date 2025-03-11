@@ -44,14 +44,14 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.Split
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
-import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrEventUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
@@ -372,7 +372,7 @@ open class ChatNewMessageViewModel : ViewModel() {
                     ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
                         hashtags(findHashtags(message))
                         references(findURLs(message))
-                        quotes(findNostrUris(message))
+                        quotes(findNostrEventUris(message))
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -381,7 +381,7 @@ open class ChatNewMessageViewModel : ViewModel() {
                     ChatMessageEvent.reply(message, replyHint) {
                         hashtags(findHashtags(message))
                         references(findURLs(message))
-                        quotes(findNostrUris(message))
+                        quotes(findNostrEventUris(message))
 
                         emojis(emojis)
                         imetas(usedAttachments)

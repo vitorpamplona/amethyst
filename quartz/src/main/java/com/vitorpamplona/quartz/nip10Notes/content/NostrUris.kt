@@ -23,3 +23,5 @@ package com.vitorpamplona.quartz.nip10Notes.content
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 
 fun findNostrUris(content: String) = Nip19Parser.parseAll(content)
+
+fun findNostrEventUris(content: String) = Nip19Parser.parseAllEvents(content)
