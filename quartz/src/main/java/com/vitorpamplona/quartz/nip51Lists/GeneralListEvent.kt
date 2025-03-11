@@ -67,8 +67,6 @@ abstract class GeneralListEvent(
 
     fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 
-    fun nameOrTitle() = name()?.ifBlank { null } ?: title()?.ifBlank { null }
-
     fun filterTagList(
         key: String,
         privateTags: Array<Array<String>>?,

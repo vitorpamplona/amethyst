@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
-import com.vitorpamplona.quartz.nip17Dm.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
