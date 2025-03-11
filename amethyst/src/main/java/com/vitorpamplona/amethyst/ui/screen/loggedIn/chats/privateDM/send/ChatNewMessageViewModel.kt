@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
+import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -179,6 +180,12 @@ open class ChatNewMessageViewModel : ViewModel() {
 
     open fun reply(replyNote: Note) {
         replyTo.value = replyNote
+        saveDraft()
+    }
+
+    fun clearReply() {
+        replyTo.value = null
+        saveDraft()
     }
 
     open fun quote(quote: Note) {
@@ -224,8 +231,6 @@ open class ChatNewMessageViewModel : ViewModel() {
     }
 
     private fun loadFromDraft(draft: Note) {
-        Log.d("draft", draft.event!!.toJson())
-
         val draftEvent = draft.event ?: return
         val accountViewModel = accountViewModel ?: return
 
@@ -264,9 +269,29 @@ open class ChatNewMessageViewModel : ViewModel() {
                 TextFieldValue(
                     draftEvent.groupMembers().mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
                 )
+
+            val replyId =
+                when (draftEvent) {
+                    is ChatMessageEvent -> draftEvent.replyTo().lastOrNull()
+                    is ChatMessageEncryptedFileHeaderEvent -> draftEvent.replyTo().lastOrNull()
+                    else -> null
+                }
+
+            if (replyId != null) {
+                accountViewModel.checkGetOrCreateNote(replyId) {
+                    replyTo.value = it
+                }
+            }
         } else if (draftEvent is PrivateDmEvent) {
             val recepientNpub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
             toUsers = TextFieldValue("@$recepientNpub")
+
+            val replyId = draftEvent.replyTo()
+            if (replyId != null) {
+                accountViewModel.checkGetOrCreateNote(replyId) {
+                    replyTo.value = it
+                }
+            }
         }
 
         message =

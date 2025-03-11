@@ -29,37 +29,21 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
-import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.ChatroomHeader
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
-import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
-import com.vitorpamplona.quartz.nip31Alts.alt
-import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun RenderChatMessageEncryptedFile(
@@ -97,80 +81,5 @@ fun RenderChatMessageEncryptedFile(
         Box(modifier = HalfVertPadding) {
             RenderEncryptedFile(note, backgroundColor, accountViewModel, nav)
         }
-    }
-}
-
-@Composable
-fun RenderEncryptedFile(
-    note: Note,
-    backgroundBubbleColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val noteEvent = note.event as? ChatMessageEncryptedFileHeaderEvent ?: return
-
-    val algo = noteEvent.algo()
-    val key = noteEvent.key()
-    val nonce = noteEvent.nonce()
-    val mimeType = noteEvent.mimeType()
-
-    if (algo == AESGCM.NAME && key != null && nonce != null) {
-        HttpClientManager.addCipherToCache(noteEvent.content, AESGCM(key, nonce), mimeType)
-
-        val content by remember(noteEvent) {
-            val isImage = mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(noteEvent.content)
-
-            mutableStateOf<BaseMediaContent>(
-                if (isImage) {
-                    EncryptedMediaUrlImage(
-                        url = noteEvent.content,
-                        description = noteEvent.alt(),
-                        hash = noteEvent.originalHash(),
-                        blurhash = noteEvent.blurhash(),
-                        dim = noteEvent.dimensions(),
-                        uri = note.toNostrUri(),
-                        mimeType = mimeType,
-                        encryptionAlgo = algo,
-                        encryptionKey = key,
-                        encryptionNonce = nonce,
-                    )
-                } else {
-                    EncryptedMediaUrlVideo(
-                        url = noteEvent.content,
-                        description = noteEvent.alt(),
-                        hash = noteEvent.originalHash(),
-                        blurhash = noteEvent.blurhash(),
-                        dim = noteEvent.dimensions(),
-                        uri = note.toNostrUri(),
-                        authorName = note.author?.toBestDisplayName(),
-                        mimeType = mimeType,
-                        encryptionAlgo = algo,
-                        encryptionKey = key,
-                        encryptionNonce = nonce,
-                    )
-                },
-            )
-        }
-
-        ZoomableContentView(
-            content,
-            persistentListOf(content),
-            roundedCorner = true,
-            contentScale = ContentScale.FillWidth,
-            accountViewModel,
-        )
-    } else {
-        TranslatableRichTextViewer(
-            content = stringRes(id = R.string.could_not_decrypt_the_message),
-            canPreview = true,
-            quotesLeft = 0,
-            modifier = Modifier,
-            tags = EmptyTagList,
-            backgroundColor = backgroundBubbleColor,
-            id = note.idHex,
-            callbackUri = note.toNostrUri(),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
     }
 }

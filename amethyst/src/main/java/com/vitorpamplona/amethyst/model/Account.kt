@@ -136,6 +136,7 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEve
 import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip37Drafts.DraftBuilder
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -2103,6 +2104,27 @@ class Account(
         Amethyst.instance.client.send(signedEvent, relayList = relayList)
     }
 
+    fun sendNip95Privately(
+        data: FileStorageEvent,
+        signedEvent: FileStorageHeaderEvent,
+        relayList: List<String>,
+    ) {
+        val connect =
+            relayList.map {
+                val normalizedUrl = RelayUrlFormatter.normalize(it)
+                RelaySetupInfoToConnect(
+                    normalizedUrl,
+                    shouldUseTorForClean(normalizedUrl),
+                    true,
+                    true,
+                    setOf(FeedType.GLOBAL),
+                )
+            }
+
+        Amethyst.instance.client.sendPrivately(data, relayList = connect)
+        Amethyst.instance.client.sendPrivately(signedEvent, relayList = connect)
+    }
+
     fun sendHeader(
         signedEvent: Event,
         relayList: List<RelaySetupInfo>,
@@ -2286,6 +2308,29 @@ class Account(
         }
     }
 
+    fun <T : Event> signAndSendPrivately(
+        template: EventTemplate<T>,
+        relayList: List<String>,
+    ) {
+        signer.sign(template) {
+            LocalCache.justConsume(it, null)
+            Amethyst.instance.client.sendPrivately(it, relayList = convertRelayList(relayList))
+        }
+    }
+
+    fun <T : Event> signAndSend(
+        template: EventTemplate<T>,
+        relayList: List<RelaySetupInfo>,
+        broadcastNotes: Set<Note>,
+    ) {
+        signer.sign(template) {
+            LocalCache.justConsume(it, null)
+            Amethyst.instance.client.send(it, relayList = relayList)
+
+            broadcastNotes.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
+        }
+    }
+
     fun <T : Event> signAndSend(
         draftTag: String?,
         template: EventTemplate<T>,
@@ -2357,6 +2402,16 @@ class Account(
         if (!isWriteable()) return
 
         signAndSend(draftTag, template, relayList, broadcastNotes)
+    }
+
+    fun createAndSendDraft(
+        draftTag: String,
+        template: EventTemplate<out Event>,
+    ) {
+        val rumor = signer.assembleRumor(template)
+        DraftBuilder.encryptAndSign(draftTag, rumor, signer) { draftEvent ->
+            sendDraftEvent(draftEvent)
+        }
     }
 
     fun deleteDraft(draftTag: String) {
@@ -2681,6 +2736,18 @@ class Account(
         }
         LocalCache.justConsume(draftEvent, null)
     }
+
+    fun convertRelayList(broadcast: List<String>): List<RelaySetupInfoToConnect> =
+        broadcast.map {
+            val normalizedUrl = RelayUrlFormatter.normalize(it)
+            RelaySetupInfoToConnect(
+                normalizedUrl,
+                shouldUseTorForClean(normalizedUrl),
+                true,
+                true,
+                setOf(FeedType.GLOBAL),
+            )
+        }
 
     fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }

@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">非常感谢！</string>
     <string name="amount_in_sats">聪金额</string>
     <string name="send_sats">发送聪</string>
+    <string name="secret_emoji_maker">私密 Emoji 生成器</string>
+    <string name="secret_emoji_maker_explainer">在帖子中添加 Emoji 到隐藏消息的帖子中</string>
+    <string name="secret_note_to_receiver">发送私密笔记给收件人</string>
+    <string name="secret_note_to_receiver_placeholder">我的隐藏消息</string>
+    <string name="secret_visible_text">可见前缀</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">添加到帖子</string>
     <string name="error_parsing_preview_for">"解析 %1$s 预览出错：%2$s"</string>
     <string name="preview_card_image_for">"预览 %1$s 卡片图片"</string>
     <string name="new_channel">新频道</string>
@@ -106,6 +113,7 @@
     <string name="global_feed">全球</string>
     <string name="search_feed">搜索</string>
     <string name="add_a_relay">添加中继器</string>
+    <string name="profile_name">名称</string>
     <string name="display_name">显示名称</string>
     <string name="my_display_name">我的显示名称</string>
     <string name="my_awesome_name">Nostr 太酷了</string>
@@ -141,6 +149,7 @@
     <string name="conversations">会话</string>
     <string name="notes">动态</string>
     <string name="replies">回复</string>
+    <string name="mutual">你的</string>
     <string name="gallery">相册</string>
     <string name="follows">"关注"</string>
     <string name="reports">"举报"</string>

@@ -80,7 +80,7 @@ fun DisplayPeopleList(
             members.take(3)
         }
 
-    val name by remember { derivedStateOf { "#${noteEvent.dTag()}" } }
+    val name by remember { derivedStateOf { "#${noteEvent.nameOrTitle() ?: noteEvent.dTag()}" } }
 
     Text(
         text = name,

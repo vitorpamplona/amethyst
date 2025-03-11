@@ -23,12 +23,18 @@ package com.vitorpamplona.amethyst.ui.note.elements
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.timeAgo
+import com.vitorpamplona.amethyst.ui.note.timeAgoShort
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
@@ -46,5 +52,23 @@ fun TimeAgo(time: Long) {
         text = timeStr,
         color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
+    )
+}
+
+@Composable
+fun NormalTimeAgo(
+    baseNote: Note,
+    modifier: Modifier,
+) {
+    val nowStr = stringRes(id = R.string.now)
+
+    val time by
+        remember(baseNote) { derivedStateOf { timeAgoShort(baseNote.createdAt() ?: 0, nowStr) } }
+
+    Text(
+        text = time,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
     )
 }

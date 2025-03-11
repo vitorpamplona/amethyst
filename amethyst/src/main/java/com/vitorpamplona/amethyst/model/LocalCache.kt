@@ -2412,9 +2412,12 @@ object LocalCache {
             }
             is ChannelMessageEvent -> {
                 draft.channelId()?.let { channelId ->
-                    checkGetOrCreateChannel(channelId)?.let { channel ->
-                        channel.addNote(note, null)
-                    }
+                    checkGetOrCreateChannel(channelId)?.addNote(note, null)
+                }
+            }
+            is LiveActivitiesChatMessageEvent -> {
+                draft.activityAddress()?.let { channelId ->
+                    checkGetOrCreateChannel(channelId.toValue())?.addNote(note, null)
                 }
             }
             is TextNoteEvent -> {

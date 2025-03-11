@@ -23,16 +23,20 @@ package com.vitorpamplona.quartz.nip53LiveActivities.chat
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.tagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.markedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -47,7 +51,8 @@ class LiveActivitiesChatMessageEvent(
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    ExposeInDraft {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
@@ -63,6 +68,12 @@ class LiveActivitiesChatMessageEvent(
     override fun markedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
 
     override fun unmarkedReplyTos() = super.markedReplyTos().minus(activityHex() ?: "")
+
+    override fun exposeInDraft() =
+        tagArray<LiveActivitiesChatMessageEvent> {
+            activity()?.let { aTag(it) }
+            reply()?.let { markedETag(it) }
+        }
 
     companion object {
         const val KIND = 1311

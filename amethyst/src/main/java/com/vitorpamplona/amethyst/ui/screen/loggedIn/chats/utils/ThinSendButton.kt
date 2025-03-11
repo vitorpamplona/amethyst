@@ -38,7 +38,7 @@ fun ThinSendButton(
 ) {
     IconButton(
         enabled = isActive,
-        modifier = modifier,
+        // modifier = modifier,
         onClick = onClick,
     ) {
         Icon(

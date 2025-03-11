@@ -109,4 +109,21 @@ abstract class NostrSigner(
             ) as T,
         )
     }
+
+    fun <T : Event> assembleRumor(ev: EventTemplate<T>) = assembleRumor<T>(ev.createdAt, ev.kind, ev.tags, ev.content)
+
+    fun <T : Event> assembleRumor(
+        createdAt: Long,
+        kind: Int,
+        tags: Array<Array<String>>,
+        content: String,
+    ) = EventFactory.create(
+        id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
+        pubKey = pubKey,
+        createdAt = createdAt,
+        kind = kind,
+        tags = tags,
+        content = content,
+        sig = "",
+    ) as T
 }

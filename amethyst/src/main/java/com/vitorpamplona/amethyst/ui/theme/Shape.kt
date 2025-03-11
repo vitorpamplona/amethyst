@@ -116,7 +116,9 @@ val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
 val StdTopPadding = Modifier.padding(top = 10.dp)
 val HalfTopPadding = Modifier.padding(top = 5.dp)
+
 val HalfHalfVertPadding = Modifier.padding(vertical = 3.dp)
+val HalfHalfHorzModifier = Modifier.padding(horizontal = 3.dp)
 
 val HalfPadding = Modifier.padding(5.dp)
 val StdPadding = Modifier.padding(10.dp)
@@ -209,7 +211,7 @@ val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = Quote
 
 val EditFieldModifier =
     Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
-val EditFieldTrailingIconModifier = Modifier.height(26.dp).padding(start = 5.dp, end = 0.dp)
+val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)
 val EditFieldLeadingIconModifier = Modifier.height(32.dp).padding(start = 2.dp)
 
 val ZeroPadding = PaddingValues(0.dp)
@@ -301,3 +303,8 @@ val ripple24dp = ripple(bounded = false, radius = Size24dp)
 val defaultTweenDuration = 100
 val defaultTweenFloatSpec = tween<Float>(durationMillis = defaultTweenDuration)
 val defaultTweenIntOffsetSpec = tween<IntOffset>(durationMillis = defaultTweenDuration)
+
+val StreamingHeaderModifier =
+    Modifier
+        .fillMaxWidth()
+        .heightIn(min = 50.dp, max = 300.dp)

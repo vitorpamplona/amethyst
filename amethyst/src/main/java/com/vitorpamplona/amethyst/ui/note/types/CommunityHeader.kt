@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,9 +38,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,12 +64,12 @@ import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
+import com.vitorpamplona.amethyst.ui.note.elements.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.JoinCommunityButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.LeaveCommunityButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.public.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
@@ -82,6 +86,8 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ModeratorTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @Composable
@@ -358,4 +364,48 @@ fun WatchAddressableNoteFollows(
     val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
 
     onFollowChanges(state.addresses.contains(note.idHex))
+}
+
+@Composable
+fun JoinCommunityButton(
+    accountViewModel: AccountViewModel,
+    note: AddressableNote,
+    nav: INav,
+) {
+    val scope = rememberCoroutineScope()
+
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(note) } },
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringRes(R.string.join), color = Color.White)
+    }
+}
+
+@Composable
+fun LeaveCommunityButton(
+    accountViewModel: AccountViewModel,
+    note: AddressableNote,
+    nav: INav,
+) {
+    val scope = rememberCoroutineScope()
+
+    Button(
+        modifier = Modifier.padding(horizontal = 3.dp),
+        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.unfollow(note) } },
+        shape = ButtonBorder,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        contentPadding = ButtonPadding,
+    ) {
+        Text(text = stringRes(R.string.leave), color = Color.White)
+    }
 }

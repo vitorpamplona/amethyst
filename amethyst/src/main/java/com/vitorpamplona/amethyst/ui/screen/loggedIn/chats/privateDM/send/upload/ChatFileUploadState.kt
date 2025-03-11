@@ -40,7 +40,11 @@ class ChatFileUploadState(
 
     var selectedServer by mutableStateOf(defaultServer)
     var caption by mutableStateOf("")
-    var sensitiveContent by mutableStateOf(false)
+
+    var contentWarning by mutableStateOf(false)
+        private set
+
+    var contentWarningReason by mutableStateOf<String?>(null)
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
@@ -72,4 +76,13 @@ class ChatFileUploadState(
     fun canPost(): Boolean = !isUploadingImage && multiOrchestrator != null
 
     fun hasPickedMedia() = multiOrchestrator != null
+
+    fun updateContentWarning(value: Boolean) {
+        contentWarning = value
+        if (value) {
+            contentWarningReason = ""
+        } else {
+            contentWarningReason = null
+        }
+    }
 }

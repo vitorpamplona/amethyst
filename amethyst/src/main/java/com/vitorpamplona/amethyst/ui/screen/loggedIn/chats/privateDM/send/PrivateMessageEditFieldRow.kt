@@ -42,12 +42,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
 import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
@@ -58,17 +61,37 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
+import com.vitorpamplona.amethyst.ui.theme.EditFieldLeadingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+
+@Preview
+@Composable
+fun PrivateMessageEditFieldRow() {
+    val channelScreenModel: ChatNewMessageViewModel = viewModel()
+    val accountViewModel = mockAccountViewModel()
+    channelScreenModel.init(accountViewModel)
+
+    ThemeComparisonRow {
+        PrivateMessageEditFieldRow(
+            channelScreenModel = channelScreenModel,
+            accountViewModel = accountViewModel,
+            onSendNewMessage = {},
+            nav = EmptyNav,
+        )
+    }
+}
 
 @Composable
 fun PrivateMessageEditFieldRow(
@@ -77,7 +100,11 @@ fun PrivateMessageEditFieldRow(
     onSendNewMessage: () -> Unit,
     nav: INav,
 ) {
-    channelScreenModel.replyTo.value?.let { DisplayReplyingToNote(it, accountViewModel, nav) { channelScreenModel.replyTo.value = null } }
+    channelScreenModel.replyTo.value?.let {
+        DisplayReplyingToNote(it, accountViewModel, nav) {
+            channelScreenModel.clearReply()
+        }
+    }
 
     LaunchedEffect(key1 = channelScreenModel.draftTag) {
         launch(Dispatchers.IO) {
@@ -148,8 +175,7 @@ fun PrivateMessageEditFieldRow(
             },
             trailingIcon = {
                 ThinSendButton(
-                    isActive =
-                        channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
+                    isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
                     modifier = EditFieldTrailingIconModifier,
                 ) {
                     channelScreenModel.sendPost(onSendNewMessage)
@@ -163,10 +189,7 @@ fun PrivateMessageEditFieldRow(
                     SelectFromGallery(
                         isUploading = channelScreenModel.isUploadingImage,
                         tint = MaterialTheme.colorScheme.placeholderText,
-                        modifier =
-                            Modifier
-                                .size(30.dp)
-                                .padding(start = 2.dp),
+                        modifier = EditFieldLeadingIconModifier,
                         onImageChosen = channelScreenModel::pickedMedia,
                     )
 

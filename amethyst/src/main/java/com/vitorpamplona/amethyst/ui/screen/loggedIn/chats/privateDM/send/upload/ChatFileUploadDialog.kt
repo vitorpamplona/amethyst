@@ -208,8 +208,8 @@ private fun ImageVideoPostChat(
         title = R.string.add_sensitive_content_label,
         description = R.string.add_sensitive_content_description,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        checked = fileUploadState.sensitiveContent,
-        onCheckedChange = { fileUploadState.sensitiveContent = it },
+        checked = fileUploadState.contentWarning,
+        onCheckedChange = fileUploadState::updateContentWarning,
     )
 
     SettingsRow(R.string.file_server, R.string.file_server_description) {
