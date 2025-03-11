@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">Děkuji moc!</string>
     <string name="amount_in_sats">Částka v sats</string>
     <string name="send_sats">Poslat sats</string>
+    <string name="secret_emoji_maker">Tajný tvůrce emoji</string>
+    <string name="secret_emoji_maker_explainer">Přidejte emoji se skrytou zprávou</string>
+    <string name="secret_note_to_receiver">Tajná poznámka pro příjemce</string>
+    <string name="secret_note_to_receiver_placeholder">Moje skrytá zpráva</string>
+    <string name="secret_visible_text">Viditelná předpona</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Přidat k příspěvku</string>
     <string name="error_parsing_preview_for">"Chyba při zpracování náhledu pro %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Náhled obrázku karty pro %1$s"</string>
     <string name="new_channel">Nový kanál</string>
