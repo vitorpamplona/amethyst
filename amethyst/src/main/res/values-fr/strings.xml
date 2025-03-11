@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">Merci beaucoup !</string>
     <string name="amount_in_sats">Montant en Sats</string>
     <string name="send_sats">Envoyer des Sats</string>
+    <string name="secret_emoji_maker">Créateur d\'émojis secrets</string>
+    <string name="secret_emoji_maker_explainer">Ajouter un émoji avec un message caché à la publication</string>
+    <string name="secret_note_to_receiver">Note secrète pour le destinataire</string>
+    <string name="secret_note_to_receiver_placeholder">Mon message caché</string>
+    <string name="secret_visible_text">Préfixe visible</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Ajouter au message</string>
     <string name="error_parsing_preview_for">"Erreur d'analyse de l'aperçu pour %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Aperçu de l'image pour %1$s"</string>
     <string name="new_channel">Nouveau canal</string>
@@ -106,6 +113,7 @@
     <string name="global_feed">Flux mondial</string>
     <string name="search_feed">Flux de recherche</string>
     <string name="add_a_relay">Ajouter un relais</string>
+    <string name="profile_name">Nom</string>
     <string name="display_name">Nom visible du public</string>
     <string name="my_display_name">Mon nom visible du public</string>
     <string name="my_awesome_name">Ostrich McGénial</string>

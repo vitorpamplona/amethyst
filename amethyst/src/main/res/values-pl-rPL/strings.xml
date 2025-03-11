@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">Dziękuję bardzo!</string>
     <string name="amount_in_sats">Kwota w Satsach</string>
     <string name="send_sats">Wyślij</string>
+    <string name="secret_emoji_maker">Kreator tajnych emoji</string>
+    <string name="secret_emoji_maker_explainer">Dodaj emoji z ukrytą wiadomością do wpisu</string>
+    <string name="secret_note_to_receiver">Tajna notatka dla odbiorcy</string>
+    <string name="secret_note_to_receiver_placeholder">Treść tajnej notatki</string>
+    <string name="secret_visible_text">Widoczny prefiks</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Dodaj do wpisu</string>
     <string name="error_parsing_preview_for">"Błąd analizowania podglądu dla %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Podgląd obrazu karty dla %1$s"</string>
     <string name="new_channel">Nowy kanał</string>
