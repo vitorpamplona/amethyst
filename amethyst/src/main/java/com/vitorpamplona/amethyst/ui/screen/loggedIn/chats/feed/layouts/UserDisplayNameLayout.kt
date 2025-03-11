@@ -18,28 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.chatAuthorBox
 
 @Composable
-fun WatchAccountForListScreen(
-    knownFeedContentState: FeedContentState,
-    newFeedContentState: FeedContentState,
-    accountViewModel: AccountViewModel,
+fun UserDisplayNameLayout(
+    picture: @Composable () -> Unit,
+    name: @Composable () -> Unit,
 ) {
-    LaunchedEffect(accountViewModel) {
-        launch(Dispatchers.IO) {
-            NostrChatroomListDataSource.account = accountViewModel.account
-            NostrChatroomListDataSource.start()
-            knownFeedContentState.invalidateData(true)
-            newFeedContentState.invalidateData(true)
-        }
+    Box(chatAuthorBox, contentAlignment = Alignment.TopEnd) {
+        picture()
     }
+
+    Spacer(modifier = StdHorzSpacer)
+
+    name()
 }

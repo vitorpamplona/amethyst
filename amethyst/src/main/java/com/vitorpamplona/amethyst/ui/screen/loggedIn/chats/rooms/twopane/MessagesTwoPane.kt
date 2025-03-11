@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.twopane
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,9 +42,9 @@ import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 
 @Composable

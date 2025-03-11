@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.messages
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -82,7 +82,7 @@ fun ChatBubbleLayout(
     val defaultBackground = MaterialTheme.colorScheme.background
     val draftColor = MaterialTheme.colorScheme.chatDraftBackground
 
-    val backgroundBubbleColor =
+    val bgColor =
         remember {
             if (isLoggedInUser) {
                 if (isDraft) {
@@ -135,7 +135,7 @@ fun ChatBubbleLayout(
             modifier = if (innerQuote) Modifier else ChatBubbleMaxSizeModifier,
         ) {
             Surface(
-                color = backgroundBubbleColor.value,
+                color = bgColor.value,
                 shape = if (isLoggedInUser) ChatBubbleShapeMe else ChatBubbleShapeThem,
                 modifier = clickableModifier,
             ) {
@@ -150,7 +150,7 @@ fun ChatBubbleLayout(
                         }
                     }
 
-                    inner(backgroundBubbleColor)
+                    inner(bgColor)
 
                     if (showDetails.value) {
                         Row(
@@ -175,7 +175,7 @@ fun ChatBubbleLayout(
 @Preview
 @Composable
 private fun BubblePreview() {
-    val backgroundBubbleColor =
+    val bgColor =
         remember {
             mutableStateOf<Color>(Color.Transparent)
         }
@@ -188,7 +188,7 @@ private fun BubblePreview() {
             isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
-            parentBackgroundColor = backgroundBubbleColor,
+            parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},
             actionMenu = { onDismiss ->
@@ -212,7 +212,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text("Relays and Actions") },
-        ) { backgroundBubbleColor ->
+        ) { bgColor ->
             Text("This is my note")
         }
 
@@ -223,7 +223,7 @@ private fun BubblePreview() {
             isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
-            parentBackgroundColor = backgroundBubbleColor,
+            parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},
             actionMenu = { onDismiss ->
@@ -246,7 +246,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text("Relays and Actions") },
-        ) { backgroundBubbleColor ->
+        ) { bgColor ->
             Text("This is a very long long loong note")
         }
 
@@ -257,7 +257,7 @@ private fun BubblePreview() {
             isComplete = true,
             hasDetailsToShow = true,
             drawAuthorInfo = true,
-            parentBackgroundColor = backgroundBubbleColor,
+            parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},
             actionMenu = { onDismiss ->
@@ -280,7 +280,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text("Relays and Actions") },
-        ) { backgroundBubbleColor ->
+        ) { bgColor ->
             Text("This is a draft note")
         }
 
@@ -291,7 +291,7 @@ private fun BubblePreview() {
             isComplete = false,
             hasDetailsToShow = false,
             drawAuthorInfo = false,
-            parentBackgroundColor = backgroundBubbleColor,
+            parentBackgroundColor = bgColor,
             onClick = { false },
             onAuthorClick = {},
             actionMenu = { onDismiss ->
@@ -314,7 +314,7 @@ private fun BubblePreview() {
                 )
             },
             detailRow = { Text("Relays and Actions") },
-        ) { backgroundBubbleColor ->
+        ) { bgColor ->
             Text("Short note")
         }
     }

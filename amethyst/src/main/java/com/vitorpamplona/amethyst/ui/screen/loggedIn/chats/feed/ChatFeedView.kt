@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.feed
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,10 +28,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -40,14 +38,10 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.messages.ChatroomMessageCompose
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 
 @Composable
@@ -64,7 +58,7 @@ fun RefreshingChatroomFeedView(
 ) {
     RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel, scrollStateKey) { listState ->
-            RenderChatroomFeedView(
+            RenderChatFeedView(
                 viewModel,
                 accountViewModel,
                 listState,
@@ -79,7 +73,7 @@ fun RefreshingChatroomFeedView(
 }
 
 @Composable
-fun RenderChatroomFeedView(
+fun RenderChatFeedView(
     viewModel: FeedViewModel,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
@@ -97,7 +91,7 @@ fun RenderChatroomFeedView(
             is FeedState.Empty -> FeedEmpty { viewModel.invalidateData() }
             is FeedState.FeedError -> FeedError(state.errorMessage) { viewModel.invalidateData() }
             is FeedState.Loaded ->
-                ChatroomFeedLoaded(
+                ChatFeedLoaded(
                     state,
                     accountViewModel,
                     listState,
@@ -112,7 +106,7 @@ fun RenderChatroomFeedView(
 }
 
 @Composable
-fun ChatroomFeedLoaded(
+fun ChatFeedLoaded(
     loaded: FeedState.Loaded,
     accountViewModel: AccountViewModel,
     listState: LazyListState,
@@ -150,34 +144,6 @@ fun ChatroomFeedLoaded(
 
                 NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
             }
-        }
-    }
-}
-
-@Composable
-fun NewDateOrSubjectDivisor(
-    previous: Note?,
-    note: Note,
-) {
-    if (previous == null) return
-
-    val never = stringRes(R.string.never)
-    val today = stringRes(R.string.today)
-
-    val prevDate = remember(previous) { dateFormatter(previous.event?.createdAt, never, today) }
-    val date = remember(note) { dateFormatter(note.event?.createdAt, never, today) }
-
-    val subject = remember(note) { note.event?.subject() }
-
-    if (prevDate != date) {
-        if (subject != null) {
-            ChatDivisor("$date - $subject")
-        } else {
-            ChatDivisor(date)
-        }
-    } else {
-        if (subject != null) {
-            ChatDivisor(subject)
         }
     }
 }

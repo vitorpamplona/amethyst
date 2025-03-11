@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.twopane
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,11 +33,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.WatchAccountForListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.WatchLifecycleAndRefreshDataSource
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.feed.MessagesPager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.feed.MessagesTabHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list.feed.MessagesTabItem
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.WatchAccountForListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.WatchLifecycleAndRefreshDataSource
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
 
 @Composable
 fun ChatroomList(

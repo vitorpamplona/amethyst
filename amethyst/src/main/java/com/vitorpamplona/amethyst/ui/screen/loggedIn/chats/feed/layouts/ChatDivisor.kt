@@ -18,29 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.list
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
-fun WatchLifecycleAndRefreshDataSource(accountViewModel: AccountViewModel) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    NostrChatroomListDataSource.account = accountViewModel.account
-                    NostrChatroomListDataSource.start()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+fun ChatDivisor(info: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = StdPadding) {
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            thickness = DividerThickness,
+        )
+        Text(
+            text = info,
+            fontWeight = FontWeight.Bold,
+            fontSize = Font14SP,
+            modifier = HalfPadding,
+        )
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            thickness = DividerThickness,
+        )
     }
 }
