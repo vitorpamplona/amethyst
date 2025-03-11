@@ -301,6 +301,8 @@ open class ChatNewMessageViewModel : ViewModel() {
                 TextFieldValue(draftEvent.content)
             }
 
+        iMetaAttachments.addAll(draftEvent.imetas())
+
         requiresNIP17 = draftEvent is NIP17Group
         nip17 = draftEvent is NIP17Group
 
@@ -348,9 +350,15 @@ open class ChatNewMessageViewModel : ViewModel() {
         val uploadState = uploadState ?: return
 
         if (nip17) {
-            ChatFileUploader(room, account).uploadNIP17(uploadState, viewModelScope, onError, context, onceUploaded)
+            ChatFileUploader(room, account).uploadNIP17(uploadState, viewModelScope, onError, context) {
+                saveDraft()
+                onceUploaded()
+            }
         } else {
-            ChatFileUploader(room, account).uploadNIP04(uploadState, viewModelScope, onError, context, onceUploaded)
+            ChatFileUploader(room, account).uploadNIP04(uploadState, viewModelScope, onError, context) {
+                saveDraft()
+                onceUploaded()
+            }
         }
     }
 
@@ -432,6 +440,8 @@ open class ChatNewMessageViewModel : ViewModel() {
 
         userSuggestions.reset()
         userSuggestionsMainMessage = null
+
+        iMetaAttachments.reset()
 
         if (emojiSearch.value.isNotEmpty()) {
             emojiSearch.tryEmit("")

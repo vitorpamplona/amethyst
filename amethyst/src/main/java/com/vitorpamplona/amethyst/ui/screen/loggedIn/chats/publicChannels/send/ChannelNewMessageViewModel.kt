@@ -262,6 +262,8 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         message = TextFieldValue(draftEvent.content)
 
+        iMetaAttachments.addAll(draftEvent.imetas())
+
         urlPreview = findUrlInMessage()
     }
 
@@ -351,6 +353,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
                 uploadState.reset()
                 onceUploaded()
+                saveDraft()
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
@@ -495,6 +498,8 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         userSuggestions.reset()
         userSuggestionsMainMessage = null
+
+        iMetaAttachments.reset()
 
         if (emojiSearch.value.isNotEmpty()) {
             emojiSearch.tryEmit("")
