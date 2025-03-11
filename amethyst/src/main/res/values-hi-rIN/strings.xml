@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">बहुत धन्यवाद!</string>
     <string name="amount_in_sats">मात्रा साट्स में</string>
     <string name="send_sats">साट्स भेजें</string>
+    <string name="secret_emoji_maker">रहस्य चित्राक्षर कर्ता</string>
+    <string name="secret_emoji_maker_explainer">गुप्त सन्देश युक्त चित्राक्षर जोडें पत्र के साथ</string>
+    <string name="secret_note_to_receiver">गुप्त टीका ग्राहक के लिए</string>
+    <string name="secret_note_to_receiver_placeholder">मेरा गुप्त सन्देश</string>
+    <string name="secret_visible_text">दृश्यमान उपसर्ग</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">पत्र के साथ जोडें</string>
     <string name="error_parsing_preview_for">"%1$s का पूर्वीक्षण परखने में अपक्रम : %2$s"</string>
     <string name="preview_card_image_for">"%1$s के लिए पूर्वीक्षण पत्ता चित्र"</string>
     <string name="new_channel">नयी प्रणाली</string>

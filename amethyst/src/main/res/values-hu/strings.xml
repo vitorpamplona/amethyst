@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">Nagyon szépen köszönöm!</string>
     <string name="amount_in_sats">Összeg satoshiban</string>
     <string name="send_sats">Satoshi küldése</string>
+    <string name="secret_emoji_maker">Titkos emodzsikészítő</string>
+    <string name="secret_emoji_maker_explainer">Emodzsi hozzáadása rejtett üzenettel a bejegyzéshez</string>
+    <string name="secret_note_to_receiver">Titkos jegyzet a kedvezményezettnek</string>
+    <string name="secret_note_to_receiver_placeholder">Saját rejtett üzenet</string>
+    <string name="secret_visible_text">Látható előtag</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Hozzáadás a bejegyzéshez</string>
     <string name="error_parsing_preview_for">"Hiba a következő előnézet elemzésekor %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Kártyakép előnézete a következőhöz: %1$s"</string>
     <string name="new_channel">Új csatorna</string>
