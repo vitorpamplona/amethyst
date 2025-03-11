@@ -40,14 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
@@ -58,7 +56,7 @@ import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploadDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.RoomChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -119,22 +117,10 @@ fun PrivateMessageEditFieldRow(
 
     channelScreenModel.uploadState?.let { uploading ->
         uploading.multiOrchestrator?.let { selectedFiles ->
-            val context = LocalContext.current
-
-            ChatFileUploadDialog(
-                room = channelScreenModel.room!!,
+            RoomChatFileUploadDialog(
+                channelScreenModel = channelScreenModel,
                 state = uploading,
-                upload = {
-                    channelScreenModel.upload(
-                        onError = accountViewModel::toast,
-                        context = context,
-                        onceUploaded = onSendNewMessage,
-                    )
-
-                    if (uploading.selectedServer.type != ServerType.NIP95) {
-                        accountViewModel.account.settings.changeDefaultFileServer(uploading.selectedServer)
-                    }
-                },
+                onUpload = onSendNewMessage,
                 onCancel = uploading::reset,
                 accountViewModel = accountViewModel,
                 nav = nav,

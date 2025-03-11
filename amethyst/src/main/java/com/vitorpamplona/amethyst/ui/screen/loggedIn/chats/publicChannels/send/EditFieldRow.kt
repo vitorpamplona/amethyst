@@ -81,6 +81,19 @@ fun EditFieldRow(
         }
     }
 
+    channelScreenModel.uploadState?.let { uploading ->
+        uploading.multiOrchestrator?.let { selectedFiles ->
+            ChannelFileUploadDialog(
+                channelScreenModel = channelScreenModel,
+                state = uploading,
+                onUpload = onSendNewMessage,
+                onCancel = uploading::reset,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
+
     Column(
         modifier = EditFieldModifier,
     ) {
