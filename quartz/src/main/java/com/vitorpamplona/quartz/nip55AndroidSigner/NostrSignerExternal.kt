@@ -133,6 +133,17 @@ class NostrSignerExternal(
         )
     }
 
+    override fun deriveKey(
+        nonce: HexKey,
+        onReady: (HexKey) -> Unit,
+    ) {
+        launcher.deriveKey(
+            nonce,
+            SignerType.DERIVE_KEY,
+            onReady,
+        )
+    }
+
     override fun decryptZapEvent(
         event: LnZapRequestEvent,
         onReady: (LnZapPrivateEvent) -> Unit,

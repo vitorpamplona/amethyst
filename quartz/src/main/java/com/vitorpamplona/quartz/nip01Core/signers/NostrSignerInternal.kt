@@ -80,4 +80,11 @@ class NostrSignerInternal(
     ) {
         signerSync.decryptZapEvent(event)?.let { onReady(it) }
     }
+
+    override fun deriveKey(
+        nonce: HexKey,
+        onReady: (HexKey) -> Unit,
+    ) {
+        signerSync.deriveKey(nonce)?.let { onReady(it) }
+    }
 }

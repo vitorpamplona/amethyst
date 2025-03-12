@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.signers
 
 import android.util.Log
+import com.vitorpamplona.quartz.experimental.decoupling.EncryptionKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -128,4 +129,10 @@ class NostrSignerSync(
     }
 
     fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent? = PrivateZapRequestBuilder().decryptZapEvent(event, this)
+
+    fun deriveKey(nonce: HexKey): HexKey? {
+        if (keyPair.privKey == null) return null
+
+        return EncryptionKeyDerivation.derivePrivateKey(keyPair.privKey, nonce.hexToByteArray()).toHexKey()
+    }
 }
