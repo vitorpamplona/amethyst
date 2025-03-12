@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip70ProtectedEvts
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip70ProtectedEvts.tags.ProtectedTag
 
-fun Event.isProtected() = tags.isProtected()
+fun TagArray.isProtected() = any(ProtectedTag::match)

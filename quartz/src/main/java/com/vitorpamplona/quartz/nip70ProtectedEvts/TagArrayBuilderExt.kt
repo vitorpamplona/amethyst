@@ -21,5 +21,7 @@
 package com.vitorpamplona.quartz.nip70ProtectedEvts
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip70ProtectedEvts.tags.ProtectedTag
 
-fun Event.isProtected() = tags.isProtected()
+fun <T : Event> TagArrayBuilder<T>.protect() = addUnique(ProtectedTag.assemble())

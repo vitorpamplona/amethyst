@@ -18,8 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip70ProtectedEvts
+package com.vitorpamplona.quartz.nip70ProtectedEvts.tags
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun Event.isProtected() = tags.isProtected()
+class ProtectedTag {
+    companion object {
+        const val TAG_NAME = "-"
+
+        @JvmStatic
+        fun match(tag: Array<String>): Boolean {
+            ensure(tag.has(0)) { return false }
+            ensure(tag[0] == TAG_NAME) { return false }
+            return true
+        }
+
+        @JvmStatic
+        fun parse(tag: Array<String>): Boolean? {
+            ensure(tag.has(0)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return true
+        }
+
+        @JvmStatic
+        fun assemble() = arrayOf(TAG_NAME)
+    }
+}
