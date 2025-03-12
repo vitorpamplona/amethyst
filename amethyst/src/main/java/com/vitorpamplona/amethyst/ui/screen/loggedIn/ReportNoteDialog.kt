@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,13 +75,13 @@ fun ReportNoteDialog(
 ) {
     val reportTypes =
         listOf(
-            Pair(ReportEvent.ReportType.SPAM, stringRes(R.string.report_dialog_spam)),
-            Pair(ReportEvent.ReportType.PROFANITY, stringRes(R.string.report_dialog_profanity)),
-            Pair(ReportEvent.ReportType.IMPERSONATION, stringRes(R.string.report_dialog_impersonation)),
-            Pair(ReportEvent.ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
-            Pair(ReportEvent.ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
-            Pair(ReportEvent.ReportType.MALWARE, stringRes(R.string.report_malware)),
-            Pair(ReportEvent.ReportType.MOD, stringRes(R.string.report_mod)),
+            Pair(ReportType.SPAM, stringRes(R.string.report_dialog_spam)),
+            Pair(ReportType.PROFANITY, stringRes(R.string.report_dialog_profanity)),
+            Pair(ReportType.IMPERSONATION, stringRes(R.string.report_dialog_impersonation)),
+            Pair(ReportType.NUDITY, stringRes(R.string.report_dialog_nudity)),
+            Pair(ReportType.ILLEGAL, stringRes(R.string.report_dialog_illegal)),
+            Pair(ReportType.MALWARE, stringRes(R.string.report_malware)),
+            Pair(ReportType.MOD, stringRes(R.string.report_mod)),
         )
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }

@@ -102,7 +102,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -741,7 +741,7 @@ class AccountViewModel(
 
     fun report(
         note: Note,
-        type: ReportEvent.ReportType,
+        type: ReportType,
         content: String = "",
     ) {
         viewModelScope.launch(Dispatchers.IO) { account.report(note, type, content) }
@@ -749,7 +749,7 @@ class AccountViewModel(
 
     fun report(
         user: User,
-        type: ReportEvent.ReportType,
+        type: ReportType,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             account.report(user, type)

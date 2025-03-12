@@ -68,6 +68,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
@@ -716,6 +718,15 @@ open class Note(
             onReady,
         )
     }
+
+    fun hasReport(
+        loggedIn: User,
+        type: ReportType,
+    ): Boolean =
+        reports[loggedIn]?.firstOrNull {
+            it.event is ReportEvent &&
+                (it.event as ReportEvent).reportedAuthor().any { it.type == type }
+        } != null
 
     fun hasPledgeBy(user: User): Boolean =
         replies

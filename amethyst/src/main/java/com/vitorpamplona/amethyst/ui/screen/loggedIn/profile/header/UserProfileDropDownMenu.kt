@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.ui.note.externalLinkForUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 @Composable
 fun UserProfileDropDownMenu(
@@ -108,42 +108,42 @@ fun UserProfileDropDownMenu(
             DropdownMenuItem(
                 text = { Text(stringRes(id = R.string.report_spam_scam)) },
                 onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.SPAM)
+                    accountViewModel.report(user, ReportType.SPAM)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.report_hateful_speech)) },
                 onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.PROFANITY)
+                    accountViewModel.report(user, ReportType.PROFANITY)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
                 text = { Text(stringRes(id = R.string.report_impersonation)) },
                 onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.IMPERSONATION)
+                    accountViewModel.report(user, ReportType.IMPERSONATION)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.report_nudity_porn)) },
                 onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.NUDITY)
+                    accountViewModel.report(user, ReportType.NUDITY)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
                 text = { Text(stringRes(id = R.string.report_illegal_behaviour)) },
                 onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.ILLEGAL)
+                    accountViewModel.report(user, ReportType.ILLEGAL)
                     onDismiss()
                 },
             )
             DropdownMenuItem(
                 text = { Text(stringRes(id = R.string.report_malware)) },
                 onClick = {
-                    accountViewModel.report(user, ReportEvent.ReportType.MALWARE)
+                    accountViewModel.report(user, ReportType.MALWARE)
                     onDismiss()
                 },
             )

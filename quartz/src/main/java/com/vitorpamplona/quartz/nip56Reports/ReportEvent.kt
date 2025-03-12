@@ -25,13 +25,14 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip56Reports.tags.DefaultReportTag
+import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAddressTag
+import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAuthorTag
+import com.vitorpamplona.quartz.nip56Reports.tags.ReportedEventTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-
-@Immutable data class ReportedKey(
-    val key: String,
-    val reportType: ReportEvent.ReportType,
-)
 
 // NIP 56 event.
 @Immutable
@@ -43,48 +44,35 @@ class ReportEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    @Transient
+    private var defaultType: ReportType? = null
+
+    private fun defaultReportTypes() = tags.mapNotNull(DefaultReportTag::parse)
+
     private fun defaultReportType(): ReportType {
+        defaultType?.let { return it }
+
         // Works with old and new structures for report.
-        var reportType =
-            tags
-                .filter { it.firstOrNull() == "report" }
-                .mapNotNull { it.getOrNull(1) }
-                .map { ReportType.valueOf(it.uppercase()) }
-                .firstOrNull()
+        var reportType = defaultReportTypes().firstOrNull()
         if (reportType == null) {
-            reportType =
-                tags.mapNotNull { it.getOrNull(2) }.map { ReportType.valueOf(it.uppercase()) }.firstOrNull()
+            reportType = tags.mapNotNull { it.getOrNull(2) }.map { ReportType.parseOrNull(it, emptyArray()) }.firstOrNull()
         }
         if (reportType == null) {
             reportType = ReportType.SPAM
         }
+        defaultType = reportType
         return reportType
     }
 
-    fun reportedPost() =
-        tags
-            .filter { it.size > 1 && it[0] == "e" }
-            .map {
-                ReportedKey(
-                    it[1],
-                    it.getOrNull(2)?.uppercase()?.let { it1 -> ReportType.valueOf(it1) }
-                        ?: defaultReportType(),
-                )
-            }
+    fun reportedPost() = tags.mapNotNull { ReportedEventTag.parse(it, defaultReportType()) }
 
-    fun reportedAuthor() =
-        tags
-            .filter { it.size > 1 && it[0] == "p" }
-            .map {
-                ReportedKey(
-                    it[1],
-                    it.getOrNull(2)?.uppercase()?.let { it1 -> ReportType.valueOf(it1) }
-                        ?: defaultReportType(),
-                )
-            }
+    fun reportedAddresses() = tags.mapNotNull { ReportedAddressTag.parse(it, defaultReportType()) }
+
+    fun reportedAuthor() = tags.mapNotNull { ReportedAuthorTag.parse(it, defaultReportType()) }
 
     companion object {
         const val KIND = 1984
+        const val ALT_PREFIX = "Report for "
 
         fun create(
             reportedPost: Event,
@@ -108,32 +96,27 @@ class ReportEvent(
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
 
-        fun create(
-            reportedUser: String,
+        fun build(
+            reportedPost: Event,
             type: ReportType,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ReportEvent) -> Unit,
-        ) {
-            val content = ""
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT_PREFIX + type.code)
+            event(reportedPost.id, type)
+            user(reportedPost.pubKey, type)
 
-            val reportAuthorTag = arrayOf("p", reportedUser, type.name.lowercase())
-            val alt = AltTag.assemble("Report for ${type.name}")
-
-            val tags: Array<Array<String>> = arrayOf(reportAuthorTag, alt)
-            signer.sign(createdAt, KIND, tags, content, onReady)
+            if (reportedPost is AddressableEvent) {
+                address(reportedPost.address(), type)
+            }
         }
-    }
 
-    enum class ReportType {
-        EXPLICIT, // Not used anymore.
-        ILLEGAL,
-        SPAM,
-        IMPERSONATION,
-        NUDITY,
-        PROFANITY,
-        MALWARE,
-        MOD,
-        OTHER,
+        fun build(
+            reportedUser: HexKey,
+            type: ReportType,
+            createdAt: Long = TimeUtils.now(),
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT_PREFIX + type.code)
+            user(reportedUser, type)
+        }
     }
 }
