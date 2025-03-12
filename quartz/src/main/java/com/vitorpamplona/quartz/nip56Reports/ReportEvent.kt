@@ -52,14 +52,15 @@ class ReportEvent(
     private fun defaultReportType(): ReportType {
         defaultType?.let { return it }
 
-        // Works with old and new structures for report.
-        var reportType = defaultReportTypes().firstOrNull()
-        if (reportType == null) {
-            reportType = tags.mapNotNull { it.getOrNull(2) }.map { ReportType.parseOrNull(it, emptyArray()) }.firstOrNull()
-        }
-        if (reportType == null) {
-            reportType = ReportType.SPAM
-        }
+        // search for any type in any tag.
+        val reportType =
+            defaultReportTypes().firstOrNull()
+                ?: tags.firstNotNullOfOrNull {
+                    ReportedAuthorTag.parse(it)?.type
+                        ?: ReportedEventTag.parse(it)?.type
+                        ?: ReportedAddressTag.parse(it)?.type
+                } ?: ReportType.SPAM
+
         defaultType = reportType
         return reportType
     }

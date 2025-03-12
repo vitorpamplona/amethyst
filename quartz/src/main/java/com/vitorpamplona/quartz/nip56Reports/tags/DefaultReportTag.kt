@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
+@Deprecated("Old version had [`report`, `<reason>`] tags")
 class DefaultReportTag {
     companion object {
         const val TAG_NAME = "report"

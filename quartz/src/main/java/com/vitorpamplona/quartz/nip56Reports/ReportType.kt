@@ -33,6 +33,7 @@ enum class ReportType(
     PROFANITY("profanity"),
     MALWARE("malware"),
     MOD("mod"),
+    HARASSMENT("Harrassment"),
     OTHER("other"),
     ;
 
@@ -51,6 +52,7 @@ enum class ReportType(
                 MALWARE.code -> MALWARE
                 MOD.code -> MOD
                 "MOD" -> MOD
+                HARASSMENT.code -> HARASSMENT
                 OTHER.code -> OTHER
                 else -> {
                     Log.w("ReportedEventTag", "Report type not supported: $code ${tag.joinToString(", ")}")
