@@ -23,11 +23,12 @@ package com.vitorpamplona.quartz.nip22Comments.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.match
-import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.tags.events.EventReference
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class ReplyEventTag(
@@ -39,42 +40,53 @@ class ReplyEventTag(
 
     companion object {
         const val TAG_NAME = "e"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun match(tag: Tag) = tag.match(TAG_NAME, TAG_SIZE)
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             eventId: String,
-        ) = tag.match(TAG_NAME, eventId, TAG_SIZE)
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == eventId
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
             eventIds: Set<String>,
-        ) = tag.match(TAG_NAME, eventIds, TAG_SIZE)
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in eventIds
 
         @JvmStatic
         fun parse(tag: Array<String>): ReplyEventTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return ReplyEventTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
         @JvmStatic
-        fun parseKey(tag: Array<String>) = tag.valueIfMatches(TAG_NAME, TAG_SIZE)
+        fun parseKey(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            return tag[1]
+        }
 
         @JvmStatic
         fun parseValidKey(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            if (tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(Hex.isHex(tag[1])) { return null }
             return tag[1]
         }
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): EventIdHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return EventIdHint(tag[1], tag[2])
         }
 

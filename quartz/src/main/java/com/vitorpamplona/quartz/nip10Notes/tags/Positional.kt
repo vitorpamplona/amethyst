@@ -48,9 +48,9 @@ fun List<String>.positionalMarkedTags(
     }
 }.map {
     when (it) {
-        root -> arrayOf(tagName, it, "", "root")
-        replyingTo -> arrayOf(tagName, it, "", "reply")
-        forkedFrom -> arrayOf(tagName, it, "", "fork")
+        root -> arrayOf(tagName, it, "", MarkedETag.MARKER.ROOT)
+        replyingTo -> arrayOf(tagName, it, "", MarkedETag.MARKER.REPLY)
+        forkedFrom -> arrayOf(tagName, it, "", MarkedETag.MARKER.FORK)
         else -> arrayOf(tagName, it)
     }
 }

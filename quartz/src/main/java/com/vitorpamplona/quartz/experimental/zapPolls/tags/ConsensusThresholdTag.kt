@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.quartz.experimental.zapPolls.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 import kotlin.math.round
 
 class ConsensusThresholdTag {
     companion object {
         const val TAG_NAME = "consensus_threshold"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): Double? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1].toLongOrNull()?.toDouble()?.div(100)
         }
 

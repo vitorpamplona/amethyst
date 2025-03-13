@@ -20,16 +20,19 @@
  */
 package com.vitorpamplona.quartz.experimental.bounties
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 import java.math.BigDecimal
 
 class RewardTag {
     companion object {
         const val TAG_NAME = "reward"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): BigDecimal? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
 
             return runCatching { BigDecimal(tag[1]) }.getOrNull()
         }

@@ -23,9 +23,10 @@ package com.vitorpamplona.quartz.nip72ModCommunities.definition.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.isNotName
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 data class ModeratorTag(
@@ -37,19 +38,20 @@ data class ModeratorTag(
 
     companion object {
         const val TAG_NAME = "p"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Tag): ModeratorTag? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
-            if (tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return ModeratorTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
         @JvmStatic
         fun parseKey(tag: Tag): String? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
-            if (tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 

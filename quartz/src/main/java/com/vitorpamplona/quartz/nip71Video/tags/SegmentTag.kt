@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip71Video.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 class SegmentTag(
     val start: String, // HH:MM:SS.sss
@@ -32,11 +34,14 @@ class SegmentTag(
 
     companion object {
         const val TAG_NAME = "segment"
-        const val TAG_SIZE = 4
 
         @JvmStatic
         fun parse(tag: Array<String>): SegmentTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(3)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            ensure(tag[3].isNotEmpty()) { return null }
             return SegmentTag(tag[1], tag[2], tag[3], tag.getOrNull(4))
         }
 

@@ -20,19 +20,23 @@
  */
 package com.vitorpamplona.quartz.nip94FileMetadata.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class MimeTypeTag {
     companion object {
         const val TAG_NAME = "m"
-        const val TAG_SIZE = 2
 
         fun isIn(
             tag: Array<String>,
             mimeTypes: Set<String>,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] in mimeTypes
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in mimeTypes
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
 

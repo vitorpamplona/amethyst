@@ -35,7 +35,7 @@ class TagArrayBuilder<T : IEvent> {
         tagName: String,
         tagValue: String,
     ): TagArrayBuilder<T> {
-        tagList[tagName]?.removeIf { it.value() == tagValue }
+        tagList[tagName]?.removeIf { it.valueOrNull() == tagValue }
         if (tagList[tagName]?.isEmpty() == true) {
             tagList.remove(tagName)
         }
@@ -46,18 +46,8 @@ class TagArrayBuilder<T : IEvent> {
         predicate: (Tag, Tag) -> Boolean,
         toCompare: Tag,
     ): TagArrayBuilder<T> {
-        tagList[toCompare.name()]?.removeIf { predicate(it, toCompare) }
-        if (tagList[toCompare.name()]?.isEmpty() == true) {
-            tagList.remove(toCompare.name())
-        }
-        return this
-    }
-
-    fun removeIf(
-        tagName: String,
-        tagValue: String,
-    ): TagArrayBuilder<T> {
-        tagList[tagName]?.removeIf { it.value() == tagValue }
+        val tagName = toCompare.nameOrNull() ?: return this
+        tagList[tagName]?.removeIf { predicate(it, toCompare) }
         if (tagList[tagName]?.isEmpty() == true) {
             tagList.remove(tagName)
         }

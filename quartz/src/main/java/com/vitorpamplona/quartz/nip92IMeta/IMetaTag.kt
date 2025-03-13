@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip92IMeta
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class IMetaTag(
     val url: String,
     val properties: Map<String, List<String>>,
@@ -38,10 +41,11 @@ class IMetaTag(
     companion object {
         const val TAG_NAME = "imeta"
         const val ANCHOR_PROPERTY = "url"
-        const val TAG_SIZE = 2
 
         fun parse(tag: Array<String>): IMetaTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
 
             val allTags = parseIMeta(tag)
             val url = allTags.get(ANCHOR_PROPERTY)?.firstOrNull()

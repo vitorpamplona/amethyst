@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip13Pow.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 class PoWTag(
@@ -34,20 +36,23 @@ class PoWTag(
 
     companion object {
         const val TAG_NAME = "nonce"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun hasTagWithContent(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun hasTagWithContent(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
         fun parse(tag: Array<String>): PoWTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return PoWTag(tag[1], tag.getOrNull(2)?.toIntOrNull())
         }
 
         @JvmStatic
         fun parseCommitment(tag: Array<String>): Int? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag.getOrNull(2)?.toIntOrNull()
         }
 

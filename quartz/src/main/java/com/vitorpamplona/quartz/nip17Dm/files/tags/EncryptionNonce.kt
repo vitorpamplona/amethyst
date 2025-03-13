@@ -20,20 +20,23 @@
  */
 package com.vitorpamplona.quartz.nip17Dm.files.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.ensure
 
 class EncryptionNonce {
     companion object {
         const val TAG_NAME = "decryption-nonce"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun isTag(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME
+        fun isTag(tag: Array<String>) = tag.has(0) && tag[0] == TAG_NAME
 
         @JvmStatic
         fun parse(tag: Array<String>): ByteArray? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return runCatching { tag[1].hexToByteArray() }.getOrNull()
         }
 

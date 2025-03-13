@@ -24,11 +24,11 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.PUBKEY_LENGTH
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.contract
+import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 data class RootAuthorTag(
@@ -41,7 +41,7 @@ data class RootAuthorTag(
         const val TAG_NAME = "P"
 
         @JvmStatic
-        fun match(tag: Tag) = tag.size > 1 && tag[0] == TAG_NAME
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
         fun parse(tag: Tag): ReplyAuthorTag? {
@@ -65,17 +65,11 @@ data class RootAuthorTag(
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): PubKeyHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != PUBKEY_LENGTH || tag[2].isEmpty()) return null
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return PubKeyHint(tag[1], tag[2])
-        }
-
-        @OptIn(ExperimentalContracts::class)
-        inline fun ensure(
-            condition: Boolean,
-            exit: () -> Nothing,
-        ) {
-            contract { returns() implies condition }
-            if (!condition) exit()
         }
 
         @JvmStatic

@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip99Classifieds.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 data class PriceTag(
     val amount: String,
@@ -31,11 +33,12 @@ data class PriceTag(
 
     companion object {
         const val TAG_NAME = "price"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): PriceTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return PriceTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 

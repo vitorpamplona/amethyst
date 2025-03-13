@@ -31,7 +31,7 @@ class ZapRaiserTag(
     fun toTagArray() = assemble(amountInSats)
 
     companion object {
-        val TAG_NAME = "zapraiser"
+        const val TAG_NAME = "zapraiser"
 
         @JvmStatic
         fun parse(tags: Array<String>): ZapRaiserTag? {

@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.nip94FileMetadata.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 class ThumbTag(
     val imageUrl: String,
@@ -29,11 +31,12 @@ class ThumbTag(
 ) {
     companion object {
         const val TAG_NAME = "thumb"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): ThumbTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return ThumbTag(tag[1], tag.getOrNull(2))
         }
 

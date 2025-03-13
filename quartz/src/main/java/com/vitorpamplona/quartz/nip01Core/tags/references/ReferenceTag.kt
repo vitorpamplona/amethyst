@@ -20,34 +20,38 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.references
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip96FileStorage.HttpUrlFormatter
+import com.vitorpamplona.quartz.utils.ensure
 
 class ReferenceTag {
     companion object {
         const val TAG_NAME = "r"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             reference: String,
-        ): Boolean = tag.size >= 2 && tag[0] == TAG_NAME && tag[1] == reference
+        ): Boolean = tag.has(1) && tag[0] == TAG_NAME && tag[1] == reference
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
             references: Set<String>,
-        ): Boolean = tag.size >= 2 && tag[0] == TAG_NAME && tag[1] in references
+        ): Boolean = tag.has(1) && tag[0] == TAG_NAME && tag[1] in references
 
         @JvmStatic
         fun hasReference(tag: Array<String>): Boolean {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return false
+            ensure(tag.has(1)) { return false }
+            ensure(tag[0] == TAG_NAME) { return false }
             return tag[1].isNotEmpty()
         }
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
 

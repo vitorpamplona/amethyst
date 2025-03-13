@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.nip35Torrents.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
+import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class FileTag(
@@ -32,18 +34,21 @@ class FileTag(
 
     companion object {
         const val TAG_NAME = "file"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): FileTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return FileTag(tag[1], tag.getOrNull(2)?.toLongOrNull())
         }
 
         @JvmStatic
         fun parseBytes(tag: Array<String>): Long? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            return tag.getOrNull(2)?.toLongOrNull()
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            return tag[2].toLongOrNull()
         }
 
         @JvmStatic

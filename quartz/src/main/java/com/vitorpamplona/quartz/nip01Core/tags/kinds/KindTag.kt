@@ -20,26 +20,30 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.kinds
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class KindTag {
     companion object {
         const val TAG_NAME = "k"
-        const val TAG_SIZE = 2
 
-        fun match(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME
+        fun match(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME
 
         fun isTagged(
             tag: Array<String>,
             kind: String,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == kind
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == kind
 
         fun isIn(
             tag: Array<String>,
             kinds: Set<String>,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] in kinds
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in kinds
 
         @JvmStatic
         fun parse(tag: Array<String>): Int? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1].toInt()
         }
 
