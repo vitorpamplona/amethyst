@@ -43,6 +43,7 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.Blurhash
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
@@ -87,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
@@ -235,7 +238,7 @@ fun LocalImageView(
                 )
             }
 
-        val ratio = remember(content) { aspectRatio(content.dim) }
+        val ratio = remember(content) { content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
             if (it) {
                 SubcomposeAsyncImage(
@@ -275,6 +278,11 @@ fun LocalImageView(
                         }
                         is AsyncImagePainter.State.Success -> {
                             SubcomposeAsyncImageContent(loadedImageModifier)
+
+                            SideEffect {
+                                val drawable = (state as AsyncImagePainter.State.Success).result.image
+                                MediaAspectRatioCache.add(content.localFile.toString(), drawable.width, drawable.height)
+                            }
 
                             content.isVerified?.let {
                                 AnimatedVisibility(
@@ -328,7 +336,7 @@ fun UrlImageView(
     accountViewModel: AccountViewModel,
     alwayShowImage: Boolean = false,
 ) {
-    val ratio = content.dim?.aspectRatio()
+    val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
 
     val showImage =
         remember {
@@ -385,6 +393,11 @@ fun UrlImageView(
                         SubcomposeAsyncImageContent(loadedImageModifier)
 
                         ShowHashAnimated(content, controllerVisible, Modifier.align(Alignment.TopEnd))
+
+                        SideEffect {
+                            val drawable = (state as AsyncImagePainter.State.Success).result.image
+                            MediaAspectRatioCache.add(content.url, drawable.width, drawable.height)
+                        }
                     }
                     else -> {}
                 }
@@ -517,12 +530,6 @@ fun ShowHash(content: MediaUrlContent) {
     }
 
     verifiedHash?.let { HashVerificationSymbol(it) }
-}
-
-fun aspectRatio(dim: DimensionTag?): Float? {
-    if (dim == null) return null
-
-    return dim.width.toFloat() / dim.height.toFloat()
 }
 
 @Composable

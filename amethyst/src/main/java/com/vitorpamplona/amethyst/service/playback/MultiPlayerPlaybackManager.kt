@@ -30,9 +30,11 @@ import androidx.media3.common.Player
 import androidx.media3.common.Player.PositionInfo
 import androidx.media3.common.Player.STATE_IDLE
 import androidx.media3.common.Player.STATE_READY
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.MainActivity
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -112,6 +114,10 @@ class MultiPlayerPlaybackManager(
             object : Player.Listener {
                 // avoids saving positions for live streams otherwise caching goes crazy
                 val mustCachePositions = !uri.contains(".m3u8", true)
+
+                override fun onVideoSizeChanged(videoSize: VideoSize) {
+                    MediaAspectRatioCache.add(uri, videoSize.width, videoSize.height)
+                }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     if (isPlaying) {
