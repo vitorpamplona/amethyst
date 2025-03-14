@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.dal.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.CommunityFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DraftEventsFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.GeoHashFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.HashtagFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.NIP90ContentDiscoveryResponseFilter
@@ -50,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -157,6 +159,16 @@ class NostrBookmarkPrivateFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         override fun <NostrBookmarkPrivateFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPrivateFeedViewModel>): NostrBookmarkPrivateFeedViewModel = NostrBookmarkPrivateFeedViewModel(account) as NostrBookmarkPrivateFeedViewModel
+    }
+}
+
+class NostrUserFollowSetFeedViewModel(
+    val account: Account,
+) : FollowSetFeedViewModel(FollowSetFeedFilter(account)) {
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <NostrUserFollowSetFeedViewModel : ViewModel> create(modelClass: Class<NostrUserFollowSetFeedViewModel>): NostrUserFollowSetFeedViewModel = NostrUserFollowSetFeedViewModel(account) as NostrUserFollowSetFeedViewModel
     }
 }
 
