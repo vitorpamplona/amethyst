@@ -554,7 +554,7 @@ fun KeyTextField(
         onValueChange = { onValueChange(it, false) },
         keyboardOptions =
             KeyboardOptions(
-                autoCorrect = false,
+                autoCorrectEnabled = false,
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Go,
             ),

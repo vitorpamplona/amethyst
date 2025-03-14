@@ -592,7 +592,7 @@ fun UpdateZapAmountContent(
                 onValueChange = { postViewModel.walletConnectSecret = it },
                 keyboardOptions =
                     KeyboardOptions(
-                        autoCorrect = false,
+                        autoCorrectEnabled = false,
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Go,
                     ),
