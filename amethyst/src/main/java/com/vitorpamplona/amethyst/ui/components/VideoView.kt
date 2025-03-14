@@ -1235,10 +1235,10 @@ private fun saveMediaToGallery(
         mimeType = mimeType,
         localContext = localContext,
         onSuccess = {
-            accountViewModel.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
+            accountViewModel.toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
         },
         onError = {
-            accountViewModel.toast(R.string.failed_to_save_the_video, null, it)
+            accountViewModel.toastManager.toast(R.string.failed_to_save_the_video, null, it)
         },
     )
 }

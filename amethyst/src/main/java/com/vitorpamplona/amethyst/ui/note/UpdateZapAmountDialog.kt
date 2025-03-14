@@ -337,12 +337,12 @@ fun UpdateZapAmountContent(
                 postViewModel.updateNIP47(nip47uri)
             } catch (e: IllegalArgumentException) {
                 if (e.message != null) {
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         stringRes(context, R.string.error_parsing_nip47_title),
                         stringRes(context, R.string.error_parsing_nip47, nip47uri, e.message!!),
                     )
                 } else {
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         stringRes(context, R.string.error_parsing_nip47_title),
                         stringRes(context, R.string.error_parsing_nip47_no_error, nip47uri),
                     )
@@ -510,12 +510,12 @@ fun UpdateZapAmountContent(
                         postViewModel.updateNIP47(it)
                     } catch (e: IllegalArgumentException) {
                         if (e.message != null) {
-                            accountViewModel.toast(
+                            accountViewModel.toastManager.toast(
                                 stringRes(context, R.string.error_parsing_nip47_title),
                                 stringRes(context, R.string.error_parsing_nip47, it, e.message!!),
                             )
                         } else {
-                            accountViewModel.toast(
+                            accountViewModel.toastManager.toast(
                                 stringRes(context, R.string.error_parsing_nip47_title),
                                 stringRes(context, R.string.error_parsing_nip47_no_error, it),
                             )
@@ -611,7 +611,7 @@ fun UpdateZapAmountContent(
                                     context = context,
                                     keyguardLauncher = keyguardLauncher,
                                     onApproved = { showPassword = true },
-                                    onError = { title, message -> accountViewModel.toast(title, message) },
+                                    onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
                                 )
                             } else {
                                 showPassword = false

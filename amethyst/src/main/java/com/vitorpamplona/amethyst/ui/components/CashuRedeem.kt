@@ -116,7 +116,7 @@ fun CashuPreview(
         CashuPreviewNew(
             it,
             accountViewModel::meltCashu,
-            accountViewModel::toast,
+            accountViewModel.toastManager::toast,
         )
     }
 }

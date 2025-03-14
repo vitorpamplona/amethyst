@@ -331,7 +331,7 @@ fun MutedWordActionOptions(
     if (isMutedWord == true) {
         ShowWordButton {
             if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     R.string.read_only_user,
                     R.string.login_with_a_private_key_to_be_able_to_show_word,
                 )
@@ -342,7 +342,7 @@ fun MutedWordActionOptions(
     } else {
         HideWordButton {
             if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     R.string.read_only_user,
                     R.string.login_with_a_private_key_to_be_able_to_hide_word,
                 )
@@ -393,7 +393,7 @@ private fun hideIfWritable(
     currentWordToAdd: MutableState<String>,
 ) {
     if (!accountViewModel.isWriteable()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.read_only_user,
             R.string.login_with_a_private_key_to_be_able_to_hide_word,
         )

@@ -65,7 +65,7 @@ fun RoomChatFileUploadDialog(
         },
         upload = {
             channelScreenModel.upload(
-                onError = accountViewModel::toast,
+                onError = accountViewModel.toastManager::toast,
                 context = context,
                 onceUploaded = onUpload,
             )

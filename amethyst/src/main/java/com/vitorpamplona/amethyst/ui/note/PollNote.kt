@@ -76,11 +76,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.components.toasts.StringToastMsg
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockVitorAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -530,23 +530,23 @@ fun ZapVote(
                 indication = ripple24dp,
                 onClick = {
                     if (!accountViewModel.isWriteable()) {
-                        accountViewModel.toast(
+                        accountViewModel.toastManager.toast(
                             R.string.read_only_user,
                             R.string.login_with_a_private_key_to_be_able_to_send_zaps,
                         )
                     } else if (pollViewModel.isPollClosed()) {
-                        accountViewModel.toast(
+                        accountViewModel.toastManager.toast(
                             R.string.poll_unable_to_vote,
                             R.string.poll_is_closed_explainer,
                         )
                     } else if (isLoggedUser) {
-                        accountViewModel.toast(
+                        accountViewModel.toastManager.toast(
                             R.string.poll_unable_to_vote,
                             R.string.poll_author_no_vote,
                         )
                     } else if (pollViewModel.isVoteAmountAtomic() && poolOption.zappedByLoggedIn.value) {
                         // only allow one vote per option when min==max, i.e. atomic vote amount specified
-                        accountViewModel.toast(
+                        accountViewModel.toastManager.toast(
                             R.string.poll_unable_to_vote,
                             R.string.one_vote_per_user_on_atomic_votes,
                         )

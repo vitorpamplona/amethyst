@@ -221,7 +221,7 @@ fun DisplayFileList(
                     ContextCompat.startActivity(context, intent, null)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    accountViewModel.toast(R.string.torrent_failure, R.string.torrent_no_apps)
+                    accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)
                 }
             }, Modifier.size(Size30dp)) {
                 DownloadForOfflineIcon(Size20dp, MaterialTheme.colorScheme.onBackground)

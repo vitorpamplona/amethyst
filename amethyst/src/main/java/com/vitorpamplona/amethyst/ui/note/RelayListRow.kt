@@ -169,7 +169,7 @@ fun RenderRelay(
                                 openRelayDialog = true
                             },
                             onError = { url, errorCode, exceptionMessage ->
-                                accountViewModel.toast(
+                                accountViewModel.toastManager.toast(
                                     R.string.unable_to_download_relay_document,
                                     when (errorCode) {
                                         Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->

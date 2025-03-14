@@ -527,7 +527,7 @@ fun NewPostScreen(
                                     it,
                                     accountViewModel.account.settings.defaultFileServer,
                                     onAdd = { alt, server, sensitiveContent, mediaQuality ->
-                                        postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, false, server, accountViewModel::toast, context)
+                                        postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, false, server, accountViewModel.toastManager::toast, context)
                                         if (server.type != ServerType.NIP95) {
                                             accountViewModel.account.settings.changeDefaultFileServer(server)
                                         }
@@ -558,7 +558,7 @@ fun NewPostScreen(
                                                 postViewModel.wantsInvoice = false
                                             },
                                             onClose = { postViewModel.wantsInvoice = false },
-                                            onError = { title, message -> accountViewModel.toast(title, message) },
+                                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
                                         )
                                     }
                                 }

@@ -208,7 +208,7 @@ fun GeoHashActionOptions(
     if (isFollowingTag) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     R.string.read_only_user,
                     R.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
@@ -219,7 +219,7 @@ fun GeoHashActionOptions(
     } else {
         FollowButton {
             if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     R.string.read_only_user,
                     R.string.login_with_a_private_key_to_be_able_to_follow,
                 )

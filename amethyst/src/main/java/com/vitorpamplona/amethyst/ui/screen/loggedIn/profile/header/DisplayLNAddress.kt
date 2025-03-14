@@ -130,7 +130,7 @@ fun DisplayLNAddress(
                         }
                     },
                     onClose = { zapExpanded = false },
-                    onError = { title, message -> accountViewModel.toast(title, message) },
+                    onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
                 )
             }
         }

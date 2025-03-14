@@ -51,8 +51,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
-import com.vitorpamplona.amethyst.ui.components.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
+import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
@@ -354,7 +354,7 @@ fun AppNavigation(
 
     NavigateIfIntentRequested(nav, accountViewModel, accountStateViewModel)
 
-    DisplayErrorMessages(accountViewModel)
+    DisplayErrorMessages(accountViewModel.toastManager, accountViewModel, nav)
     DisplayNotifyMessages(accountViewModel, nav)
 }
 
@@ -437,7 +437,7 @@ private fun NavigateIfIntentRequested(
 
                     actionableNextPage = null
                 } else {
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         R.string.invalid_nip19_uri,
                         R.string.invalid_nip19_uri_description,
                         intentNextPage,
@@ -492,7 +492,7 @@ private fun NavigateIfIntentRequested(
                             } else {
                                 scope.launch {
                                     delay(1000)
-                                    accountViewModel.toast(
+                                    accountViewModel.toastManager.toast(
                                         R.string.invalid_nip19_uri,
                                         R.string.invalid_nip19_uri_description,
                                         uri,

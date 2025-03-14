@@ -726,7 +726,7 @@ fun ShareImageAction(
                         val n19 = Nip19Parser.uriToRoute(postNostrUri)?.entity as? NEvent
                         if (n19 != null) {
                             accountViewModel.addMediaToGallery(n19.hex, videoUri, n19.relay.getOrNull(0), blurhash, dim, hash, mimeType) // TODO Whole list or first?
-                            accountViewModel.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
+                            accountViewModel.toastManager.toast(R.string.media_added, R.string.media_added_to_profile_gallery)
                         }
                     }
 
