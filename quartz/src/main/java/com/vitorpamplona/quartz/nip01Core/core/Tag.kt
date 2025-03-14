@@ -27,64 +27,12 @@ typealias Tag = Array<String>
  */
 fun Tag.has(index: Int) = size > index
 
-/**
- * Returns if the Tag has less than $index elements.
- */
-fun Tag.lacks(index: Int) = size <= index
-
 fun Tag.name() = this[0]
 
 fun Tag.value() = this[1]
 
-fun Tag.hasValue() = this[1].isNotEmpty()
+fun Tag.hasValue() = if (has(1)) this[1].isNotEmpty() else false
 
-fun Tag.nameOrNull() = if (size > 0) name() else null
+fun Tag.nameOrNull() = if (has(0)) this[0] else null
 
-fun Tag.valueOrNull() = if (size > 1) value() else null
-
-fun Tag.isNameUnsafe(name: String): Boolean = name() == name
-
-fun Tag.isValueUnsafe(value: String): Boolean = value() == value
-
-fun Tag.isValueInUnsafe(values: Set<String>): Boolean = value() in values
-
-fun Tag.match(name: String): Boolean = if (size > 0) isNameUnsafe(name) else false
-
-fun Tag.isValue(value: String): Boolean = if (size > 1) isValueUnsafe(value) else false
-
-fun Tag.match(
-    name: String,
-    value: String,
-    minSize: Int,
-): Boolean = if (size >= minSize) isNameUnsafe(name) && isValueUnsafe(value) else false
-
-fun Tag.match(
-    name: String,
-    values: Set<String>,
-    minSize: Int,
-): Boolean = if (size >= minSize) isNameUnsafe(name) && isValueInUnsafe(values) else false
-
-fun Tag.match(
-    name: String,
-    minSize: Int,
-): Boolean = if (size >= minSize) isNameUnsafe(name) else false
-
-fun Tag.isNotName(
-    name: String,
-    minSize: Int,
-): Boolean = !match(name, minSize)
-
-fun Tag.matchAndHasValue(
-    name: String,
-    minSize: Int,
-): Boolean = if (size >= minSize) isNameUnsafe(name) && hasValue() else false
-
-fun Tag.valueIfMatches(
-    name: String,
-    minSize: Int,
-): String? = if (match(name, minSize)) value() else null
-
-fun Tag.valueToIntIfMatches(
-    name: String,
-    minSize: Int,
-): Int? = if (match(name, minSize)) value().toIntOrNull() else null
+fun Tag.valueOrNull() = if (has(1)) this[1] else null

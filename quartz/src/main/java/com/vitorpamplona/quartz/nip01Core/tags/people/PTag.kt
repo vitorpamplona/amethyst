@@ -24,12 +24,14 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -50,24 +52,25 @@ data class PTag(
 
     companion object {
         const val TAG_NAME = "p"
-        const val TAG_SIZE = 2
 
         fun isTagged(
             tag: Array<String>,
             key: HexKey,
-        ): Boolean = tag.size >= 2 && tag[0] == TAG_NAME && tag[1] == key
+        ): Boolean = tag.has(1) && tag[0] == TAG_NAME && tag[1] == key
 
         @JvmStatic
         fun parse(tag: Tag): PTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            if (tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return PTag(tag[1], tag.getOrNull(2))
         }
 
         @JvmStatic
         fun parseKey(tag: Array<String>): HexKey? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            if (tag[1].length != 64) {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) {
                 Log.w("PTag", "Invalid `$TAG_NAME` value ${tag.joinToString(", ")}")
                 return null
             }
@@ -76,7 +79,10 @@ data class PTag(
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): PubKeyHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return PubKeyHint(tag[1], tag[2])
         }
 

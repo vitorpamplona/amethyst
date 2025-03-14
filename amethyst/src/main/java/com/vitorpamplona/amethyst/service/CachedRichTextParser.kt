@@ -41,6 +41,12 @@ object CachedRichTextParser {
         return result
     }
 
+    fun cachedText(
+        content: String,
+        tags: ImmutableListOfLists<String>,
+        callbackUri: String? = null,
+    ): RichTextViewerState? = richTextCache[hashCodeCache(content, tags, callbackUri)]
+
     fun parseText(
         content: String,
         tags: ImmutableListOfLists<String>,

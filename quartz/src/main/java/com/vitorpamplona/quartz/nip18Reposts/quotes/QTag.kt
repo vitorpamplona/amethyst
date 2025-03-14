@@ -20,35 +20,46 @@
  */
 package com.vitorpamplona.quartz.nip18Reposts.quotes
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.utils.ensure
 
 interface QTag {
     fun toTagArray(): Array<String>
 
     companion object {
         const val TAG_NAME = "q"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): QTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
             return if (tag[1].length == 64) {
-                QEventTag.parse(tag)
+                QEventTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
             } else {
-                QAddressableTag.parse(tag)
+                val address = Address.parse(tag[1]) ?: return null
+                QAddressableTag(address, tag.getOrNull(2))
             }
         }
 
         @JvmStatic
         fun parseEventAsHint(tag: Array<String>): EventIdHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return EventIdHint(tag[1], tag[2])
         }
 
         @JvmStatic
         fun parseAddressAsHint(tag: Array<String>): AddressHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length == 64 || !tag[1].contains(':') || tag[2].isEmpty()) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length != 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+            ensure(!tag[1].contains(':')) { return null }
             return AddressHint(tag[1], tag[2])
         }
     }

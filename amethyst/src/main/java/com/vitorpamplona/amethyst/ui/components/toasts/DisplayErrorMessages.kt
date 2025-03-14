@@ -18,20 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.ui.components.toasts
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiErrorToastMsg
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.MultiUserErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ResourceToastMsg
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.StringToastMsg
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ThrowableToastMsg
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
-    val openDialogMsg = accountViewModel.toasts.collectAsStateWithLifecycle(null)
+fun DisplayErrorMessages(
+    toastManager: ToastManager,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val openDialogMsg = toastManager.toasts.collectAsStateWithLifecycle(null)
 
     openDialogMsg.value?.let { obj ->
         when (obj) {
@@ -41,14 +45,14 @@ fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
                         stringRes(obj.titleResId),
                         stringRes(obj.resourceId, *obj.params),
                     ) {
-                        accountViewModel.clearToasts()
+                        toastManager.clearToasts()
                     }
                 } else {
                     InformationDialog(
                         stringRes(obj.titleResId),
                         stringRes(obj.resourceId),
                     ) {
-                        accountViewModel.clearToasts()
+                        toastManager.clearToasts()
                     }
                 }
 
@@ -57,7 +61,7 @@ fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
                     obj.title,
                     obj.msg,
                 ) {
-                    accountViewModel.clearToasts()
+                    toastManager.clearToasts()
                 }
 
             is ThrowableToastMsg ->
@@ -66,8 +70,10 @@ fun DisplayErrorMessages(accountViewModel: AccountViewModel) {
                     obj.msg,
                     obj.throwable,
                 ) {
-                    accountViewModel.clearToasts()
+                    toastManager.clearToasts()
                 }
+
+            is MultiErrorToastMsg -> MultiUserErrorMessageDialog(obj, accountViewModel, nav)
         }
     }
 }

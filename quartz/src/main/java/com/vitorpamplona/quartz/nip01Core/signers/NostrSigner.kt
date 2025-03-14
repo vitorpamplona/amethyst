@@ -73,6 +73,11 @@ abstract class NostrSigner(
         onReady: (LnZapPrivateEvent) -> Unit,
     )
 
+    abstract fun deriveKey(
+        nonce: HexKey,
+        onReady: (HexKey) -> Unit,
+    )
+
     fun decrypt(
         encryptedContent: String,
         fromPublicKey: HexKey,

@@ -60,7 +60,6 @@ data class RootSceneTag(
 
     companion object {
         const val TAG_NAME = "A"
-        const val TAG_SIZE = 2
 
         fun assembleATagId(
             kind: Int,

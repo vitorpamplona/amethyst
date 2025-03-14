@@ -21,20 +21,24 @@
 package com.vitorpamplona.quartz.nip22Comments.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.match
-import com.vitorpamplona.quartz.nip01Core.core.valueIfMatches
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.utils.ensure
 
 class RootKindTag {
     companion object {
         const val TAG_NAME = "K"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun match(tag: Tag) = tag.match(TAG_NAME, TAG_SIZE)
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
-        fun parse(tag: Tag) = tag.valueIfMatches(TAG_NAME, TAG_SIZE)
+        fun parse(tag: Tag): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
 
         @JvmStatic
         fun assemble(kind: String): Tag = arrayOf(TAG_NAME, kind)

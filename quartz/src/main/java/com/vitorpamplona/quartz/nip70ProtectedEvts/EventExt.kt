@@ -22,6 +22,4 @@ package com.vitorpamplona.quartz.nip70ProtectedEvts
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-const val PROTECTED_TAG = "-"
-
-fun Event.isProtected() = tags.any { (it.size > 0 && it[0] == PROTECTED_TAG) }
+fun Event.isProtected() = tags.isProtected()

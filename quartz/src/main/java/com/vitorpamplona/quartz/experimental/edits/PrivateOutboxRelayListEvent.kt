@@ -47,6 +47,8 @@ class PrivateOutboxRelayListEvent(
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     @Transient private var privateTagsCache: Array<Array<String>>? = null
 
+    override fun isContentEncoded() = true
+
     override fun countMemory(): Long =
         super.countMemory() +
             pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)

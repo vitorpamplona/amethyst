@@ -99,12 +99,12 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
@@ -662,7 +662,7 @@ fun ReplyReaction(
         modifier = iconSizeModifier,
         onClick = {
             if (baseNote.isDraft()) {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     R.string.draft_note,
                     R.string.it_s_not_possible_to_reply_to_a_draft_note,
                 )
@@ -670,7 +670,7 @@ fun ReplyReaction(
                 if (accountViewModel.isWriteable()) {
                     onPress()
                 } else {
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         R.string.read_only_user,
                         R.string.login_with_a_private_key_to_be_able_to_reply,
                     )
@@ -986,7 +986,7 @@ private fun likeClick(
     onWantsToSignReaction: () -> Unit,
 ) {
     if (baseNote.isDraft()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.draft_note,
             R.string.it_s_not_possible_to_react_to_a_draft_note,
         )
@@ -995,12 +995,12 @@ private fun likeClick(
 
     val choices = accountViewModel.reactionChoices()
     if (choices.isEmpty()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.no_reactions_setup,
             R.string.no_reaction_type_setup_long_press_to_change,
         )
     } else if (!accountViewModel.isWriteable()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.read_only_user,
             R.string.login_with_a_private_key_to_like_posts,
         )
@@ -1025,7 +1025,6 @@ fun ZapReaction(
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToChangeZapAmount by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
-    val errorViewModel: UserBasedErrorMessageViewModel = viewModel()
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -1060,7 +1059,7 @@ fun ZapReaction(
                             onError = { _, message, user ->
                                 scope.launch {
                                     zappingProgress = 0f
-                                    errorViewModel.add(message, user)
+                                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
                                 }
                             },
                             onPayViaIntent = { wantsToPay = it },
@@ -1089,20 +1088,13 @@ fun ZapReaction(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(message, user)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
                 onPayViaIntent = { wantsToPay = it },
             )
         }
-
-        MultiUserErrorMessageDialog(
-            title = stringRes(id = R.string.error_dialog_zap_error),
-            model = errorViewModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
 
         if (wantsToChangeZapAmount) {
             UpdateZapAmountDialog(
@@ -1120,12 +1112,12 @@ fun ZapReaction(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(it)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
                     }
                 },
                 justShowError = {
                     scope.launch {
-                        errorViewModel.add(it)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
                     }
                 },
             )
@@ -1137,7 +1129,7 @@ fun ZapReaction(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(message, user)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
@@ -1191,7 +1183,7 @@ fun zapClick(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     if (baseNote.isDraft()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.draft_note,
             R.string.it_s_not_possible_to_zap_to_a_draft_note,
         )
@@ -1201,12 +1193,12 @@ fun zapClick(
     val choices = accountViewModel.zapAmountChoices()
 
     if (choices.isEmpty()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.error_dialog_zap_error,
             R.string.no_zap_amount_setup_long_press_to_change,
         )
     } else if (!accountViewModel.isWriteable()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.error_dialog_zap_error,
             R.string.login_with_a_private_key_to_be_able_to_send_zaps,
         )

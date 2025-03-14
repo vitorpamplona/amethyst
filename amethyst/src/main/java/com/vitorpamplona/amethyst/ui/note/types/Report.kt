@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 @Composable
 fun RenderReport(
@@ -52,16 +53,18 @@ fun RenderReport(
     val reportType =
         base
             .map {
-                when (it.reportType) {
-                    ReportEvent.ReportType.EXPLICIT -> stringRes(R.string.explicit_content)
-                    ReportEvent.ReportType.NUDITY -> stringRes(R.string.nudity)
-                    ReportEvent.ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
-                    ReportEvent.ReportType.SPAM -> stringRes(R.string.spam)
-                    ReportEvent.ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
-                    ReportEvent.ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
-                    ReportEvent.ReportType.MALWARE -> stringRes(R.string.malware)
-                    ReportEvent.ReportType.MOD -> stringRes(R.string.mod)
-                    ReportEvent.ReportType.OTHER -> stringRes(R.string.other)
+                when (it.type) {
+                    ReportType.EXPLICIT -> stringRes(R.string.explicit_content)
+                    ReportType.NUDITY -> stringRes(R.string.nudity)
+                    ReportType.PROFANITY -> stringRes(R.string.profanity_hateful_speech)
+                    ReportType.SPAM -> stringRes(R.string.spam)
+                    ReportType.IMPERSONATION -> stringRes(R.string.impersonation)
+                    ReportType.ILLEGAL -> stringRes(R.string.illegal_behavior)
+                    ReportType.MALWARE -> stringRes(R.string.malware)
+                    ReportType.MOD -> stringRes(R.string.mod)
+                    ReportType.OTHER -> stringRes(R.string.other)
+                    ReportType.HARASSMENT -> stringRes(R.string.harassment)
+                    null -> stringRes(R.string.other)
                 }
             }.toSet()
             .joinToString(", ")

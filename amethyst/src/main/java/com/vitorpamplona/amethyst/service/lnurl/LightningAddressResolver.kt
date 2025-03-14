@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.lnurl
 
 import android.content.Context
+import android.util.Log
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
@@ -166,12 +167,24 @@ class LightningAddressResolver {
         response: Response,
         context: Context,
     ): String {
+        val body = response.body.string()
+
         val errorMessage =
             runCatching {
-                jacksonObjectMapper().readTree(response.body.string())
+                jacksonObjectMapper().readTree(body)
             }.getOrNull()?.let { tree ->
-                val status = tree.get("status")?.asText()
-                val message = tree.get("message")?.asText()
+                val errorNode = tree.get("error")
+                val messageNode = tree.get("message")
+                val statusNode = tree.get("status")
+
+                if (tree.get("error").isBoolean && messageNode != null) {
+                    if (errorNode.asBoolean() == true) {
+                        return messageNode.asText()
+                    }
+                }
+
+                val status = statusNode?.asText()
+                val message = messageNode?.asText()
 
                 if (status == "error" && message != null) {
                     message
@@ -179,6 +192,10 @@ class LightningAddressResolver {
                     tree.get("error")?.get("message")?.asText()
                 }
             }
+
+        if (errorMessage == null) {
+            Log.d("LightningAddressResolver", "Error parsing LNResponse: $body")
+        }
 
         return errorMessage
             ?: HttpStatusMessages.resourceIdFor(response.code)?.let { stringRes(context, it) }

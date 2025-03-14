@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -363,11 +364,11 @@ class User(
 
     fun hasReport(
         loggedIn: User,
-        type: ReportEvent.ReportType,
+        type: ReportType,
     ): Boolean =
         reports[loggedIn]?.firstOrNull {
             it.event is ReportEvent &&
-                (it.event as ReportEvent).reportedAuthor().any { it.reportType == type }
+                (it.event as ReportEvent).reportedAuthor().any { it.type == type }
         } != null
 
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {

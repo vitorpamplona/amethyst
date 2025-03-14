@@ -58,7 +58,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -72,10 +71,8 @@ import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
-import com.vitorpamplona.amethyst.ui.note.MultiUserErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
-import com.vitorpamplona.amethyst.ui.note.UserBasedErrorMessageViewModel
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
@@ -293,7 +290,6 @@ fun ZapDonationButton(
     nav: INav,
 ) {
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
-    val errorViewModel: UserBasedErrorMessageViewModel = viewModel()
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -320,7 +316,7 @@ fun ZapDonationButton(
                 onError = { _, message, toUser ->
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(message, toUser)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, toUser)
                     }
                 },
                 onPayViaIntent = { wantsToPay = it },
@@ -344,7 +340,7 @@ fun ZapDonationButton(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(message, user)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = {
@@ -353,13 +349,6 @@ fun ZapDonationButton(
                 onPayViaIntent = { wantsToPay = it },
             )
         }
-
-        MultiUserErrorMessageDialog(
-            title = stringRes(id = R.string.error_dialog_zap_error),
-            model = errorViewModel,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
 
         if (wantsToPay.isNotEmpty()) {
             PayViaIntentDialog(
@@ -370,12 +359,12 @@ fun ZapDonationButton(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(it)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
                     }
                 },
                 justShowError = {
                     scope.launch {
-                        errorViewModel.add(it)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
                     }
                 },
             )
@@ -441,7 +430,7 @@ fun customZapClick(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     if (baseNote.isDraft()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             R.string.draft_note,
             R.string.it_s_not_possible_to_zap_to_a_draft_note,
         )
@@ -451,12 +440,12 @@ fun customZapClick(
     val choices = accountViewModel.zapAmountChoices()
 
     if (choices.isEmpty()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             stringRes(context, R.string.error_dialog_zap_error),
             stringRes(context, R.string.no_zap_amount_setup_long_press_to_change),
         )
     } else if (!accountViewModel.isWriteable()) {
-        accountViewModel.toast(
+        accountViewModel.toastManager.toast(
             stringRes(context, R.string.error_dialog_zap_error),
             stringRes(context, R.string.login_with_a_private_key_to_be_able_to_send_zaps),
         )

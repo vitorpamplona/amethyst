@@ -20,16 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip96FileStorage.config.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class ServerTag {
     companion object {
         const val TAG_NAME = "server"
-        const val TAG_SIZE = 2
 
         fun isTag(tag: Array<String>) = tag[0] == TAG_NAME
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
 

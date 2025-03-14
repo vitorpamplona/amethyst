@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.experimental.audio.header.tags
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.utils.ensure
 
 class WaveformTag(
     val wave: List<Int>,
@@ -30,12 +32,12 @@ class WaveformTag(
 
     companion object {
         const val TAG_NAME = "waveform"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): WaveformTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            if (tag[1].isEmpty()) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             val wave = runCatching { EventMapper.mapper.readValue<List<Int>>(tag[1]) }.getOrNull()
             if (wave.isNullOrEmpty()) return null
             return WaveformTag(wave)

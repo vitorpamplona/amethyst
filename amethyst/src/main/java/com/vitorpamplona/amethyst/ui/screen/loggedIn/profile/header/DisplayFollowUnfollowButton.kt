@@ -56,7 +56,7 @@ fun DisplayFollowUnfollowButton(
     if (isLoggedInFollowingUser) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     R.string.read_only_user,
                     R.string.login_with_a_private_key_to_be_able_to_unfollow,
                 )
@@ -68,7 +68,7 @@ fun DisplayFollowUnfollowButton(
         if (isUserFollowingLoggedIn) {
             FollowButton(R.string.follow_back) {
                 if (!accountViewModel.isWriteable()) {
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         R.string.read_only_user,
                         R.string.login_with_a_private_key_to_be_able_to_follow,
                     )
@@ -79,7 +79,7 @@ fun DisplayFollowUnfollowButton(
         } else {
             FollowButton(R.string.follow) {
                 if (!accountViewModel.isWriteable()) {
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         R.string.read_only_user,
                         R.string.login_with_a_private_key_to_be_able_to_follow,
                     )

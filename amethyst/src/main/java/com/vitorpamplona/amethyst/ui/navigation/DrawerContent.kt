@@ -559,7 +559,7 @@ fun ListContent(
                 accountViewModel.setTorSettings(torSettings)
             },
             onError = {
-                accountViewModel.toast(
+                accountViewModel.toastManager.toast(
                     stringRes(context, R.string.could_not_connect_to_tor),
                     it,
                 )

@@ -23,9 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.tags.addressables
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.core.match
-import com.vitorpamplona.quartz.nip01Core.core.name
-import com.vitorpamplona.quartz.nip01Core.core.value
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -57,40 +54,44 @@ data class ATag(
 
     companion object {
         const val TAG_NAME = "a"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.size >= 2 && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
-        @JvmStatic
         fun isSameAddress(
             tag1: Array<String>,
             tag2: Array<String>,
-        ) = tag1.match(tag2.name(), tag2.value(), TAG_SIZE)
+        ): Boolean {
+            ensure(tag1.has(1)) { return false }
+            ensure(tag2.has(1)) { return false }
+            ensure(tag1[0] == tag2[0]) { return false }
+            ensure(tag1[1] == tag2[1]) { return false }
+            return true
+        }
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             addressId: String,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == addressId
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == addressId
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             address: ATag,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == address.toTag()
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == address.toTag()
 
         @JvmStatic
         fun isIn(
             tag: Array<String>,
             addressIds: Set<String>,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] in addressIds
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in addressIds
 
         @JvmStatic
         fun isTaggedWithKind(
             tag: Array<String>,
             kind: String,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && Address.isOfKind(tag[1], kind)
+        ) = tag.has(1) && tag[0] == TAG_NAME && Address.isOfKind(tag[1], kind)
 
         @JvmStatic
         fun parseIfOfKind(

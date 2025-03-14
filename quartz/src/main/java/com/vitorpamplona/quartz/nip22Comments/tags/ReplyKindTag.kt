@@ -21,36 +21,36 @@
 package com.vitorpamplona.quartz.nip22Comments.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.match
-import com.vitorpamplona.quartz.nip01Core.core.matchAndHasValue
-import com.vitorpamplona.quartz.nip01Core.core.valueToIntIfMatches
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.utils.ensure
 
 class ReplyKindTag {
     companion object {
         const val TAG_NAME = "k"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun match(tag: Tag) = tag.match(TAG_NAME, TAG_SIZE)
-
-        @JvmStatic
-        fun isTagged(tag: Tag) = tag.matchAndHasValue(TAG_NAME, TAG_SIZE)
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
         fun isTagged(
             tag: Tag,
             kind: String,
-        ) = tag.match(TAG_NAME, kind, TAG_SIZE)
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == kind
 
         @JvmStatic
         fun isIn(
             tag: Tag,
             kinds: Set<String>,
-        ) = tag.match(TAG_NAME, kinds, TAG_SIZE)
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in kinds
 
         @JvmStatic
-        fun parse(tag: Tag) = tag.valueToIntIfMatches(TAG_NAME, TAG_SIZE)
+        fun parse(tag: Tag): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
 
         @JvmStatic
         fun assemble(kind: String) = arrayOf(TAG_NAME, kind)

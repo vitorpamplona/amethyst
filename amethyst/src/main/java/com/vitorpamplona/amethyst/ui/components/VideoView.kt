@@ -98,6 +98,7 @@ import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.playback.PlaybackClientController
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
@@ -261,7 +262,8 @@ fun VideoView(
         }
 
     if (blurhash == null) {
-        val ratio = dimensions?.aspectRatio()
+        val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
+
         val modifier =
             if (ratio != null && automaticallyStartPlayback.value) {
                 Modifier.aspectRatio(ratio)
@@ -295,7 +297,7 @@ fun VideoView(
             }
         }
     } else {
-        val ratio = dimensions?.aspectRatio()
+        val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
 
         val modifier =
             if (ratio != null) {
@@ -1233,10 +1235,10 @@ private fun saveMediaToGallery(
         mimeType = mimeType,
         localContext = localContext,
         onSuccess = {
-            accountViewModel.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
+            accountViewModel.toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
         },
         onError = {
-            accountViewModel.toast(R.string.failed_to_save_the_video, null, it)
+            accountViewModel.toastManager.toast(R.string.failed_to_save_the_video, null, it)
         },
     )
 }

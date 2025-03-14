@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 class KeyPair(
     privKey: ByteArray? = null,
     pubKey: ByteArray? = null,
+    forceReplacePubkey: Boolean = true,
 ) {
     val privKey: ByteArray?
     val pubKey: ByteArray
@@ -44,7 +45,11 @@ class KeyPair(
         } else {
             // as private key is provided, ignore the public key and set keys according to private key
             this.privKey = privKey
-            this.pubKey = Nip01.pubKeyCreate(privKey)
+            if (pubKey == null || forceReplacePubkey) {
+                this.pubKey = Nip01.pubKeyCreate(privKey)
+            } else {
+                this.pubKey = pubKey
+            }
         }
     }
 

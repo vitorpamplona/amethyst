@@ -86,6 +86,7 @@ val TopBarSize = 50.dp - 64.dp
 
 val Size0dp = 0.dp
 val Size5dp = 5.dp
+val Size6dp = 6.dp
 val Size10dp = 10.dp
 val Size12dp = 12.dp
 val Size13dp = 13.dp

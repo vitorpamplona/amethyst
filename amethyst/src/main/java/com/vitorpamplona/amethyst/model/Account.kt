@@ -150,6 +150,7 @@ import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
@@ -1618,18 +1619,18 @@ class Account(
 
     suspend fun report(
         note: Note,
-        type: ReportEvent.ReportType,
+        type: ReportType,
         content: String = "",
     ) {
         if (!isWriteable()) return
 
-        if (note.hasReacted(userProfile(), "⚠️")) {
-            // has already liked this note
+        if (note.hasReport(userProfile(), type)) {
+            // has already reported this note
             return
         }
 
         note.event?.let {
-            ReportEvent.create(it, type, signer, content) {
+            signer.sign(ReportEvent.build(it, type)) {
                 Amethyst.instance.client.send(it)
                 LocalCache.justConsume(it, null)
             }
@@ -1638,7 +1639,7 @@ class Account(
 
     suspend fun report(
         user: User,
-        type: ReportEvent.ReportType,
+        type: ReportType,
     ) {
         if (!isWriteable()) return
 
@@ -1647,7 +1648,8 @@ class Account(
             return
         }
 
-        ReportEvent.create(user.pubkeyHex, type, signer) {
+        val template = ReportEvent.build(user.pubkeyHex, type)
+        signer.sign(template) {
             Amethyst.instance.client.send(it)
             LocalCache.justConsume(it, null)
         }

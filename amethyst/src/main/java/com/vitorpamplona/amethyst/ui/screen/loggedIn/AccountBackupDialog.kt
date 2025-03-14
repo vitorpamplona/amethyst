@@ -321,7 +321,7 @@ private fun NSecCopyButton(accountViewModel: AccountViewModel) {
                 context = context,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { copyNSec(context, scope, accountViewModel.account, clipboardManager) },
-                onError = { title, message -> accountViewModel.toast(title, message) },
+                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
             )
         },
         shape = ButtonBorder,
@@ -371,7 +371,7 @@ private fun EncryptNSecCopyButton(
                         context = context,
                         keyguardLauncher = keyguardLauncher,
                         onApproved = { encryptCopyNSec(password, context, scope, accountViewModel, clipboardManager) },
-                        onError = { title, message -> accountViewModel.toast(title, message) },
+                        onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
                     )
                 },
                 shape = ButtonBorder,
@@ -496,7 +496,7 @@ private fun QrCodeButtonBase(
                 context = context,
                 keyguardLauncher = keyguardLauncher,
                 onApproved = { dialogOpen = true },
-                onError = { title, message -> accountViewModel.toast(title, message) },
+                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
             )
         },
     ) {

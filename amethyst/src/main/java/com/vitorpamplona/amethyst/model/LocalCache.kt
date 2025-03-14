@@ -695,8 +695,8 @@ object LocalCache {
                 event.originalPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             is ReportEvent ->
-                event.reportedPost().mapNotNull { checkGetOrCreateNote(it.key) } +
-                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
+                event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
+                    event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
             is ChannelMessageEvent ->
                 event
                     .tagsWithoutCitations()
@@ -1342,7 +1342,7 @@ object LocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.key) }
+        val mentions = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubkey) }
         val repliesTo = computeReplyTo(event)
 
         note.loadEvent(event, author, repliesTo)
@@ -2231,7 +2231,7 @@ object LocalCache {
         }
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().mapNotNull {
-                val author = getUserIfExists(it.key)
+                val author = getUserIfExists(it.pubkey)
                 author?.removeReport(note)
                 author?.clearEOSE()
             }

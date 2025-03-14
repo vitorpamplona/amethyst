@@ -218,7 +218,7 @@ fun RelaySelectionDialog(
                                                     )
                                             }
 
-                                        accountViewModel.toast(
+                                        accountViewModel.toastManager.toast(
                                             stringRes(context, R.string.unable_to_download_relay_document),
                                             msg,
                                         )

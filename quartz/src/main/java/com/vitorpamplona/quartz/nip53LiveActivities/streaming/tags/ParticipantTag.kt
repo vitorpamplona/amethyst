@@ -23,9 +23,10 @@ package com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.isNotName
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 enum class ROLE(
     val code: String,
@@ -43,40 +44,43 @@ data class ParticipantTag(
 ) : PubKeyReferenceTag {
     companion object {
         const val TAG_NAME = "p"
-        const val TAG_SIZE = 2
 
         fun isIn(
             tag: Array<String>,
             keys: Set<HexKey>,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] in keys
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in keys
 
         @JvmStatic
         fun isHost(tag: Tag): Boolean {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return false
-            if (tag[1].length != 64) return false
-            if (tag.getOrNull(3).equals(ROLE.HOST.code)) return true
-            return false
+            ensure(tag.has(3)) { return false }
+            ensure(tag[0] == TAG_NAME) { return false }
+            ensure(tag[1].length == 64) { return false }
+            ensure(tag[3] == ROLE.HOST.code) { return false }
+            return true
         }
 
         @JvmStatic
         fun parse(tag: Tag): ParticipantTag? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
-            if (tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return ParticipantTag(tag[1], tag.getOrNull(2), tag.getOrNull(3), tag.getOrNull(4))
         }
 
         @JvmStatic
         fun parseHost(tag: Tag): ParticipantTag? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
-            if (tag[1].length != 64) return null
-            if (!tag.getOrNull(3).equals(ROLE.HOST.code)) return null
-            return ParticipantTag(tag[1], tag.getOrNull(2), tag.getOrNull(3), tag.getOrNull(4))
+            ensure(tag.has(3)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[3] == ROLE.HOST.code) { return null }
+            return ParticipantTag(tag[1], tag[2], tag[3], tag.getOrNull(4))
         }
 
         @JvmStatic
         fun parseKey(tag: Tag): String? {
-            if (tag.isNotName(TAG_NAME, TAG_SIZE)) return null
-            if (tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 

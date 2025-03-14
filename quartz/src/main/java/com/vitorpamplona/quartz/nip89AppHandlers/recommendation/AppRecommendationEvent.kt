@@ -43,7 +43,7 @@ class AppRecommendationEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun recommendations() = tags.mapNotNull(RecommendationTag::parse)
 
-    fun recommendationAddresses() = tags.mapNotNull(RecommendationTag::parseAddress)
+    fun recommendationAddresses() = tags.mapNotNull(RecommendationTag::parseAddressId)
 
     companion object {
         const val KIND = 31989

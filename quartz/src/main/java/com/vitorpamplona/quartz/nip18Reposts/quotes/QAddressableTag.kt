@@ -59,13 +59,13 @@ data class QAddressableTag(
     override fun toTagArray() = assemble(address, relay)
 
     companion object {
-        const val TAG_SIZE = 2
+        const val TAG_NAME = "q"
 
         @JvmStatic
         fun parse(tag: Array<String>): QAddressableTag? {
             ensure(tag.has(1)) { return null }
-            ensure(tag[0] == QTag.TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length != 64) { return null }
             val address = Address.parse(tag[1]) ?: return null
             return QAddressableTag(address, tag.getOrNull(2))
         }
@@ -76,12 +76,12 @@ data class QAddressableTag(
             pubKeyHex: HexKey,
             dTag: String,
             relay: String?,
-        ) = arrayOfNotNull(QTag.TAG_NAME, Address.assemble(kind, pubKeyHex, dTag), relay)
+        ) = arrayOfNotNull(TAG_NAME, Address.assemble(kind, pubKeyHex, dTag), relay)
 
         @JvmStatic
         fun assemble(
             address: Address,
             relay: String?,
-        ) = arrayOfNotNull(QTag.TAG_NAME, address.toValue(), relay)
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay)
     }
 }

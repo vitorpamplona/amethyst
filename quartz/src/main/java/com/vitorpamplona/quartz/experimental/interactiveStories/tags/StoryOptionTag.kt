@@ -35,7 +35,6 @@ class StoryOptionTag(
 
     companion object {
         const val TAG_NAME = "option"
-        const val TAG_SIZE = 3
 
         @JvmStatic
         fun parse(tag: Array<String>): StoryOptionTag? {

@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.experimental.zapPolls.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class PollOptionTag(
     val index: Int,
     val descriptor: String,
@@ -28,11 +31,13 @@ class PollOptionTag(
 
     companion object {
         const val TAG_NAME = "poll_option"
-        const val TAG_SIZE = 3
 
         @JvmStatic
         fun parse(tag: Array<String>): PollOptionTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
 
             val index = tag[1].toIntOrNull() ?: return null
 

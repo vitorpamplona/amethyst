@@ -46,6 +46,7 @@ enum class SignerType {
     NIP44_DECRYPT,
     GET_PUBLIC_KEY,
     DECRYPT_ZAP_EVENT,
+    DERIVE_KEY,
 }
 
 class Permission(
@@ -219,6 +220,7 @@ class ExternalSignerLauncher(
                 SignerType.NIP44_DECRYPT -> "nip44_decrypt"
                 SignerType.GET_PUBLIC_KEY -> "get_public_key"
                 SignerType.DECRYPT_ZAP_EVENT -> "decrypt_zap_event"
+                SignerType.DERIVE_KEY -> "derive_key"
             }
         intent.putExtra("type", signerType)
         intent.putExtra("pubKey", pubKey)
@@ -320,6 +322,15 @@ class ExternalSignerLauncher(
 
     fun hashCodeFields(
         str1: String,
+        onReady: (String) -> Unit,
+    ): Int {
+        var result = str1.hashCode()
+        result = 31 * result + onReady.hashCode()
+        return result
+    }
+
+    fun hashCodeFields(
+        str1: String,
         str2: String,
         onReady: (String) -> Unit,
     ): Int {
@@ -390,6 +401,29 @@ class ExternalSignerLauncher(
                         SignerType.DECRYPT_ZAP_EVENT,
                         event.pubKey,
                         event.id,
+                        onReady,
+                    )
+                } else {
+                    onReady(it)
+                }
+            },
+        )
+    }
+
+    fun deriveKey(
+        nonce: HexKey,
+        signerType: SignerType = SignerType.DERIVE_KEY,
+        onReady: (String) -> Unit,
+    ) {
+        getDataFromResolver(signerType, arrayOf(nonce)).fold(
+            onFailure = { },
+            onSuccess = {
+                if (it == null) {
+                    openSignerApp(
+                        nonce,
+                        signerType,
+                        "",
+                        hashCodeFields(nonce, onReady).toString(),
                         onReady,
                     )
                 } else {

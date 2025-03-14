@@ -20,17 +20,21 @@
  */
 package com.vitorpamplona.quartz.nip94FileMetadata.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class SummaryTag {
     companion object {
         const val TAG_NAME = "summary"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun isTag(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
 

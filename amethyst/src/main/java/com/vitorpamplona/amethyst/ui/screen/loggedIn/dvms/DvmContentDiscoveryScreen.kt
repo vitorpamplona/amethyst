@@ -70,11 +70,9 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DVMCard
-import com.vitorpamplona.amethyst.ui.note.MultiUserErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
-import com.vitorpamplona.amethyst.ui.note.UserBasedErrorMessageViewModel
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
@@ -442,7 +440,6 @@ fun ZapDVMButton(
     val noteAuthor = baseNote.author ?: return
 
     var wantsToZap by remember { mutableStateOf<List<Long>?>(null) }
-    val errorViewModel: UserBasedErrorMessageViewModel = viewModel()
     var wantsToPay by
         remember(baseNote) {
             mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
@@ -472,7 +469,7 @@ fun ZapDVMButton(
                 onError = { _, message, toUser ->
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(message, toUser)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, toUser)
                     }
                 },
                 onPayViaIntent = { wantsToPay = it },
@@ -496,7 +493,7 @@ fun ZapDVMButton(
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(message, user)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
                     }
                 },
                 onProgress = {
@@ -505,13 +502,6 @@ fun ZapDVMButton(
                 onPayViaIntent = { wantsToPay = it },
             )
         }
-
-        MultiUserErrorMessageDialog(
-            title = stringRes(id = R.string.error_dialog_zap_error),
-            model = errorViewModel,
-            accountViewModel,
-            nav,
-        )
 
         if (wantsToPay.isNotEmpty()) {
             PayViaIntentDialog(
@@ -522,12 +512,12 @@ fun ZapDVMButton(
                     wantsToPay = persistentListOf()
                     scope.launch {
                         zappingProgress = 0f
-                        errorViewModel.add(it)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
                     }
                 },
                 justShowError = {
                     scope.launch {
-                        errorViewModel.add(it)
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
                     }
                 },
             )

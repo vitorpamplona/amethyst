@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 open class DiscoverNIP89FeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    val lastAnnounced = 90 * 24 * 60 * 60 // 90 Days ago
+    val lastAnnounced = 365 * 24 * 60 * 60 // 365 Days ago
     // TODO better than announced would be last active, as this requires the DVM provider to regularly update the NIP89 announcement
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
@@ -43,8 +43,6 @@ open class DiscoverNIP89FeedFilter(
             followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
-        val filterParams = buildFilterParams(account)
-
         val notes =
             LocalCache.addressables.filterIntoSet { _, it ->
                 acceptDVM(it)

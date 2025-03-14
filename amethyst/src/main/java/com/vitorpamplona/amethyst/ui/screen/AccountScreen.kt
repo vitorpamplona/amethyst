@@ -156,7 +156,7 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                 contract = ActivityResultContracts.StartActivityForResult(),
                 onResult = { result ->
                     if (result.resultCode != Activity.RESULT_OK) {
-                        accountViewModel.toast(
+                        accountViewModel.toastManager.toast(
                             R.string.sign_request_rejected,
                             R.string.sign_request_rejected_description,
                         )
@@ -183,7 +183,7 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                                 } catch (e: Exception) {
                                     if (e is CancellationException) throw e
                                     Log.e("Signer", "Error opening Signer app", e)
-                                    accountViewModel.toast(
+                                    accountViewModel.toastManager.toast(
                                         R.string.error_opening_external_signer,
                                         R.string.error_opening_external_signer_description,
                                     )
@@ -203,7 +203,7 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         Log.e("Signer", "Error opening Signer app", e)
-                        accountViewModel.toast(
+                        accountViewModel.toastManager.toast(
                             R.string.error_opening_external_signer,
                             R.string.error_opening_external_signer_description,
                         )

@@ -23,11 +23,13 @@ package com.vitorpamplona.quartz.nip02FollowList.tags
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -56,20 +58,23 @@ data class ContactTag(
 
     companion object {
         const val TAG_NAME = "p"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
         fun parse(tag: Array<String>): ContactTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return ContactTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
         @JvmStatic
         fun parseValid(tag: Array<String>): ContactTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return try {
                 ContactTag(decodePublicKey(tag[1]).toHexKey(), tag.getOrNull(2), tag.getOrNull(3))
             } catch (e: Exception) {
@@ -80,13 +85,17 @@ data class ContactTag(
 
         @JvmStatic
         fun parseKey(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 
         @JvmStatic
         fun parseValidKey(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return try {
                 decodePublicKey(tag[1]).toHexKey()
             } catch (e: Exception) {
@@ -97,7 +106,10 @@ data class ContactTag(
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): PubKeyHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return PubKeyHint(tag[1], tag[2])
         }
 

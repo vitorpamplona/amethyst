@@ -75,7 +75,7 @@ fun DisplayOts(
                     val fullDateTime =
                         SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000))
 
-                    accountViewModel.toast(
+                    accountViewModel.toastManager.toast(
                         R.string.ots_info_title,
                         R.string.ots_info_description,
                         fullDateTime,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip89AppHandlers.definition.tags
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
@@ -32,14 +33,10 @@ class PlatformLinkTag(
     fun toTagArray() = assemble(platform, uri, entityType)
 
     companion object {
-        const val TAG_SIZE = 3
-
         @JvmStatic
         fun match(tag: Tag): Boolean =
-            if (tag.size >= TAG_SIZE) {
-                tag[0] == PlatformType.IOS.code ||
-                    tag[0] == PlatformType.WEB.code ||
-                    tag[0] == PlatformType.ANDROID.code
+            if (tag.has(2)) {
+                tag[0] == PlatformType.IOS.code || tag[0] == PlatformType.WEB.code || tag[0] == PlatformType.ANDROID.code
             } else {
                 false
             }

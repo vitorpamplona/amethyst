@@ -142,6 +142,7 @@ class Amethyst : Application() {
                 RECEIVER_EXPORTED,
             )
         } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(
                 pokeyReceiver,
                 IntentFilter(PokeyReceiver.POKEY_ACTION),

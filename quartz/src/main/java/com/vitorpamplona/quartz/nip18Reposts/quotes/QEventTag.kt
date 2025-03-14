@@ -22,8 +22,10 @@ package com.vitorpamplona.quartz.nip18Reposts.quotes
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -47,11 +49,13 @@ data class QEventTag(
     override fun toTagArray() = assemble(eventId, relay, author)
 
     companion object {
-        const val TAG_SIZE = 2
+        const val TAG_NAME = "q"
 
         @JvmStatic
         fun parse(tag: Array<String>): QEventTag? {
-            if (tag.size < TAG_SIZE || tag[0] != QTag.TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return QEventTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
@@ -60,6 +64,6 @@ data class QEventTag(
             eventId: HexKey,
             relay: String?,
             author: HexKey?,
-        ) = arrayOfNotNull(QTag.TAG_NAME, eventId, relay, author)
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay, author)
     }
 }

@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip72ModCommunities.definition.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
+import com.vitorpamplona.quartz.utils.ensure
 
 class ImageTag(
     val imageUrl: String,
@@ -29,12 +31,12 @@ class ImageTag(
 ) {
     companion object {
         const val TAG_NAME = "image"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): ImageTag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
-            if (tag[1].isEmpty()) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             val dims = tag.getOrNull(2)?.let { DimensionTag.parse(it) }
             return ImageTag(tag[1], dims)
         }

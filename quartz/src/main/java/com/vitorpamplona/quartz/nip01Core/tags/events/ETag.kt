@@ -22,10 +22,12 @@ package com.vitorpamplona.quartz.nip01Core.tags.events
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -56,32 +58,38 @@ data class ETag(
 
     companion object {
         const val TAG_NAME = "e"
-        const val TAG_SIZE = 2
 
         @JvmStatic
-        fun isTagged(tag: Array<String>) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1].length == 64
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].length == 64
 
         @JvmStatic
         fun isTagged(
             tag: Array<String>,
             eventId: HexKey,
-        ) = tag.size >= TAG_SIZE && tag[0] == TAG_NAME && tag[1] == eventId
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == eventId
 
         @JvmStatic
         fun parse(tag: Array<String>): ETag? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return ETag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
         }
 
         @JvmStatic
         fun parseId(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME || tag[1].length != 64) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 
         @JvmStatic
         fun parseAsHint(tag: Array<String>): EventIdHint? {
-            if (tag.size < 3 || tag[0] != TAG_NAME || tag[1].length != 64 || tag[2].isEmpty()) return null
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
             return EventIdHint(tag[1], tag[2])
         }
 

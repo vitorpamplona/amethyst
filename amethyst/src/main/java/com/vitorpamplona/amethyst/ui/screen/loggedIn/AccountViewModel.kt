@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
@@ -102,7 +103,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -123,8 +124,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -136,25 +135,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-@Immutable open class ToastMsg
-
-@Immutable class StringToastMsg(
-    val title: String,
-    val msg: String,
-) : ToastMsg()
-
-@Immutable class ResourceToastMsg(
-    val titleResId: Int,
-    val resourceId: Int,
-    val params: Array<out String>? = null,
-) : ToastMsg()
-
-@Immutable class ThrowableToastMsg(
-    val titleResId: Int,
-    val msg: String? = null,
-    val throwable: Throwable,
-) : ToastMsg()
 
 @Stable
 class AccountViewModel(
@@ -189,7 +169,7 @@ class AccountViewModel(
     val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
     val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
-    val toasts = MutableSharedFlow<ToastMsg?>(0, 3, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val toastManager = ToastManager()
 
     val feedStates = AccountFeedContentStates(this)
 
@@ -268,40 +248,6 @@ class AccountViewModel(
             Route.Message to messagesHasNewItemsFlow,
             Route.Notification to notificationHasNewItemsFlow,
         )
-
-    fun clearToasts() {
-        viewModelScope.launch { toasts.emit(null) }
-    }
-
-    fun toast(
-        title: String,
-        message: String,
-    ) {
-        viewModelScope.launch { toasts.emit(StringToastMsg(title, message)) }
-    }
-
-    fun toast(
-        titleResId: Int,
-        resourceId: Int,
-    ) {
-        viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId)) }
-    }
-
-    fun toast(
-        titleResId: Int,
-        message: String?,
-        throwable: Throwable,
-    ) {
-        viewModelScope.launch { toasts.emit(ThrowableToastMsg(titleResId, message, throwable)) }
-    }
-
-    fun toast(
-        titleResId: Int,
-        resourceId: Int,
-        vararg params: String,
-    ) {
-        viewModelScope.launch { toasts.emit(ResourceToastMsg(titleResId, resourceId, params)) }
-    }
 
     fun isWriteable(): Boolean = account.isWriteable()
 
@@ -741,7 +687,7 @@ class AccountViewModel(
 
     fun report(
         note: Note,
-        type: ReportEvent.ReportType,
+        type: ReportType,
         content: String = "",
     ) {
         viewModelScope.launch(Dispatchers.IO) { account.report(note, type, content) }
@@ -749,7 +695,7 @@ class AccountViewModel(
 
     fun report(
         user: User,
-        type: ReportEvent.ReportType,
+        type: ReportType,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             account.report(user, type)
@@ -1406,7 +1352,7 @@ class AccountViewModel(
         onMore: () -> Unit,
     ) {
         if (baseNote.isDraft()) {
-            toast(
+            toastManager.toast(
                 R.string.draft_note,
                 R.string.it_s_not_possible_to_quote_to_a_draft_note,
             )
@@ -1420,7 +1366,7 @@ class AccountViewModel(
                 onMore()
             }
         } else {
-            toast(
+            toastManager.toast(
                 R.string.read_only_user,
                 R.string.login_with_a_private_key_to_be_able_to_boost_posts,
             )
@@ -1766,6 +1712,7 @@ fun mockAccountViewModel(): AccountViewModel {
                 KeyPair(
                     privKey = Hex.decode("0f761f8a5a481e26f06605a1d9b3e9eba7a107d351f43c43a57469b788274499"),
                     pubKey = Hex.decode("989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"),
+                    forceReplacePubkey = false,
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,

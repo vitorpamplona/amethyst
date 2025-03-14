@@ -107,8 +107,8 @@ class CommentEvent(
             ?: tags.lastNotNullOfOrNull(RootEventTag::parseKey)
 
     fun replyingToAddressId(): String? =
-        tags.lastNotNullOfOrNull(RootAddressTag::parseAddress)
-            ?: tags.lastNotNullOfOrNull(ReplyAddressTag::parseAddress)
+        tags.lastNotNullOfOrNull(RootAddressTag::parseAddressId)
+            ?: tags.lastNotNullOfOrNull(ReplyAddressTag::parseAddressId)
 
     override fun replyingToAddressOrEvent(): HexKey? = replyingToAddressId() ?: replyingTo()
 

@@ -64,7 +64,7 @@ fun RelayStatusRow(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
-                            accountViewModel.toast(
+                            accountViewModel.toastManager.toast(
                                 R.string.read_from_relay,
                                 R.string.read_from_relay_description,
                             )
@@ -91,7 +91,7 @@ fun RelayStatusRow(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
-                            accountViewModel.toast(
+                            accountViewModel.toastManager.toast(
                                 R.string.write_to_relay,
                                 R.string.write_to_relay_description,
                             )
@@ -118,7 +118,7 @@ fun RelayStatusRow(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
-                            accountViewModel.toast(
+                            accountViewModel.toastManager.toast(
                                 R.string.errors,
                                 R.string.errors_description,
                             )
@@ -150,7 +150,7 @@ fun RelayStatusRow(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
-                            accountViewModel.toast(
+                            accountViewModel.toastManager.toast(
                                 R.string.spam,
                                 R.string.spam_description,
                             )

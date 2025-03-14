@@ -312,10 +312,10 @@ private fun saveMediaToGallery(
             forceProxy = useTor,
             localContext,
             onSuccess = {
-                accountViewModel.toast(success, success)
+                accountViewModel.toastManager.toast(success, success)
             },
             onError = {
-                accountViewModel.toast(failure, null, it)
+                accountViewModel.toastManager.toast(failure, null, it)
             },
         )
     } else if (content is MediaPreloadedContent) {
@@ -325,10 +325,10 @@ private fun saveMediaToGallery(
                 content.mimeType,
                 localContext,
                 onSuccess = {
-                    accountViewModel.toast(success, success)
+                    accountViewModel.toastManager.toast(success, success)
                 },
                 onError = { innerIt ->
-                    accountViewModel.toast(failure, null, innerIt)
+                    accountViewModel.toastManager.toast(failure, null, innerIt)
                 },
             )
         }

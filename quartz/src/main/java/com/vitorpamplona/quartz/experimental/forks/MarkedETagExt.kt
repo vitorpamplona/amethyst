@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.MARKER
 
 fun MarkedETag.Companion.parseFork(tag: Array<String>): MarkedETag? {
-    if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+    if (tag.size < 4 || tag[0] != "e") return null
     if (tag[ORDER_MARKER] != MARKER.FORK.code) return null
     // ["e", id hex, relay hint, marker, pubkey]
     return MarkedETag(

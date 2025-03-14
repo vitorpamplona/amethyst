@@ -20,18 +20,22 @@
  */
 package com.vitorpamplona.quartz.nip31Alts
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class AltTag {
     companion object {
         const val TAG_NAME = "alt"
-        const val TAG_SIZE = 2
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
-            if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
         }
 
         @JvmStatic
-        fun assemble(altDescriptor: String = "") = arrayOf(TAG_NAME, altDescriptor)
+        fun assemble(altDescriptor: String) = arrayOf(TAG_NAME, altDescriptor)
     }
 }
