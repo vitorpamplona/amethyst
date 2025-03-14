@@ -94,6 +94,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
@@ -135,7 +137,6 @@ fun ZoomableContentView(
                             .fillMaxWidth()
                             .clickable { dialogOpen = true }
                     val loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth()
-
                     UrlImageView(content, contentScale, mainImageModifier, loadedImageModifier, controllerVisible, accountViewModel = accountViewModel)
                 }
             }
@@ -268,8 +269,14 @@ fun LocalImageView(
                                     )
                                 }
                             } else {
-                                WaitAndDisplay {
-                                    DisplayUrlWithLoadingSymbol(content)
+                                if (ratio != null) {
+                                    Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                                        LoadingAnimation(Size40dp, Size6dp)
+                                    }
+                                } else {
+                                    WaitAndDisplay {
+                                        DisplayUrlWithLoadingSymbol(content)
+                                    }
                                 }
                             }
                         }
@@ -381,8 +388,14 @@ fun UrlImageView(
                                 )
                             }
                         } else {
-                            WaitAndDisplay {
-                                DisplayUrlWithLoadingSymbol(content)
+                            if (ratio != null) {
+                                Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                                    LoadingAnimation(Size40dp, Size6dp)
+                                }
+                            } else {
+                                WaitAndDisplay {
+                                    DisplayUrlWithLoadingSymbol(content)
+                                }
                             }
                         }
                     }

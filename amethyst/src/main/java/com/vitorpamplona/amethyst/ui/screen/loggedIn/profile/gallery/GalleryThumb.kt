@@ -56,12 +56,11 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
-import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.ui.components.GetMediaItem
 import com.vitorpamplona.amethyst.ui.components.GetVideoController
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
+import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
@@ -217,8 +216,8 @@ fun UrlImageView(
                                 defaultModifier,
                             )
                         } else {
-                            WaitAndDisplay {
-                                DisplayUrlWithLoadingSymbol(content)
+                            Box(defaultModifier, contentAlignment = Alignment.Center) {
+                                LoadingAnimation()
                             }
                         }
                     }

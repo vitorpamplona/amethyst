@@ -99,9 +99,12 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size0dp
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.Size50dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
@@ -200,7 +203,7 @@ fun LoginPage(
             contentScale = ContentScale.Inside,
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(Size40dp))
 
         KeyTextField(
             value = key.value,
@@ -334,9 +337,9 @@ fun LoginPage(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(Size10dp))
 
-        Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
+        Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
             LoginButton(
                 enabled = acceptedTerms.value,
                 processingLogin = processingLogin,
@@ -371,7 +374,7 @@ fun LoginPage(
         }
 
         if (PackageUtils.isExternalSignerInstalled(context)) {
-            Box(modifier = Modifier.padding(40.dp, 20.dp, 40.dp, 0.dp)) {
+            Box(modifier = Modifier.padding(Size40dp, Size20dp, Size40dp, Size0dp)) {
                 LoginWithAmberButton(
                     enabled = acceptedTerms.value,
                     onClick = {
@@ -777,11 +780,11 @@ fun LoginWithAmberButton(
         enabled = enabled,
         onClick = onClick,
         shape = RoundedCornerShape(Size35dp),
-        modifier = Modifier.height(50.dp),
+        modifier = Modifier.height(Size50dp),
     ) {
         Text(
             text = stringRes(R.string.login_with_external_signer),
-            modifier = Modifier.padding(horizontal = 40.dp),
+            modifier = Modifier.padding(horizontal = Size40dp),
         )
     }
 }
@@ -796,9 +799,9 @@ fun LoginButton(
         enabled = enabled,
         onClick = onClick,
         shape = RoundedCornerShape(Size35dp),
-        modifier = Modifier.height(50.dp),
+        modifier = Modifier.height(Size50dp),
     ) {
-        Row(modifier = Modifier.padding(horizontal = 40.dp)) {
+        Row(modifier = Modifier.padding(horizontal = Size40dp)) {
             if (processingLogin) {
                 LoadingAnimation()
                 Spacer(modifier = DoubleHorzSpacer)

@@ -59,6 +59,7 @@ val DefaultAnimationColors =
 @Composable
 fun LoadingAnimation(
     indicatorSize: Dp = 20.dp,
+    circleWidth: Dp = 4.dp,
     circleColors: ImmutableList<Color> = DefaultAnimationColors,
     animationDuration: Int = 1000,
 ) {
@@ -86,7 +87,7 @@ fun LoadingAnimation(
                 .size(size = indicatorSize)
                 .rotate(degrees = rotateAnimation)
                 .border(
-                    width = 4.dp,
+                    width = circleWidth,
                     brush = Brush.sweepGradient(circleColors),
                     shape = CircleShape,
                 ),

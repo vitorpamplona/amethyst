@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageVie
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -108,11 +109,11 @@ fun ShowEmojiSuggestionList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = spacedBy(Size10dp),
                 ) {
-                    Box(Modifier.size(40.dp)) {
+                    Box(Size40Modifier) {
                         UrlImageView(it.url, accountViewModel)
                     }
                     Text(it.code, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    Box(Size40Modifier, contentAlignment = Alignment.Center) {
                         IconButton(
                             onClick = {
                                 onFullSize(it)
