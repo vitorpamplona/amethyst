@@ -64,7 +64,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
-import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -251,21 +250,23 @@ fun DisplaySecretEmojiAsReaction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var secretContent by remember {
-        mutableStateOf<RichTextViewerState?>(null)
+    var secretContent by remember(reaction) {
+        mutableStateOf(CachedRichTextParser.cachedText(EmojiCoder.decode(reaction), EmptyTagList))
     }
 
     var showPopup by remember {
         mutableStateOf(false)
     }
 
-    LaunchedEffect(reaction) {
-        launch(Dispatchers.Default) {
-            secretContent =
-                CachedRichTextParser.parseText(
-                    EmojiCoder.decode(reaction),
-                    EmptyTagList,
-                )
+    if (secretContent == null) {
+        LaunchedEffect(reaction) {
+            launch(Dispatchers.Default) {
+                secretContent =
+                    CachedRichTextParser.parseText(
+                        EmojiCoder.decode(reaction),
+                        EmptyTagList,
+                    )
+            }
         }
     }
 

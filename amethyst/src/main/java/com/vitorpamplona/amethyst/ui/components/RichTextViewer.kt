@@ -530,20 +530,22 @@ fun DisplaySecretEmoji(
 ) {
     if (canPreview && quotesLeft > 0) {
         var secretContent by remember {
-            mutableStateOf<RichTextViewerState?>(null)
+            mutableStateOf(CachedRichTextParser.cachedText(EmojiCoder.decode(segment.segmentText), state.tags))
         }
 
         var showPopup by remember {
             mutableStateOf(false)
         }
 
-        LaunchedEffect(segment) {
-            launch(Dispatchers.Default) {
-                secretContent =
-                    CachedRichTextParser.parseText(
-                        EmojiCoder.decode(segment.segmentText),
-                        state.tags,
-                    )
+        if (secretContent == null) {
+            LaunchedEffect(segment) {
+                launch(Dispatchers.Default) {
+                    secretContent =
+                        CachedRichTextParser.parseText(
+                            EmojiCoder.decode(segment.segmentText),
+                            state.tags,
+                        )
+                }
             }
         }
 
