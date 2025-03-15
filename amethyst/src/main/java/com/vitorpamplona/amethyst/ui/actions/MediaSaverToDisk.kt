@@ -55,10 +55,10 @@ object MediaSaverToDisk {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        if (videoUri != null) {
-            if (!videoUri.startsWith("file")) {
+        videoUri?.let { theVideoUri ->
+            if (!theVideoUri.startsWith("file")) {
                 downloadAndSave(
-                    url = videoUri,
+                    url = theVideoUri,
                     mimeType = mimeType,
                     context = localContext,
                     forceProxy = forceProxy,
@@ -67,7 +67,7 @@ object MediaSaverToDisk {
                 )
             } else {
                 save(
-                    localFile = videoUri.toUri().toFile(),
+                    localFile = theVideoUri.toUri().toFile(),
                     mimeType = mimeType,
                     context = localContext,
                     onSuccess = onSuccess,
@@ -124,8 +124,8 @@ object MediaSaverToDisk {
                                 checkNotNull(contentType) { "Can't find out the content type" }
 
                                 val realType =
-                                    if (mimeType != null && contentType == "application/octet-stream") {
-                                        mimeType
+                                    if (contentType == "application/octet-stream") {
+                                        mimeType ?: getMimeTypeFromExtension(url)
                                     } else {
                                         contentType
                                     }
@@ -154,6 +154,11 @@ object MediaSaverToDisk {
             )
     }
 
+    private fun getMimeTypeFromExtension(fileName: String): String =
+        fileName.substringAfterLast('.', "").lowercase().let {
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(it).orEmpty()
+        }
+
     fun save(
         localFile: File,
         mimeType: String?,
@@ -175,7 +180,7 @@ object MediaSaverToDisk {
                 )
             } else {
                 saveContentDefault(
-                    fileName = UUID.randomUUID().toString() + ".$extension",
+                    fileName = "${UUID.randomUUID()}.$extension",
                     contentSource = buffer,
                     context = context,
                 )
@@ -206,10 +211,9 @@ object MediaSaverToDisk {
             }
 
         val masterUri =
-            if (contentType.startsWith("image")) {
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            } else {
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            when {
+                contentType.startsWith("image") -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             }
 
         val uri = contentResolver.insert(masterUri, contentValues)
