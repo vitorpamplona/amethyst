@@ -43,6 +43,7 @@ import okio.IOException
 import okio.buffer
 import okio.sink
 import okio.source
+import okio.use
 import java.io.File
 import java.util.UUID
 
@@ -124,8 +125,8 @@ object MediaSaverToDisk {
                                 checkNotNull(contentType) { "Can't find out the content type" }
 
                                 val realType =
-                                    if (mimeType != null && contentType == "application/octet-stream") {
-                                        mimeType
+                                    if (contentType == "application/octet-stream") {
+                                        mimeType ?: getMimeTypeFromExtension(url)
                                     } else {
                                         contentType
                                     }
@@ -153,6 +154,11 @@ object MediaSaverToDisk {
                 },
             )
     }
+
+    private fun getMimeTypeFromExtension(fileName: String): String =
+        fileName.substringAfterLast('.', "").lowercase().let {
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(it).orEmpty()
+        }
 
     fun save(
         localFile: File,
