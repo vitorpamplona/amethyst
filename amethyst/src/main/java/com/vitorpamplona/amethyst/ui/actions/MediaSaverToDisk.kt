@@ -131,14 +131,14 @@ object MediaSaverToDisk {
                                     }
 
                                 saveContentQ(
-                                    displayName = File(url).nameWithoutExtension,
+                                    displayName = File(trimInlineMetaData(url)).nameWithoutExtension,
                                     contentType = realType,
                                     contentSource = response.body.source(),
                                     contentResolver = context.contentResolver,
                                 )
                             } else {
                                 saveContentDefault(
-                                    fileName = File(url).name,
+                                    fileName = File(trimInlineMetaData(url)).name,
                                     contentSource = response.body.source(),
                                     context = context,
                                 )
@@ -202,7 +202,7 @@ object MediaSaverToDisk {
     ) {
         val contentValues =
             ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, trimInlineMetaData(displayName))
+                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
                 put(MediaStore.MediaColumns.MIME_TYPE, contentType)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
@@ -246,7 +246,7 @@ object MediaSaverToDisk {
             subdirectory.mkdirs()
         }
 
-        val outputFile = File(subdirectory, trimInlineMetaData(fileName))
+        val outputFile = File(subdirectory, fileName)
 
         outputFile.outputStream().use { contentSource.readAll(it.sink()) }
 
