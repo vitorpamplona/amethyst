@@ -202,7 +202,7 @@ object MediaSaverToDisk {
     ) {
         val contentValues =
             ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, trimInlineMetaData(displayName))
                 put(MediaStore.MediaColumns.MIME_TYPE, contentType)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
@@ -246,7 +246,7 @@ object MediaSaverToDisk {
             subdirectory.mkdirs()
         }
 
-        val outputFile = File(subdirectory, fileName)
+        val outputFile = File(subdirectory, trimInlineMetaData(fileName))
 
         outputFile.outputStream().use { contentSource.readAll(it.sink()) }
 
@@ -254,6 +254,8 @@ object MediaSaverToDisk {
         // appears in the gallery faster.
         MediaScannerConnection.scanFile(context, arrayOf(outputFile.toString()), null, null)
     }
+
+    private fun trimInlineMetaData(url: String): String = url.substringBefore("#")
 
     private const val PICTURES_SUBDIRECTORY = "Amethyst"
 }
