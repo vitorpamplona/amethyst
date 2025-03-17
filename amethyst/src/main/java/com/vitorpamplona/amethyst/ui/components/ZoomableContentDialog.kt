@@ -28,12 +28,14 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -58,9 +60,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -76,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
@@ -423,21 +428,32 @@ private fun RenderImageOrVideo(
                     if (roundedCorner) {
                         MaterialTheme.colorScheme.imageModifier
                     } else {
-                        Modifier.fillMaxWidth()
+                        Modifier.fillMaxWidth().border(1.dp, Color.Red)
                     }
 
-                VideoViewInner(
-                    videoUri = content.url,
-                    mimeType = content.mimeType,
-                    title = content.description,
-                    artworkUri = content.artworkUri,
-                    authorName = content.authorName,
-                    borderModifier = borderModifier,
-                    contentScale = contentScale,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    accountViewModel = accountViewModel,
-                )
+                val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+
+                val modifier =
+                    if (ratio != null) {
+                        Modifier.aspectRatio(ratio)
+                    } else {
+                        Modifier
+                    }
+
+                Box(modifier, contentAlignment = Alignment.Center) {
+                    VideoViewInner(
+                        videoUri = content.url,
+                        mimeType = content.mimeType,
+                        title = content.description,
+                        artworkUri = content.artworkUri,
+                        authorName = content.authorName,
+                        borderModifier = borderModifier,
+                        contentScale = contentScale,
+                        automaticallyStartPlayback = automaticallyStartPlayback,
+                        onControllerVisibilityChanged = onControllerVisibilityChanged,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
 
             is MediaLocalImage -> {
@@ -473,18 +489,29 @@ private fun RenderImageOrVideo(
                     }
 
                 content.localFile?.let {
-                    VideoViewInner(
-                        videoUri = it.toUri().toString(),
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        authorName = content.authorName,
-                        borderModifier = borderModifier,
-                        contentScale = contentScale,
-                        automaticallyStartPlayback = automaticallyStartPlayback,
-                        onControllerVisibilityChanged = onControllerVisibilityChanged,
-                        accountViewModel = accountViewModel,
-                    )
+                    val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(it.toUri().toString())
+
+                    val modifier =
+                        if (ratio != null) {
+                            Modifier.aspectRatio(ratio)
+                        } else {
+                            Modifier
+                        }
+
+                    Box(modifier, contentAlignment = Alignment.Center) {
+                        VideoViewInner(
+                            videoUri = it.toUri().toString(),
+                            mimeType = content.mimeType,
+                            title = content.description,
+                            artworkUri = content.artworkUri,
+                            authorName = content.authorName,
+                            borderModifier = borderModifier,
+                            contentScale = contentScale,
+                            automaticallyStartPlayback = automaticallyStartPlayback,
+                            onControllerVisibilityChanged = onControllerVisibilityChanged,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
             }
         }
