@@ -50,7 +50,6 @@ object BackgroundMedia {
 
     fun removeBackgroundControllerAndReleaseIt() {
         bgInstance.value?.let {
-            println("AABBCCDD removeBackgroundControllerAndReleaseIt")
             removeController(it)
             bgInstance.tryEmit(null)
         }
@@ -58,7 +57,6 @@ object BackgroundMedia {
 
     fun removeBackgroundControllerIfNotComposed() {
         bgInstance.value?.let {
-            println("AABBCCDD removeBackgroundControllerIfNotComposed ${it.composed.value}")
             if (!it.composed.value) {
                 removeController(it)
             }

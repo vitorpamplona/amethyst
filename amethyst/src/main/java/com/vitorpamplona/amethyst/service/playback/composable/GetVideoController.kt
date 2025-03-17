@@ -57,7 +57,6 @@ fun GetVideoController(
 
     // Prepares a VideoPlayer from the foreground service.
     DisposableEffect(key1 = videoUri) {
-        println("AABBCC On DisposableEffect: ${controllerId.id} ${controllerId.controller.value}")
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
         if (controllerId.needsController()) {
@@ -152,7 +151,6 @@ fun GetVideoController(
         }
 
         onDispose {
-            println("AABBCC On Dispose: ${controllerId.id} ${controllerId.controller.value}")
             controllerId.composed.value = false
             if (!controllerId.keepPlaying.value) {
                 PlaybackServiceClient.removeController(controllerId)
@@ -167,13 +165,12 @@ fun GetVideoController(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     controllerId.composed.value = true
-                    println("AABBCC On Resume: ${controllerId.id} ${controllerId.controller.value}")
                     // if the controller is null, restarts the controller with a new one
                     // if the controller is not null, just continue playing what the controller was playing
                     if (controllerId.controller.value == null) {
                         if (!onlyOnePreparing.getAndSet(true)) {
                             scope.launch(Dispatchers.Main) {
-                                Log.d("PlaybackService", "AABBCC Preparing Video from Resume ${controllerId.id} $videoUri ")
+                                Log.d("PlaybackService", "Preparing Video from Resume ${controllerId.id} $videoUri ")
                                 PlaybackServiceClient.prepareController(
                                     controllerId,
                                     videoUri,
@@ -228,7 +225,6 @@ fun GetVideoController(
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {
                     controllerId.composed.value = false
-                    println("AABBCC On Pause: ${controllerId.keepPlaying.value} ${controllerId.id}")
                     if (!controllerId.keepPlaying.value) {
                         // Stops and releases the media.
                         PlaybackServiceClient.removeController(controllerId)

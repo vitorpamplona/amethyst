@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import android.content.Context
+import android.util.Log
 import android.util.LruCache
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
@@ -82,7 +83,6 @@ class MediaSessionPool(
         id: String,
         context: Context,
     ): MediaSession {
-        println("AABBCC New Session. Cache has ${cache.size()} sessions. Playing ${playingMap.size}")
         val mediaSession =
             MediaSession
                 .Builder(context, exoPlayerPool.acquirePlayer(context))
@@ -103,12 +103,9 @@ class MediaSessionPool(
     }
 
     fun releaseSession(session: MediaSession) {
-        println("AABBCC Release Session ${session.id}. Cache has ${cache.size()} sessions. Playing ${playingMap.size}")
         val listener = playingMap.get(session.id) ?: cache.get(session.id)
         if (listener != null) {
             session.player.removeListener(listener.playerListener)
-        } else {
-            println("AABBCC ERROR listener not found")
         }
 
         cache.remove(session.id)
@@ -129,18 +126,13 @@ class MediaSessionPool(
                 // but not connected yet.
                 // delay(10000)
                 snap.values.forEach {
-                    println("AABBCC CleanUpUnused ${it.session.connectedControllers.size} ${it.session.id}")
-                    it.session.connectedControllers.forEach { conn ->
-                        println("AABBCC CleanUpUnused ${conn.connectionHints.keySet().joinToString(", ") { "$it " + conn.connectionHints.get(it).toString() }}")
-                    }
+                    Log.d("MediaSessionPoll", "Clean Up Unused ${it.session.connectedControllers.size} ${it.session.id}")
                     if (it.session.connectedControllers.isEmpty()) {
                         releaseSession(it.session)
                         counter++
                     }
                 }
                 lastCleanup = TimeUtils.now()
-
-                println("AABBCC Launched Cleanup: $counter sessions released")
             }
         }
     }
@@ -165,7 +157,6 @@ class MediaSessionPool(
     ): MediaSession {
         val existingSession = playingMap.get(id) ?: cache.get(id)
         if (existingSession != null) {
-            println("AABBCC Reusing session $id")
             return existingSession.session
         }
 
@@ -183,7 +174,6 @@ class MediaSessionPool(
             controller: MediaSession.ControllerInfo,
             mediaItems: List<MediaItem>,
         ): ListenableFuture<List<MediaItem>> {
-            println("AABBCC onAddMediaItems ${mediaSession.id}")
             mediaSession.player.setMediaItems(mediaItems)
 
             // set up return call when clicking on the Notification bar
@@ -198,7 +188,6 @@ class MediaSessionPool(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ) {
-            println("AABBCC OnDisconnected ${session.connectedControllers.size} ${session.id}")
             pool.releaseSession(session)
         }
     }
@@ -208,7 +197,6 @@ class MediaSessionPool(
         val pool: MediaSessionPool,
     ) : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            println("AABBCC onIsPlayingChanged ${mediaSession.id} isPlaying $isPlaying")
             if (isPlaying) {
                 pool.playingMap.put(mediaSession.id, SessionListener(mediaSession, this))
             } else {
