@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
+import android.app.PendingIntent
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Looper
@@ -30,6 +32,7 @@ import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.os.StrictMode.VmPolicy
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.ImageLoader
 import coil3.disk.DiskCache
@@ -38,7 +41,8 @@ import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
-import com.vitorpamplona.amethyst.service.playback.VideoCache
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.ammolite.relays.NostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -172,6 +176,14 @@ class Amethyst : Application() {
             serviceManager.trimMemory()
         }
     }
+
+    fun createIntent(callbackUri: String): PendingIntent =
+        PendingIntent.getActivity(
+            this,
+            0,
+            Intent(Intent.ACTION_VIEW, callbackUri.toUri(), this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
     companion object {
         lateinit var instance: Amethyst

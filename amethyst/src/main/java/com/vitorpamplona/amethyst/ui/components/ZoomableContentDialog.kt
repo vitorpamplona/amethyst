@@ -76,6 +76,8 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -234,7 +236,7 @@ private fun DialogContent(
                     ShareImageAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
-                if (myContent !is MediaUrlContent || !myContent.url.endsWith(".m3u8")) {
+                if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
                     val localContext = LocalContext.current
 
                     val scope = rememberCoroutineScope()

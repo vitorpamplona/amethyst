@@ -18,32 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.service.playback.playerPool.aspectRatio
 
-import android.util.LruCache
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
+import com.vitorpamplona.amethyst.model.MutableMediaAspectRatioCache
 
-interface MutableMediaAspectRatioCache {
-    fun get(url: String): Float
+class AspectRatioCacher(
+    val cache: MutableMediaAspectRatioCache,
+) : Player.Listener {
+    var currentUrl: String? = null
 
-    fun add(
-        url: String,
-        width: Int,
-        height: Int,
-    )
-}
-
-object MediaAspectRatioCache : MutableMediaAspectRatioCache {
-    val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
-
-    override fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
-
-    override fun add(
-        url: String,
-        width: Int,
-        height: Int,
+    override fun onMediaItemTransition(
+        mediaItem: MediaItem?,
+        reason: Int,
     ) {
-        if (height > 1) {
-            mediaAspectRatioCacheByUrl.put(url, width.toFloat() / height.toFloat())
+        if (mediaItem == null) {
+            currentUrl = null
+        } else {
+            currentUrl = mediaItem.mediaId
+        }
+    }
+
+    override fun onVideoSizeChanged(videoSize: VideoSize) {
+        currentUrl?.let {
+            cache.add(it, videoSize.width, videoSize.height)
         }
     }
 }

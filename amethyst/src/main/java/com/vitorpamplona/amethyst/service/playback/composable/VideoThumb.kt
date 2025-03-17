@@ -18,33 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback
+package com.vitorpamplona.amethyst.service.playback.composable
 
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import okio.ByteString
-import java.util.concurrent.ConcurrentSkipListSet
+import android.graphics.drawable.Drawable
+import androidx.compose.runtime.Stable
 
-class WssDataStreamCollector : WebSocketListener() {
-    private val wssData = ConcurrentSkipListSet<ByteString>()
-
-    override fun onMessage(
-        webSocket: WebSocket,
-        bytes: ByteString,
-    ) {
-        wssData.add(bytes)
-    }
-
-    override fun onClosing(
-        webSocket: WebSocket,
-        code: Int,
-        reason: String,
-    ) {
-        super.onClosing(webSocket, code, reason)
-        wssData.removeAll(wssData)
-    }
-
-    fun canStream(): Boolean = wssData.size > 0
-
-    fun getNextStream(): ByteString = wssData.pollFirst()
-}
+@Stable
+data class VideoThumb(
+    val thumb: Drawable?,
+)

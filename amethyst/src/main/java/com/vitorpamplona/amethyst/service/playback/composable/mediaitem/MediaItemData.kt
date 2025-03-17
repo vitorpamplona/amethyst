@@ -18,32 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
-import android.util.LruCache
+import androidx.compose.runtime.Immutable
 
-interface MutableMediaAspectRatioCache {
-    fun get(url: String): Float
-
-    fun add(
-        url: String,
-        width: Int,
-        height: Int,
-    )
-}
-
-object MediaAspectRatioCache : MutableMediaAspectRatioCache {
-    val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
-
-    override fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
-
-    override fun add(
-        url: String,
-        width: Int,
-        height: Int,
-    ) {
-        if (height > 1) {
-            mediaAspectRatioCacheByUrl.put(url, width.toFloat() / height.toFloat())
-        }
-    }
-}
+@Immutable
+data class MediaItemData(
+    val videoUri: String,
+    val authorName: String? = null,
+    val title: String? = null,
+    val artworkUri: String? = null,
+    val callbackUri: String? = null,
+)

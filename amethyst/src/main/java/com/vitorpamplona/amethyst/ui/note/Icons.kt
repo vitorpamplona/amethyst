@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
@@ -412,26 +410,6 @@ fun CloseIcon() {
         painter = painterResource(id = R.drawable.ic_close),
         contentDescription = stringRes(id = R.string.cancel),
         modifier = Size20Modifier,
-    )
-}
-
-@Composable
-fun MutedIcon() {
-    Icon(
-        imageVector = Icons.AutoMirrored.Filled.VolumeOff,
-        contentDescription = stringRes(id = R.string.muted_button),
-        tint = MaterialTheme.colorScheme.onBackground,
-        modifier = Size30Modifier,
-    )
-}
-
-@Composable
-fun MuteIcon() {
-    Icon(
-        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-        contentDescription = stringRes(id = R.string.mute_button),
-        tint = MaterialTheme.colorScheme.onBackground,
-        modifier = Size30Modifier,
     )
 }
 

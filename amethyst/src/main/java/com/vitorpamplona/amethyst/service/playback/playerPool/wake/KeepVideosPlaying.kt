@@ -18,32 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model
+package com.vitorpamplona.amethyst.service.playback.playerPool.wake
 
-import android.util.LruCache
+import androidx.media3.common.C
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 
-interface MutableMediaAspectRatioCache {
-    fun get(url: String): Float
-
-    fun add(
-        url: String,
-        width: Int,
-        height: Int,
-    )
-}
-
-object MediaAspectRatioCache : MutableMediaAspectRatioCache {
-    val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
-
-    override fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
-
-    override fun add(
-        url: String,
-        width: Int,
-        height: Int,
-    ) {
-        if (height > 1) {
-            mediaAspectRatioCacheByUrl.put(url, width.toFloat() / height.toFloat())
+class KeepVideosPlaying(
+    val player: ExoPlayer,
+) : Player.Listener {
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        if (isPlaying) {
+            player.setWakeMode(C.WAKE_MODE_NETWORK)
+        } else {
+            player.setWakeMode(C.WAKE_MODE_NONE)
         }
     }
 }
