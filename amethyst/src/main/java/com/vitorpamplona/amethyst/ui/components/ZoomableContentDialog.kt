@@ -28,7 +28,6 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -60,11 +59,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
@@ -428,7 +425,7 @@ private fun RenderImageOrVideo(
                     if (roundedCorner) {
                         MaterialTheme.colorScheme.imageModifier
                     } else {
-                        Modifier.fillMaxWidth().border(1.dp, Color.Red)
+                        Modifier.fillMaxWidth()
                     }
 
                 val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
