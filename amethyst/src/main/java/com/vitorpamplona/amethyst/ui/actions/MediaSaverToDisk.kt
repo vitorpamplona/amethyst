@@ -131,14 +131,14 @@ object MediaSaverToDisk {
                                     }
 
                                 saveContentQ(
-                                    displayName = File(url).nameWithoutExtension,
+                                    displayName = File(trimInlineMetaData(url)).nameWithoutExtension,
                                     contentType = realType,
                                     contentSource = response.body.source(),
                                     contentResolver = context.contentResolver,
                                 )
                             } else {
                                 saveContentDefault(
-                                    fileName = File(url).name,
+                                    fileName = File(trimInlineMetaData(url)).name,
                                     contentSource = response.body.source(),
                                     context = context,
                                 )
@@ -254,6 +254,8 @@ object MediaSaverToDisk {
         // appears in the gallery faster.
         MediaScannerConnection.scanFile(context, arrayOf(outputFile.toString()), null, null)
     }
+
+    private fun trimInlineMetaData(url: String): String = url.substringBefore("#")
 
     private const val PICTURES_SUBDIRECTORY = "Amethyst"
 }
