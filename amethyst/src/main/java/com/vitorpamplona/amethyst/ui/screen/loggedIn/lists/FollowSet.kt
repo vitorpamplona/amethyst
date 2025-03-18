@@ -37,7 +37,7 @@ class FollowSet(
             signer: NostrSigner,
         ): FollowSet {
             val dTag = event.dTag()
-            val listTitle = event.title() ?: dTag
+            val listTitle = event.nameOrTitle() ?: dTag
             val listDescription = event.description() ?: ""
             val publicFollows = event.filterTagList("p", null)
             val privateFollows = mutableListOf<String>()
