@@ -120,7 +120,7 @@ object MediaSaverToDisk {
                             check(response.isSuccessful)
 
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                val contentType = response.header("Content-Type") ?: getMimeTypeFromExtension(url)
+                                val contentType = response.header("Content-Type") ?: getMimeTypeFromExtension(trimInlineMetaData(url))
                                 check(contentType.isNotBlank()) { "Can't find out the content type" }
 
                                 val realType =
