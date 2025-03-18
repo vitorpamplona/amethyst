@@ -55,25 +55,25 @@ object MediaSaverToDisk {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        videoUri?.let { theVideoUri ->
-            if (!theVideoUri.startsWith("file")) {
-                downloadAndSave(
-                    url = theVideoUri,
-                    mimeType = mimeType,
-                    context = localContext,
-                    forceProxy = forceProxy,
-                    onSuccess = onSuccess,
-                    onError = onError,
-                )
-            } else {
+        when {
+            videoUri.isNullOrBlank() -> return
+            videoUri.startsWith("file") ->
                 save(
-                    localFile = theVideoUri.toUri().toFile(),
+                    localFile = videoUri.toUri().toFile(),
                     mimeType = mimeType,
                     context = localContext,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
-            }
+            else ->
+                downloadAndSave(
+                    url = videoUri,
+                    mimeType = mimeType,
+                    forceProxy = forceProxy,
+                    context = localContext,
+                    onSuccess = onSuccess,
+                    onError = onError,
+                )
         }
     }
 
