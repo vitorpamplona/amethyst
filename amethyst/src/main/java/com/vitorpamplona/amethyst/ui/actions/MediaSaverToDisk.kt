@@ -240,11 +240,9 @@ object MediaSaverToDisk {
             File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
                 PICTURES_SUBDIRECTORY,
-            )
-
-        if (!subdirectory.exists()) {
-            subdirectory.mkdirs()
-        }
+            ).apply {
+                if (!exists()) mkdirs()
+            }
 
         val outputFile = File(subdirectory, fileName)
 
