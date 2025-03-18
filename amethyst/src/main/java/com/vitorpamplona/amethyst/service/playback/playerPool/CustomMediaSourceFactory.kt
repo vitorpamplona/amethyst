@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback
+package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -28,6 +28,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import okhttp3.OkHttpClient
 
 /**
@@ -35,10 +36,15 @@ import okhttp3.OkHttpClient
  */
 @UnstableApi
 class CustomMediaSourceFactory(
-    val okHttpClient: OkHttpClient,
+    okHttpClient: OkHttpClient,
 ) : MediaSource.Factory {
-    private var cachingFactory: MediaSource.Factory = DefaultMediaSourceFactory(Amethyst.instance.videoCache.get(okHttpClient))
-    private var nonCachingFactory: MediaSource.Factory = DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
+    private var cachingFactory: MediaSource.Factory =
+        DefaultMediaSourceFactory(
+            Amethyst.Companion.instance.videoCache
+                .get(okHttpClient),
+        )
+    private var nonCachingFactory: MediaSource.Factory =
+        DefaultMediaSourceFactory(OkHttpDataSource.Factory(okHttpClient))
 
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
         cachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
@@ -55,7 +61,7 @@ class CustomMediaSourceFactory(
     override fun getSupportedTypes(): IntArray = nonCachingFactory.supportedTypes
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-        if (mediaItem.mediaId.contains(".m3u8", true)) {
+        if (isLiveStreaming(mediaItem.mediaId)) {
             return nonCachingFactory.createMediaSource(mediaItem)
         }
         return cachingFactory.createMediaSource(mediaItem)

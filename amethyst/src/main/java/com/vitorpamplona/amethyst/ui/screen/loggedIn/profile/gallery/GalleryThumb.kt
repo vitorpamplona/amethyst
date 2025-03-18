@@ -52,12 +52,12 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
-import com.vitorpamplona.amethyst.ui.components.GetMediaItem
-import com.vitorpamplona.amethyst.ui.components.GetVideoController
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -284,20 +284,19 @@ fun UrlVideoView(
                 DownloadForOfflineIcon(Size75dp, Color.White)
             }
         } else {
-            GetMediaItem(content.url, content.description, content.artworkUri, content.authorName) { mediaItem ->
+            GetMediaItem(content.url, content.description, content.artworkUri, content.authorName, content.uri) { mediaItem ->
                 GetVideoController(
                     mediaItem = mediaItem,
                     videoUri = content.url,
-                    defaultToStart = true,
-                    nostrUriCallback = content.uri,
+                    muted = true,
                     proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(content.url)),
-                ) { controller, keepPlaying ->
+                ) { controller ->
                     AndroidView(
                         modifier = Modifier,
                         factory = { context: Context ->
                             PlayerView(context).apply {
                                 clipToOutline = true
-                                player = controller
+                                player = controller.controller.value
                                 setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
 
                                 controllerAutoShow = false
@@ -307,7 +306,7 @@ fun UrlVideoView(
 
                                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
 
-                                controller.playWhenReady = true
+                                controller.controller.value?.playWhenReady = true
                             }
                         },
                     )

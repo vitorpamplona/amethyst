@@ -18,19 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback
+package com.vitorpamplona.amethyst.service.playback.websocket
 
-import android.util.LruCache
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
+import java.util.concurrent.ConcurrentSkipListSet
 
-class VideoViewedPositionCache {
-    val cachedPosition = LruCache<String, Long>(100)
+class WssDataStreamCollector : WebSocketListener() {
+    private val wssData = ConcurrentSkipListSet<ByteString>()
 
-    fun add(
-        uri: String,
-        position: Long,
+    override fun onMessage(
+        webSocket: WebSocket,
+        bytes: ByteString,
     ) {
-        cachedPosition.put(uri, position)
+        wssData.add(bytes)
     }
 
-    fun get(uri: String): Long? = cachedPosition.get(uri)
+    override fun onClosing(
+        webSocket: WebSocket,
+        code: Int,
+        reason: String,
+    ) {
+        super.onClosing(webSocket, code, reason)
+        wssData.removeAll(wssData)
+    }
+
+    fun canStream(): Boolean = wssData.size > 0
+
+    fun getNextStream(): ByteString = wssData.pollFirst()
 }

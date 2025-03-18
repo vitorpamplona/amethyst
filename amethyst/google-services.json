@@ -62,6 +62,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:768341258853:android:5d07c35a37b24ff36b8c8c",
+        "android_client_info": {
+          "package_name": "com.vitorpamplona.amethyst.benchmark"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7ZxgdpgrN6R223HCFdfv4ulP8Egp7trE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "768341258853-6um8ig59qstvio60gfo60fe5e45lnqqe.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

@@ -129,6 +129,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
@@ -149,7 +150,6 @@ import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
-import com.vitorpamplona.amethyst.ui.components.VideoView
 import com.vitorpamplona.amethyst.ui.components.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.navigation.Nav
 import com.vitorpamplona.amethyst.ui.navigation.getActivity

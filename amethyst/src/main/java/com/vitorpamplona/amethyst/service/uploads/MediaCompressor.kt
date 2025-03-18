@@ -25,6 +25,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.core.net.toUri
+import androidx.media3.common.MimeTypes
 import com.abedelazizshe.lightcompressorlibrary.CompressionListener
 import com.abedelazizshe.lightcompressorlibrary.VideoCompressor
 import com.abedelazizshe.lightcompressorlibrary.VideoQuality
@@ -181,7 +182,7 @@ class MediaCompressor {
                     default(width = 640, format = Bitmap.CompressFormat.JPEG, quality = imageQuality)
                 }
             Log.d("MediaCompressor", "Image compression success. Original size [${tempFile.length()}], new size [${compressedImageFile.length()}]")
-            MediaCompressorResult(compressedImageFile.toUri(), contentType, compressedImageFile.length())
+            MediaCompressorResult(compressedImageFile.toUri(), MimeTypes.IMAGE_JPEG, compressedImageFile.length())
         } catch (e: Exception) {
             Log.d("MediaCompressor", "Image compression failed: ${e.message}")
             if (e is CancellationException) throw e

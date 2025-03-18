@@ -40,8 +40,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.amethyst.ui.components.DEFAULT_MUTED_SETTING
-import com.vitorpamplona.amethyst.ui.components.keepPlayingMutex
+import com.vitorpamplona.amethyst.service.playback.composable.BackgroundMedia
+import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -185,11 +185,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         Log.d("Lifetime Event", "MainActivity.onDestroy")
 
-        GlobalScope.launch(Dispatchers.Main) {
-            keepPlayingMutex?.stop()
-            keepPlayingMutex?.release()
-            keepPlayingMutex = null
-        }
+        BackgroundMedia.removeBackgroundControllerAndReleaseIt()
 
         super.onDestroy()
     }

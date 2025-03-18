@@ -36,6 +36,8 @@ class AppSpecificDataEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    override fun isContentEncoded() = true
+
     companion object {
         const val KIND = 30078
         const val ALT = "Arbitrary app data"

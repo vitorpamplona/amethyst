@@ -22,12 +22,22 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.LruCache
 
-object MediaAspectRatioCache {
-    val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
-
-    fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
+interface MutableMediaAspectRatioCache {
+    fun get(url: String): Float
 
     fun add(
+        url: String,
+        width: Int,
+        height: Int,
+    )
+}
+
+object MediaAspectRatioCache : MutableMediaAspectRatioCache {
+    val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
+
+    override fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
+
+    override fun add(
         url: String,
         width: Int,
         height: Int,

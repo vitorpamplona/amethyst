@@ -104,6 +104,9 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
+            applicationIdSuffix '.benchmark'
+            versionNameSuffix '-BENCHMARK'
+            resValue "string", "app_name", "@string/app_name_benchmark"
             profileable true
             signingConfig signingConfigs.debug
         }

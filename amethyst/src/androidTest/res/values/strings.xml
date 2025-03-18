@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name_release">Amethyst</string>
-    <string name="app_name_debug">Amethyst Debug</string>
+    <string name="app_name_debug">Amy Debug</string>
+    <string name="app_name_benchmark">Amy Benchmark</string>
 </resources>

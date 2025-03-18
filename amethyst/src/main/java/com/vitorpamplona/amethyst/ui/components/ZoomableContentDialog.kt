@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -76,6 +77,9 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -234,7 +238,7 @@ private fun DialogContent(
                     ShareImageAction(accountViewModel = accountViewModel, popupExpanded = popupExpanded, myContent, onDismiss = { popupExpanded.value = false })
                 }
 
-                if (myContent !is MediaUrlContent || !myContent.url.endsWith(".m3u8")) {
+                if (myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)) {
                     val localContext = LocalContext.current
 
                     val scope = rememberCoroutineScope()
@@ -424,18 +428,29 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                VideoViewInner(
-                    videoUri = content.url,
-                    mimeType = content.mimeType,
-                    title = content.description,
-                    artworkUri = content.artworkUri,
-                    authorName = content.authorName,
-                    borderModifier = borderModifier,
-                    contentScale = contentScale,
-                    automaticallyStartPlayback = automaticallyStartPlayback,
-                    onControllerVisibilityChanged = onControllerVisibilityChanged,
-                    accountViewModel = accountViewModel,
-                )
+                val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+
+                val modifier =
+                    if (ratio != null) {
+                        Modifier.aspectRatio(ratio)
+                    } else {
+                        Modifier
+                    }
+
+                Box(modifier, contentAlignment = Alignment.Center) {
+                    VideoViewInner(
+                        videoUri = content.url,
+                        mimeType = content.mimeType,
+                        title = content.description,
+                        artworkUri = content.artworkUri,
+                        authorName = content.authorName,
+                        borderModifier = borderModifier,
+                        contentScale = contentScale,
+                        automaticallyStartPlayback = automaticallyStartPlayback,
+                        onControllerVisibilityChanged = onControllerVisibilityChanged,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
 
             is MediaLocalImage -> {
@@ -471,18 +486,29 @@ private fun RenderImageOrVideo(
                     }
 
                 content.localFile?.let {
-                    VideoViewInner(
-                        videoUri = it.toUri().toString(),
-                        mimeType = content.mimeType,
-                        title = content.description,
-                        artworkUri = content.artworkUri,
-                        authorName = content.authorName,
-                        borderModifier = borderModifier,
-                        contentScale = contentScale,
-                        automaticallyStartPlayback = automaticallyStartPlayback,
-                        onControllerVisibilityChanged = onControllerVisibilityChanged,
-                        accountViewModel = accountViewModel,
-                    )
+                    val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(it.toUri().toString())
+
+                    val modifier =
+                        if (ratio != null) {
+                            Modifier.aspectRatio(ratio)
+                        } else {
+                            Modifier
+                        }
+
+                    Box(modifier, contentAlignment = Alignment.Center) {
+                        VideoViewInner(
+                            videoUri = it.toUri().toString(),
+                            mimeType = content.mimeType,
+                            title = content.description,
+                            artworkUri = content.artworkUri,
+                            authorName = content.authorName,
+                            borderModifier = borderModifier,
+                            contentScale = contentScale,
+                            automaticallyStartPlayback = automaticallyStartPlayback,
+                            onControllerVisibilityChanged = onControllerVisibilityChanged,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 }
             }
         }
