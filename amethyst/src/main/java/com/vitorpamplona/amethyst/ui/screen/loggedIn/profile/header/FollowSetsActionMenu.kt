@@ -65,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -118,7 +117,6 @@ fun FollowSetsActionMenu(
             expanded = isMenuOpen,
             onDismissRequest = {
                 uiScope.launch {
-                    delay(100L)
                     setMenuValue(false)
                 }
             },
