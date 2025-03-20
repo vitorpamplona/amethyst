@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.toMutableStateList
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -36,6 +38,7 @@ fun ProfileActions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val tempFollowLists = remember { generateFollowLists().toMutableStateList() }
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
@@ -50,4 +53,21 @@ fun ProfileActions(
             DisplayFollowUnfollowButton(baseUser, accountViewModel)
         }
     }
+
+    FollowSetsActionMenu(
+        userHex = baseUser.pubkeyHex,
+        followLists = tempFollowLists,
+        addUser = { index, list ->
+            Log.d("Amethyst", "ProfileActions: Updating list ...")
+            val newList = tempFollowLists[index].memberList + baseUser.pubkeyHex
+            tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
+            println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+        },
+        removeUser = { index ->
+            Log.d("Amethyst", "ProfileActions: Updating list ...")
+            val newList = tempFollowLists[index].memberList - baseUser.pubkeyHex
+            tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
+            println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+        },
+    )
 }
