@@ -25,8 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 
 @Stable
-class FollowSet(
-    val isPrivate: Boolean,
+data class FollowSet(
+    val type: ListType,
     val title: String,
     val description: String?,
     val profileList: Set<String>,
@@ -44,14 +44,14 @@ class FollowSet(
             event.privateTaggedUsers(signer) { userList -> privateFollows.addAll(userList) }
             return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
                 FollowSet(
-                    isPrivate = true,
+                    type = ListType.Public,
                     title = listTitle,
                     description = listDescription,
                     profileList = privateFollows.toSet(),
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
                 FollowSet(
-                    isPrivate = false,
+                    type = ListType.Private,
                     title = listTitle,
                     description = listDescription,
                     profileList = publicFollows.toSet(),

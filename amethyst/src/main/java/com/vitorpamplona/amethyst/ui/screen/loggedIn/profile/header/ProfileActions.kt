@@ -59,15 +59,15 @@ fun ProfileActions(
         followLists = tempFollowLists,
         addUser = { index, list ->
             Log.d("Amethyst", "ProfileActions: Updating list ...")
-            val newList = tempFollowLists[index].memberList + baseUser.pubkeyHex
-            tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
-            println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+            val newList = tempFollowLists[index].profileList + baseUser.pubkeyHex
+            tempFollowLists[index] = tempFollowLists[index].copy(profileList = newList)
+            println("Updated List. New size: ${tempFollowLists[index].profileList.size}")
         },
         removeUser = { index ->
             Log.d("Amethyst", "ProfileActions: Updating list ...")
-            val newList = tempFollowLists[index].memberList - baseUser.pubkeyHex
-            tempFollowLists[index] = tempFollowLists[index].copy(memberList = newList)
-            println("Updated List. New size: ${tempFollowLists[index].memberList.size}")
+            val newList = tempFollowLists[index].profileList - baseUser.pubkeyHex
+            tempFollowLists[index] = tempFollowLists[index].copy(profileList = newList)
+            println("Updated List. New size: ${tempFollowLists[index].profileList.size}")
         },
     )
 }

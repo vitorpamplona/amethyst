@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListType
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -70,9 +72,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun FollowSetsActionMenu(
     userHex: String,
-    followLists: List<FollowInfo>,
+    followLists: List<FollowSet>,
     modifier: Modifier = Modifier,
-    addUser: (followListItemIndex: Int, list: FollowInfo) -> Unit,
+    addUser: (followListItemIndex: Int, list: FollowSet) -> Unit,
     removeUser: (followListItemIndex: Int) -> Unit,
 ) {
     val (isMenuOpen, setMenuValue) = remember { mutableStateOf(false) }
@@ -130,17 +132,17 @@ fun FollowSetsActionMenu(
                     text = {
                         FollowSetItem(
                             modifier = Modifier.fillMaxWidth(),
-                            listHeader = list.name,
-                            listIsPublic = !list.isPrivate,
-                            isUserInList = list.memberList.contains(userHex),
+                            listHeader = list.title,
+                            listType = list.type,
+                            isUserInList = list.profileList.contains(userHex),
                             onRemoveUser = {
                                 removeUser(index)
                             },
                             onAddUser = {
-                                println("List contains user -> ${list.memberList.contains(userHex)}")
-                                println("Adding user to List -> ${list.name}")
+                                println("List contains user -> ${list.profileList.contains(userHex)}")
+                                println("Adding user to List -> ${list.title}")
                                 addUser(index, list)
-                                println("List contains user -> ${list.memberList.contains(userHex)}")
+                                println("List contains user -> ${list.profileList.contains(userHex)}")
                             },
                         )
                     },
@@ -169,17 +171,18 @@ private fun DropDownMenuHeader(
     }
 }
 
-data class FollowInfo(
-    val name: String,
-    val isPrivate: Boolean,
-    val memberList: List<String> = listOf(),
-)
-
-fun generateFollowLists(): List<FollowInfo> =
+fun generateFollowLists(): List<FollowSet> =
     List(10) { index: Int ->
-        FollowInfo(
-            name = "List No $index",
-            isPrivate = index % 2 == 0,
+        FollowSet(
+            type =
+                when {
+                    index % 2 == 0 -> ListType.Private
+                    index in listOf(3, 7, 9) -> ListType.Mixed
+                    else -> ListType.Public
+                },
+            title = "List No $index",
+            description = null,
+            profileList = emptySet(),
         )
     }
 
@@ -187,7 +190,7 @@ fun generateFollowLists(): List<FollowInfo> =
 fun FollowSetItem(
     modifier: Modifier = Modifier,
     listHeader: String,
-    listIsPublic: Boolean,
+    listType: ListType,
     isUserInList: Boolean,
     onAddUser: () -> Unit,
     onRemoveUser: () -> Unit,
@@ -278,8 +281,15 @@ fun FollowSetItem(
             }
         }
 
-        listIsPublic.let {
-            val text by derivedStateOf { if (!it) "Private" else "Public" }
+        listType.let {
+            val text by derivedStateOf {
+                when (it) {
+                    ListType.Public -> "Public"
+                    ListType.Private -> "Private"
+                    ListType.Mixed -> "Mixed"
+                }
+            }
+
             Column(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -287,7 +297,11 @@ fun FollowSetItem(
                 Icon(
                     painter =
                         painterResource(
-                            if (!it) R.drawable.incognito else R.drawable.ic_public,
+                            when (it) {
+                                ListType.Public -> R.drawable.ic_public
+                                ListType.Private -> R.drawable.incognito
+                                ListType.Mixed -> R.drawable.format_list_bulleted_type
+                            },
                         ),
                     contentDescription = "Icon for $text List",
                 )
