@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ fun ProfileActions(
     nav: INav,
 ) {
     val tempFollowLists = remember { generateFollowLists().toMutableStateList() }
+    val actualFollowLists by accountViewModel.followSetsFlow.collectAsState()
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }
 
@@ -56,7 +58,7 @@ fun ProfileActions(
 
     FollowSetsActionMenu(
         userHex = baseUser.pubkeyHex,
-        followLists = tempFollowLists,
+        followLists = actualFollowLists,
         addUser = { index, list ->
             Log.d("Amethyst", "ProfileActions: Updating list ...")
             val newList = tempFollowLists[index].profileList + baseUser.pubkeyHex

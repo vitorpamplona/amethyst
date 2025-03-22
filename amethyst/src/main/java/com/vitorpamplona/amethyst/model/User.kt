@@ -67,7 +67,7 @@ class User(
     var latestMetadataRelay: String? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
-    var followSets: List<AddressableNote> = listOf()
+    var followSets: Set<AddressableNote> = setOf()
         private set
 
     var reports = mapOf<User, Set<Note>>()
