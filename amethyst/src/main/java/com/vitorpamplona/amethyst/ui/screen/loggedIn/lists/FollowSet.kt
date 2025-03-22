@@ -44,14 +44,14 @@ data class FollowSet(
             event.privateTaggedUsers(signer) { userList -> privateFollows.addAll(userList) }
             return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
                 FollowSet(
-                    type = ListType.Public,
+                    type = ListType.Private,
                     title = listTitle,
                     description = listDescription,
                     profileList = privateFollows.toSet(),
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
                 FollowSet(
-                    type = ListType.Private,
+                    type = ListType.Public,
                     title = listTitle,
                     description = listDescription,
                     profileList = publicFollows.toSet(),
