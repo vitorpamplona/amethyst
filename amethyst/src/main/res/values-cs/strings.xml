@@ -863,6 +863,7 @@
     <string name="message_to_author">Souhrn změn</string>
     <string name="message_to_author_placeholder">Rychlé opravy…</string>
     <string name="accept_the_suggestion">Přijmout návrhy</string>
+    <string name="enter_picture_in_picture">Spustit video ve vyskakovacím okně</string>
     <string name="accessibility_download_for_offline">Stáhnout</string>
     <string name="accessibility_lyrics_on">Text písně zapnuto</string>
     <string name="accessibility_lyrics_off">Text písně vypnuto</string>
