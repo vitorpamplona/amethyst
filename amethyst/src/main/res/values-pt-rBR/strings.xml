@@ -863,6 +863,7 @@
     <string name="message_to_author">Resumo das alterações</string>
     <string name="message_to_author_placeholder">Correções rápidas…</string>
     <string name="accept_the_suggestion">Aceitar a Sugestão</string>
+    <string name="enter_picture_in_picture">Iniciar o vídeo em um popup</string>
     <string name="accessibility_download_for_offline">Baixar</string>
     <string name="accessibility_lyrics_on">Letras ligadas</string>
     <string name="accessibility_lyrics_off">Letras desligadas</string>

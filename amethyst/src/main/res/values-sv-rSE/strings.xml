@@ -862,6 +862,7 @@
     <string name="message_to_author">Sammanfattning av ändringar</string>
     <string name="message_to_author_placeholder">Snabba fixar…</string>
     <string name="accept_the_suggestion">Acceptera förslaget</string>
+    <string name="enter_picture_in_picture">Starta video i ett popup-fönster</string>
     <string name="accessibility_download_for_offline">Ladda ner</string>
     <string name="accessibility_lyrics_on">Undertexter på</string>
     <string name="accessibility_lyrics_off">Undertexter av</string>
