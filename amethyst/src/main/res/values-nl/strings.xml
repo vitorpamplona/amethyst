@@ -20,6 +20,7 @@
     <string name="impersonation">Impersonatie</string>
     <string name="illegal_behavior">Illegaal gedrag</string>
     <string name="other">Overige</string>
+    <string name="harassment">Pesterijen</string>
     <string name="unknown">Onbekend</string>
     <string name="relay_icon">Relay-icoon</string>
     <string name="unknown_author">Onbekende auteur</string>
@@ -81,6 +82,13 @@
     <string name="thank_you_so_much">Hartelijk bedankt!</string>
     <string name="amount_in_sats">Bedrag in sats</string>
     <string name="send_sats">Verstuur sats</string>
+    <string name="secret_emoji_maker">Geheime Emoji-maker</string>
+    <string name="secret_emoji_maker_explainer">Voeg een emoji toe met verborgen bericht</string>
+    <string name="secret_note_to_receiver">Geheime notitie voor ontvanger</string>
+    <string name="secret_note_to_receiver_placeholder">Mijn verborgen bericht</string>
+    <string name="secret_visible_text">Zichtbaar voorvoegsel</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Voeg toe aan bericht</string>
     <string name="error_parsing_preview_for">"Error parsing preview voor %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Voorbeeld kaartafbeelding voor %1$s"</string>
     <string name="new_channel">Nieuw kanaal</string>
@@ -106,6 +114,7 @@
     <string name="global_feed">Globale feed</string>
     <string name="search_feed">Zoeken</string>
     <string name="add_a_relay">Voeg relay toe</string>
+    <string name="profile_name">Naam</string>
     <string name="display_name">Naam</string>
     <string name="my_display_name">Mijn naam</string>
     <string name="my_awesome_name">Struisvogel McAwesome</string>
@@ -141,6 +150,7 @@
     <string name="conversations">Discussies</string>
     <string name="notes">Notes</string>
     <string name="replies">Reacties</string>
+    <string name="mutual">Jouw</string>
     <string name="gallery">Galerij</string>
     <string name="follows">"Volgend"</string>
     <string name="reports">"Rapporten"</string>
