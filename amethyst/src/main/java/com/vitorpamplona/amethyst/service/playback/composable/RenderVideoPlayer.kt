@@ -36,7 +36,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderControls
+import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderControlButtons
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
@@ -44,13 +45,11 @@ import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 @Composable
 @OptIn(UnstableApi::class)
 fun RenderVideoPlayer(
-    videoUri: String,
-    mimeType: String?,
-    controller: MediaControllerState,
+    mediaItem: LoadedMediaItem,
+    controllerState: MediaControllerState,
     thumbData: VideoThumb?,
     showControls: Boolean = true,
     contentScale: ContentScale,
-    nostrUriCallback: String?,
     waveform: WaveformTag? = null,
     borderModifier: Modifier,
     videoModifier: Modifier,
@@ -58,14 +57,14 @@ fun RenderVideoPlayer(
     onDialog: ((Boolean) -> Unit)?,
     accountViewModel: AccountViewModel,
 ) {
-    val controllerVisible = remember(controller) { mutableStateOf(false) }
+    val controllerVisible = remember(controllerState) { mutableStateOf(false) }
 
     Box(modifier = borderModifier) {
         AndroidView(
             modifier = videoModifier,
             factory = { context: Context ->
                 PlayerView(context).apply {
-                    player = controller.controller.value
+                    player = controllerState.controller
                     setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                     setBackgroundColor(Color.Transparent.toArgb())
                     setShutterBackgroundColor(Color.Transparent.toArgb())
@@ -88,7 +87,7 @@ fun RenderVideoPlayer(
                     if (showControls) {
                         onDialog?.let { innerOnDialog ->
                             setFullscreenButtonClickListener {
-                                controller.controller.value?.pause()
+                                controllerState.controller?.pause()
                                 innerOnDialog(it)
                             }
                         }
@@ -103,20 +102,18 @@ fun RenderVideoPlayer(
             },
         )
 
-        waveform?.let { Waveform(it, controller, Modifier.align(Alignment.Center)) }
+        waveform?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
 
         if (showControls) {
-            RenderControls(
-                videoUri,
-                mimeType,
-                controller,
-                nostrUriCallback,
+            RenderControlButtons(
+                mediaItem.src,
+                controllerState,
                 controllerVisible,
                 Modifier.align(Alignment.TopEnd),
                 accountViewModel,
             )
         } else {
-            controller.controller.value?.volume = 0f
+            controllerState.controller?.volume = 0f
         }
     }
 }

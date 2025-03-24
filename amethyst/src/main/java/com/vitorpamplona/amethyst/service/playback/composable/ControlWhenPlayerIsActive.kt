@@ -27,6 +27,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.ui.platform.LocalView
 import androidx.media3.common.Player
+import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 
 @Composable
 fun ControlWhenPlayerIsActive(
@@ -34,7 +35,7 @@ fun ControlWhenPlayerIsActive(
     automaticallyStartPlayback: State<Boolean>,
     isClosestToTheCenterOfTheScreen: MutableState<Boolean>,
 ) {
-    val controller = mediaControllerState.controller.value ?: return
+    val controller = mediaControllerState.controller ?: return
 
     LaunchedEffect(key1 = isClosestToTheCenterOfTheScreen.value, key2 = mediaControllerState) {
         // active means being fully visible
@@ -58,9 +59,7 @@ fun ControlWhenPlayerIsActive(
             // Pauses the video when it becomes invisible.
             // Destroys the video later when it Disposes the element
             // meanwhile if the user comes back, the position in the track is saved.
-            if (!mediaControllerState.keepPlaying.value) {
-                controller.pause()
-            }
+            controller.pause()
         }
     }
 

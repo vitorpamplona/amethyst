@@ -1044,6 +1044,8 @@
 
     <string name="accept_the_suggestion">Accept the Suggestion</string>
 
+    <string name="enter_picture_in_picture">Start video in a popup</string>
+
     <string name="accessibility_download_for_offline">Download</string>
     <string name="accessibility_lyrics_on">Lyrics on</string>
     <string name="accessibility_lyrics_off">Lyrics off</string>

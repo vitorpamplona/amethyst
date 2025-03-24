@@ -123,6 +123,7 @@ fun VideoView(
                 VideoViewInner(
                     videoUri = videoUri,
                     mimeType = mimeType,
+                    aspectRatio = ratio,
                     title = title,
                     thumb = thumb,
                     borderModifier = borderModifier,
@@ -169,6 +170,7 @@ fun VideoView(
                 VideoViewInner(
                     videoUri = videoUri,
                     mimeType = mimeType,
+                    aspectRatio = ratio,
                     title = title,
                     thumb = thumb,
                     borderModifier = borderModifier,

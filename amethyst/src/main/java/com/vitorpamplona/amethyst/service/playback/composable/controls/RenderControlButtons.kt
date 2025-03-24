@@ -25,79 +25,65 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.playback.composable.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.components.ShareImageAction
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size110dp
 import com.vitorpamplona.amethyst.ui.theme.Size165dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 
 @Composable
-fun RenderControls(
-    videoUri: String,
-    mimeType: String?,
+fun RenderControlButtons(
+    mediaData: MediaItemData,
     controllerState: MediaControllerState,
-    nostrUriCallback: String?,
     controllerVisible: MutableState<Boolean>,
     buttonPositionModifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     MuteButton(
         controllerVisible,
-        (controllerState.controller.value?.volume ?: 0f) < 0.001,
+        (controllerState.controller?.volume ?: 0f) < 0.001,
         buttonPositionModifier,
     ) { mute: Boolean ->
         // makes the new setting the default for new creations.
         DEFAULT_MUTED_SETTING.value = mute
 
-        // if the user unmutes a video and it's not the current playing, switches to that one.
-        if (!mute && BackgroundMedia.hasBackgroundButNot(controllerState)) {
-            BackgroundMedia.removeBackgroundControllerIfNotComposed()
-        }
-
-        controllerState.controller.value?.volume = if (mute) 0f else 1f
+        controllerState.controller?.volume = if (mute) 0f else 1f
     }
 
-    KeepPlayingButton(
-        controllerState.keepPlaying,
+    val context = LocalContext.current.getActivity()
+
+    PictureInPictureButton(
         controllerVisible,
         buttonPositionModifier.padding(end = Size55dp),
-    ) { newKeepPlaying: Boolean ->
-        // If something else is playing and the user marks this video to keep playing, stops the other
-        // one.
-        if (newKeepPlaying) {
-            BackgroundMedia.switchKeepPlaying(controllerState)
-        } else {
-            // if removed from background.
-            if (BackgroundMedia.isMutex(controllerState)) {
-                BackgroundMedia.removeBackgroundControllerIfNotComposed()
-            }
-        }
-
-        controllerState.keepPlaying.value = newKeepPlaying
+    ) {
+        PipVideoActivity.callIn(mediaData, controllerState.visibility.bounds, context)
     }
 
-    if (!isLiveStreaming(videoUri)) {
+    if (!isLiveStreaming(mediaData.videoUri)) {
         AnimatedSaveButton(controllerVisible, buttonPositionModifier.padding(end = Size110dp)) { context ->
-            saveMediaToGallery(videoUri, mimeType, context, accountViewModel)
+            saveMediaToGalleryInner(mediaData.videoUri, mediaData.mimeType, context, accountViewModel)
         }
 
         AnimatedShareButton(controllerVisible, buttonPositionModifier.padding(end = Size165dp)) { popupExpanded, toggle ->
-            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, null, null, null, mimeType, toggle)
+            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
         }
     } else {
         AnimatedShareButton(controllerVisible, buttonPositionModifier.padding(end = Size110dp)) { popupExpanded, toggle ->
-            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, videoUri, nostrUriCallback, null, null, null, mimeType, toggle)
+            ShareImageAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
         }
     }
 }
 
-private fun saveMediaToGallery(
+private fun saveMediaToGalleryInner(
     videoUri: String?,
     mimeType: String?,
     localContext: Context,

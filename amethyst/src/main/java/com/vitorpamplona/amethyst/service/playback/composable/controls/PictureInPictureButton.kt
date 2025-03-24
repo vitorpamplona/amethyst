@@ -31,26 +31,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import com.vitorpamplona.amethyst.ui.note.LyricsIcon
-import com.vitorpamplona.amethyst.ui.note.LyricsOffIcon
+import com.vitorpamplona.amethyst.ui.note.EnablePiP
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 
 @Composable
-fun KeepPlayingButton(
-    keepPlayingStart: MutableState<Boolean>,
+fun PictureInPictureButton(
     controllerVisible: MutableState<Boolean>,
     modifier: Modifier,
-    toggle: (Boolean) -> Unit,
+    onClick: () -> Unit,
 ) {
-    val keepPlaying = remember(keepPlayingStart.value) { mutableStateOf(keepPlayingStart.value) }
-
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
@@ -67,17 +62,10 @@ fun KeepPlayingButton(
             )
 
             IconButton(
-                onClick = {
-                    keepPlaying.value = !keepPlaying.value
-                    toggle(keepPlaying.value)
-                },
+                onClick = onClick,
                 modifier = Size50Modifier,
             ) {
-                if (keepPlaying.value) {
-                    LyricsIcon(Size22Modifier, MaterialTheme.colorScheme.onBackground)
-                } else {
-                    LyricsOffIcon(Size22Modifier, MaterialTheme.colorScheme.onBackground)
-                }
+                EnablePiP(Size22Modifier, MaterialTheme.colorScheme.onBackground)
             }
         }
     }

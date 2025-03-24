@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -37,15 +36,11 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import kotlin.math.abs
 
 // This keeps the position of all visible videos in the current screen.
-val trackingVideos = mutableListOf<VisibilityData>()
-
-@Stable
-class VisibilityData {
-    var distanceToCenter: Float? = null
-}
+val trackingVideos = mutableListOf<MediaControllerState>()
 
 /**
  * This function selects only one Video to be active. The video that is closest to the center of the
@@ -53,30 +48,29 @@ class VisibilityData {
  */
 @Composable
 fun VideoPlayerActiveMutex(
-    controller: String,
+    controller: MediaControllerState,
     inner: @Composable (Modifier, MutableState<Boolean>) -> Unit,
 ) {
-    val myCache = remember(controller) { VisibilityData() }
-
     // Is the current video the closest to the center?
     val isClosestToTheCenterOfTheScreen = remember(controller) { mutableStateOf<Boolean>(false) }
 
     // Keep track of all available videos.
     DisposableEffect(key1 = controller) {
-        trackingVideos.add(myCache)
-        onDispose { trackingVideos.remove(myCache) }
+        trackingVideos.add(controller)
+        onDispose { trackingVideos.remove(controller) }
     }
 
     val videoModifier =
         remember(controller) {
-            Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges { distanceToCenter ->
-                myCache.distanceToCenter = distanceToCenter
+            Modifier.fillMaxWidth().heightIn(min = 100.dp).onVisiblePositionChanges { bounds, distanceToCenter ->
+                controller.visibility.bounds = bounds
+                controller.visibility.distanceToCenter = distanceToCenter
 
                 if (distanceToCenter != null) {
                     // finds out of the current video is the closest to the center.
                     var newActive = true
                     for (video in trackingVideos) {
-                        val videoPos = video.distanceToCenter
+                        val videoPos = video.visibility.distanceToCenter
                         if (videoPos != null && videoPos < distanceToCenter) {
                             newActive = false
                             break
@@ -99,16 +93,21 @@ fun VideoPlayerActiveMutex(
     inner(videoModifier, isClosestToTheCenterOfTheScreen)
 }
 
-fun Modifier.onVisiblePositionChanges(onVisiblePosition: (Float?) -> Unit): Modifier =
+fun Modifier.onVisiblePositionChanges(onVisiblePosition: (Rect, Float?) -> Unit): Modifier =
     composed {
         val view = LocalView.current
 
         onGloballyPositioned { coordinates ->
-            onVisiblePosition(coordinates.getDistanceToVertCenterIfVisible(view))
+            val bounds = coordinates.boundsInWindow()
+            val boundRect = Rect(bounds.left.toInt(), bounds.top.toInt(), bounds.right.toInt(), bounds.bottom.toInt())
+            onVisiblePosition(boundRect, coordinates.getDistanceToVertCenterIfVisible(boundRect, view))
         }
     }
 
-fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
+fun LayoutCoordinates.getDistanceToVertCenterIfVisible(
+    bounds: Rect,
+    view: View,
+): Float? {
     if (!isAttached) return null
     // Window relative bounds of our compose root view that are visible on the screen
     val globalRootRect = Rect()
@@ -116,8 +115,6 @@ fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
         // we aren't visible at all.
         return null
     }
-
-    val bounds = boundsInWindow()
 
     if (bounds.isEmpty) return null
 
@@ -129,7 +126,7 @@ fun LayoutCoordinates.getDistanceToVertCenterIfVisible(view: View): Float? {
         bounds.bottom <= globalRootRect.bottom
     ) {
         return abs(
-            ((bounds.top + bounds.bottom) / 2) - ((globalRootRect.top + globalRootRect.bottom) / 2),
+            ((bounds.top + bounds.bottom) / 2.0f) - ((globalRootRect.top + globalRootRect.bottom) / 2.0f),
         )
     }
 

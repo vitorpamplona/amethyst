@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.media3.common.MediaItem
 import com.vitorpamplona.amethyst.commons.compose.produceCachedState
 
 val mediaItemCache = MediaItemCache()
@@ -33,11 +30,14 @@ val mediaItemCache = MediaItemCache()
 @Composable
 fun GetMediaItem(
     videoUri: String,
-    title: String?,
-    artworkUri: String?,
-    authorName: String?,
-    callbackUri: String?,
-    inner: @Composable (State<MediaItem>) -> Unit,
+    title: String? = null,
+    artworkUri: String? = null,
+    authorName: String? = null,
+    callbackUri: String? = null,
+    mimeType: String? = null,
+    aspectRatio: Float? = null,
+    proxyPort: Int? = null,
+    inner: @Composable (LoadedMediaItem) -> Unit,
 ) {
     val data =
         remember(videoUri) {
@@ -47,6 +47,9 @@ fun GetMediaItem(
                 title = title,
                 artworkUri = artworkUri,
                 callbackUri = callbackUri,
+                mimeType = mimeType,
+                aspectRatio = aspectRatio,
+                proxyPort = proxyPort,
             )
         }
 
@@ -56,12 +59,11 @@ fun GetMediaItem(
 @Composable
 fun GetMediaItem(
     data: MediaItemData,
-    inner: @Composable (State<MediaItem>) -> Unit,
+    inner: @Composable (LoadedMediaItem) -> Unit,
 ) {
     val mediaItem by produceCachedState(cache = mediaItemCache, key = data)
 
     mediaItem?.let {
-        val myState = remember(data.videoUri) { mutableStateOf(it) }
-        inner(myState)
+        inner(it)
     }
 }

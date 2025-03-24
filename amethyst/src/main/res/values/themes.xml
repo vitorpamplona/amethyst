@@ -4,4 +4,7 @@
         <item name="android:statusBarColor">@color/purple_700</item>
         <item name="android:windowLayoutInDisplayCutoutMode" tools:ignore="NewApi">shortEdges</item>
     </style>
+    <style name="noAnimTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

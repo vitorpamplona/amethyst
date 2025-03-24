@@ -41,10 +41,10 @@ object PlaybackServiceClient {
         mediaControllerState.active.value = false
         mediaControllerState.readyToDisplay.value = false
 
-        val myController = mediaControllerState.controller.value
+        val myController = mediaControllerState.controller
         // release when can
         if (myController != null) {
-            mediaControllerState.controller.value = null
+            mediaControllerState.controller = null
             GlobalScope.launch(Dispatchers.Main) {
                 // myController.pause()
                 // myController.stop()
@@ -61,6 +61,8 @@ object PlaybackServiceClient {
         context: Context,
         onReady: (MediaControllerState) -> Unit,
     ) {
+        val appContext = context.applicationContext
+
         mediaControllerState.active.value = true
 
         try {
@@ -74,11 +76,11 @@ object PlaybackServiceClient {
                     }
                 }
 
-            val session = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+            val session = SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
 
             val controllerFuture =
                 MediaController
-                    .Builder(context, session)
+                    .Builder(appContext, session)
                     .setConnectionHints(bundle)
                     .buildAsync()
 
@@ -88,7 +90,7 @@ object PlaybackServiceClient {
                 {
                     try {
                         val controller = controllerFuture.get()
-                        mediaControllerState.controller.value = controller
+                        mediaControllerState.controller = controller
 
                         // checks if the player is still active before engaging further
                         if (mediaControllerState.isActive()) {

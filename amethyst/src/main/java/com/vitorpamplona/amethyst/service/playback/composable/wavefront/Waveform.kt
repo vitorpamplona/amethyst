@@ -57,7 +57,7 @@ fun Waveform(
     val restartFlow = remember { mutableIntStateOf(0) }
 
     // Keeps the screen on while playing and viewing videos.
-    DisposableEffect(key1 = mediaControllerState.controller.value) {
+    DisposableEffect(key1 = mediaControllerState.controller) {
         val listener =
             object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -69,12 +69,12 @@ fun Waveform(
                 }
             }
 
-        mediaControllerState.controller.value?.addListener(listener)
-        onDispose { mediaControllerState.controller.value?.removeListener(listener) }
+        mediaControllerState.controller?.addListener(listener)
+        onDispose { mediaControllerState.controller?.removeListener(listener) }
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {
-        mediaControllerState.controller.value?.let {
+        mediaControllerState.controller?.let {
             pollCurrentDuration(it).collect { value -> waveformProgress.floatValue = value }
         }
     }

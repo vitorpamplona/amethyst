@@ -284,19 +284,26 @@ fun UrlVideoView(
                 DownloadForOfflineIcon(Size75dp, Color.White)
             }
         } else {
-            GetMediaItem(content.url, content.description, content.artworkUri, content.authorName, content.uri) { mediaItem ->
+            GetMediaItem(
+                videoUri = content.url,
+                title = content.description,
+                artworkUri = content.artworkUri,
+                authorName = content.authorName,
+                callbackUri = content.uri,
+                mimeType = content.mimeType,
+                aspectRatio = ratio,
+                proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(content.url)),
+            ) { mediaItem ->
                 GetVideoController(
                     mediaItem = mediaItem,
-                    videoUri = content.url,
                     muted = true,
-                    proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(content.url)),
                 ) { controller ->
                     AndroidView(
                         modifier = Modifier,
                         factory = { context: Context ->
                             PlayerView(context).apply {
                                 clipToOutline = true
-                                player = controller.controller.value
+                                player = controller.controller
                                 setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
 
                                 controllerAutoShow = false
@@ -306,7 +313,7 @@ fun UrlVideoView(
 
                                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
 
-                                controller.controller.value?.playWhenReady = true
+                                controller.controller?.playWhenReady = true
                             }
                         },
                     )
