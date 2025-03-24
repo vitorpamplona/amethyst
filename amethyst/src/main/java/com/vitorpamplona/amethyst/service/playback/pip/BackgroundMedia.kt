@@ -48,7 +48,7 @@ object BackgroundMedia {
     // background playing mutex.
     val bgInstance = MutableStateFlow<MediaControllerState?>(null)
 
-    private fun hasInstance() = bgInstance.value != null
+    fun hasInstance() = bgInstance.value != null
 
     fun isPlaying() = bgInstance.value?.isPlaying() == true
 
