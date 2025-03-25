@@ -55,25 +55,25 @@ object MediaSaverToDisk {
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        videoUri?.let { theVideoUri ->
-            if (!theVideoUri.startsWith("file")) {
-                downloadAndSave(
-                    url = theVideoUri,
-                    mimeType = mimeType,
-                    context = localContext,
-                    forceProxy = forceProxy,
-                    onSuccess = onSuccess,
-                    onError = onError,
-                )
-            } else {
+        when {
+            videoUri.isNullOrBlank() -> return
+            videoUri.startsWith("file") ->
                 save(
-                    localFile = theVideoUri.toUri().toFile(),
+                    localFile = videoUri.toUri().toFile(),
                     mimeType = mimeType,
                     context = localContext,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
-            }
+            else ->
+                downloadAndSave(
+                    url = videoUri,
+                    mimeType = mimeType,
+                    forceProxy = forceProxy,
+                    context = localContext,
+                    onSuccess = onSuccess,
+                    onError = onError,
+                )
         }
     }
 
@@ -120,8 +120,8 @@ object MediaSaverToDisk {
                             check(response.isSuccessful)
 
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                val contentType = response.header("Content-Type")
-                                checkNotNull(contentType) { "Can't find out the content type" }
+                                val contentType = response.header("Content-Type") ?: getMimeTypeFromExtension(trimInlineMetaData(url))
+                                check(contentType.isNotBlank()) { "Can't find out the content type" }
 
                                 val realType =
                                     if (contentType == "application/octet-stream") {
@@ -240,11 +240,9 @@ object MediaSaverToDisk {
             File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
                 PICTURES_SUBDIRECTORY,
-            )
-
-        if (!subdirectory.exists()) {
-            subdirectory.mkdirs()
-        }
+            ).apply {
+                if (!exists()) mkdirs()
+            }
 
         val outputFile = File(subdirectory, fileName)
 

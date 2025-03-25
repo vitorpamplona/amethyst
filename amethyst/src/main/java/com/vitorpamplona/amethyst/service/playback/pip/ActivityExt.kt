@@ -18,37 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.service.playback.pip
 
 import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.view.Window
-import androidx.activity.ComponentActivity
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.window.DialogWindowProvider
+import android.graphics.Rect
 
-// Window utils
-@Composable
-fun getDialogWindow(): Window? = (LocalView.current.parent as? DialogWindowProvider)?.window
-
-@Composable
-fun getActivityWindow(): Window? = LocalView.current.context.getActivityWindow()
-
-private tailrec fun Context.getActivityWindow(): Window? =
-    when (this) {
-        is Activity -> window
-        is ContextWrapper -> baseContext.getActivityWindow()
-        else -> null
+fun Activity.enterPipMode(
+    ratio: Float?,
+    bounds: Rect?,
+) {
+    if (!isInPictureInPictureMode) {
+        enterPictureInPictureMode(makePipParams(ratio, bounds))
+    } else {
+        setPictureInPictureParams(makePipParams(ratio, bounds))
     }
-
-@Composable
-fun getActivity(): Activity? = LocalView.current.context.getActivity()
-
-tailrec fun Context.getActivity(): ComponentActivity =
-    when (this) {
-        is ComponentActivity -> this
-        is ContextWrapper -> baseContext.getActivity()
-        else -> throw IllegalStateException("Requires a ComponentActivity to run")
-    }
+}

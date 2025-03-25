@@ -29,6 +29,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
@@ -91,34 +92,43 @@ class PlaybackService : MediaSessionService() {
         // Updates any new player ready
         super.onUpdateNotification(session, startInForegroundRequired)
 
-        val proxyPlaying = poolWithProxy?.playingContent()
+        // playback controllers control the last notification updated.
+        // this procedure re-updates the notification to make sure it aligns
+        // with users expectation on which playback they decide to control:
+        // 1. If no video is being played, play the picture in picture if there.
+        // 2. If there are videos being played the order is:
+        // 2. a. Picture in picture if playing
+        // 2. b. On screen video with volume on
+        // 2. c. On screen video with volume off.
 
-        // Overrides the notification with any player actually playing
-        proxyPlaying?.forEach {
-            if (it.session.player.isPlaying) {
+        val playing = (poolWithProxy?.playingContent() ?: emptyList()) + (poolNoProxy?.playingContent() ?: emptyList())
+
+        // if nothing is pl
+        if (playing.isEmpty() && BackgroundMedia.hasInstance()) {
+            BackgroundMedia.bgInstance.value?.id?.let { id ->
+                (poolNoProxy?.getSession(id) ?: poolWithProxy?.getSession(id))?.let {
+                    super.onUpdateNotification(it, startInForegroundRequired)
+                }
+            }
+            return
+        }
+
+        playing.forEachIndexed { idx, it ->
+            if (it.session.player.isPlaying && it.session.player.volume > 0 && it.session.id == BackgroundMedia.bgInstance.value?.id) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
+                return
             }
         }
 
-        // Overrides again with playing with audio
-        proxyPlaying?.forEach {
+        playing.forEachIndexed { idx, it ->
             if (it.session.player.isPlaying && it.session.player.volume > 0) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
+                return
             }
         }
 
-        val noProxyPlaying = poolNoProxy?.playingContent()
-
-        // Overrides the notification with any player actually playing
-        noProxyPlaying?.forEach {
+        playing.forEachIndexed { idx, it ->
             if (it.session.player.isPlaying) {
-                super.onUpdateNotification(it.session, startInForegroundRequired)
-            }
-        }
-
-        // Overrides again with playing with audio
-        noProxyPlaying?.forEach {
-            if (it.session.player.isPlaying && it.session.player.volume > 0) {
                 super.onUpdateNotification(it.session, startInForegroundRequired)
             }
         }

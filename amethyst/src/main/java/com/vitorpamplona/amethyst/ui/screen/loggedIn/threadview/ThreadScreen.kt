@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -32,6 +33,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.NostrThreadFeedViewModel
@@ -83,6 +85,13 @@ fun ThreadScreen(
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LoadNote(noteId, accountViewModel) {
+        if (it != null) {
+            // this will force loading every post from this thread.
+            val metadata = it.live().metadata.observeAsState()
+        }
     }
 
     DisappearingScaffold(

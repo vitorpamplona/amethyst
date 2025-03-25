@@ -165,6 +165,8 @@ class MediaSessionPool(
 
     fun playingContent() = playingMap.values
 
+    fun getSession(id: String) = cache.get(id)?.session
+
     class MediaSessionCallback(
         val pool: MediaSessionPool,
     ) : MediaSession.Callback {

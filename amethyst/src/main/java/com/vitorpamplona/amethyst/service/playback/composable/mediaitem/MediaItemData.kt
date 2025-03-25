@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import androidx.compose.runtime.Immutable
+import androidx.media3.common.MediaItem
 
 @Immutable
 data class MediaItemData(
@@ -29,4 +30,13 @@ data class MediaItemData(
     val title: String? = null,
     val artworkUri: String? = null,
     val callbackUri: String? = null,
+    val mimeType: String? = null,
+    val aspectRatio: Float? = null,
+    val proxyPort: Int? = null,
+)
+
+@Immutable
+class LoadedMediaItem(
+    val src: MediaItemData,
+    val item: MediaItem,
 )

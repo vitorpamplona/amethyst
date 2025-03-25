@@ -868,6 +868,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="message_to_author">Zusammenfassung der Änderungen</string>
     <string name="message_to_author_placeholder">Schnelle Korrekturen…</string>
     <string name="accept_the_suggestion">Den Vorschlag annehmen</string>
+    <string name="enter_picture_in_picture">Video in einem Pop-Up starten</string>
     <string name="accessibility_download_for_offline">Herunterladen</string>
     <string name="accessibility_lyrics_on">Liedtext an</string>
     <string name="accessibility_lyrics_off">Liedtext aus</string>

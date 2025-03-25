@@ -34,11 +34,7 @@ class AspectRatioCacher(
         mediaItem: MediaItem?,
         reason: Int,
     ) {
-        if (mediaItem == null) {
-            currentUrl = null
-        } else {
-            currentUrl = mediaItem.mediaId
-        }
+        currentUrl = mediaItem?.mediaId
     }
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {

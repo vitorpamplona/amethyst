@@ -69,6 +69,7 @@
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout"
+            android:taskAffinity=".service.playback.pip.PipVideoActivity"
             android:theme="@style/Theme.Amethyst">
 
             <intent-filter android:label="Amethyst">
@@ -120,6 +121,17 @@
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
             tools:replace="screenOrientation" />
+
+        <activity
+            android:name=".service.playback.pip.PipVideoActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboardHidden|keyboard|uiMode"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTask"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:theme="@style/noAnimTheme"
+        />
 
         <service
             android:name=".service.playback.service.PlaybackService"

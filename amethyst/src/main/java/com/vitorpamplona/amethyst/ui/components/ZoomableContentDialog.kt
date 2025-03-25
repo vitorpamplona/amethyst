@@ -441,6 +441,7 @@ private fun RenderImageOrVideo(
                     VideoViewInner(
                         videoUri = content.url,
                         mimeType = content.mimeType,
+                        aspectRatio = ratio,
                         title = content.description,
                         artworkUri = content.artworkUri,
                         authorName = content.authorName,
@@ -499,6 +500,7 @@ private fun RenderImageOrVideo(
                         VideoViewInner(
                             videoUri = it.toUri().toString(),
                             mimeType = content.mimeType,
+                            aspectRatio = ratio,
                             title = content.description,
                             artworkUri = content.artworkUri,
                             authorName = content.authorName,

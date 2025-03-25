@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -39,6 +38,7 @@ public val DEFAULT_MUTED_SETTING = mutableStateOf(true)
 fun VideoViewInner(
     videoUri: String,
     mimeType: String?,
+    aspectRatio: Float? = null,
     title: String? = null,
     thumb: VideoThumb? = null,
     showControls: Boolean = true,
@@ -56,26 +56,31 @@ fun VideoViewInner(
     // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes
     val muted = remember(videoUri) { DEFAULT_MUTED_SETTING.value }
 
-    GetMediaItem(videoUri, title, artworkUri, authorName, nostrUriCallback) { mediaItem ->
+    GetMediaItem(
+        videoUri,
+        title,
+        artworkUri,
+        authorName,
+        nostrUriCallback,
+        mimeType,
+        aspectRatio,
+        proxyPort =
+            HttpClientManager.getCurrentProxyPort(
+                accountViewModel.account.shouldUseTorForVideoDownload(videoUri),
+            ),
+    ) { mediaItem ->
         GetVideoController(
             mediaItem = mediaItem,
-            videoUri = videoUri,
             muted = muted,
-            proxyPort =
-                HttpClientManager.getCurrentProxyPort(
-                    accountViewModel.account.shouldUseTorForVideoDownload(videoUri),
-                ),
         ) { controller ->
-            VideoPlayerActiveMutex(controller.id) { videoModifier, isClosestToTheCenterOfTheScreen ->
+            VideoPlayerActiveMutex(controller) { videoModifier, isClosestToTheCenterOfTheScreen ->
                 ControlWhenPlayerIsActive(controller, automaticallyStartPlayback, isClosestToTheCenterOfTheScreen)
                 RenderVideoPlayer(
-                    videoUri = videoUri,
-                    mimeType = mimeType,
-                    controller = controller,
+                    mediaItem = mediaItem,
+                    controllerState = controller,
                     thumbData = thumb,
                     showControls = showControls,
                     contentScale = contentScale,
-                    nostrUriCallback = nostrUriCallback,
                     waveform = waveform,
                     borderModifier = borderModifier,
                     videoModifier = videoModifier,

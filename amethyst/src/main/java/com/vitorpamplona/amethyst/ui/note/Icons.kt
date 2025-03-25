@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -453,26 +455,13 @@ fun PinIcon(
 }
 
 @Composable
-fun LyricsIcon(
+fun EnablePiP(
     modifier: Modifier,
     tint: Color,
 ) {
     Icon(
-        painter = painterResource(id = R.drawable.lyrics_on),
-        contentDescription = stringRes(id = R.string.accessibility_lyrics_on),
-        modifier = modifier,
-        tint = tint,
-    )
-}
-
-@Composable
-fun LyricsOffIcon(
-    modifier: Modifier,
-    tint: Color,
-) {
-    Icon(
-        painter = painterResource(id = R.drawable.lyrics_off),
-        contentDescription = stringRes(id = R.string.accessibility_lyrics_off),
+        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+        contentDescription = stringRes(id = R.string.enter_picture_in_picture),
         modifier = modifier,
         tint = tint,
     )

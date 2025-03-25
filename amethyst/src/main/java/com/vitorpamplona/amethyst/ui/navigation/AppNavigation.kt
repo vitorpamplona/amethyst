@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
@@ -48,10 +46,10 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -519,11 +517,6 @@ private fun NavigateIfIntentRequested(
             AddAccountDialog(newAccount, accountStateViewModel) { newAccount = null }
         }
     }
-}
-
-fun Context.getActivity(): MainActivity {
-    if (this is MainActivity) return this
-    return if (this is ContextWrapper) baseContext.getActivity() else getActivity()
 }
 
 private fun isSameRoute(

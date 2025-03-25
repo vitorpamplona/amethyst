@@ -23,15 +23,15 @@ package com.vitorpamplona.amethyst.service.playback.composable
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
+import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,35 +39,33 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 @Composable
 fun GetVideoController(
-    mediaItem: State<MediaItem>,
-    videoUri: String,
-    proxyPort: Int?,
+    mediaItem: LoadedMediaItem,
     muted: Boolean = false,
     inner: @Composable (mediaControllerState: MediaControllerState) -> Unit,
 ) {
     val context = LocalContext.current
 
-    val onlyOnePreparing = AtomicBoolean()
+    val onlyOnePreparing = remember { AtomicBoolean() }
 
-    val controllerId = remember(videoUri) { BackgroundMedia.backgroundOrNewController(videoUri) }
+    val controllerId = remember(mediaItem.src.videoUri) { MediaControllerState() }
 
-    controllerId.composed.value = true
+    controllerId.composed = true
 
     val scope = rememberCoroutineScope()
 
     // Prepares a VideoPlayer from the foreground service.
-    DisposableEffect(key1 = videoUri) {
+    DisposableEffect(key1 = mediaItem.src.videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.
         if (controllerId.needsController()) {
             // If there is a connection, don't wait.
             if (!onlyOnePreparing.getAndSet(true)) {
                 scope.launch {
-                    Log.d("PlaybackService", "Preparing Video ${controllerId.id} $videoUri")
+                    Log.d("PlaybackService", "Preparing Video ${controllerId.id} $mediaItem.src.videoUri")
                     PlaybackServiceClient.prepareController(
                         controllerId,
-                        videoUri,
-                        proxyPort,
+                        mediaItem.src.videoUri,
+                        mediaItem.src.proxyPort,
                         context,
                     ) { controllerId ->
                         scope.launch(Dispatchers.Main) {
@@ -82,16 +80,16 @@ fun GetVideoController(
                             if (!controllerId.isPlaying()) {
                                 if (BackgroundMedia.isPlaying()) {
                                     // There is a video playing, start this one on mute.
-                                    controllerId.controller.value?.volume = 0f
+                                    controllerId.controller?.volume = 0f
                                 } else {
                                     // There is no other video playing. Use the default mute state to
                                     // decide if sound is on or not.
-                                    controllerId.controller.value?.volume = if (muted) 0f else 1f
+                                    controllerId.controller?.volume = if (muted) 0f else 1f
                                 }
                             }
 
-                            controllerId.controller.value?.setMediaItem(mediaItem.value)
-                            controllerId.controller.value?.prepare()
+                            controllerId.controller?.setMediaItem(mediaItem.item)
+                            controllerId.controller?.prepare()
 
                             // checks if the player is still active after requesting to load
                             if (!controllerId.isActive()) {
@@ -114,7 +112,7 @@ fun GetVideoController(
             }
         } else {
             // has been loaded. prepare to play. This happens when the background video switches screens.
-            controllerId.controller.value?.let {
+            controllerId.controller?.let {
                 scope.launch {
                     // checks if the player is still active after requesting to load
                     if (!controllerId.isActive()) {
@@ -123,7 +121,7 @@ fun GetVideoController(
                     }
 
                     if (it.playbackState == Player.STATE_IDLE || it.playbackState == Player.STATE_ENDED) {
-                        Log.d("PlaybackService", "Preparing Existing Video $videoUri ")
+                        Log.d("PlaybackService", "Preparing Existing Video ${mediaItem.src.videoUri} ")
 
                         if (it.isPlaying) {
                             // There is a video playing, start this one on mute.
@@ -134,8 +132,8 @@ fun GetVideoController(
                             it.volume = if (muted) 0f else 1f
                         }
 
-                        if (mediaItem.value != it.currentMediaItem) {
-                            it.setMediaItem(mediaItem.value)
+                        if (mediaItem.item != it.currentMediaItem) {
+                            it.setMediaItem(mediaItem.item)
                         }
 
                         it.prepare()
@@ -151,8 +149,8 @@ fun GetVideoController(
         }
 
         onDispose {
-            controllerId.composed.value = false
-            if (!controllerId.keepPlaying.value) {
+            controllerId.composed = false
+            if (!controllerId.pictureInPictureActive.value) {
                 PlaybackServiceClient.removeController(controllerId)
             }
         }
@@ -164,17 +162,17 @@ fun GetVideoController(
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    controllerId.composed.value = true
+                    controllerId.composed = true
                     // if the controller is null, restarts the controller with a new one
                     // if the controller is not null, just continue playing what the controller was playing
-                    if (controllerId.controller.value == null) {
+                    if (controllerId.needsController()) {
                         if (!onlyOnePreparing.getAndSet(true)) {
                             scope.launch(Dispatchers.Main) {
-                                Log.d("PlaybackService", "Preparing Video from Resume ${controllerId.id} $videoUri ")
+                                Log.d("PlaybackService", "Preparing Video from Resume ${controllerId.id} ${mediaItem.src.videoUri} ")
                                 PlaybackServiceClient.prepareController(
                                     controllerId,
-                                    videoUri,
-                                    proxyPort,
+                                    mediaItem.src.videoUri,
+                                    mediaItem.src.proxyPort,
                                     context,
                                 ) { controllerId ->
                                     scope.launch(Dispatchers.Main) {
@@ -190,16 +188,16 @@ fun GetVideoController(
                                         if (!controllerId.isPlaying()) {
                                             if (BackgroundMedia.isPlaying()) {
                                                 // There is a video playing, start this one on mute.
-                                                controllerId.controller.value?.volume = 0f
+                                                controllerId.controller?.volume = 0f
                                             } else {
                                                 // There is no other video playing. Use the default mute state to
                                                 // decide if sound is on or not.
-                                                controllerId.controller.value?.volume = if (muted) 0f else 1f
+                                                controllerId.controller?.volume = if (muted) 0f else 1f
                                             }
                                         }
 
-                                        controllerId.controller.value?.setMediaItem(mediaItem.value)
-                                        controllerId.controller.value?.prepare()
+                                        controllerId.controller?.setMediaItem(mediaItem.item)
+                                        controllerId.controller?.prepare()
 
                                         // checks if the player is still active after requesting to load
                                         if (!controllerId.isActive()) {
@@ -224,11 +222,8 @@ fun GetVideoController(
                     }
                 }
                 if (event == Lifecycle.Event.ON_PAUSE) {
-                    controllerId.composed.value = false
-                    if (!controllerId.keepPlaying.value) {
-                        // Stops and releases the media.
-                        PlaybackServiceClient.removeController(controllerId)
-                    }
+                    controllerId.composed = false
+                    PlaybackServiceClient.removeController(controllerId)
                 }
             }
 
@@ -237,7 +232,7 @@ fun GetVideoController(
     }
 
     if (controllerId.readyToDisplay.value && controllerId.active.value) {
-        controllerId.controller.value?.let {
+        controllerId.controller?.let {
             inner(controllerId)
         }
     }

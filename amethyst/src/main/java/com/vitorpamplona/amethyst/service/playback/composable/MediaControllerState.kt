@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable
 
+import android.graphics.Rect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
@@ -31,21 +32,29 @@ class MediaControllerState(
     // each composable has an ID.
     val id: String = UUID.randomUUID().toString(),
     // This is filled after the controller returns from this class
-    val controller: MutableState<MediaController?> = mutableStateOf(null),
+    var controller: MediaController? = null,
     // this set's the stage to keep playing on the background or not when the user leaves the screen
-    val keepPlaying: MutableState<Boolean> = mutableStateOf(false),
+    val pictureInPictureActive: MutableState<Boolean> = mutableStateOf(false),
     // this will be false if the screen leaves before the controller connection comes back from the service.
     val active: MutableState<Boolean> = mutableStateOf(true),
     // this will be set to own when the controller is ready
     val readyToDisplay: MutableState<Boolean> = mutableStateOf(false),
     // isCurrentlyBeingRendered
-    val composed: MutableState<Boolean> = mutableStateOf(false),
+    var composed: Boolean = false,
+    // visibility onscreen
+    val visibility: VisibilityData = VisibilityData(),
 ) {
-    fun isPlaying() = controller.value?.isPlaying == true
+    fun isPlaying() = controller?.isPlaying == true
 
-    fun currrentMedia() = controller.value?.currentMediaItem?.mediaId
+    fun currrentMedia() = controller?.currentMediaItem?.mediaId
 
     fun isActive() = active.value == true
 
-    fun needsController() = controller.value == null
+    fun needsController() = controller == null
+}
+
+@Stable
+class VisibilityData {
+    var bounds: Rect? = null
+    var distanceToCenter: Float? = null
 }
