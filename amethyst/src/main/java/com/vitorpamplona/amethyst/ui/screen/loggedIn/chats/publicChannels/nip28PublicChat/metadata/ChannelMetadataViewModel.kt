@@ -37,20 +37,21 @@ import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.relays.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.collections.isNotEmpty
+import kotlin.collections.map
 import kotlin.collections.plus
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -84,12 +85,8 @@ class ChannelMetadataViewModel : ViewModel() {
 
             val relays =
                 channel.info.relays
-                    ?.map {
-                        BasicRelaySetupInfo(
-                            RelayUrlFormatter.normalize(it),
-                            RelayStats.get(it),
-                        )
-                    }?.distinctBy { it.url }
+                    ?.map { relaySetupInfoBuilder(it) }
+                    ?.distinctBy { it.url }
 
             _channelRelays.update { relays ?: emptyList() }
         }

@@ -54,9 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.ui.actions.relays.BasicRelaySetupInfoDialog
-import com.vitorpamplona.amethyst.ui.actions.relays.RelayUrlEditField
-import com.vitorpamplona.amethyst.ui.actions.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -67,6 +64,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CreateButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
@@ -236,7 +237,7 @@ private fun ChannelMetadataScaffold(
             }
 
             item {
-                RelayUrlEditField { postViewModel.addHomeRelay(it) }
+                RelayUrlEditField { postViewModel.addHomeRelay(relaySetupInfoBuilder(it)) }
 
                 Spacer(modifier = DoubleVertSpacer)
             }

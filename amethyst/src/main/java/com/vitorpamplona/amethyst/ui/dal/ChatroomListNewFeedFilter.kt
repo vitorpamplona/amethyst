@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.relays.updated
+import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -77,7 +77,7 @@ class ChatroomListNewFeedFilter(
                 if (newNotePair.key == oldRoom) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
-                        myNewList = myNewList.updated(oldNote, newNotePair.value)
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
                     }
                 }
             }
