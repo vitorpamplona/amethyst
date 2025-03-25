@@ -90,7 +90,7 @@ fun MessagesSinglePane(
             }
         },
         floatingButton = {
-            ChannelFabColumn(accountViewModel, nav)
+            ChannelFabColumn(nav)
         },
         accountViewModel = accountViewModel,
     ) {

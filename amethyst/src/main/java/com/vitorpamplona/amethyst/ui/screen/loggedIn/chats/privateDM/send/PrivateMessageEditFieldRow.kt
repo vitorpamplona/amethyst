@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,11 +63,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
-import com.vitorpamplona.amethyst.ui.theme.EditFieldLeadingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
-import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -76,12 +75,12 @@ import kotlinx.coroutines.launch
 
 @Preview
 @Composable
-fun PrivateMessageEditFieldRow() {
+fun PrivateMessageEditFieldRowPreview() {
     val channelScreenModel: ChatNewMessageViewModel = viewModel()
     val accountViewModel = mockAccountViewModel()
     channelScreenModel.init(accountViewModel)
 
-    ThemeComparisonRow {
+    ThemeComparisonColumn {
         PrivateMessageEditFieldRow(
             channelScreenModel = channelScreenModel,
             accountViewModel = accountViewModel,
@@ -170,12 +169,12 @@ fun PrivateMessageEditFieldRow(
             leadingIcon = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 6.dp),
+                    modifier = Modifier.padding(start = 4.dp, end = 10.dp),
                 ) {
                     SelectFromGallery(
                         isUploading = channelScreenModel.isUploadingImage,
                         tint = MaterialTheme.colorScheme.placeholderText,
-                        modifier = EditFieldLeadingIconModifier,
+                        modifier = Modifier,
                         onImageChosen = channelScreenModel::pickedMedia,
                     )
 
@@ -190,7 +189,7 @@ fun PrivateMessageEditFieldRow(
                     }
 
                     IconButton(
-                        modifier = Size30Modifier,
+                        modifier = Modifier.width(30.dp),
                         onClick = {
                             if (
                                 !accountViewModel.account.settings.hideNIP17WarningDialog &&
@@ -208,7 +207,7 @@ fun PrivateMessageEditFieldRow(
                                 modifier =
                                     Modifier
                                         .padding(top = 2.dp)
-                                        .size(18.dp),
+                                        .size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         } else {
@@ -216,7 +215,7 @@ fun PrivateMessageEditFieldRow(
                                 modifier =
                                     Modifier
                                         .padding(top = 2.dp)
-                                        .size(18.dp),
+                                        .size(20.dp),
                                 tint = MaterialTheme.colorScheme.placeholderText,
                             )
                         }

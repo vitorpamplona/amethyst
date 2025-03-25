@@ -97,7 +97,7 @@ fun MessagesTwoPane(
                     )
 
                     Box(Modifier.padding(Size20dp), contentAlignment = Alignment.Center) {
-                        ChannelFabColumn(accountViewModel, nav)
+                        ChannelFabColumn(nav)
                     }
                 }
             },

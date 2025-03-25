@@ -64,7 +64,7 @@ import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
 
 @Composable
-fun AllRelayListView(
+fun AllRelayListScreen(
     relayToAdd: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,

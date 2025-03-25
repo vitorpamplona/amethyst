@@ -47,7 +47,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
+import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
@@ -261,6 +262,22 @@ fun AppNavigation(
             }
 
             composable(
+                Route.ChannelMetadataEdit.route,
+                Route.ChannelMetadataEdit.arguments,
+                enterTransition = { slideInVerticallyFromBottom },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutVerticallyToBottom },
+                content = {
+                    ChannelMetadataScreen(
+                        channelId = it.id(),
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
+            )
+
+            composable(
                 Route.Event.route,
                 Route.Event.arguments,
             ) {
@@ -304,7 +321,7 @@ fun AppNavigation(
                 content = {
                     val relayToAdd = it.arguments?.getString("toAdd")
 
-                    AllRelayListView(
+                    AllRelayListScreen(
                         relayToAdd = relayToAdd,
                         accountViewModel = accountViewModel,
                         nav = nav,

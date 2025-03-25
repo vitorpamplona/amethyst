@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.actions.relays
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -35,13 +37,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+
+@Preview
+@Composable
+fun RelayUrlEditFieldPreview() {
+    ThemeComparisonColumn {
+        RelayUrlEditField {}
+    }
+}
 
 @Composable
 fun RelayUrlEditField(onNewRelay: (BasicRelaySetupInfo) -> Unit) {
@@ -61,6 +76,22 @@ fun RelayUrlEditField(onNewRelay: (BasicRelaySetupInfo) -> Unit) {
                 )
             },
             singleLine = true,
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Go,
+                    capitalization = KeyboardCapitalization.None,
+                    keyboardType = KeyboardType.Text,
+                ),
+            keyboardActions =
+                KeyboardActions(
+                    onGo = {
+                        if (url.isNotBlank() && url != "/") {
+                            onNewRelay(BasicRelaySetupInfo(RelayUrlFormatter.normalize(url), RelayStat()))
+                            url = ""
+                        }
+                    },
+                ),
         )
 
         Button(

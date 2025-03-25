@@ -220,6 +220,15 @@
     <string name="channel_created">Channel created</string>
     <string name="channel_information_changed_to">"Channel Information changed to"</string>
     <string name="public_chat">Public Chat</string>
+    <string name="public_chat_title">Public Chat Metadata</string>
+    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
+        can participate on them. They are great for open communities around specific topics.
+        Moderation can be controlled by deleting posts on the its relays</string>
+
+    <string name="public_chat_relays_title">Relays</string>
+    <string name="public_chat_relays_explainer">Insert between 1-3 relays that host this group.
+        Nostr clients use this setting to know where to download messages from and send your messages to.</string>
+
     <string name="posts_received">posts received</string>
     <string name="remove">Remove</string>
     <string name="sats" translatable="false">sats</string>

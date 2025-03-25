@@ -211,7 +211,6 @@ val CashuCardBorders = Modifier.fillMaxWidth().padding(10.dp).clip(shape = Quote
 val EditFieldModifier =
     Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 5.dp).fillMaxWidth()
 val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)
-val EditFieldLeadingIconModifier = Modifier.height(32.dp).padding(start = 2.dp)
 
 val ZeroPadding = PaddingValues(0.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)

@@ -89,7 +89,7 @@ fun LongChannelActionOptions(
         }
 
     if (isMe) {
-        EditButton(channel, accountViewModel)
+        EditButton(channel, accountViewModel, nav)
     }
 
     WatchChannelFollows(channel, accountViewModel) { isFollowing ->
