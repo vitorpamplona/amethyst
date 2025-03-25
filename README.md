@@ -28,9 +28,6 @@ alt="Get it on Obtaininum"
 height="70">](https://github.com/ImranR98/Obtainium)
 [<img src="https://github.com/machiav3lli/oandbackupx/raw/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" alt="Get it on GitHub"
 height="70">](https://github.com/vitorpamplona/amethyst/releases)
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-     alt="Get it on F-Droid"
-     height="70">](https://f-droid.org/packages/com.vitorpamplona.amethyst/)
 [<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
      alt="Get it on Google Play"
      height="70">](https://play.google.com/store/apps/details?id=com.vitorpamplona.amethyst)
