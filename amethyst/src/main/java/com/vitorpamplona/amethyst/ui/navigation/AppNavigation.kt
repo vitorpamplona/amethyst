@@ -337,7 +337,7 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutVerticallyToBottom },
             ) {
-                val draftMessage = it.arguments?.getString("message")?.ifBlank { null }
+                val draftMessage = it.message()?.ifBlank { null }
                 val attachment =
                     it.arguments?.getString("attachment")?.ifBlank { null }?.let {
                         Uri.parse(it)
@@ -347,8 +347,8 @@ fun AppNavigation(
                 val fork = it.arguments?.getString("fork")
                 val version = it.arguments?.getString("version")
                 val draft = it.arguments?.getString("draft")
-                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
-                val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") ?: false
+                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") == true
+                val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") == true
 
                 NewPostScreen(
                     message = draftMessage,
