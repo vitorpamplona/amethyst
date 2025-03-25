@@ -213,6 +213,7 @@
     <string name="with_description_of">with description of</string>
     <string name="and_picture">and picture</string>
     <string name="changed_chat_name_to">changed chat name to</string>
+    <string name="changed_chat_profile_to">New chat profile:</string>
     <string name="description_to">description to</string>
     <string name="and_picture_to">and picture to</string>
     <string name="leave">Leave</string>
@@ -615,6 +616,8 @@
     <string name="cashu_redeem_to_zap">Send to Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Open in Cashu Wallet</string>
     <string name="cashu_copy_token">Copy Token</string>
+
+    <string name="quick_actions_open_in_another_app">Open in Another App</string>
 
     <string name="no_lightning_address_set">No Lightning Address set</string>
     <string name="copied_token_to_clipboard">Copied token to clipboard</string>

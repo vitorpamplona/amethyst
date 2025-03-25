@@ -30,8 +30,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -273,6 +275,20 @@ val DarkLargeRelayIconModifier =
         .size(Size55dp)
         .clip(shape = CircleShape)
 
+val darkLargeProfilePictureModifier =
+    Modifier
+        .width(120.dp)
+        .height(120.dp)
+        .clip(shape = CircleShape)
+        .border(3.dp, DarkColorPalette.background, CircleShape)
+
+val lightLargeProfilePictureModifier =
+    Modifier
+        .width(120.dp)
+        .height(120.dp)
+        .clip(shape = CircleShape)
+        .border(3.dp, LightColorPalette.background, CircleShape)
+
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
 val MarkDownStyleOnDark =
@@ -446,6 +462,9 @@ val ColorScheme.largeRelayIconModifier: Modifier
 
 val ColorScheme.selectedReactionBoxModifier: Modifier
     get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
+
+val ColorScheme.largeProfilePictureModifier: Modifier
+    get() = if (isLight) lightLargeProfilePictureModifier else darkLargeProfilePictureModifier
 
 val chartLightColors =
     VicoTheme(

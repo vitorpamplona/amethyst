@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,8 +27,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
@@ -43,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 
 @Preview
@@ -135,12 +132,7 @@ fun ShowQRDialog(
                                     robot = user.pubkeyHex,
                                     model = user.profilePicture(),
                                     contentDescription = stringRes(R.string.profile_image),
-                                    modifier =
-                                        Modifier
-                                            .width(120.dp)
-                                            .height(120.dp)
-                                            .clip(shape = CircleShape)
-                                            .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape),
+                                    modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
                                     loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                                     loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                                 )

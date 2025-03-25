@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -38,7 +38,7 @@ fun LeaveChatButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Button(
+    FilledTonalButton(
         modifier = HalfHalfHorzModifier,
         onClick = { accountViewModel.unfollow(channel) },
         contentPadding = ButtonPadding,

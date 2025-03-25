@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
 
+import android.content.Intent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -31,33 +32,55 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
-fun EditButton(
+fun ShareChatButton(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val context = LocalContext.current
+
     FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
-        onClick = { nav.nav("ChannelMetadataEdit?id=${channel.idHex}") },
+        onClick = {
+            val sendIntent =
+                Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, njumpLink(channel.toNEvent()))
+                    putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.quick_action_share_browser_link))
+                }
+
+            val shareIntent =
+                Intent.createChooser(
+                    sendIntent,
+                    stringRes(context, R.string.quick_action_share),
+                )
+
+            ContextCompat.startActivity(context, shareIntent, null)
+        },
         contentPadding = ZeroPadding,
     ) {
         Icon(
             tint = Color.White,
-            imageVector = Icons.Default.EditNote,
-            contentDescription = stringRes(R.string.edits_the_channel_metadata),
+            imageVector = Icons.Default.Share,
+            contentDescription = stringRes(R.string.quick_action_share),
+            modifier = Size20Modifier,
         )
     }
 }
