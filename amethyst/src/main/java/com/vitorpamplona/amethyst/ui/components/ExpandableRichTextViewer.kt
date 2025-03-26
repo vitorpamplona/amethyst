@@ -26,9 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -50,7 +48,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
-import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
 object ShowFullTextCache {
@@ -128,16 +125,12 @@ fun ExpandableRichTextViewer(
 
 @Composable
 fun ShowMoreButton(onClick: () -> Unit) {
-    Button(
+    FilledTonalButton(
         modifier = StdTopPadding,
         onClick = onClick,
         shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondaryButtonBackground,
-            ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.show_more), color = Color.White)
+        Text(text = stringRes(R.string.show_more))
     }
 }

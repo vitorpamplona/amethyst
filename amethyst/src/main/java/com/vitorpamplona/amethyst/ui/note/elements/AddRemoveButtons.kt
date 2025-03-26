@@ -24,11 +24,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -62,7 +61,7 @@ fun AddButton(
     modifier: Modifier = Modifier.padding(start = 3.dp),
     onClick: () -> Unit,
 ) {
-    Button(
+    OutlinedButton(
         modifier = modifier,
         onClick = {
             if (isActive) {
@@ -73,7 +72,7 @@ fun AddButton(
         enabled = isActive,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
-        Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringRes(text), textAlign = TextAlign.Center)
     }
 }
 
@@ -82,7 +81,7 @@ fun RemoveButton(
     isActive: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Button(
+    OutlinedButton(
         modifier = Modifier.padding(start = 3.dp),
         onClick = {
             if (isActive) {
@@ -93,6 +92,6 @@ fun RemoveButton(
         enabled = isActive,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 16.dp),
     ) {
-        Text(text = stringRes(R.string.remove), color = Color.White)
+        Text(text = stringRes(R.string.remove))
     }
 }

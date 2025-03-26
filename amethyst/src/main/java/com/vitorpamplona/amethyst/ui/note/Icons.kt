@@ -312,27 +312,19 @@ fun CashuIcon(modifier: Modifier) {
 }
 
 @Composable
-fun CopyIcon(
-    modifier: Modifier,
-    tint: Color = Color.Unspecified,
-) {
+fun CopyIcon(modifier: Modifier) {
     Icon(
         imageVector = Icons.Default.ContentCopy,
         stringRes(id = R.string.copy_to_clipboard),
-        tint = tint,
         modifier = modifier,
     )
 }
 
 @Composable
-fun OpenInNewIcon(
-    modifier: Modifier,
-    tint: Color = Color.Unspecified,
-) {
+fun OpenInNewIcon(modifier: Modifier) {
     Icon(
         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
         stringRes(id = R.string.copy_to_clipboard),
-        tint = tint,
         modifier = modifier,
     )
 }

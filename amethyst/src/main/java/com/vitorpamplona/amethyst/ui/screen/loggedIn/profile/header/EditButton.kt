@@ -24,11 +24,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -50,7 +49,7 @@ fun InnerEditButtonPreview() {
 
 @Composable
 fun InnerEditButton(onClick: () -> Unit) {
-    Button(
+    FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
@@ -59,7 +58,6 @@ fun InnerEditButton(onClick: () -> Unit) {
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.EditNote,
             contentDescription = stringRes(R.string.edits_the_user_s_metadata),
         )

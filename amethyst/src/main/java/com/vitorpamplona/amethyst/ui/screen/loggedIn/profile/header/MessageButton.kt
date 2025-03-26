@@ -22,12 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -48,7 +47,7 @@ fun MessageButton(
 ) {
     val scope = rememberCoroutineScope()
 
-    Button(
+    FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
@@ -62,7 +61,6 @@ fun MessageButton(
             painter = painterResource(R.drawable.ic_dm),
             stringRes(R.string.send_a_direct_message),
             modifier = Size20Modifier,
-            tint = Color.White,
         )
     }
 }

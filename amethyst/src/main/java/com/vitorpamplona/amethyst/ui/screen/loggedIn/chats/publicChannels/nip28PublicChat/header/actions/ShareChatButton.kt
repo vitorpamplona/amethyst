@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -77,7 +76,6 @@ fun ShareChatButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.Share,
             contentDescription = stringRes(R.string.quick_action_share),
             modifier = Size20Modifier,

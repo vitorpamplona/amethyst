@@ -25,9 +25,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -35,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -121,33 +119,25 @@ private fun RelayOptions(
 
 @Composable
 fun AddRelayButton(onClick: () -> Unit) {
-    Button(
+    OutlinedButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(id = R.string.add), color = Color.White)
+        Text(text = stringRes(id = R.string.add))
     }
 }
 
 @Composable
 fun RemoveRelayButton(onClick: () -> Unit) {
-    Button(
+    OutlinedButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.remove), color = Color.White)
+        Text(text = stringRes(R.string.remove))
     }
 }
 

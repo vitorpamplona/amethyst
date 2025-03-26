@@ -23,12 +23,10 @@ package com.vitorpamplona.amethyst.ui.theme
 import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context
+import android.graphics.Color.red
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,7 +35,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -57,7 +54,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
 import com.patrykandpatrick.vico.compose.common.VicoTheme
@@ -70,8 +66,9 @@ private val DarkColorPalette =
         primary = Purple200,
         secondary = Teal200,
         tertiary = Teal200,
-        background = Color(red = 0, green = 0, blue = 0),
-        surface = Color(red = 0, green = 0, blue = 0),
+        background = Color.Black, // full black theme
+        surface = Color.Black, // full black theme
+        surfaceDim = Color.Black, // full black theme
         surfaceVariant = Color(red = 29, green = 26, blue = 34),
     )
 
@@ -80,6 +77,7 @@ private val LightColorPalette =
         primary = Purple500,
         secondary = Teal200,
         tertiary = Teal200,
+        surfaceContainerHighest = Color(red = 236, green = 230, blue = 240),
         surfaceVariant = Color(red = 250, green = 245, blue = 252),
     )
 
@@ -537,48 +535,6 @@ fun AmethystTheme(
             window.navigationBarColor = colors.transparentBackground.toArgb()
 
             view.setBackgroundColor(colors.background.toArgb())
-        }
-    }
-}
-
-@Composable
-fun ThemeComparisonColumn(toPreview: @Composable () -> Unit) {
-    Column {
-        Box {
-            val darkTheme: SharedPreferencesViewModel = viewModel()
-            darkTheme.updateTheme(ThemeType.DARK)
-            AmethystTheme(darkTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
-
-        Box {
-            val lightTheme: SharedPreferencesViewModel = viewModel()
-            lightTheme.updateTheme(ThemeType.LIGHT)
-            AmethystTheme(lightTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
-    }
-}
-
-@Composable
-fun ThemeComparisonRow(toPreview: @Composable () -> Unit) {
-    Row {
-        Box(modifier = Modifier.weight(1f)) {
-            val darkTheme: SharedPreferencesViewModel = viewModel()
-            darkTheme.updateTheme(ThemeType.DARK)
-            AmethystTheme(darkTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
-        }
-
-        Box(modifier = Modifier.weight(1f)) {
-            val lightTheme: SharedPreferencesViewModel = viewModel()
-            lightTheme.updateTheme(ThemeType.LIGHT)
-            AmethystTheme(lightTheme) {
-                Surface(color = MaterialTheme.colorScheme.background) { toPreview() }
-            }
         }
     }
 }

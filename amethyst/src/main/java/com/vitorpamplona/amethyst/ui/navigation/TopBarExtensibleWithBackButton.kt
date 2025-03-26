@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.theme.isLight
 
 @Composable
 fun TopBarExtensibleWithBackButton(
@@ -90,7 +92,8 @@ fun MyExtensibleTopAppBar(
         )
 
         if (expanded.value && extendableRow != null) {
-            Surface(modifier = Modifier.fillMaxWidth(), tonalElevation = 10.dp) {
+            val elevation = if (MaterialTheme.colorScheme.isLight) 1.dp else 10.dp
+            Surface(modifier = Modifier.fillMaxWidth(), tonalElevation = elevation) {
                 Column { extendableRow() }
             }
         }

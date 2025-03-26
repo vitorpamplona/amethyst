@@ -29,7 +29,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -80,7 +79,6 @@ fun LinkChatButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.ContentCopy,
             contentDescription = stringRes(R.string.quick_action_copy_note_id),
             modifier = Size20Modifier,

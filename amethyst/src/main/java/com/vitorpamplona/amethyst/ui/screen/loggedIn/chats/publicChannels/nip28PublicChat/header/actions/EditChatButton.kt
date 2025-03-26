@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
@@ -55,7 +54,6 @@ fun EditButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.EditNote,
             contentDescription = stringRes(R.string.edits_the_channel_metadata),
         )

@@ -30,7 +30,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -65,7 +64,6 @@ fun OpenChatButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = stringRes(R.string.quick_actions_open_in_another_app),
             modifier = Size20Modifier,

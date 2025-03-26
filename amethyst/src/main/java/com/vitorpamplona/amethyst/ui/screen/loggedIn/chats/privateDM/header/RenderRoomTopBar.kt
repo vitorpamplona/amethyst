@@ -31,7 +31,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -42,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -132,7 +131,7 @@ fun GroupMembersHeader(
     val list = remember(room) { room.users.toPersistentList() }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(5.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -181,7 +180,7 @@ private fun EditRoomSubjectButton(
         NewChatroomSubjectDialog({ wantsToPost = false }, accountViewModel, room)
     }
 
-    Button(
+    FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
@@ -190,7 +189,6 @@ private fun EditRoomSubjectButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.EditNote,
             contentDescription = stringRes(R.string.edits_the_channel_metadata),
         )
