@@ -212,6 +212,13 @@
     <string name="channel_created">Kanal skapad</string>
     <string name="channel_information_changed_to">"Kanalinformation ändrad till"</string>
     <string name="public_chat">Publik Chat</string>
+    <string name="public_chat_title">Metadata för offentlig chatt</string>
+    <string name="public_chat_explainer">Offentliga chattar är synliga för alla på Nostr och alla
+        kan delta på dem. De är bra för öppna samhällen kring specifika ämnen.
+        Moderation kan kontrolleras genom att ta bort inlägg på reläerna</string>
+    <string name="public_chat_relays_title">Reläer</string>
+    <string name="public_chat_relays_explainer">Infoga mellan 1-3 reläer som är värd för denna grupp.
+        Nostr klienter använder denna inställning för att veta var du kan ladda ner meddelanden från och skicka dina meddelanden till.</string>
     <string name="posts_received">mottagna inlägg</string>
     <string name="remove">Ta bort</string>
     <string name="translations_auto">Automatiskt</string>
