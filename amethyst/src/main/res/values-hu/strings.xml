@@ -212,6 +212,13 @@
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult:"</string>
     <string name="public_chat">Nyilvános csevegés</string>
+    <string name="public_chat_title">Nyilvános csevegés metaadatai</string>
+    <string name="public_chat_explainer">A nyilvános csevegések mindenki számára láthatóak a Nostr-on, és bárki
+        részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára.
+        A moderálás az átjátszókon lévő hozzászólások törlésével szabályozható</string>
+    <string name="public_chat_relays_title">Átjátszók</string>
+    <string name="public_chat_relays_explainer">Adjon hozzá 1-3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
+        A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
     <string name="posts_received">fogadott bejegyzések</string>
     <string name="remove">Eltávolítás</string>
     <string name="translations_auto">Automatikus</string>
@@ -865,6 +872,7 @@
     <string name="message_to_author">Változások összefoglalása</string>
     <string name="message_to_author_placeholder">Gyors javítások…</string>
     <string name="accept_the_suggestion">Javaslat elfogadása</string>
+    <string name="enter_picture_in_picture">Videó lejátszása felugró ablakban</string>
     <string name="accessibility_download_for_offline">Letöltés</string>
     <string name="accessibility_lyrics_on">Feliratozás bekapcsolva</string>
     <string name="accessibility_lyrics_off">Feliratozás kikapcsolva</string>

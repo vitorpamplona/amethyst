@@ -87,7 +87,6 @@ import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
-import com.vitorpamplona.amethyst.ui.note.types.JustVideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
@@ -194,7 +193,6 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
@@ -328,9 +326,6 @@ fun AcceptableNote(
                     )
                 }
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
-            is FileHeaderEvent -> FileHeaderDisplay(baseNote, false, ContentScale.FillWidth, accountViewModel)
-            is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, false, ContentScale.FillWidth, accountViewModel)
-            is VideoEvent -> JustVideoDisplay(baseNote, false, ContentScale.FillWidth, accountViewModel)
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
