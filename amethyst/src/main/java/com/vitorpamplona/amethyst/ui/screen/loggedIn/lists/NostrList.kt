@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
-enum class ListType {
-    Public,
-    Private,
-    Mixed,
-}
+sealed class NostrList(
+    val listVisibility: ListVisibility,
+    val content: Collection<String>,
+)

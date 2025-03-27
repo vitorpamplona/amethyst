@@ -226,12 +226,12 @@ fun CustomListItem(
             )
         }
 
-        followSet.type.let {
+        followSet.visibility.let {
             val text by derivedStateOf {
                 when (it) {
-                    ListType.Public -> "Public"
-                    ListType.Private -> "Private"
-                    ListType.Mixed -> "Mixed"
+                    ListVisibility.Public -> "Public"
+                    ListVisibility.Private -> "Private"
+                    ListVisibility.Mixed -> "Mixed"
                 }
             }
             Column(
@@ -243,9 +243,9 @@ fun CustomListItem(
                     painter =
                         painterResource(
                             when (it) {
-                                ListType.Public -> R.drawable.ic_public
-                                ListType.Private -> R.drawable.incognito
-                                ListType.Mixed -> R.drawable.format_list_bulleted_type
+                                ListVisibility.Public -> R.drawable.ic_public
+                                ListVisibility.Private -> R.drawable.incognito
+                                ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
                             },
                         ),
                     contentDescription = "Icon for $text List",
@@ -261,7 +261,7 @@ fun CustomListItem(
 private fun ListItemPreview() {
     val sampleFollowSet =
         FollowSet(
-            type = ListType.Mixed,
+            visibility = ListVisibility.Mixed,
             title = "Sample List Title",
             description = "Sample List Description",
             emptySet(),

@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListType
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -133,7 +133,7 @@ fun FollowSetsActionMenu(
                         FollowSetItem(
                             modifier = Modifier.fillMaxWidth(),
                             listHeader = list.title,
-                            listType = list.type,
+                            listVisibility = list.visibility,
                             isUserInList = list.profileList.contains(userHex),
                             onRemoveUser = {
                                 removeUser(index)
@@ -174,11 +174,11 @@ private fun DropDownMenuHeader(
 fun generateFollowLists(): List<FollowSet> =
     List(10) { index: Int ->
         FollowSet(
-            type =
+            visibility =
                 when {
-                    index % 2 == 0 -> ListType.Private
-                    index in listOf(3, 7, 9) -> ListType.Mixed
-                    else -> ListType.Public
+                    index % 2 == 0 -> ListVisibility.Private
+                    index in listOf(3, 7, 9) -> ListVisibility.Mixed
+                    else -> ListVisibility.Public
                 },
             title = "List No $index",
             description = null,
@@ -190,7 +190,7 @@ fun generateFollowLists(): List<FollowSet> =
 fun FollowSetItem(
     modifier: Modifier = Modifier,
     listHeader: String,
-    listType: ListType,
+    listVisibility: ListVisibility,
     isUserInList: Boolean,
     onAddUser: () -> Unit,
     onRemoveUser: () -> Unit,
@@ -281,12 +281,12 @@ fun FollowSetItem(
             }
         }
 
-        listType.let {
+        listVisibility.let {
             val text by derivedStateOf {
                 when (it) {
-                    ListType.Public -> "Public"
-                    ListType.Private -> "Private"
-                    ListType.Mixed -> "Mixed"
+                    ListVisibility.Public -> "Public"
+                    ListVisibility.Private -> "Private"
+                    ListVisibility.Mixed -> "Mixed"
                 }
             }
 
@@ -298,9 +298,9 @@ fun FollowSetItem(
                     painter =
                         painterResource(
                             when (it) {
-                                ListType.Public -> R.drawable.ic_public
-                                ListType.Private -> R.drawable.incognito
-                                ListType.Mixed -> R.drawable.format_list_bulleted_type
+                                ListVisibility.Public -> R.drawable.ic_public
+                                ListVisibility.Private -> R.drawable.incognito
+                                ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
                             },
                         ),
                     contentDescription = "Icon for $text List",
