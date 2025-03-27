@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "768341258853",
     "project_id": "amethyst-3057a",
-    "storage_bucket": "amethyst-3057a.appspot.com"
+    "storage_bucket": "amethyst-3057a.firebasestorage.app"
   },
   "client": [
     {
@@ -36,9 +36,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:768341258853:android:e0200680f552484d6b8c8c",
+        "mobilesdk_app_id": "1:768341258853:android:3270514bee61de546b8c8c",
         "android_client_info": {
-          "package_name": "com.vitorpamplona.amethyst.debug"
+          "package_name": "com.vitorpamplona.amethyst.benchmark"
         }
       },
       "oauth_client": [
@@ -65,9 +65,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:768341258853:android:5d07c35a37b24ff36b8c8c",
+        "mobilesdk_app_id": "1:768341258853:android:e0200680f552484d6b8c8c",
         "android_client_info": {
-          "package_name": "com.vitorpamplona.amethyst.benchmark"
+          "package_name": "com.vitorpamplona.amethyst.debug"
         }
       },
       "oauth_client": [
