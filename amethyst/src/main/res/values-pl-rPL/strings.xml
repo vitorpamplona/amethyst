@@ -205,6 +205,7 @@
     <string name="with_description_of">z opisem</string>
     <string name="and_picture">i zdjęcie</string>
     <string name="changed_chat_name_to">zmieniono nazwę czatu na</string>
+    <string name="changed_chat_profile_to">Nowy profil czatu:</string>
     <string name="description_to">opis dla</string>
     <string name="and_picture_to">i zdjęcie do</string>
     <string name="leave">Wyjdź</string>
@@ -212,6 +213,10 @@
     <string name="channel_created">Kanał utworzony</string>
     <string name="channel_information_changed_to">"Informacje o kanale zmienione na"</string>
     <string name="public_chat">Czat Publiczny</string>
+    <string name="public_chat_title">Metadane Czatu Publicznego</string>
+    <string name="public_chat_explainer">Czaty publiczne są widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć. Są idealne dla otwartych społeczności skupionych wokół konkretnych tematów. Moderację można kontrolować, usuwając posty z transmiterów</string>
+    <string name="public_chat_relays_title">Transmitery</string>
+    <string name="public_chat_relays_explainer">Wstaw od 1 do 3 transmiterów, które obsługują tę grupę. Klienci Nostr używają tego ustawienia, aby wiedzieć, skąd pobierać wiadomości i do kogo je wysyłać.</string>
     <string name="posts_received">odebranych wiadomości</string>
     <string name="remove">Usuń</string>
     <string name="translations_auto">Automatycznie</string>
@@ -418,7 +423,7 @@
     <string name="orbot_socks_port">Port Socks Orbota</string>
     <string name="use_internal_tor">Aktywny silnik Tor</string>
     <string name="use_internal_tor_explainer">Użyj wersji wewnętrznej lub Orbota</string>
-    <string name="tor_preset">TOR wstępne ustawienia prywatności</string>
+    <string name="tor_preset">Tor wstępne ustawienia prywatności</string>
     <string name="tor_preset_explainer">Szybka modyfikacja wszystkich ustawień poniżej</string>
     <string name="tor_use_onion_address">Adres Onion /Transmitery</string>
     <string name="tor_use_onion_address_explainer">Użyj Tor dla dowolnego adresu .onion</string>
@@ -519,6 +524,7 @@
     <string name="cashu_redeem_to_zap">Wyślij do Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Otwórz w Portfelu Cashu</string>
     <string name="cashu_copy_token">Skopiuj token</string>
+    <string name="quick_actions_open_in_another_app">Otwórz w innej aplikacji</string>
     <string name="no_lightning_address_set">Nie ustawiono adresu Lightning</string>
     <string name="copied_token_to_clipboard">Skopiowano token do schowka</string>
     <string name="live_stream_live_tag">NA ŻYWO</string>
@@ -865,6 +871,7 @@
     <string name="message_to_author">Podsumowanie zmian</string>
     <string name="message_to_author_placeholder">Szybkie poprawki…</string>
     <string name="accept_the_suggestion">Zaakceptuj sugestię</string>
+    <string name="enter_picture_in_picture">Uruchom wideo w pop-upie</string>
     <string name="accessibility_download_for_offline">Pobierz</string>
     <string name="accessibility_lyrics_on">Tekst włączony</string>
     <string name="accessibility_lyrics_off">Tekst wyłączony</string>
