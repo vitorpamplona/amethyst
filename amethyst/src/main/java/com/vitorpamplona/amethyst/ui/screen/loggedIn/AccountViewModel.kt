@@ -166,6 +166,24 @@ class AccountViewModel(
                 emptySet(),
             )
 
+    val followSetsFlow =
+        account
+            .userProfile()
+            .flow()
+            .followSets.stateFlow
+            .map { followSetsState ->
+                checkNotInMainThread()
+                account.getFollowSetNotes()
+                followSetsState.user.followSets.map {
+                    account.mapNoteToFollowSet(it)
+                }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(10000, 10000),
+                emptyList(),
+            )
+
     val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
     val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
