@@ -21,33 +21,32 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 
 import android.content.Context
+import androidx.core.app.PendingIntentCompat.send
+import coil3.util.CoilUtils.result
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
-import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ChatFileUploader(
-    val chatroom: ChatroomKey,
     val account: Account,
 ) {
-    fun uploadNIP17(
+    // ------
+    // NIP 17
+    // ------
+
+    fun justUploadNIP17(
         viewState: ChatFileUploadState,
         scope: CoroutineScope,
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: () -> Unit,
+        onceUploaded: (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
 
@@ -69,34 +68,16 @@ class ChatFileUploader(
                 )
 
             if (results.allGood) {
-                results.successful.forEach { state ->
-                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        val template =
-                            ChatMessageEncryptedFileHeaderEvent.build(
-                                url = state.result.url,
-                                to = chatroom.users.map { LocalCache.getOrCreateUser(it).toPTag() },
-                                cipher = cipher,
-                                mimeType = state.result.mimeTypeBeforeEncryption,
-                                originalHash = state.result.hashBeforeEncryption,
-                                hash = state.result.fileHeader.hash,
-                                size = state.result.fileHeader.size,
-                                dimension = state.result.fileHeader.dim,
-                                blurhash =
-                                    state.result.fileHeader.blurHash
-                                        ?.blurhash,
-                            ) {
-                                if (viewState.caption.isNotEmpty()) {
-                                    alt(viewState.caption)
-                                }
-
-                                viewState.contentWarningReason?.let { contentWarning(it) }
-                            }
-
-                        account.sendNIP17EncryptedFile(template)
+                val list =
+                    results.successful.mapNotNull { state ->
+                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, cipher)
+                        } else {
+                            null
+                        }
                     }
-                }
 
-                onceUploaded()
+                onceUploaded(list)
                 viewState.reset()
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
@@ -108,12 +89,16 @@ class ChatFileUploader(
         }
     }
 
-    fun uploadNIP04(
+    // ------
+    // NIP 04
+    // ------
+
+    fun justUploadNIP04(
         viewState: ChatFileUploadState,
         scope: CoroutineScope,
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: () -> Unit,
+        onceUploaded: (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
 
@@ -132,28 +117,17 @@ class ChatFileUploader(
                 )
 
             if (results.allGood) {
-                results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        val iMetaAttachments = IMetaAttachments()
-                        iMetaAttachments.add(it.result, viewState.caption, viewState.contentWarningReason)
-
-                        account.sendPrivateMessage(
-                            message = it.result.url,
-                            toUser = chatroom.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
-                            replyingTo = null,
-                            zapReceiver = null,
-                            contentWarningReason = null,
-                            zapRaiserAmount = null,
-                            geohash = null,
-                            imetas = iMetaAttachments.iMetaAttachments,
-                            emojis = null,
-                            draftTag = null,
-                        )
+                val list =
+                    results.successful.mapNotNull { state ->
+                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                            SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, null)
+                        } else {
+                            null
+                        }
                     }
 
-                    onceUploaded()
-                    viewState.reset()
-                }
+                onceUploaded(list)
+                viewState.reset()
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 

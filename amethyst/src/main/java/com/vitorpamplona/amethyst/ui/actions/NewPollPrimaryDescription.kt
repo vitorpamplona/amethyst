@@ -54,7 +54,9 @@ fun NewPollPrimaryDescription(pollViewModel: NewPostViewModel) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     var isInputValid = true
-    if (pollViewModel.message.text.isEmpty()) {
+    if (pollViewModel.message.text
+            .isEmpty()
+    ) {
         isInputValid = false
     }
 

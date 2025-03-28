@@ -38,11 +38,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.ClickableText
-import com.vitorpamplona.amethyst.ui.components.InvoiceRequestCard
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
+import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequestCard
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -129,7 +129,6 @@ fun DisplayLNAddress(
                             payViaIntent(it, context, { zapExpanded = false }, { showErrorMessageDialog = it })
                         }
                     },
-                    onClose = { zapExpanded = false },
                     onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
                 )
             }

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst
 
 import android.os.Looper
-import com.vitorpamplona.amethyst.ui.components.Split
+import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.SpyK
@@ -37,7 +37,7 @@ import org.junit.Before
 import org.junit.Test
 
 class SplitterTest {
-    @SpyK var mySplit = Split<String>()
+    @SpyK var mySplitBuilder = SplitBuilder<String>()
 
     @Before
     fun setUp() {
@@ -55,79 +55,79 @@ class SplitterTest {
     @Test
     fun testSplit() =
         runBlocking {
-            val vitor = mySplit.addItem("Vitor")
+            val vitor = mySplitBuilder.addItem("Vitor")
 
-            assertEquals(1f, mySplit.items[vitor].percentage, 0.01f)
-            assertTrue(mySplit.isEqualSplit())
+            assertEquals(1f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertTrue(mySplitBuilder.isEqualSplit())
 
-            val pablo = mySplit.addItem("Pablo")
+            val pablo = mySplitBuilder.addItem("Pablo")
 
-            assertEquals(0.5f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.5f, mySplit.items[vitor].percentage, 0.01f)
-            assertTrue(mySplit.isEqualSplit())
+            assertEquals(0.5f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.5f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertTrue(mySplitBuilder.isEqualSplit())
 
-            val gigi = mySplit.addItem("Gigi")
+            val gigi = mySplitBuilder.addItem("Gigi")
 
-            assertEquals(0.33f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.33f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.33f, mySplit.items[gigi].percentage, 0.01f)
-            assertTrue(mySplit.isEqualSplit())
+            assertEquals(0.33f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.33f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.33f, mySplitBuilder.items[gigi].percentage, 0.01f)
+            assertTrue(mySplitBuilder.isEqualSplit())
 
-            mySplit.updatePercentage(vitor, 0.5f)
+            mySplitBuilder.updatePercentage(vitor, 0.5f)
 
-            assertEquals(0.5f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.33f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.16f, mySplit.items[gigi].percentage, 0.01f)
-            assertFalse(mySplit.isEqualSplit())
+            assertEquals(0.5f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.33f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.16f, mySplitBuilder.items[gigi].percentage, 0.01f)
+            assertFalse(mySplitBuilder.isEqualSplit())
 
-            mySplit.updatePercentage(vitor, 0.95f)
+            mySplitBuilder.updatePercentage(vitor, 0.95f)
 
-            assertEquals(0.95f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.05f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.0f, mySplit.items[gigi].percentage, 0.01f)
-            assertFalse(mySplit.isEqualSplit())
+            assertEquals(0.95f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.05f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.0f, mySplitBuilder.items[gigi].percentage, 0.01f)
+            assertFalse(mySplitBuilder.isEqualSplit())
 
-            mySplit.updatePercentage(vitor, 0.15f)
+            mySplitBuilder.updatePercentage(vitor, 0.15f)
 
-            assertEquals(0.15f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.05f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.80f, mySplit.items[gigi].percentage, 0.01f)
-            assertFalse(mySplit.isEqualSplit())
+            assertEquals(0.15f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.05f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.80f, mySplitBuilder.items[gigi].percentage, 0.01f)
+            assertFalse(mySplitBuilder.isEqualSplit())
 
-            mySplit.updatePercentage(pablo, 0.95f)
+            mySplitBuilder.updatePercentage(pablo, 0.95f)
 
-            assertEquals(0.05f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.95f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.00f, mySplit.items[gigi].percentage, 0.01f)
+            assertEquals(0.05f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.95f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[gigi].percentage, 0.01f)
 
-            mySplit.updatePercentage(gigi, 1f)
+            mySplitBuilder.updatePercentage(gigi, 1f)
 
-            assertEquals(0.00f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.00f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(1.00f, mySplit.items[gigi].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(1.00f, mySplitBuilder.items[gigi].percentage, 0.01f)
 
-            mySplit.updatePercentage(vitor, 0.5f)
+            mySplitBuilder.updatePercentage(vitor, 0.5f)
 
-            assertEquals(0.50f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.00f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.50f, mySplit.items[gigi].percentage, 0.01f)
+            assertEquals(0.50f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.50f, mySplitBuilder.items[gigi].percentage, 0.01f)
 
-            mySplit.updatePercentage(pablo, 0.3f)
+            mySplitBuilder.updatePercentage(pablo, 0.3f)
 
-            assertEquals(0.50f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.30f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.20f, mySplit.items[gigi].percentage, 0.01f)
+            assertEquals(0.50f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.30f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.20f, mySplitBuilder.items[gigi].percentage, 0.01f)
 
-            mySplit.updatePercentage(gigi, 1f)
+            mySplitBuilder.updatePercentage(gigi, 1f)
 
-            assertEquals(0.00f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.00f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(1.00f, mySplit.items[gigi].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(1.00f, mySplitBuilder.items[gigi].percentage, 0.01f)
 
-            mySplit.updatePercentage(gigi, 0.5f)
+            mySplitBuilder.updatePercentage(gigi, 0.5f)
 
-            assertEquals(0.00f, mySplit.items[vitor].percentage, 0.01f)
-            assertEquals(0.50f, mySplit.items[pablo].percentage, 0.01f)
-            assertEquals(0.50f, mySplit.items[gigi].percentage, 0.01f)
+            assertEquals(0.00f, mySplitBuilder.items[vitor].percentage, 0.01f)
+            assertEquals(0.50f, mySplitBuilder.items[pablo].percentage, 0.01f)
+            assertEquals(0.50f, mySplitBuilder.items[gigi].percentage, 0.01f)
         }
 }

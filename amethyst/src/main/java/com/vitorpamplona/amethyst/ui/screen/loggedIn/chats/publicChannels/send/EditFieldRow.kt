@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -41,8 +40,8 @@ import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
-import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
@@ -51,12 +50,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -69,17 +63,6 @@ fun EditFieldRow(
     channelScreenModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) {
             channelScreenModel.clearReply()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
-            channelScreenModel.draftTextChanges
-                .receiveAsFlow()
-                .debounce(1000)
-                .collectLatest {
-                    channelScreenModel.sendDraft()
-                }
         }
     }
 
@@ -99,18 +82,22 @@ fun EditFieldRow(
     Column(
         modifier = EditFieldModifier,
     ) {
-        ShowUserSuggestionList(
-            channelScreenModel.userSuggestions.userSuggestions,
-            channelScreenModel::autocompleteWithUser,
-            accountViewModel,
-        )
+        channelScreenModel.userSuggestions?.let {
+            ShowUserSuggestionList(
+                it,
+                channelScreenModel::autocompleteWithUser,
+                accountViewModel,
+            )
+        }
 
-        ShowEmojiSuggestionList(
-            channelScreenModel.emojiSuggestions,
-            channelScreenModel::autocompleteWithEmoji,
-            channelScreenModel::autocompleteWithEmojiUrl,
-            accountViewModel,
-        )
+        channelScreenModel.emojiSuggestions?.let {
+            ShowEmojiSuggestionList(
+                it,
+                channelScreenModel::autocompleteWithEmoji,
+                channelScreenModel::autocompleteWithEmojiUrl,
+                accountViewModel,
+            )
+        }
 
         ThinPaddingTextField(
             value = channelScreenModel.message,

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -90,14 +89,14 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
-import com.vitorpamplona.amethyst.ui.components.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
+import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -338,7 +337,6 @@ fun EditPostView(
                                             },
                                             onDelete = postViewModel::deleteMediaToUpload,
                                             onCancel = { postViewModel.multiOrchestrator = null },
-                                            onError = { scope.launch { Toast.makeText(context, context.resources.getText(it), Toast.LENGTH_SHORT).show() } },
                                             accountViewModel = accountViewModel,
                                         )
                                     }
@@ -352,22 +350,19 @@ fun EditPostView(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
                                     ) {
-                                        Column(Modifier.fillMaxWidth()) {
-                                            InvoiceRequest(
-                                                lud16,
-                                                user.pubkeyHex,
-                                                accountViewModel,
-                                                stringRes(id = R.string.lightning_invoice),
-                                                stringRes(id = R.string.lightning_create_and_add_invoice),
-                                                onSuccess = {
-                                                    postViewModel.message =
-                                                        TextFieldValue(postViewModel.message.text + "\n\n" + it)
-                                                    postViewModel.wantsInvoice = false
-                                                },
-                                                onClose = { postViewModel.wantsInvoice = false },
-                                                onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                                            )
-                                        }
+                                        InvoiceRequest(
+                                            lud16,
+                                            user.pubkeyHex,
+                                            accountViewModel,
+                                            stringRes(id = R.string.lightning_invoice),
+                                            stringRes(id = R.string.lightning_create_and_add_invoice),
+                                            onSuccess = {
+                                                postViewModel.message =
+                                                    TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                                postViewModel.wantsInvoice = false
+                                            },
+                                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                                        )
                                     }
                                 }
 
@@ -410,12 +405,14 @@ fun EditPostView(
                             }
                         }
 
-                        ShowUserSuggestionList(
-                            postViewModel.userSuggestions,
-                            postViewModel::autocompleteWithUser,
-                            accountViewModel,
-                            modifier = Modifier.heightIn(0.dp, 300.dp),
-                        )
+                        postViewModel.userSuggestions?.let {
+                            ShowUserSuggestionList(
+                                it,
+                                postViewModel::autocompleteWithUser,
+                                accountViewModel,
+                                modifier = Modifier.heightIn(0.dp, 300.dp),
+                            )
+                        }
 
                         BottomRowActions(postViewModel)
                     }

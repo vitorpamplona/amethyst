@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -52,7 +53,7 @@ fun RefreshingChatroomFeedView(
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
-    avoidDraft: String? = null,
+    avoidDraft: DraftTagState? = null,
     scrollStateKey: String? = null,
     enablePullRefresh: Boolean = true,
 ) {
@@ -81,7 +82,7 @@ fun RenderChatFeedView(
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
-    avoidDraft: String? = null,
+    avoidDraft: DraftTagState? = null,
 ) {
     val feedState by viewModel.feedState.feedContent.collectAsStateWithLifecycle()
 
@@ -114,7 +115,7 @@ fun ChatFeedLoaded(
     routeForLastRead: String,
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
-    avoidDraft: String? = null,
+    avoidDraft: DraftTagState? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -132,7 +133,7 @@ fun ChatFeedLoaded(
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { index, item ->
             val noteEvent = item.event
-            if (avoidDraft == null || noteEvent !is DraftEvent || noteEvent.dTag() != avoidDraft) {
+            if (avoidDraft == null || noteEvent !is DraftEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 ChatroomMessageCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,

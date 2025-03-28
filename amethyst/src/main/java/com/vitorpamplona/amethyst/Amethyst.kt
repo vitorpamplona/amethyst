@@ -37,7 +37,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
-import com.vitorpamplona.amethyst.service.LocationState
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket

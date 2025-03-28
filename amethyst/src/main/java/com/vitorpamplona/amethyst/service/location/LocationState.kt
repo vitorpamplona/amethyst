@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.service.location
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -32,8 +32,8 @@ import android.util.Log
 import android.util.LruCache
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
-import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_DISTANCE
-import com.vitorpamplona.amethyst.service.LocationState.Companion.MIN_TIME
+import com.vitorpamplona.amethyst.service.location.LocationState.Companion.MIN_DISTANCE
+import com.vitorpamplona.amethyst.service.location.LocationState.Companion.MIN_TIME
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

@@ -20,16 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
@@ -58,7 +53,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -71,7 +65,6 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
-import com.vitorpamplona.amethyst.commons.icons.ZapSplit
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -544,49 +537,4 @@ fun IncognitoIconOff(
         modifier = modifier,
         tint = tint,
     )
-}
-
-@Composable
-fun ZapSplitIcon(
-    modifier: Modifier = Size20Modifier,
-    tint: Color = BitcoinOrange,
-) {
-    Icon(
-        imageVector = ZapSplit,
-        contentDescription = stringRes(id = R.string.zap_split_title),
-        modifier = modifier,
-        tint = tint,
-    )
-}
-
-@Preview
-@Composable
-fun ZapSplitPreview() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier
-                .height(20.dp)
-                .width(25.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Bolt,
-                contentDescription = stringRes(id = R.string.zaps),
-                modifier =
-                    Modifier
-                        .size(20.dp)
-                        .align(Alignment.CenterStart),
-                tint = BitcoinOrange,
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = stringRes(id = R.string.zaps),
-                modifier =
-                    Modifier
-                        .size(13.dp)
-                        .align(Alignment.CenterEnd),
-                tint = BitcoinOrange,
-            )
-        }
-        ZapSplitIcon(tint = BitcoinOrange)
-    }
 }

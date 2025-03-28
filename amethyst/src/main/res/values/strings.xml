@@ -106,6 +106,7 @@
     <string name="description">Description</string>
     <string name="about_us">"About us.. "</string>
     <string name="what_s_on_your_mind">What\'s on your mind?</string>
+    <string name="write_a_message">Write a message...</string>
     <string name="post">Post</string>
     <string name="save">Save</string>
     <string name="create">Create</string>
@@ -723,6 +724,9 @@
     <string name="messages_new_message_subject_caption">Topic of the conversation</string>
     <string name="messages_new_message_to_caption">"@User1, @User2, @User3"</string>
 
+    <string name="messages_cant_upload_title">Can\'t Upload</string>
+    <string name="messages_cant_upload_explainer">Insert the destination of the message first</string>
+
     <string name="messages_group_descriptor">Members of this group</string>
     <string name="messages_new_subject_message">Explanation to members</string>
     <string name="messages_new_subject_message_placeholder">Changing the name for the new goals.</string>
@@ -1134,4 +1138,5 @@
     <string name="select_list_to_filter">Select a list to filter the feed</string>
 
     <string name="temporary_account">Log off on device lock</string>
+    <string name="private_message">Private Message</string>
 </resources>

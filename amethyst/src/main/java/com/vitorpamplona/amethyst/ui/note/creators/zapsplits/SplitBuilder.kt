@@ -18,21 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.collections.all
+import kotlin.collections.getOrNull
+import kotlin.collections.lastIndex
+import kotlin.compareTo
 import kotlin.math.abs
+import kotlin.text.toDouble
 
-class SplitItem<T>(
-    val key: T,
-) {
-    // 0 to 1
-    var percentage by mutableStateOf(0f)
-}
-
-class Split<T> {
+class SplitBuilder<T> {
     var items: List<SplitItem<T>> by mutableStateOf(emptyList())
 
     fun addItem(
@@ -126,4 +124,11 @@ class Split<T> {
             }
         }
     }
+}
+
+class SplitItem<T>(
+    val key: T,
+) {
+    // 0 to 1
+    var percentage by mutableStateOf(0f)
 }

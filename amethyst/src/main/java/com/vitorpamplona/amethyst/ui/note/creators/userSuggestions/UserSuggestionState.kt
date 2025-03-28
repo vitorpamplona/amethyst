@@ -18,41 +18,47 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
+package com.vitorpamplona.amethyst.ui.note.creators.userSuggestions
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
-class UserSuggestions {
-    var userSuggestions by mutableStateOf<List<User>>(emptyList())
+class UserSuggestionState(
+    val accountViewModel: AccountViewModel,
+) {
+    var search = MutableStateFlow("")
+    var results =
+        search
+            .debounce(500)
+            .distinctUntilChanged()
+            .map { word ->
+                if (word.startsWith("@") && word.length > 2) {
+                    val prefix = word.removePrefix("@")
+                    NostrSearchEventOrUserDataSource.search(prefix)
+                    accountViewModel.findUsersStartingWithSync(prefix)
+                } else {
+                    NostrSearchEventOrUserDataSource.clear()
+                    search.tryEmit("")
+                    emptyList()
+                }
+            }.flowOn(Dispatchers.IO)
 
     fun reset() {
-        userSuggestions = emptyList()
+        NostrSearchEventOrUserDataSource.clear()
+        search.tryEmit("")
     }
 
-    fun processCurrentWord(
-        word: String,
-        accountViewModel: AccountViewModel,
-    ) {
-        if (word.startsWith("@") && word.length > 2) {
-            val prefix = word.removePrefix("@")
-            NostrSearchEventOrUserDataSource.search(prefix)
-            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                userSuggestions = accountViewModel.findUsersStartingWithSync(prefix)
-            }
-        } else {
-            NostrSearchEventOrUserDataSource.clear()
-            userSuggestions = emptyList()
-        }
+    fun processCurrentWord(word: String) {
+        search.tryEmit(word)
     }
 
     fun replaceCurrentWord(

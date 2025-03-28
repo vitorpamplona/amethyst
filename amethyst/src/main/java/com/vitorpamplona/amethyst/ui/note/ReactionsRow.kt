@@ -315,7 +315,7 @@ private fun GenericInnerReactionRow(
 }
 
 @Composable
-private fun LoadAndDisplayZapraiser(
+fun LoadAndDisplayZapraiser(
     baseNote: Note,
     showReactionDetail: Boolean,
     wantsToSeeReactions: MutableState<Boolean>,
