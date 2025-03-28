@@ -20,19 +20,63 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 @Composable
 fun RenderCreateChannelNote(
@@ -42,27 +86,272 @@ fun RenderCreateChannelNote(
     nav: INav,
 ) {
     val noteEvent = note.event as? ChannelCreateEvent ?: return
-    val channelInfo = remember { noteEvent.channelInfo() }
+    val channelInfo = remember(noteEvent) { noteEvent.channelInfo() }
+    val tags =
+        remember(noteEvent) {
+            noteEvent.tags.toImmutableListOfLists()
+        }
 
-    val text =
-        note.author?.toBestDisplayName().toString() +
-            " ${stringRes(R.string.created)} " +
-            (channelInfo.name ?: "") +
-            " ${stringRes(R.string.with_description_of)} '" +
-            (channelInfo.about ?: "") +
-            "' ${stringRes(R.string.and_picture_to)} " +
-            (channelInfo.picture ?: "")
-
-    TranslatableRichTextViewer(
-        content = text,
-        canPreview = true,
-        quotesLeft = 0,
-        modifier = Modifier,
-        tags = note.author?.info?.tags ?: EmptyTagList,
-        backgroundColor = bgColor,
-        id = note.idHex,
-        callbackUri = note.toNostrUri(),
-        accountViewModel = accountViewModel,
-        nav = nav,
+    RenderChannelData(
+        noteEvent.id,
+        note.toNostrUri(),
+        channelInfo,
+        tags,
+        bgColor,
+        accountViewModel,
+        nav,
     )
+}
+
+@Preview
+@Composable
+fun RenderChannelDataPreview() {
+    ThemeComparisonRow {
+        RenderChannelData(
+            id = "bbaacc",
+            uri = "nostr:nevent1...",
+            channelInfo =
+                ChannelData(
+                    "My Group",
+                    "Testing About me",
+                    "http://test.com",
+                    listOf("wss://nostr.mom", "wss://nos.lol"),
+                ),
+            tags = EmptyTagList,
+            bgColor = remember { mutableStateOf(Color.Transparent) },
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav,
+        )
+    }
+}
+
+@Composable
+fun RenderChannelData(
+    id: HexKey,
+    uri: String,
+    channelInfo: ChannelData,
+    tags: ImmutableListOfLists<String>,
+    bgColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column {
+        Row {
+            TranslatableRichTextViewer(
+                content = stringRes(R.string.changed_chat_profile_to),
+                canPreview = true,
+                quotesLeft = 1,
+                modifier = Modifier,
+                tags = tags,
+                backgroundColor = bgColor,
+                id = id,
+                callbackUri = uri,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        channelInfo.picture?.let {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            ) {
+                RobohashFallbackAsyncImage(
+                    robot = id,
+                    model = it,
+                    contentDescription = stringRes(R.string.channel_image),
+                    modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                )
+            }
+        }
+
+        channelInfo.name?.let {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            ) {
+                CreateTextWithEmoji(
+                    text = it,
+                    tags = tags,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                )
+            }
+        }
+
+        channelInfo.about?.let {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            ) {
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = true,
+                    quotesLeft = 1,
+                    modifier = Modifier,
+                    tags = tags,
+                    backgroundColor = bgColor,
+                    id = id,
+                    callbackUri = uri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+
+        channelInfo.relays?.let {
+            Text(
+                stringRes(R.string.public_chat_relays_title) + ": ",
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            )
+            it.forEach {
+                Spacer(StdVertSpacer)
+                RenderRelayLinePublicChat(
+                    it,
+                    accountViewModel,
+                    nav,
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun RenderRelayLinePreview() {
+    ThemeComparisonRow {
+        RenderRelayLine(
+            "wss://nos.lol",
+            "http://icon.com/icon.ico",
+            Modifier,
+            true,
+            true,
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun RenderRelayLinePublicChat(
+    dirtyUrl: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val relayInfo by produceState(
+        initialValue = Nip11CachedRetriever.getFromCache(dirtyUrl),
+    ) {
+        if (value == null) {
+            accountViewModel.retrieveRelayDocument(
+                dirtyUrl,
+                onInfo = {
+                    value = it
+                },
+                onError = { url, errorCode, exceptionMessage ->
+                },
+            )
+        }
+    }
+
+    var openRelayDialog by remember { mutableStateOf(false) }
+
+    val info =
+        remember(dirtyUrl) {
+            RelayBriefInfoCache.get(RelayUrlFormatter.normalize(dirtyUrl))
+        }
+
+    if (openRelayDialog && relayInfo != null) {
+        RelayInformationDialog(
+            onClose = { openRelayDialog = false },
+            relayInfo = relayInfo!!,
+            relayBriefInfo = info,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    val clipboardManager = LocalClipboardManager.current
+    val clickableModifier =
+        remember(dirtyUrl) {
+            Modifier.combinedClickable(
+                onLongClick = {
+                    clipboardManager.setText(AnnotatedString(dirtyUrl))
+                },
+                onClick = {
+                    accountViewModel.retrieveRelayDocument(
+                        dirtyUrl,
+                        onInfo = {
+                            openRelayDialog = true
+                        },
+                        onError = { url, errorCode, exceptionMessage ->
+                            accountViewModel.toastManager.toast(
+                                R.string.unable_to_download_relay_document,
+                                when (errorCode) {
+                                    Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
+                                        R.string.relay_information_document_error_failed_to_assemble_url
+
+                                    Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
+                                        R.string.relay_information_document_error_failed_to_reach_server
+
+                                    Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
+                                        R.string.relay_information_document_error_failed_to_parse_response
+
+                                    Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
+                                        R.string.relay_information_document_error_failed_with_http
+                                },
+                                url,
+                                exceptionMessage ?: errorCode.toString(),
+                            )
+                        },
+                    )
+                },
+            )
+        }
+
+    RenderRelayLine(
+        info.displayUrl,
+        relayInfo?.icon ?: info.favIcon,
+        clickableModifier,
+        showPicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+    )
+}
+
+@Composable
+fun RenderRelayLine(
+    url: String,
+    icon: String?,
+    modifier: Modifier = Modifier,
+    showPicture: Boolean = true,
+    loadRobohash: Boolean = true,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier,
+    ) {
+        Text(" -")
+
+        Spacer(modifier = StdHorzSpacer)
+
+        RobohashFallbackAsyncImage(
+            robot = url,
+            model = icon,
+            contentDescription = stringRes(id = R.string.relay_info, url),
+            colorFilter = RelayIconFilter,
+            modifier =
+                Modifier
+                    .size(Size20dp)
+                    .clip(shape = CircleShape),
+            loadProfilePicture = showPicture,
+            loadRobohash = loadRobohash,
+        )
+
+        Spacer(modifier = StdHorzSpacer)
+
+        Text(
+            text = url,
+        )
+    }
 }

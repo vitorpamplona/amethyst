@@ -24,20 +24,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
+import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
@@ -45,23 +43,17 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 fun EditButton(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    var wantsToPost by remember { mutableStateOf(false) }
-
-    if (wantsToPost) {
-        ChannelMetadataDialog({ wantsToPost = false }, accountViewModel, channel)
-    }
-
-    Button(
+    FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
-        onClick = { wantsToPost = true },
+        onClick = { nav.nav("ChannelMetadataEdit?id=${channel.idHex}") },
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            tint = Color.White,
             imageVector = Icons.Default.EditNote,
             contentDescription = stringRes(R.string.edits_the_channel_metadata),
         )

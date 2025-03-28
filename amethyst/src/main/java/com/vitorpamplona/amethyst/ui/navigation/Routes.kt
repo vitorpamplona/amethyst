@@ -213,6 +213,20 @@ sealed class Route(
             arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
         )
 
+    object ChannelMetadataEdit :
+        Route(
+            route = "ChannelMetadataEdit?id={id}",
+            icon = R.drawable.ic_moments,
+            arguments =
+                listOf(
+                    navArgument("id") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ).toImmutableList(),
+        )
+
     object Event :
         Route(
             route = "Event/{id}",

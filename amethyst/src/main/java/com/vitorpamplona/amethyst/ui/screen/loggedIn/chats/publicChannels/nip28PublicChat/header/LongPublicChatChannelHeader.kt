@@ -20,25 +20,35 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -46,20 +56,63 @@ import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.NormalTimeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.EditButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LeaveChatButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LinkChatButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.OpenChatButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.ShareChatButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
+import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 
 @Composable
 fun LongPublicChatChannelHeader(
     baseChannel: PublicChatChannel,
-    lineModifier: Modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+    lineModifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val channelState by baseChannel.live.observeAsState()
     val channel = channelState?.channel as? PublicChatChannel ?: return
+
+    Spacer(StdVertSpacer)
+
+    channel.info.picture?.let {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = lineModifier,
+        ) {
+            RobohashFallbackAsyncImage(
+                robot = baseChannel.idHex,
+                model = it,
+                contentDescription = stringRes(R.string.channel_image),
+                modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+            )
+        }
+    }
+
+    channel.info.name?.let {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            modifier = lineModifier,
+        ) {
+            CreateTextWithEmoji(
+                text = it,
+                tags = channel.infoTags,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+            )
+        }
+    }
+
+    Row(horizontalArrangement = Arrangement.Center, modifier = lineModifier) {
+        LongChannelActionOptions(channel, accountViewModel, nav)
+    }
 
     Row(lineModifier) {
         val summary = remember(channelState) { channel.summary()?.ifBlank { null } }
@@ -73,7 +126,7 @@ fun LongPublicChatChannelHeader(
                     content = summary ?: stringRes(id = R.string.groups_no_descriptor),
                     canPreview = false,
                     quotesLeft = 1,
-                    tags = EmptyTagList,
+                    tags = channel.infoTags,
                     backgroundColor = background,
                     id = baseChannel.idHex,
                     accountViewModel = accountViewModel,
@@ -81,9 +134,6 @@ fun LongPublicChatChannelHeader(
                 )
             }
         }
-
-        Spacer(DoubleHorzSpacer)
-        LongChannelActionOptions(channel, accountViewModel, nav)
     }
 
     LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
@@ -120,4 +170,54 @@ fun LongPublicChatChannelHeader(
             }
         }
     }
+
+    Spacer(StdVertSpacer)
+}
+
+@Composable
+fun LongChannelActionOptions(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val isMe by
+        remember(accountViewModel) {
+            derivedStateOf { channel.creator == accountViewModel.account.userProfile() }
+        }
+
+    OpenChatButton(channel, accountViewModel, nav)
+
+    LinkChatButton(channel, accountViewModel, nav)
+
+    ShareChatButton(channel, accountViewModel, nav)
+
+    if (isMe) {
+        EditButton(channel, accountViewModel, nav)
+    }
+
+    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
+        if (isFollowing) {
+            LeaveChatButton(channel, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun WatchChannelFollows(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    content: @Composable (Boolean) -> Unit,
+) {
+    val isFollowing by
+        accountViewModel
+            .userProfile()
+            .live()
+            .follows
+            .map { it.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false }
+            .distinctUntilChanged()
+            .observeAsState(
+                accountViewModel.userProfile().latestContactList?.isTaggedEvent(channel.idHex) ?: false,
+            )
+
+    content(isFollowing)
 }

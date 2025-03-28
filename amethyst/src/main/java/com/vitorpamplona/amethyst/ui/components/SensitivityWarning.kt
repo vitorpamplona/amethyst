@@ -32,8 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -161,19 +160,14 @@ fun ContentWarningNote(onDismiss: () -> Unit) {
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Button(
+                    FilledTonalButton(
                         modifier = Modifier.padding(top = 10.dp),
                         onClick = onDismiss,
                         shape = ButtonBorder,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                            ),
                         contentPadding = ButtonPadding,
                     ) {
                         Text(
                             text = stringRes(R.string.show_anyway),
-                            color = Color.White,
                         )
                     }
                 }

@@ -21,13 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -40,32 +37,24 @@ fun FollowButton(
     text: Int = R.string.follow,
     onClick: () -> Unit,
 ) {
-    Button(
+    FilledTonalButton(
         modifier = Modifier.padding(start = 3.dp),
         onClick = onClick,
         shape = LeftHalfCircleButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(text), color = Color.White, textAlign = TextAlign.Center)
+        Text(text = stringRes(text), textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 fun UnfollowButton(onClick: () -> Unit) {
-    Button(
+    FilledTonalButton(
         modifier = Modifier.padding(horizontal = 3.dp),
         onClick = onClick,
         shape = LeftHalfCircleButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
         contentPadding = ButtonPadding,
     ) {
-        Text(text = stringRes(R.string.unfollow), color = Color.White)
+        Text(text = stringRes(R.string.unfollow))
     }
 }

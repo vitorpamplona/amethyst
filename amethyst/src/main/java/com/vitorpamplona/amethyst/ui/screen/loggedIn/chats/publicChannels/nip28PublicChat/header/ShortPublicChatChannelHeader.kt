@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,12 +40,18 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.JoinChatButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
+import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 
 @Composable
 fun ShortPublicChatChannelHeader(
@@ -91,6 +99,39 @@ fun ShortPublicChatChannelHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ShortChannelActionOptions(channel, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun ShortChannelActionOptions(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadNote(baseNoteHex = channel.idHex, accountViewModel) {
+        it?.let {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
+                LikeReaction(
+                    baseNote = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav,
+                )
+                ZapReaction(
+                    baseNote = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
+        }
+    }
+
+    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
+        if (!isFollowing) {
+            JoinChatButton(channel, accountViewModel, nav)
         }
     }
 }

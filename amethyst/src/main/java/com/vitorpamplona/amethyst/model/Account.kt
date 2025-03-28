@@ -127,8 +127,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
@@ -2313,10 +2311,29 @@ class Account(
     fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,
         relayList: List<String>,
+        onDone: (T) -> Unit = {},
     ) {
         signer.sign(template) {
             LocalCache.justConsume(it, null)
             Amethyst.instance.client.sendPrivately(it, relayList = convertRelayList(relayList))
+            onDone(it)
+        }
+    }
+
+    fun <T : Event> signAndSendPrivatelyOrBroadcast(
+        template: EventTemplate<T>,
+        relayList: (T) -> List<String>?,
+        onDone: (T) -> Unit = {},
+    ) {
+        signer.sign(template) {
+            LocalCache.justConsume(it, null)
+            val relays = relayList(it)
+            if (relays != null) {
+                Amethyst.instance.client.sendPrivately(it, relayList = convertRelayList(relays))
+            } else {
+                Amethyst.instance.client.send(it)
+            }
+            onDone(it)
         }
     }
 
@@ -2803,28 +2820,6 @@ class Account(
             } else {
                 Amethyst.instance.client.send(wrap)
             }
-        }
-    }
-
-    fun sendChangeChannel(template: EventTemplate<ChannelMetadataEvent>) {
-        if (!isWriteable()) return
-
-        signer.sign(template) {
-            Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
-
-            it.channelId()?.let { LocalCache.getChannelIfExists(it)?.let { follow(it) } }
-        }
-    }
-
-    fun sendCreateNewChannel(template: EventTemplate<ChannelCreateEvent>) {
-        if (!isWriteable()) return
-
-        signer.sign(template) {
-            Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
-
-            LocalCache.getChannelIfExists(it.id)?.let { follow(it) }
         }
     }
 

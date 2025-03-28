@@ -1385,7 +1385,7 @@ object LocalCache {
         }
         if (oldChannel.creator == null || oldChannel.creator == author) {
             if (oldChannel is PublicChatChannel) {
-                oldChannel.updateChannelInfo(author, event, event.createdAt)
+                oldChannel.updateChannelInfo(author, event)
             }
         }
     }
@@ -1404,7 +1404,7 @@ object LocalCache {
         val author = getOrCreateUser(event.pubKey)
         if (event.createdAt > oldChannel.updatedMetadataAt) {
             if (oldChannel is PublicChatChannel) {
-                oldChannel.updateChannelInfo(author, event.channelInfo(), event.createdAt)
+                oldChannel.updateChannelInfo(author, event)
             }
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}

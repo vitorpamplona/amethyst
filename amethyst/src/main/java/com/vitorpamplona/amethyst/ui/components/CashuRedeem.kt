@@ -67,12 +67,12 @@ import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -129,14 +129,12 @@ fun CashuPreviewPreview() {
     sharedPreferencesViewModel.init()
     sharedPreferencesViewModel.updateTheme(ThemeType.DARK)
 
-    AmethystTheme(sharedPrefsViewModel = sharedPreferencesViewModel) {
-        Column {
-            CashuPreviewNew(
-                token = CashuToken("token", "mint", 32400, listOf()),
-                melt = { token, context, onDone -> },
-                toast = { title, message -> },
-            )
-        }
+    ThemeComparisonColumn {
+        CashuPreviewNew(
+            token = CashuToken("token", "mint", 32400, listOf()),
+            melt = { token, context, onDone -> },
+            toast = { title, message -> },
+        )
     }
 }
 
@@ -210,7 +208,6 @@ fun CashuPreviewNew(
 
                     Text(
                         "Redeem",
-                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 16.sp,
                     )
                 }
@@ -232,7 +229,7 @@ fun CashuPreviewNew(
                     shape = SmallishBorder,
                     contentPadding = PaddingValues(0.dp),
                 ) {
-                    OpenInNewIcon(Size18Modifier, tint = MaterialTheme.colorScheme.onBackground)
+                    OpenInNewIcon(Size18Modifier)
                 }
 
                 Spacer(modifier = StdHorzSpacer)
@@ -245,7 +242,7 @@ fun CashuPreviewNew(
                     shape = SmallishBorder,
                     contentPadding = PaddingValues(0.dp),
                 ) {
-                    CopyIcon(Size18Modifier, tint = MaterialTheme.colorScheme.onBackground)
+                    CopyIcon(Size18Modifier)
                 }
             }
         }

@@ -33,9 +33,13 @@ import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.Hex
@@ -46,17 +50,30 @@ class PublicChatChannel(
     idHex: String,
 ) : Channel(idHex) {
     var event: ChannelCreateEvent? = null
+    var infoTags = EmptyTagList
     var info = ChannelData(null, null, null, null)
 
     override fun relays() = info.relays ?: super.relays()
 
+    fun toNEvent() = NEvent.create(idHex, event?.pubKey, ChannelCreateEvent.KIND, *relays().toTypedArray())
+
+    fun toNostrUri() = "nostr:${toNEvent()}"
+
     fun updateChannelInfo(
         creator: User,
-        channelInfo: ChannelCreateEvent,
-        updatedAt: Long,
+        event: ChannelCreateEvent,
     ) {
-        this.event = channelInfo
-        updateChannelInfo(creator, channelInfo.channelInfo(), updatedAt)
+        this.event = event
+        this.infoTags = event.tags.toImmutableListOfLists()
+        updateChannelInfo(creator, event.channelInfo(), event.createdAt)
+    }
+
+    fun updateChannelInfo(
+        creator: User,
+        event: ChannelMetadataEvent,
+    ) {
+        this.infoTags = event.tags.toImmutableListOfLists()
+        updateChannelInfo(creator, event.channelInfo(), event.createdAt)
     }
 
     fun updateChannelInfo(
@@ -116,9 +133,11 @@ class LiveActivitiesChannel(
             .filter { it.contains(prefix, true) }
             .isNotEmpty()
 
-    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
+    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, *relays().toTypedArray())
 
     fun toATag() = ATag(address, relayHintUrl())
+
+    fun toNostrUri() = "nostr:${toNAddr()}"
 }
 
 data class Counter(

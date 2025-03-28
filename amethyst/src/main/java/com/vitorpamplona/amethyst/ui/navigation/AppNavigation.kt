@@ -47,7 +47,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
-import com.vitorpamplona.amethyst.ui.actions.relays.AllRelayListView
 import com.vitorpamplona.amethyst.ui.components.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
@@ -270,6 +271,22 @@ fun AppNavigation(
             }
 
             composable(
+                Route.ChannelMetadataEdit.route,
+                Route.ChannelMetadataEdit.arguments,
+                enterTransition = { slideInVerticallyFromBottom },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutVerticallyToBottom },
+                content = {
+                    ChannelMetadataScreen(
+                        channelId = it.id(),
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
+            )
+
+            composable(
                 Route.Event.route,
                 Route.Event.arguments,
             ) {
@@ -313,7 +330,7 @@ fun AppNavigation(
                 content = {
                     val relayToAdd = it.arguments?.getString("toAdd")
 
-                    AllRelayListView(
+                    AllRelayListScreen(
                         relayToAdd = relayToAdd,
                         accountViewModel = accountViewModel,
                         nav = nav,
@@ -329,7 +346,7 @@ fun AppNavigation(
                 popEnterTransition = { scaleIn },
                 popExitTransition = { slideOutVerticallyToBottom },
             ) {
-                val draftMessage = it.arguments?.getString("message")?.ifBlank { null }
+                val draftMessage = it.message()?.ifBlank { null }
                 val attachment =
                     it.arguments?.getString("attachment")?.ifBlank { null }?.let {
                         Uri.parse(it)
@@ -339,8 +356,8 @@ fun AppNavigation(
                 val fork = it.arguments?.getString("fork")
                 val version = it.arguments?.getString("version")
                 val draft = it.arguments?.getString("draft")
-                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") ?: false
-                val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") ?: false
+                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") == true
+                val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") == true
 
                 NewPostScreen(
                     message = draftMessage,

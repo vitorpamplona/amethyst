@@ -24,7 +24,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
@@ -37,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -110,22 +108,20 @@ private fun GallerySelectButton(
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    Box {
-        IconButton(
-            modifier = modifier.align(Alignment.Center),
-            enabled = !isUploading,
-            onClick = { onClick() },
-        ) {
-            if (!isUploading) {
-                Icon(
-                    imageVector = Icons.Default.AddPhotoAlternate,
-                    contentDescription = stringRes(id = R.string.upload_image),
-                    modifier = Modifier.height(25.dp),
-                    tint = tint,
-                )
-            } else {
-                LoadingAnimation()
-            }
+    IconButton(
+        modifier = modifier,
+        enabled = !isUploading,
+        onClick = { onClick() },
+    ) {
+        if (!isUploading) {
+            Icon(
+                imageVector = Icons.Default.AddPhotoAlternate,
+                contentDescription = stringRes(id = R.string.upload_image),
+                modifier = Modifier.height(25.dp),
+                tint = tint,
+            )
+        } else {
+            LoadingAnimation()
         }
     }
 }

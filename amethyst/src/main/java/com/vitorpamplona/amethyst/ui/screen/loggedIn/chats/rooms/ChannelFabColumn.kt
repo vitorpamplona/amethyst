@@ -48,26 +48,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
-fun ChannelFabColumn(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
+fun ChannelFabColumn(nav: INav) {
     var isOpen by remember { mutableStateOf(false) }
-
-    var wantsToCreateChannel by remember { mutableStateOf(false) }
-
-    if (wantsToCreateChannel) {
-        ChannelMetadataDialog({ wantsToCreateChannel = false }, accountViewModel = accountViewModel)
-    }
 
     Column {
         AnimatedVisibility(
@@ -101,7 +91,7 @@ fun ChannelFabColumn(
 
                 FloatingActionButton(
                     onClick = {
-                        wantsToCreateChannel = true
+                        nav.nav("ChannelMetadataEdit")
                         isOpen = false
                     },
                     modifier = Size55Modifier,

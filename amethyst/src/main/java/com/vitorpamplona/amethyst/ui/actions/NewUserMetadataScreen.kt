@@ -221,7 +221,7 @@ fun NewUserMetadataScreen(
                         SelectSingleFromGallery(
                             isUploading = postViewModel.isUploadingImageForBanner,
                             tint = MaterialTheme.colorScheme.placeholderText,
-                            modifier = Modifier.padding(start = 5.dp),
+                            modifier = Modifier.padding(start = 5.dp).align(Alignment.CenterHorizontally),
                         ) {
                             postViewModel.uploadForBanner(it, context, onError = accountViewModel.toastManager::toast)
                         }

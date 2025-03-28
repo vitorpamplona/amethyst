@@ -20,22 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +47,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,6 +60,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNIP05
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.nip05VerificationAsAState
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -65,6 +69,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 
 @Preview
@@ -98,6 +104,7 @@ fun BackButton(onPress: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShowQRDialog(
     user: User,
@@ -111,96 +118,113 @@ fun ShowQRDialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Surface {
-            Column {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BackButton(onPress = onClose)
-                }
+        SetDialogToEdgeToEdge()
 
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                    verticalArrangement = Arrangement.SpaceAround,
-                ) {
-                    if (presenting) {
-                        Column {
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                RobohashFallbackAsyncImage(
-                                    robot = user.pubkeyHex,
-                                    model = user.profilePicture(),
-                                    contentDescription = stringRes(R.string.profile_image),
-                                    modifier =
-                                        Modifier
-                                            .width(120.dp)
-                                            .height(120.dp)
-                                            .clip(shape = CircleShape)
-                                            .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape),
-                                    loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                                )
-                            }
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                            ) {
-                                CreateTextWithEmoji(
-                                    text = user.info?.bestName() ?: "",
-                                    tags = user.info?.tags,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 20.sp,
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            ) {
-                                val nip05 = user.nip05()
-                                if (nip05 != null) {
-                                    val nip05Verified =
-                                        nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
-
-                                    DisplayNIP05(nip05, nip05Verified, accountViewModel)
-                                } else {
-                                    Text(
-                                        text = user.pubkeyDisplayHex(),
-                                        fontSize = Font14SP,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        Row {
+                            Spacer(modifier = StdHorzSpacer)
+                            BackButton(onPress = onClose)
+                        }
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                )
+            },
+        ) { pad ->
+            Surface(
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = 10.dp,
+                        end = 10.dp,
+                        top = pad.calculateTopPadding(),
+                        bottom = pad.calculateBottomPadding(),
+                    ).consumeWindowInsets(pad)
+                    .imePadding(),
+            ) {
+                Column {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                        verticalArrangement = Arrangement.SpaceAround,
+                    ) {
+                        if (presenting) {
+                            Column {
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    RobohashFallbackAsyncImage(
+                                        robot = user.pubkeyHex,
+                                        model = user.profilePicture(),
+                                        contentDescription = stringRes(R.string.profile_image),
+                                        modifier = MaterialTheme.colorScheme.largeProfilePictureModifier,
+                                        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                                        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                                     )
                                 }
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                ) {
+                                    CreateTextWithEmoji(
+                                        text = user.info?.bestName() ?: "",
+                                        tags = user.info?.tags,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                ) {
+                                    val nip05 = user.nip05()
+                                    if (nip05 != null) {
+                                        val nip05Verified =
+                                            nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
+
+                                        DisplayNIP05(nip05, nip05Verified, accountViewModel)
+                                    } else {
+                                        Text(
+                                            text = user.pubkeyDisplayHex(),
+                                            fontSize = Font14SP,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
                             }
-                        }
 
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = Size10dp),
-                        ) {
-                            QrCodeDrawer(user.toNostrUri())
-                        }
-
-                        Row(modifier = Modifier.padding(horizontal = 30.dp)) {
-                            FilledTonalButton(
-                                onClick = { presenting = false },
-                                shape = RoundedCornerShape(Size35dp),
-                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = Size10dp),
                             ) {
-                                Text(text = stringRes(R.string.scan_qr))
+                                QrCodeDrawer(user.toNostrUri())
                             }
-                        }
-                    } else {
-                        NIP19QrCodeScanner {
-                            if (it.isNullOrEmpty()) {
-                                presenting = true
-                            } else {
-                                onScan(it)
+
+                            Row(modifier = Modifier.padding(horizontal = 30.dp)) {
+                                FilledTonalButton(
+                                    onClick = { presenting = false },
+                                    shape = RoundedCornerShape(Size35dp),
+                                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                                ) {
+                                    Text(text = stringRes(R.string.scan_qr))
+                                }
+                            }
+                        } else {
+                            NIP19QrCodeScanner {
+                                if (it.isNullOrEmpty()) {
+                                    presenting = true
+                                } else {
+                                    onScan(it)
+                                }
                             }
                         }
                     }
