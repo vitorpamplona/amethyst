@@ -24,6 +24,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 
+val Primary50 = Color(red = 127, green = 103, blue = 190)
+val Primary60 = Color(red = 154, green = 130, blue = 219)
+val Primary70 = Color(red = 182, green = 157, blue = 248)
+val Primary80 = Color(red = 208, green = 188, blue = 255)
+
+val DEFAULT_PRIMARY = Color(red = 208, green = 188, blue = 255)
+val LIGHT_PURPLE = Color(red = 187, green = 134, blue = 252)
+
 val Purple200 = Color(0xFFBB86FC)
 val Purple500 = Color(0xFF6200EE)
 val Purple700 = Color(0xFF3700B3)

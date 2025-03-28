@@ -216,6 +216,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="channel_created">Kanal erstellt</string>
     <string name="channel_information_changed_to">"Kanalinformationen geändert in"</string>
     <string name="public_chat">Öffentlicher Chat</string>
+    <string name="public_chat_title">Öffentliche Chat Metadaten</string>
+    <string name="public_chat_explainer">Öffentliche Chats sind für jeden auf Nostr sichtbar und jeder
+        kann daran teilnehmen. Sie eignen sich hervorragend für offene Gemeinschaften rund um bestimmte Themen.
+        Moderation kann durch Löschen von Beiträgen auf den Relais gesteuert werden</string>
+    <string name="public_chat_relays_title">Relais</string>
+    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1-3 Relais ein, die diese Gruppe beherbergen.
+        Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
     <string name="posts_received">empfangene Beiträge</string>
     <string name="remove">Entfernen</string>
     <string name="translations_auto">Automatisch</string>

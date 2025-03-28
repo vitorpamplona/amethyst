@@ -22,15 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
+import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 
 @Composable
@@ -41,27 +38,19 @@ fun RenderChangeChannelMetadataNote(
     nav: INav,
 ) {
     val noteEvent = note.event as? ChannelMetadataEvent ?: return
+    val channelInfo = remember(noteEvent) { noteEvent.channelInfo() }
+    val tags =
+        remember(noteEvent) {
+            noteEvent.tags.toImmutableListOfLists()
+        }
 
-    val channelInfo = noteEvent.channelInfo()
-    val text =
-        note.author?.toBestDisplayName().toString() +
-            " ${stringRes(R.string.changed_chat_name_to)} '" +
-            (channelInfo.name ?: "") +
-            "', ${stringRes(R.string.description_to)} '" +
-            (channelInfo.about ?: "") +
-            "' ${stringRes(R.string.and_picture_to)} " +
-            (channelInfo.picture ?: "")
-
-    TranslatableRichTextViewer(
-        content = text,
-        canPreview = true,
-        quotesLeft = 0,
-        modifier = Modifier,
-        tags = note.author?.info?.tags ?: EmptyTagList,
-        backgroundColor = bgColor,
-        id = note.idHex,
-        callbackUri = note.toNostrUri(),
-        accountViewModel = accountViewModel,
-        nav = nav,
+    RenderChannelData(
+        noteEvent.id,
+        note.toNostrUri(),
+        channelInfo,
+        tags,
+        bgColor,
+        accountViewModel,
+        nav,
     )
 }

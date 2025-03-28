@@ -29,8 +29,8 @@ import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
+import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.tryAndWait
-import com.vitorpamplona.amethyst.ui.actions.relays.updated
 import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
@@ -791,28 +791,28 @@ open class Note(
         // migrates these comments to a new version
         replies.forEach {
             note.addReply(it)
-            it.replyTo = it.replyTo?.updated(this, note)
+            it.replyTo = it.replyTo?.replace(this, note)
         }
         reactions.forEach {
             it.value.forEach {
                 note.addReaction(it)
-                it.replyTo = it.replyTo?.updated(this, note)
+                it.replyTo = it.replyTo?.replace(this, note)
             }
         }
         boosts.forEach {
             note.addBoost(it)
-            it.replyTo = it.replyTo?.updated(this, note)
+            it.replyTo = it.replyTo?.replace(this, note)
         }
         reports.forEach {
             it.value.forEach {
                 note.addReport(it)
-                it.replyTo = it.replyTo?.updated(this, note)
+                it.replyTo = it.replyTo?.replace(this, note)
             }
         }
         zaps.forEach {
             note.addZap(it.key, it.value)
-            it.key.replyTo = it.key.replyTo?.updated(this, note)
-            it.value?.replyTo = it.value?.replyTo?.updated(this, note)
+            it.key.replyTo = it.key.replyTo?.replace(this, note)
+            it.value?.replyTo = it.value?.replyTo?.replace(this, note)
         }
 
         replyTo = null

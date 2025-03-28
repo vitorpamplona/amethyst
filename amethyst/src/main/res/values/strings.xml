@@ -213,6 +213,7 @@
     <string name="with_description_of">with description of</string>
     <string name="and_picture">and picture</string>
     <string name="changed_chat_name_to">changed chat name to</string>
+    <string name="changed_chat_profile_to">New chat profile:</string>
     <string name="description_to">description to</string>
     <string name="and_picture_to">and picture to</string>
     <string name="leave">Leave</string>
@@ -220,6 +221,15 @@
     <string name="channel_created">Channel created</string>
     <string name="channel_information_changed_to">"Channel Information changed to"</string>
     <string name="public_chat">Public Chat</string>
+    <string name="public_chat_title">Public Chat Metadata</string>
+    <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
+        can participate on them. They are great for open communities around specific topics.
+        Moderation can be controlled by deleting posts on the its relays</string>
+
+    <string name="public_chat_relays_title">Relays</string>
+    <string name="public_chat_relays_explainer">Insert between 1-3 relays that host this group.
+        Nostr clients use this setting to know where to download messages from and send your messages to.</string>
+
     <string name="posts_received">posts received</string>
     <string name="remove">Remove</string>
     <string name="sats" translatable="false">sats</string>
@@ -606,6 +616,8 @@
     <string name="cashu_redeem_to_zap">Send to Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Open in Cashu Wallet</string>
     <string name="cashu_copy_token">Copy Token</string>
+
+    <string name="quick_actions_open_in_another_app">Open in Another App</string>
 
     <string name="no_lightning_address_set">No Lightning Address set</string>
     <string name="copied_token_to_clipboard">Copied token to clipboard</string>

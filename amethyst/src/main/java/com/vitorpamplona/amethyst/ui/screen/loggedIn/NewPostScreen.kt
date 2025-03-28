@@ -1698,19 +1698,11 @@ fun CreateButton(
     modifier: Modifier = Modifier,
 ) {
     Button(
+        enabled = isActive,
         modifier = modifier,
-        onClick = {
-            if (isActive) {
-                onPost()
-            }
-        },
-        shape = ButtonBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,
-            ),
+        onClick = onPost,
     ) {
-        Text(text = stringRes(R.string.create), color = Color.White)
+        Text(text = stringRes(R.string.create))
     }
 }
 
