@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -67,7 +67,6 @@ fun InvoiceRequestCard(
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
-    onClose: () -> Unit,
     onError: (String, String) -> Unit,
 ) {
     Column(
@@ -76,22 +75,18 @@ fun InvoiceRequestCard(
                 .fillMaxWidth()
                 .padding(start = 30.dp, end = 30.dp)
                 .clip(shape = QuoteBorder)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder),
+                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
+                .padding(30.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(30.dp),
-        ) {
-            InvoiceRequest(
-                lud16,
-                toUserPubKeyHex,
-                accountViewModel,
-                titleText,
-                buttonText,
-                onSuccess,
-                onClose,
-                onError,
-            )
-        }
+        InvoiceRequest(
+            lud16,
+            toUserPubKeyHex,
+            accountViewModel,
+            titleText,
+            buttonText,
+            onSuccess,
+            onError,
+        )
     }
 }
 
@@ -103,103 +98,104 @@ fun InvoiceRequest(
     titleText: String? = null,
     buttonText: String? = null,
     onSuccess: (String) -> Unit,
-    onClose: () -> Unit,
     onError: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
-    ) {
-        Icon(
-            imageVector = CustomHashTagIcons.Lightning,
-            null,
-            modifier = Size20Modifier,
-            tint = Color.Unspecified,
-        )
-
-        Text(
-            text = titleText ?: stringRes(R.string.lightning_tips),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.W500,
-            modifier = Modifier.padding(start = 10.dp),
-        )
-    }
-
-    HorizontalDivider(thickness = DividerThickness)
-
-    var message by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf(1000L) }
-
-    OutlinedTextField(
-        label = { Text(text = stringRes(R.string.note_to_receiver)) },
-        modifier = Modifier.fillMaxWidth(),
-        value = message,
-        onValueChange = { message = it },
-        placeholder = {
-            Text(
-                text = stringRes(R.string.thank_you_so_much),
-                color = MaterialTheme.colorScheme.placeholderText,
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+        ) {
+            Icon(
+                imageVector = CustomHashTagIcons.Lightning,
+                null,
+                modifier = Size20Modifier,
+                tint = Color.Unspecified,
             )
-        },
-        keyboardOptions =
-            KeyboardOptions.Default.copy(
-                capitalization = KeyboardCapitalization.Sentences,
-            ),
-        singleLine = true,
-    )
 
-    OutlinedTextField(
-        label = { Text(text = stringRes(R.string.amount_in_sats)) },
-        modifier = Modifier.fillMaxWidth(),
-        value = amount.toString(),
-        onValueChange = {
-            runCatching {
-                if (it.isEmpty()) {
-                    amount = 0
-                } else {
-                    amount = it.toLong()
+            Text(
+                text = titleText ?: stringRes(R.string.lightning_tips),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.W500,
+                modifier = Modifier.padding(start = 10.dp),
+            )
+        }
+
+        HorizontalDivider(thickness = DividerThickness)
+
+        var message by remember { mutableStateOf("") }
+        var amount by remember { mutableStateOf(1000L) }
+
+        OutlinedTextField(
+            label = { Text(text = stringRes(R.string.note_to_receiver)) },
+            modifier = Modifier.fillMaxWidth(),
+            value = message,
+            onValueChange = { message = it },
+            placeholder = {
+                Text(
+                    text = stringRes(R.string.thank_you_so_much),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+            singleLine = true,
+        )
+
+        OutlinedTextField(
+            label = { Text(text = stringRes(R.string.amount_in_sats)) },
+            modifier = Modifier.fillMaxWidth(),
+            value = amount.toString(),
+            onValueChange = {
+                runCatching {
+                    if (it.isEmpty()) {
+                        amount = 0
+                    } else {
+                        amount = it.toLong()
+                    }
                 }
-            }
-        },
-        placeholder = {
-            Text(
-                text = "1000",
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
-        },
-        keyboardOptions =
-            KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Number,
-            ),
-        singleLine = true,
-    )
-
-    Button(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        onClick = {
-            accountViewModel.sendSats(
-                lnaddress = lud16,
-                milliSats = amount * 1000,
-                message = message,
-                toUserPubKeyHex = toUserPubKeyHex,
-                onSuccess = onSuccess,
-                onError = onError,
-                onProgress = {},
-                context = context,
-            )
-        },
-        shape = QuoteBorder,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
-    ) {
-        Text(
-            text = buttonText ?: stringRes(R.string.send_sats),
-            color = Color.White,
-            fontSize = 20.sp,
+            },
+            placeholder = {
+                Text(
+                    text = "1000",
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            },
+            keyboardOptions =
+                KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number,
+                ),
+            singleLine = true,
         )
+
+        Button(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            onClick = {
+                accountViewModel.sendSats(
+                    lnaddress = lud16,
+                    milliSats = amount * 1000,
+                    message = message,
+                    toUserPubKeyHex = toUserPubKeyHex,
+                    onSuccess = onSuccess,
+                    onError = onError,
+                    onProgress = {},
+                    context = context,
+                )
+            },
+            shape = QuoteBorder,
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+        ) {
+            Text(
+                text = buttonText ?: stringRes(R.string.send_sats),
+                color = Color.White,
+                fontSize = 20.sp,
+            )
+        }
     }
 }

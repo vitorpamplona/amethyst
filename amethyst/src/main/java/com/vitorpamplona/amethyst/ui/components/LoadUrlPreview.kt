@@ -42,29 +42,39 @@ fun LoadUrlPreview(
     if (!accountViewModel.settings.showUrlPreview.value) {
         ClickableUrl(urlText, url)
     } else {
-        @Suppress("ProduceStateDoesNotAssignValue")
-        val urlPreviewState by
-            produceState(
-                initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
-                key1 = url,
-            ) {
-                if (value == UrlPreviewState.Loading) {
-                    accountViewModel.urlPreview(url) { value = it }
-                }
-            }
+        LoadUrlPreviewDirect(url, urlText, callbackUri, accountViewModel)
+    }
+}
 
-        CrossfadeIfEnabled(
-            targetState = urlPreviewState,
-            label = "UrlPreview",
-            accountViewModel = accountViewModel,
-        ) { state ->
-            when (state) {
-                is UrlPreviewState.Loaded -> {
-                    RenderLoaded(state, url, callbackUri, accountViewModel)
-                }
-                else -> {
-                    ClickableUrl(urlText, url)
-                }
+@Composable
+fun LoadUrlPreviewDirect(
+    url: String,
+    urlText: String,
+    callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
+) {
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val urlPreviewState by
+        produceState(
+            initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
+            key1 = url,
+        ) {
+            if (value == UrlPreviewState.Loading) {
+                accountViewModel.urlPreview(url) { value = it }
+            }
+        }
+
+    CrossfadeIfEnabled(
+        targetState = urlPreviewState,
+        label = "UrlPreview",
+        accountViewModel = accountViewModel,
+    ) { state ->
+        when (state) {
+            is UrlPreviewState.Loaded -> {
+                RenderLoaded(state, url, callbackUri, accountViewModel)
+            }
+            else -> {
+                ClickableUrl(urlText, url)
             }
         }
     }

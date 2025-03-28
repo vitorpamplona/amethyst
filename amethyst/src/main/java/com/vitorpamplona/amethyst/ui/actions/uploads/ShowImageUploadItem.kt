@@ -103,29 +103,28 @@ fun createVideoThumb(
 }
 
 @Composable
-fun ShowImageUploadItem(
-    item: SelectedMediaProcessing,
-    onDelete: (SelectedMediaProcessing) -> Unit,
+fun ShowImageGallery(
+    media: SelectedMedia,
     accountViewModel: AccountViewModel,
 ) {
-    if (item.media.isImage() == true) {
+    if (media.isImage() == true) {
         AsyncImage(
-            model = item.media.uri.toString(),
-            contentDescription = item.media.uri.toString(),
+            model = media.uri.toString(),
+            contentDescription = media.uri.toString(),
             contentScale = ContentScale.Crop,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
         )
-    } else if (item.media.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    } else if (media.isVideo() == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         var bitmap by remember { mutableStateOf<Bitmap?>(null) }
         val context = LocalContext.current
 
-        LaunchedEffect(key1 = item) {
+        LaunchedEffect(key1 = media) {
             launch(Dispatchers.IO) {
                 try {
-                    bitmap = createVideoThumb(context, item.media.uri)
+                    bitmap = createVideoThumb(context, media.uri)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.w("NewPostView", "Couldn't create thumbnail, but the video can be uploaded", e)
@@ -144,8 +143,8 @@ fun ShowImageUploadItem(
             }
         } else {
             VideoView(
-                videoUri = item.media.uri.toString(),
-                mimeType = item.media.mimeType,
+                videoUri = media.uri.toString(),
+                mimeType = media.mimeType,
                 roundedCorner = false,
                 contentScale = ContentScale.Crop,
                 accountViewModel = accountViewModel,
@@ -153,13 +152,22 @@ fun ShowImageUploadItem(
         }
     } else {
         VideoView(
-            videoUri = item.media.uri.toString(),
-            mimeType = item.media.mimeType,
+            videoUri = media.uri.toString(),
+            mimeType = media.mimeType,
             roundedCorner = false,
             contentScale = ContentScale.Crop,
             accountViewModel = accountViewModel,
         )
     }
+}
+
+@Composable
+fun ShowImageUploadItem(
+    item: SelectedMediaProcessing,
+    onDelete: (SelectedMediaProcessing) -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    ShowImageGallery(item.media, accountViewModel)
 
     OrchestratorOverlay(item.orchestrator) {
         onDelete(item)

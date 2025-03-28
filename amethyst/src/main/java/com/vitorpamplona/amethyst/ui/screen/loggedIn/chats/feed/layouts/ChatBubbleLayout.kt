@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingInnerQuoteModifier
 import com.vitorpamplona.amethyst.ui.theme.ChatPaddingModifier
 import com.vitorpamplona.amethyst.ui.theme.HalfHalfVertPadding
-import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.chatBackground
@@ -153,12 +152,7 @@ fun ChatBubbleLayout(
                     inner(bgColor)
 
                     if (showDetails.value) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = ReactionRowHeightChat,
-                        ) {
-                            detailRow()
-                        }
+                        detailRow()
                     }
                 }
             }

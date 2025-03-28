@@ -29,24 +29,38 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.components.Split
+import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
+import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
+import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.IZapField
+import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
+import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -64,33 +78,44 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
+import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 @Stable
-open class ChatNewMessageViewModel : ViewModel() {
-    var draftTag: String by mutableStateOf(UUID.randomUUID().toString())
+class ChatNewMessageViewModel :
+    ViewModel(),
+    ILocationGrabber,
+    IMessageField,
+    IZapField,
+    IZapRaiser {
+    val draftTag = DraftTagState()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            draftTag.versions.collectLatest {
+                sendDraft()
+            }
+        }
+    }
 
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
-    var room: ChatroomKey? = null
+    var room: ChatroomKey? by mutableStateOf(null)
 
     var requiresNIP17: Boolean = false
 
@@ -99,33 +124,18 @@ open class ChatNewMessageViewModel : ViewModel() {
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
     val iMetaAttachments = IMetaAttachments()
 
-    var message by mutableStateOf(TextFieldValue(""))
-    var urlPreview by mutableStateOf<String?>(null)
+    var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList<SuccessfulUploads>())
+
+    override var message by mutableStateOf(TextFieldValue(""))
+
+    val urlPreviews = PreviewState()
+
     var isUploadingImage by mutableStateOf(false)
 
-    val userSuggestions = UserSuggestions()
+    var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
 
-    val emojiSearch: MutableStateFlow<String> = MutableStateFlow("")
-    val emojiSuggestions: StateFlow<List<Account.EmojiMedia>> by lazy {
-        account!!
-            .myEmojis
-            .combine(emojiSearch) { list, search ->
-                if (search.length == 1) {
-                    list
-                } else if (search.isNotEmpty()) {
-                    val code = search.removePrefix(":")
-                    list.filter { it.code.startsWith(code) }
-                } else {
-                    emptyList()
-                }
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyList(),
-            )
-    }
+    var emojiSuggestions: EmojiSuggestionState? = null
 
     var toUsers by mutableStateOf(TextFieldValue(""))
     var subject by mutableStateOf(TextFieldValue(""))
@@ -134,23 +144,27 @@ open class ChatNewMessageViewModel : ViewModel() {
     var canAddInvoice by mutableStateOf(false)
     var wantsInvoice by mutableStateOf(false)
 
+    var wantsSecretEmoji by mutableStateOf(false)
+
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
-    var forwardZapTo by mutableStateOf<Split<User>>(Split())
-    var forwardZapToEditting by mutableStateOf(TextFieldValue(""))
+    override val forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
+    override val forwardZapToEditting = mutableStateOf(TextFieldValue(""))
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
 
+    // GeoHash
+    var wantsToAddGeoHash by mutableStateOf(false)
+    var location: StateFlow<LocationState.LocationResult>? = null
+
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
-    var zapRaiserAmount by mutableStateOf<Long?>(null)
+    override var zapRaiserAmount = mutableStateOf<Long?>(null)
 
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
-
-    val draftTextChanges = Channel<String>(Channel.CONFLATED)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -158,11 +172,17 @@ open class ChatNewMessageViewModel : ViewModel() {
 
     fun user(): User? = account?.userProfile()
 
-    open fun init(accountVM: AccountViewModel) {
+    fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
+
+        this.userSuggestions?.reset()
+        this.userSuggestions = UserSuggestionState(accountVM)
+
+        this.emojiSuggestions?.reset()
+        this.emojiSuggestions = EmojiSuggestionState(accountVM)
 
         this.uploadState =
             ChatFileUploadState(
@@ -170,48 +190,63 @@ open class ChatNewMessageViewModel : ViewModel() {
             )
     }
 
-    open fun load(room: ChatroomKey) {
+    fun load(room: ChatroomKey) {
         this.room = room
-        this.requiresNIP17 = room.users.size > 1
-        if (this.requiresNIP17) {
-            this.nip17 = true
+        this.toUsers =
+            TextFieldValue(
+                room.users.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
+            )
+
+        updateNIP17StatusFromRoom()
+    }
+
+    fun updateNIP17StatusFromRoom() {
+        val room = this.room
+        if (room != null) {
+            this.requiresNIP17 = room.users.size > 1
+            if (this.requiresNIP17) {
+                this.nip17 = true
+            }
+        } else {
+            this.requiresNIP17 = false
+            this.nip17 = false
         }
     }
 
-    open fun reply(replyNote: Note) {
+    fun reply(replyNote: Note) {
         replyTo.value = replyNote
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun clearReply() {
         replyTo.value = null
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun quote(quote: Note) {
+    fun quote(quote: Note) {
         message = TextFieldValue(message.text + "\nnostr:${quote.toNEvent()}")
-        urlPreview = findUrlInMessage()
+        urlPreviews.update(message)
 
         // creates a split with that author.
         val accountViewModel = accountViewModel ?: return
         val quotedAuthor = quote.author ?: return
 
         if (quotedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
-            if (forwardZapTo.items.none { it.key.pubkeyHex == quotedAuthor.pubkeyHex }) {
-                forwardZapTo.addItem(quotedAuthor)
+            if (forwardZapTo.value.items.none { it.key.pubkeyHex == quotedAuthor.pubkeyHex }) {
+                forwardZapTo.value.addItem(quotedAuthor)
             }
-            if (forwardZapTo.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
-                forwardZapTo.addItem(accountViewModel.userProfile())
+            if (forwardZapTo.value.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
+                forwardZapTo.value.addItem(accountViewModel.userProfile())
             }
 
-            val pos = forwardZapTo.items.indexOfFirst { it.key.pubkeyHex == quotedAuthor.pubkeyHex }
-            forwardZapTo.updatePercentage(pos, 0.9f)
+            val pos = forwardZapTo.value.items.indexOfFirst { it.key.pubkeyHex == quotedAuthor.pubkeyHex }
+            forwardZapTo.value.updatePercentage(pos, 0.9f)
 
             wantsForwardZapTo = true
         }
     }
 
-    open fun editFromDraft(draft: Note) {
+    fun editFromDraft(draft: Note) {
         val noteEvent = draft.event
         val noteAuthor = draft.author
 
@@ -221,7 +256,7 @@ open class ChatNewMessageViewModel : ViewModel() {
                     if (innerNote != null) {
                         val oldTag = (draft.event as? AddressableEvent)?.dTag()
                         if (oldTag != null) {
-                            draftTag = oldTag
+                            draftTag.set(oldTag)
                         }
                         loadFromDraft(innerNote)
                     }
@@ -236,27 +271,30 @@ open class ChatNewMessageViewModel : ViewModel() {
 
         val localfowardZapTo = draftEvent.tags.zapSplitSetup()
         val totalWeight = localfowardZapTo.sumOf { it.weight }
-        forwardZapTo = Split()
+        forwardZapTo.value = SplitBuilder()
         localfowardZapTo.forEach {
             if (it is ZapSplitSetup) {
                 val user = LocalCache.getOrCreateUser(it.pubKeyHex)
-                forwardZapTo.addItem(user, (it.weight / totalWeight).toFloat())
+                forwardZapTo.value.addItem(user, (it.weight / totalWeight).toFloat())
             }
             // don't support edditing old-style splits.
         }
-        forwardZapToEditting = TextFieldValue("")
+        forwardZapToEditting.value = TextFieldValue("")
         wantsForwardZapTo = localfowardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
 
+        val geohash = draftEvent.getGeoHash()
+        wantsToAddGeoHash = geohash != null
+
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
-        zapRaiserAmount = null
+        zapRaiserAmount.value = null
         if (zapraiser != null) {
-            zapRaiserAmount = zapraiser
+            zapRaiserAmount.value = zapraiser
         }
 
-        if (forwardZapTo.items.isNotEmpty()) {
+        if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
 
@@ -300,13 +338,12 @@ open class ChatNewMessageViewModel : ViewModel() {
             } else {
                 TextFieldValue(draftEvent.content)
             }
+        urlPreviews.update(message)
 
         iMetaAttachments.addAll(draftEvent.imetas())
 
         requiresNIP17 = draftEvent is NIP17Group
         nip17 = draftEvent is NIP17Group
-
-        urlPreview = findUrlInMessage()
     }
 
     fun sendPost(onDone: () -> Unit) {
@@ -318,7 +355,7 @@ open class ChatNewMessageViewModel : ViewModel() {
 
     suspend fun sendPostSync() {
         innerSendPost(null)
-        accountViewModel?.deleteDraft(draftTag)
+        accountViewModel?.deleteDraft(draftTag.current)
         cancel()
     }
 
@@ -330,9 +367,9 @@ open class ChatNewMessageViewModel : ViewModel() {
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
-            account?.deleteDraft(draftTag)
+            account?.deleteDraft(draftTag.current)
         } else {
-            innerSendPost(draftTag)
+            innerSendPost(draftTag.current)
         }
     }
 
@@ -340,7 +377,38 @@ open class ChatNewMessageViewModel : ViewModel() {
         uploadState?.load(list)
     }
 
-    fun upload(
+    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+        if (location == null) {
+            location = locationManager().geohashStateFlow
+        }
+
+        return location!!
+    }
+
+    fun uploadAndHold(
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: () -> Unit,
+    ) {
+        val account = account ?: return
+        val uploadState = uploadState ?: return
+
+        if (nip17) {
+            ChatFileUploader(account).justUploadNIP17(uploadState, viewModelScope, onError, context) {
+                uploadsWaitingToBeSent += it
+                draftTag.newVersion()
+                onceUploaded()
+            }
+        } else {
+            ChatFileUploader(account).justUploadNIP04(uploadState, viewModelScope, onError, context) {
+                uploadsWaitingToBeSent += it
+                draftTag.newVersion()
+                onceUploaded()
+            }
+        }
+    }
+
+    fun uploadAndSend(
         onError: (title: String, message: String) -> Unit,
         context: Context,
         onceUploaded: () -> Unit,
@@ -350,13 +418,15 @@ open class ChatNewMessageViewModel : ViewModel() {
         val uploadState = uploadState ?: return
 
         if (nip17) {
-            ChatFileUploader(room, account).uploadNIP17(uploadState, viewModelScope, onError, context) {
-                saveDraft()
+            ChatFileUploader(account).justUploadNIP17(uploadState, viewModelScope, onError, context) {
+                ChatFileSender(room, account).sendNIP17(it)
+                draftTag.newVersion()
                 onceUploaded()
             }
         } else {
-            ChatFileUploader(room, account).uploadNIP04(uploadState, viewModelScope, onError, context) {
-                saveDraft()
+            ChatFileUploader(account).justUploadNIP04(uploadState, viewModelScope, onError, context) {
+                ChatFileSender(room, account).sendNIP04(it)
+                draftTag.newVersion()
                 onceUploaded()
             }
         }
@@ -369,8 +439,12 @@ open class ChatNewMessageViewModel : ViewModel() {
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
         val emojis = findEmoji(message.text, accountViewModel.account.myEmojis.value)
-
+        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
         val message = message.text
+
+        val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
+        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
+        val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
         if (nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
             val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
@@ -382,6 +456,11 @@ open class ChatNewMessageViewModel : ViewModel() {
                         references(findURLs(message))
                         quotes(findNostrEventUris(message))
 
+                        geoHash?.let { geohash(it) }
+                        localZapRaiserAmount?.let { zapraiser(it) }
+                        zapReceiver?.let { zapSplits(it) }
+                        contentWarningReason?.let { contentWarning(it) }
+
                         emojis(emojis)
                         imetas(usedAttachments)
                     }
@@ -390,6 +469,11 @@ open class ChatNewMessageViewModel : ViewModel() {
                         hashtags(findHashtags(message))
                         references(findURLs(message))
                         quotes(findNostrEventUris(message))
+
+                        geoHash?.let { geohash(it) }
+                        localZapRaiserAmount?.let { zapraiser(it) }
+                        zapReceiver?.let { zapSplits(it) }
+                        contentWarningReason?.let { contentWarning(it) }
 
                         emojis(emojis)
                         imetas(usedAttachments)
@@ -407,6 +491,10 @@ open class ChatNewMessageViewModel : ViewModel() {
                 draftTag = dTag,
             )
         }
+
+        if (dTag == null) {
+            ChatFileSender(room, accountViewModel.account).sendAll(uploadsWaitingToBeSent)
+        }
     }
 
     fun findEmoji(
@@ -419,141 +507,149 @@ open class ChatNewMessageViewModel : ViewModel() {
         }
     }
 
-    open fun cancel() {
+    fun cancel() {
         message = TextFieldValue("")
-        toUsers = TextFieldValue("")
         subject = TextFieldValue("")
 
         replyTo.value = null
 
-        urlPreview = null
-
         wantsInvoice = false
         wantsZapraiser = false
-        zapRaiserAmount = null
+        zapRaiserAmount.value = null
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        wantsToAddGeoHash = false
+        wantsSecretEmoji = false
 
-        forwardZapTo = Split()
-        forwardZapToEditting = TextFieldValue("")
+        forwardZapTo.value = SplitBuilder()
+        forwardZapToEditting.value = TextFieldValue("")
 
-        userSuggestions.reset()
+        urlPreviews.reset()
+
+        userSuggestions?.reset()
         userSuggestionsMainMessage = null
+
+        uploadsWaitingToBeSent = emptyList()
 
         iMetaAttachments.reset()
 
-        if (emojiSearch.value.isNotEmpty()) {
-            emojiSearch.tryEmit("")
-        }
+        emojiSuggestions?.reset()
 
-        draftTag = UUID.randomUUID().toString()
+        draftTag.rotate()
 
         NostrSearchEventOrUserDataSource.clear()
     }
 
     fun deleteDraft() {
         viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel?.deleteDraft(draftTag)
+            accountViewModel?.deleteDraft(draftTag.current)
         }
     }
 
-    open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
-
-    private fun saveDraft() {
-        draftTextChanges.trySend("")
-    }
-
-    open fun addToMessage(it: String) {
+    fun addToMessage(it: String) {
         updateMessage(TextFieldValue(message.text + " " + it))
     }
 
-    open fun updateMessage(newMessage: TextFieldValue) {
+    override fun updateMessage(newMessage: TextFieldValue) {
         message = newMessage
-        urlPreview = findUrlInMessage()
+        urlPreviews.update(newMessage)
 
-        if (newMessage.selection.collapsed) {
-            val lastWord = newMessage.currentWord()
-
+        if (message.selection.collapsed) {
             userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
 
-            accountViewModel?.let {
-                userSuggestions.processCurrentWord(lastWord, it)
-            }
-
-            if (lastWord.startsWith(":")) {
-                emojiSearch.tryEmit(lastWord)
-            } else {
-                if (emojiSearch.value.isNotBlank()) {
-                    emojiSearch.tryEmit("")
-                }
-            }
+            val lastWord = message.currentWord()
+            userSuggestions?.processCurrentWord(lastWord)
+            emojiSuggestions?.processCurrentWord(lastWord)
         }
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun updateToUsers(newToUsersValue: TextFieldValue) {
+    fun updateToUsers(newToUsersValue: TextFieldValue) {
         toUsers = newToUsersValue
 
         if (newToUsersValue.selection.collapsed) {
             val lastWord = newToUsersValue.currentWord()
             userSuggestionsMainMessage = UserSuggestionAnchor.TO_USERS
+            userSuggestions?.processCurrentWord(lastWord)
+        }
 
-            accountViewModel?.let {
-                userSuggestions.processCurrentWord(lastWord, it)
+        // updateRoomFromUsersInput()
+
+        draftTag.newVersion()
+    }
+
+    fun updateRoomFromUsersInput() {
+        viewModelScope.launch(Dispatchers.Default) {
+            delay(300)
+            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null, accountViewModel!!)
+            toUsersTagger.run()
+
+            val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
+            if (users == null || users.isEmpty()) {
+                room = null
+                updateNIP17StatusFromRoom()
+            } else {
+                if (users != room?.users) {
+                    room = ChatroomKey(users)
+                    updateNIP17StatusFromRoom()
+                }
             }
         }
-        saveDraft()
     }
 
-    open fun updateSubject(it: TextFieldValue) {
+    fun updateSubject(it: TextFieldValue) {
         subject = it
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
-        forwardZapToEditting = newZapForwardTo
+    override fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
+        forwardZapToEditting.value = newZapForwardTo
         if (newZapForwardTo.selection.collapsed) {
             val lastWord = newZapForwardTo.text
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
-            accountViewModel?.let {
-                userSuggestions.processCurrentWord(lastWord, it)
+            userSuggestions?.processCurrentWord(lastWord)
+        }
+    }
+
+    fun autocompleteWithUser(item: User) {
+        userSuggestions?.let { userSuggestions ->
+            if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
+                val lastWord = message.currentWord()
+                message = userSuggestions.replaceCurrentWord(message, lastWord, item)
+                urlPreviews.update(message)
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
+                forwardZapTo.value.addItem(item)
+                forwardZapToEditting.value = TextFieldValue("")
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
+                val lastWord = toUsers.currentWord()
+                toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
+                updateRoomFromUsersInput()
+
+                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelays()
+                nip17 = relayList != null
             }
-        }
-    }
 
-    open fun autocompleteWithUser(item: User) {
-        if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
-            val lastWord = message.currentWord()
-            message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-        } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
-            forwardZapTo.addItem(item)
-            forwardZapToEditting = TextFieldValue("")
-        } else if (userSuggestionsMainMessage == UserSuggestionAnchor.TO_USERS) {
-            val lastWord = toUsers.currentWord()
-            toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
-
-            val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelays()
-            nip17 = relayList != null
+            userSuggestionsMainMessage = null
+            userSuggestions.reset()
         }
 
-        userSuggestionsMainMessage = null
-        userSuggestions.reset()
-
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmoji(item: Account.EmojiMedia) {
+    fun autocompleteWithEmoji(item: Account.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
+
         message = message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message)
 
-        emojiSearch.tryEmit("")
+        emojiSuggestions?.reset()
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
+    fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
         val wordToInsert = item.url.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -564,24 +660,24 @@ open class ChatNewMessageViewModel : ViewModel() {
         }
 
         message = message.replaceCurrentWord(wordToInsert)
+        urlPreviews.update(message)
 
-        emojiSearch.tryEmit("")
+        emojiSuggestions?.reset()
 
-        urlPreview = findUrlInMessage()
-
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun canPost(): Boolean =
         message.text.isNotBlank() &&
             uploadState?.isUploadingImage != true &&
             !wantsInvoice &&
-            (!wantsZapraiser || zapRaiserAmount != null) &&
+            (!wantsZapraiser || zapRaiserAmount.value != null) &&
             (toUsers.text.isNotBlank()) &&
             uploadState?.multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
         message = message.insertUrlAtCursor(newElement)
+        urlPreviews.update(message)
     }
 
     override fun onCleared() {
@@ -595,37 +691,40 @@ open class ChatNewMessageViewModel : ViewModel() {
         } else {
             nip17 = !nip17
         }
-        if (message.text.isNotBlank()) {
-            saveDraft()
-        }
+
+        draftTag.newVersion()
     }
 
-    fun updateZapPercentage(
+    override fun updateZapPercentage(
         index: Int,
         sliderValue: Float,
     ) {
-        forwardZapTo.updatePercentage(index, sliderValue)
+        forwardZapTo.value.updatePercentage(index, sliderValue)
+
+        draftTag.newVersion()
     }
 
-    fun updateZapFromText() {
+    override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
             val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
-                if (!forwardZapTo.items.any { it.key == taggedUser }) {
-                    forwardZapTo.addItem(taggedUser)
+                if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
+                    forwardZapTo.value.addItem(taggedUser)
                 }
             }
         }
     }
 
-    fun updateZapRaiserAmount(newAmount: Long?) {
-        zapRaiserAmount = newAmount
-        saveDraft()
+    override fun updateZapRaiserAmount(newAmount: Long?) {
+        zapRaiserAmount.value = newAmount
+        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
-        saveDraft()
+        draftTag.newVersion()
     }
+
+    override fun locationManager(): LocationState = Amethyst.instance.locationManager
 }

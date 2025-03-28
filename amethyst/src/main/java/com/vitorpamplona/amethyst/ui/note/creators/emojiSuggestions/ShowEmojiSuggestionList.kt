@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note
+package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
@@ -38,14 +38,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -54,43 +51,16 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.flow.Flow
-
-@Composable
-fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
-    LoadAddressableNote(
-        EmojiPackSelectionEvent.createAddress(accountViewModel.userProfile().pubkeyHex),
-        accountViewModel,
-    ) { emptyNote ->
-        emptyNote?.let { usersEmojiList ->
-            val collections by usersEmojiList
-                .live()
-                .metadata
-                .map { (it.note.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList() }
-                .distinctUntilChanged()
-                .observeAsState((usersEmojiList.event as? EmojiPackSelectionEvent)?.taggedAddresses()?.toImmutableList())
-
-            collections?.forEach {
-                LoadAddressableNote(it, accountViewModel) {
-                    it?.live()?.metadata?.observeAsState()
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun ShowEmojiSuggestionList(
-    emojiSuggestions: Flow<List<Account.EmojiMedia>>,
+    emojiSuggestions: EmojiSuggestionState,
     onSelect: (Account.EmojiMedia) -> Unit,
     onFullSize: (Account.EmojiMedia) -> Unit,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
 ) {
-    val suggestions by emojiSuggestions.collectAsStateWithLifecycle(emptyList())
+    val suggestions by emojiSuggestions.results.collectAsStateWithLifecycle(emptyList())
 
     if (suggestions.isNotEmpty()) {
         LazyColumn(

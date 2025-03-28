@@ -445,7 +445,9 @@ object LocalCache {
                 oldUser.updateUserInfo(newUserMetadata, event)
                 if (relay != null) {
                     oldUser.addRelayBeingUsed(relay, event.createdAt)
-                    oldUser.latestMetadataRelay = relay.url
+                    if (!RelayUrlFormatter.isLocalHost(relay.url)) {
+                        oldUser.latestMetadataRelay = relay.url
+                    }
                 }
             }
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex()} ${oldUser.toBestDisplayName()} from ${relay?.url}")

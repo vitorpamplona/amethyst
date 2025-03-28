@@ -25,15 +25,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
@@ -43,6 +42,7 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
@@ -80,8 +80,7 @@ open class EditPostViewModel : ViewModel() {
     var urlPreview by mutableStateOf<String?>(null)
     var isUploadingImage by mutableStateOf(false)
 
-    var userSuggestions by mutableStateOf<List<User>>(emptyList())
-    var userSuggestionAnchor: TextRange? = null
+    var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
 
     // Images and Videos
@@ -99,6 +98,9 @@ open class EditPostViewModel : ViewModel() {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
         this.editedFromNote = edit
+
+        this.userSuggestions?.reset()
+        this.userSuggestions = UserSuggestionState(accountViewModel)
     }
 
     open fun load(
@@ -247,8 +249,7 @@ open class EditPostViewModel : ViewModel() {
 
         wantsInvoice = false
 
-        userSuggestions = emptyList()
-        userSuggestionAnchor = null
+        userSuggestions?.reset()
         userSuggestionsMainMessage = null
 
         NostrSearchEventOrUserDataSource.clear()
@@ -266,46 +267,19 @@ open class EditPostViewModel : ViewModel() {
         urlPreview = findUrlInMessage()
 
         if (it.selection.collapsed) {
-            val lastWord =
-                it.text
-                    .substring(0, it.selection.end)
-                    .substringAfterLast("\n")
-                    .substringAfterLast(" ")
-            userSuggestionAnchor = it.selection
+            val lastWord = message.currentWord()
             userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
-            if (lastWord.startsWith("@") && lastWord.length > 2) {
-                NostrSearchEventOrUserDataSource.search(lastWord.removePrefix("@"))
-                viewModelScope.launch(Dispatchers.IO) {
-                    userSuggestions = LocalCache.findUsersStartingWith(lastWord.removePrefix("@"), account)
-                }
-            } else {
-                NostrSearchEventOrUserDataSource.clear()
-                userSuggestions = emptyList()
-            }
+            userSuggestions?.processCurrentWord(lastWord)
         }
     }
 
     open fun autocompleteWithUser(item: User) {
-        userSuggestionAnchor?.let {
-            if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
-                val lastWord =
-                    message.text
-                        .substring(0, it.end)
-                        .substringAfterLast("\n")
-                        .substringAfterLast(" ")
-                val lastWordStart = it.end - lastWord.length
-                val wordToInsert = "@${item.pubkeyNpub()}"
+        userSuggestions?.let { userSuggestions ->
+            val lastWord = message.currentWord()
+            message = userSuggestions.replaceCurrentWord(message, lastWord, item)
 
-                message =
-                    TextFieldValue(
-                        message.text.replaceRange(lastWordStart, it.end, wordToInsert),
-                        TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length),
-                    )
-            }
-
-            userSuggestionAnchor = null
             userSuggestionsMainMessage = null
-            userSuggestions = emptyList()
+            userSuggestions.reset()
         }
     }
 

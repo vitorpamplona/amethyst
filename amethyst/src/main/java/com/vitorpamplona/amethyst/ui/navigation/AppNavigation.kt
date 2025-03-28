@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
@@ -287,6 +289,30 @@ fun AppNavigation(
             )
 
             composable(
+                Route.NewGroupDM.route,
+                Route.NewGroupDM.arguments,
+                enterTransition = { slideInVerticallyFromBottom },
+                exitTransition = { scaleOut },
+                popEnterTransition = { scaleIn },
+                popExitTransition = { slideOutVerticallyToBottom },
+                content = {
+                    val draftMessage = it.message()?.ifBlank { null }
+                    val attachment =
+                        it.arguments
+                            ?.getString("attachment")
+                            ?.ifBlank { null }
+                            ?.toUri()
+
+                    NewGroupDMScreen(
+                        draftMessage,
+                        attachment,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                },
+            )
+
+            composable(
                 Route.Event.route,
                 Route.Event.arguments,
             ) {
@@ -356,7 +382,6 @@ fun AppNavigation(
                 val fork = it.arguments?.getString("fork")
                 val version = it.arguments?.getString("version")
                 val draft = it.arguments?.getString("draft")
-                val enableMessageInterface = it.arguments?.getBoolean("enableMessageInterface") == true
                 val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") == true
 
                 NewPostScreen(
@@ -367,7 +392,6 @@ fun AppNavigation(
                     fork = fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     version = version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    enableMessageInterface = enableMessageInterface,
                     enableGeolocation = enableGeolocation,
                     accountViewModel = accountViewModel,
                     nav = nav,

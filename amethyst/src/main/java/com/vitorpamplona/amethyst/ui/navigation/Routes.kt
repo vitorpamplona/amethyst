@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.R.attr.type
 import android.net.Uri
 import android.os.Bundle
 import androidx.compose.foundation.layout.size
@@ -101,6 +102,26 @@ sealed class Route(
             route = "Message",
             icon = R.drawable.ic_dm,
             contentDescriptor = R.string.route_messages,
+        )
+
+    object NewGroupDM :
+        Route(
+            route = "NewGroupDM?message={message}&attachment={attachment}",
+            icon = R.drawable.ic_dm,
+            contentDescriptor = R.string.route_messages,
+            arguments =
+                listOf(
+                    navArgument("message") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("attachment") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ).toImmutableList(),
         )
 
     object BlockedUsers :
@@ -277,7 +298,7 @@ sealed class Route(
 
     object NewPost :
         Route(
-            route = "NewPost?message={message}&attachment={attachment}&baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableGeolocation={enableGeolocation}&enableMessageInterface={enableMessageInterface}",
+            route = "NewPost?message={message}&attachment={attachment}&baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableGeolocation={enableGeolocation}",
             icon = R.drawable.ic_moments,
             arguments =
                 listOf(
@@ -289,7 +310,6 @@ sealed class Route(
                     navArgument("version") { type = NavType.StringType },
                     navArgument("draft") { type = NavType.StringType },
                     navArgument("enableGeolocation") { type = NavType.BoolType },
-                    navArgument("enableMessageInterface") { type = NavType.BoolType },
                 ).toImmutableList(),
         )
 }
@@ -361,7 +381,6 @@ fun buildNewPostRoute(
     version: String? = null,
     draft: String? = null,
     enableGeolocation: Boolean = false,
-    enableMessageInterface: Boolean = false,
 ): String =
     "NewPost?" +
         "message=${draftMessage?.let { URLEncoder.encode(it, "utf-8") } ?: ""}&" +
@@ -371,5 +390,4 @@ fun buildNewPostRoute(
         "fork=${fork ?: ""}&" +
         "version=${version ?: ""}&" +
         "draft=${draft ?: ""}&" +
-        "enableGeolocation=$enableGeolocation&" +
-        "enableMessageInterface=$enableMessageInterface"
+        "enableGeolocation=$enableGeolocation&"

@@ -42,18 +42,21 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.LocationState
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.components.Split
+import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.SplitBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.UserSuggestions
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
@@ -86,18 +89,23 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 @Stable
-open class ChannelNewMessageViewModel : ViewModel() {
-    var draftTag: String by mutableStateOf(UUID.randomUUID().toString())
+open class ChannelNewMessageViewModel :
+    ViewModel(),
+    ILocationGrabber {
+    val draftTag = DraftTagState()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            draftTag.versions.collectLatest {
+                sendDraft()
+            }
+        }
+    }
 
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
@@ -113,29 +121,10 @@ open class ChannelNewMessageViewModel : ViewModel() {
     var urlPreview by mutableStateOf<String?>(null)
     var isUploadingImage by mutableStateOf(false)
 
-    val userSuggestions = UserSuggestions()
+    var userSuggestions: UserSuggestionState? = null
     var userSuggestionsMainMessage: UserSuggestionAnchor? = null
 
-    val emojiSearch: MutableStateFlow<String> = MutableStateFlow("")
-    val emojiSuggestions: StateFlow<List<Account.EmojiMedia>> by lazy {
-        account!!
-            .myEmojis
-            .combine(emojiSearch) { list, search ->
-                if (search.length == 1) {
-                    list
-                } else if (search.isNotEmpty()) {
-                    val code = search.removePrefix(":")
-                    list.filter { it.code.startsWith(code) }
-                } else {
-                    emptyList()
-                }
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyList(),
-            )
-    }
+    var emojiSuggestions: EmojiSuggestionState? = null
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -143,7 +132,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
-    var forwardZapTo by mutableStateOf<Split<User>>(Split())
+    var forwardZapTo by mutableStateOf<SplitBuilder<User>>(SplitBuilder())
     var forwardZapToEditting by mutableStateOf(TextFieldValue(""))
 
     // NSFW, Sensitive
@@ -152,14 +141,11 @@ open class ChannelNewMessageViewModel : ViewModel() {
     // GeoHash
     var wantsToAddGeoHash by mutableStateOf(false)
     var location: StateFlow<LocationState.LocationResult>? = null
-    var wantsExclusiveGeoPost by mutableStateOf(false)
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
     var zapRaiserAmount by mutableStateOf<Long?>(null)
-
-    val draftTextChanges = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -173,6 +159,9 @@ open class ChannelNewMessageViewModel : ViewModel() {
         this.canAddInvoice = hasLnAddress()
         this.canAddZapRaiser = hasLnAddress()
 
+        this.userSuggestions?.reset()
+        this.userSuggestions = UserSuggestionState(accountVM)
+
         this.uploadState =
             ChatFileUploadState(
                 account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0],
@@ -185,12 +174,12 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
     open fun reply(replyNote: Note) {
         replyTo.value = replyNote
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun clearReply() {
         replyTo.value = null
-        saveDraft()
+        draftTag.newVersion()
     }
 
     open fun editFromDraft(draft: Note) {
@@ -203,7 +192,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
                     if (innerNote != null) {
                         val oldTag = (draft.event as? AddressableEvent)?.dTag()
                         if (oldTag != null) {
-                            draftTag = oldTag
+                            draftTag.set(oldTag)
                         }
                         loadFromDraft(innerNote)
                     }
@@ -217,7 +206,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         val localfowardZapTo = draftEvent.tags.zapSplitSetup()
         val totalWeight = localfowardZapTo.sumOf { it.weight }
-        forwardZapTo = Split()
+        forwardZapTo = SplitBuilder()
         localfowardZapTo.forEach {
             if (it is ZapSplitSetup) {
                 val user = LocalCache.getOrCreateUser(it.pubKeyHex)
@@ -280,7 +269,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         accountViewModel?.account?.signAndSendPrivately(template, channelRelays)
 
-        accountViewModel?.deleteDraft(draftTag)
+        accountViewModel?.deleteDraft(draftTag.current)
 
         cancel()
     }
@@ -295,10 +284,10 @@ open class ChannelNewMessageViewModel : ViewModel() {
         val accountViewModel = accountViewModel ?: return
 
         if (message.text.isBlank()) {
-            account?.deleteDraft(draftTag)
+            account?.deleteDraft(draftTag.current)
         } else {
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraft(draftTag, template)
+            accountViewModel.account.createAndSendDraft(draftTag.current, template)
         }
     }
 
@@ -353,7 +342,7 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
                 uploadState.reset()
                 onceUploaded()
-                saveDraft()
+                draftTag.newVersion()
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
@@ -493,34 +482,28 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         wantsToAddGeoHash = false
 
-        forwardZapTo = Split()
+        forwardZapTo = SplitBuilder()
         forwardZapToEditting = TextFieldValue("")
 
-        userSuggestions.reset()
+        userSuggestions?.reset()
         userSuggestionsMainMessage = null
 
         iMetaAttachments.reset()
 
-        if (emojiSearch.value.isNotEmpty()) {
-            emojiSearch.tryEmit("")
-        }
+        emojiSuggestions?.reset()
 
-        draftTag = UUID.randomUUID().toString()
+        draftTag.rotate()
 
         NostrSearchEventOrUserDataSource.clear()
     }
 
     fun deleteDraft() {
         viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel?.deleteDraft(draftTag)
+            accountViewModel?.deleteDraft(draftTag.current)
         }
     }
 
     open fun findUrlInMessage(): String? = RichTextParser().parseValidUrls(message.text).firstOrNull()
-
-    private fun saveDraft() {
-        draftTextChanges.trySend("")
-    }
 
     open fun addToMessage(it: String) {
         updateMessage(TextFieldValue(message.text + " " + it))
@@ -534,21 +517,12 @@ open class ChannelNewMessageViewModel : ViewModel() {
             val lastWord = newMessage.currentWord()
 
             userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
+            userSuggestions?.processCurrentWord(lastWord)
 
-            accountViewModel?.let {
-                userSuggestions.processCurrentWord(lastWord, it)
-            }
-
-            if (lastWord.startsWith(":")) {
-                emojiSearch.tryEmit(lastWord)
-            } else {
-                if (emojiSearch.value.isNotBlank()) {
-                    emojiSearch.tryEmit("")
-                }
-            }
+            emojiSuggestions?.processCurrentWord(lastWord)
         }
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
     open fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
@@ -556,34 +530,34 @@ open class ChannelNewMessageViewModel : ViewModel() {
         if (newZapForwardTo.selection.collapsed) {
             val lastWord = newZapForwardTo.text
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
-            accountViewModel?.let {
-                userSuggestions.processCurrentWord(lastWord, it)
-            }
+            userSuggestions?.processCurrentWord(lastWord)
         }
     }
 
     open fun autocompleteWithUser(item: User) {
-        if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
-            val lastWord = message.currentWord()
-            message = userSuggestions.replaceCurrentWord(message, lastWord, item)
-        } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
-            forwardZapTo.addItem(item)
-            forwardZapToEditting = TextFieldValue("")
+        userSuggestions?.let {
+            if (userSuggestionsMainMessage == UserSuggestionAnchor.MAIN_MESSAGE) {
+                val lastWord = message.currentWord()
+                message = it.replaceCurrentWord(message, lastWord, item)
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
+                forwardZapTo.addItem(item)
+                forwardZapToEditting = TextFieldValue("")
+            }
+
+            userSuggestionsMainMessage = null
+            it.reset()
         }
 
-        userSuggestionsMainMessage = null
-        userSuggestions.reset()
-
-        saveDraft()
+        draftTag.newVersion()
     }
 
     open fun autocompleteWithEmoji(item: Account.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
         message = message.replaceCurrentWord(wordToInsert)
 
-        emojiSearch.tryEmit("")
+        emojiSuggestions?.reset()
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
     open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
@@ -598,11 +572,11 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
         message = message.replaceCurrentWord(wordToInsert)
 
-        emojiSearch.tryEmit("")
+        emojiSuggestions?.reset()
 
         urlPreview = findUrlInMessage()
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun canPost(): Boolean =
@@ -616,9 +590,11 @@ open class ChannelNewMessageViewModel : ViewModel() {
         message = message.insertUrlAtCursor(newElement)
     }
 
-    fun locationFlow(): StateFlow<LocationState.LocationResult> {
+    override fun locationManager(): LocationState = Amethyst.instance.locationManager
+
+    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
         if (location == null) {
-            location = Amethyst.instance.locationManager.geohashStateFlow
+            location = locationManager().geohashStateFlow
         }
 
         return location!!
@@ -650,11 +626,11 @@ open class ChannelNewMessageViewModel : ViewModel() {
 
     fun updateZapRaiserAmount(newAmount: Long?) {
         zapRaiserAmount = newAmount
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
-        saveDraft()
+        draftTag.newVersion()
     }
 }

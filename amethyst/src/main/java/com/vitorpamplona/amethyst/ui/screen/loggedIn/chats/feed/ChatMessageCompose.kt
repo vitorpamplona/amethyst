@@ -20,20 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -41,10 +49,14 @@ import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.RelayBadgesHorizontal
+import com.vitorpamplona.amethyst.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.ui.note.ReplyReaction
 import com.vitorpamplona.amethyst.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
+import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
@@ -54,16 +66,23 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderEncr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.IncognitoBadge
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChat
+import com.vitorpamplona.amethyst.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 
 @Composable
 fun ChatroomMessageCompose(
@@ -79,7 +98,7 @@ fun ChatroomMessageCompose(
     WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
         WatchBlockAndReport(
             note = baseNote,
-            showHiddenWarning = innerQuote,
+            showHiddenWarning = false,
             modifier = Modifier.fillMaxWidth(),
             accountViewModel = accountViewModel,
             nav = nav,
@@ -177,29 +196,49 @@ fun NormalChatNote(
             )
         },
         detailRow = {
-            IncognitoBadge(note)
-            ChatTimeAgo(note)
-            RelayBadgesHorizontal(note, accountViewModel, nav = nav)
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = ReactionRowHeightChat,
+                ) {
+                    IncognitoBadge(note)
+                    ChatTimeAgo(note)
+                    RelayBadgesHorizontal(note, accountViewModel, nav = nav)
 
-            Spacer(modifier = DoubleHorzSpacer)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
-                if (!note.isDraft()) {
-                    ReplyReaction(
-                        baseNote = note,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel = accountViewModel,
-                        showCounter = false,
-                        iconSizeModifier = Size18Modifier,
-                    ) {
-                        onWantsToReply(note)
+                    Spacer(modifier = DoubleHorzSpacer)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = RowColSpacing) {
+                        if (!note.isDraft()) {
+                            ReplyReaction(
+                                baseNote = note,
+                                grayTint = MaterialTheme.colorScheme.placeholderText,
+                                accountViewModel = accountViewModel,
+                                showCounter = false,
+                                iconSizeModifier = Size18Modifier,
+                            ) {
+                                onWantsToReply(note)
+                            }
+                            Spacer(StdHorzSpacer)
+                            LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
+
+                            ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+
+                            val geo = remember(note) { note.event?.getGeoHash() }
+                            if (geo != null) {
+                                Spacer(StdHorzSpacer)
+                                DisplayLocation(geo, nav)
+                            }
+
+                            val pow = remember(note) { note.event?.strongPoWOrNull() }
+                            if (pow != null) {
+                                Spacer(StdHorzSpacer)
+                                DisplayPoW(pow)
+                            }
+                        } else {
+                            DisplayDraftChat()
+                        }
                     }
-                    Spacer(modifier = StdHorzSpacer)
-                    LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
-
-                    ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
-                } else {
-                    DisplayDraftChat()
                 }
+                LoadAndDisplayClickableZapraiser(note, accountViewModel)
             }
         },
     ) { bgColor ->
@@ -213,6 +252,27 @@ fun NormalChatNote(
             accountViewModel,
             nav,
         )
+    }
+}
+
+@Composable
+fun LoadAndDisplayClickableZapraiser(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val zapraiserAmount = baseNote.event?.zapraiserAmount() ?: 0
+    if (zapraiserAmount > 0) {
+        val wantsToSeeReactions = rememberSaveable(baseNote) { mutableStateOf(false) }
+        Spacer(StdVertSpacer)
+        Box(
+            modifier =
+                ReactionRowZapraiser.clickable(
+                    onClick = { wantsToSeeReactions.value = !wantsToSeeReactions.value },
+                ),
+            contentAlignment = CenterStart,
+        ) {
+            RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)
+        }
     }
 }
 
@@ -249,6 +309,18 @@ private fun MessageBubbleLines(
         accountViewModel = accountViewModel,
         nav = nav,
     )
+
+    if (!innerQuote) {
+        val noteEvent = baseNote.event
+        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+        if (zapSplits && noteEvent != null) {
+            Column {
+                DisplayZapSplits(noteEvent, false, accountViewModel, nav)
+
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+        }
+    }
 }
 
 @Composable

@@ -24,24 +24,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,11 +41,8 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
-import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
-import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
-import com.vitorpamplona.amethyst.ui.note.ShowEmojiSuggestionList
-import com.vitorpamplona.amethyst.ui.note.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.RoomChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
@@ -65,13 +52,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.PostKeyboard
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
 
 @Preview
 @Composable
@@ -103,17 +86,6 @@ fun PrivateMessageEditFieldRow(
         }
     }
 
-    LaunchedEffect(key1 = channelScreenModel.draftTag) {
-        launch(Dispatchers.IO) {
-            channelScreenModel.draftTextChanges
-                .receiveAsFlow()
-                .debounce(1000)
-                .collectLatest {
-                    channelScreenModel.sendDraft()
-                }
-        }
-    }
-
     channelScreenModel.uploadState?.let { uploading ->
         uploading.multiOrchestrator?.let { selectedFiles ->
             RoomChatFileUploadDialog(
@@ -130,132 +102,81 @@ fun PrivateMessageEditFieldRow(
     Column(
         modifier = EditFieldModifier,
     ) {
-        ShowUserSuggestionList(
-            channelScreenModel.userSuggestions.userSuggestions,
-            channelScreenModel::autocompleteWithUser,
-            accountViewModel,
-        )
+        channelScreenModel.userSuggestions?.let {
+            ShowUserSuggestionList(
+                it,
+                channelScreenModel::autocompleteWithUser,
+                accountViewModel,
+            )
+        }
 
-        ShowEmojiSuggestionList(
-            channelScreenModel.emojiSuggestions,
-            channelScreenModel::autocompleteWithEmoji,
-            channelScreenModel::autocompleteWithEmojiUrl,
-            accountViewModel,
-        )
+        channelScreenModel.emojiSuggestions?.let {
+            ShowEmojiSuggestionList(
+                it,
+                channelScreenModel::autocompleteWithEmoji,
+                channelScreenModel::autocompleteWithEmojiUrl,
+                accountViewModel,
+            )
+        }
 
-        ThinPaddingTextField(
-            value = channelScreenModel.message,
-            onValueChange = { channelScreenModel.updateMessage(it) },
-            keyboardOptions =
-                KeyboardOptions.Default.copy(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
-            shape = EditFieldBorder,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text(
-                    text = stringRes(R.string.reply_here),
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
-            },
-            trailingIcon = {
-                ThinSendButton(
-                    isActive = channelScreenModel.message.text.isNotBlank() && !channelScreenModel.isUploadingImage,
-                    modifier = EditFieldTrailingIconModifier,
-                ) {
-                    channelScreenModel.sendPost(onSendNewMessage)
-                }
-            },
-            leadingIcon = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 4.dp, end = 10.dp),
-                ) {
-                    SelectFromGallery(
-                        isUploading = channelScreenModel.isUploadingImage,
-                        tint = MaterialTheme.colorScheme.placeholderText,
-                        modifier = Modifier,
-                        onImageChosen = channelScreenModel::pickedMedia,
-                    )
-
-                    var wantsToActivateNIP17 by remember { mutableStateOf(false) }
-
-                    if (wantsToActivateNIP17) {
-                        NewFeatureNIP17AlertDialog(
-                            accountViewModel = accountViewModel,
-                            onConfirm = { channelScreenModel.toggleNIP04And24() },
-                            onDismiss = { wantsToActivateNIP17 = false },
-                        )
-                    }
-
-                    IconButton(
-                        modifier = Modifier.width(30.dp),
-                        onClick = {
-                            if (
-                                !accountViewModel.account.settings.hideNIP17WarningDialog &&
-                                !channelScreenModel.nip17 &&
-                                !channelScreenModel.requiresNIP17
-                            ) {
-                                wantsToActivateNIP17 = true
-                            } else {
-                                channelScreenModel.toggleNIP04And24()
-                            }
-                        },
-                    ) {
-                        if (channelScreenModel.nip17) {
-                            IncognitoIconOn(
-                                modifier =
-                                    Modifier
-                                        .padding(top = 2.dp)
-                                        .size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        } else {
-                            IncognitoIconOff(
-                                modifier =
-                                    Modifier
-                                        .padding(top = 2.dp)
-                                        .size(20.dp),
-                                tint = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        }
-                    }
-                }
-            },
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
-            visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
-        )
+        EditField(channelScreenModel, onSendNewMessage, accountViewModel)
     }
 }
 
 @Composable
-fun NewFeatureNIP17AlertDialog(
+fun EditField(
+    channelScreenModel: ChatNewMessageViewModel,
+    onSendNewMessage: () -> Unit,
     accountViewModel: AccountViewModel,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-
-    QuickActionAlertDialog(
-        title = stringRes(R.string.new_feature_nip17_might_not_be_available_title),
-        textContent = stringRes(R.string.new_feature_nip17_might_not_be_available_description),
-        buttonIconResource = R.drawable.incognito,
-        buttonText = stringRes(R.string.new_feature_nip17_activate),
-        onClickDoOnce = {
-            scope.launch { onConfirm() }
-            onDismiss()
+    ThinPaddingTextField(
+        value = channelScreenModel.message,
+        onValueChange = { channelScreenModel.updateMessage(it) },
+        keyboardOptions = PostKeyboard,
+        shape = EditFieldBorder,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = {
+            Text(
+                text = stringRes(R.string.reply_here),
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
         },
-        onClickDontShowAgain = {
-            scope.launch {
-                onConfirm()
-                accountViewModel.account.settings.setHideNIP17WarningDialog()
+        trailingIcon = {
+            ThinSendButton(
+                isActive = channelScreenModel.canPost(),
+                modifier = EditFieldTrailingIconModifier,
+            ) {
+                channelScreenModel.sendPost(onSendNewMessage)
             }
-            onDismiss()
         },
-        onDismiss = onDismiss,
+        leadingIcon = {
+            KeyboardLeadingIcon(channelScreenModel, accountViewModel)
+        },
+        colors =
+            TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
     )
+}
+
+@Composable
+fun KeyboardLeadingIcon(
+    channelScreenModel: ChatNewMessageViewModel,
+    accountViewModel: AccountViewModel,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 4.dp, end = 10.dp),
+    ) {
+        SelectFromGallery(
+            isUploading = channelScreenModel.isUploadingImage,
+            tint = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier,
+            onImageChosen = channelScreenModel::pickedMedia,
+        )
+
+        ToggleNip17Button(channelScreenModel, accountViewModel)
+    }
 }

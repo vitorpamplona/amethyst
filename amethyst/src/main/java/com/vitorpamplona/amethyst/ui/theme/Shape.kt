@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.ripple
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 
@@ -272,7 +274,7 @@ val chatAuthorImage = Modifier.size(20.dp).clip(shape = CircleShape)
 val AuthorInfoVideoFeed = Modifier.width(75.dp).padding(end = 15.dp)
 
 val messageDetailsModifier = Modifier.height(Size25dp)
-val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 5.dp)
+val messageBubbleLimits = Modifier.padding(start = 10.dp, end = 10.dp, top = 7.dp, bottom = 6.dp)
 
 val inlinePlaceholder =
     Placeholder(
@@ -308,3 +310,9 @@ val StreamingHeaderModifier =
     Modifier
         .fillMaxWidth()
         .heightIn(min = 50.dp, max = 300.dp)
+
+val PostKeyboard =
+    KeyboardOptions.Default.copy(
+        autoCorrectEnabled = true,
+        capitalization = KeyboardCapitalization.Sentences,
+    )
