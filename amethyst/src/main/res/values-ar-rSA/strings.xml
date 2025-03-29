@@ -9,7 +9,6 @@
     <string name="post_was_hidden">تم إخفاء هذا المنشور لأنه يشير إلى المستخدمين الذين قمت بإخفائهم أو الكلمات التي قمت بإخفائها</string>
     <string name="post_was_flagged_as_inappropriate_by">تم وضع علامة على المنشور على أنه غير لائق بواسطة</string>
     <string name="post_not_found">المنشور غير موجود</string>
-    <string name="post_not_found_short">👀</string>
     <string name="channel_image">صورة القناة</string>
     <string name="referenced_event_not_found">لم يتم العثور على الحدث المشار إليه</string>
     <string name="could_not_decrypt_the_message">لا يمكن فك تشفير الرسالة</string>
@@ -83,7 +82,6 @@
     <string name="secret_note_to_receiver">ملاحظة سرية للمستلم</string>
     <string name="secret_note_to_receiver_placeholder">رسالتي المخفية</string>
     <string name="secret_visible_text">بادئة مرئية</string>
-    <string name="secret_visible_text_placeholder">😎</string>
     <string name="secret_add_to_text">إضافة إلى المنشور</string>
     <string name="error_parsing_preview_for">"خطأ في تحليل المعاينة لـ %1$s : %2$s"</string>
     <string name="preview_card_image_for">"معاينة صورة البطاقة لـ %1$s"</string>
@@ -326,7 +324,6 @@
     <string name="poll_zap_value_min">الحد الأدنى</string>
     <string name="poll_zap_value_max">الحد الاقصى</string>
     <string name="poll_consensus_threshold">توافق الآراء</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">إغلاق بعد</string>
     <string name="poll_closing_time_days">أيام</string>
     <string name="poll_unable_to_vote">تعذر التصويت</string>
@@ -400,7 +397,6 @@
     <string name="tor_use_nip96_uploads">رفع الوسائط</string>
     <string name="tor_use_nip96_uploads_explainer">أستخدام Tor عند رفع الوسائط</string>
     <string name="tor_internal">مضمن</string>
-    <string name="tor_external">Orbot</string>
     <string name="tor_off">إيقاف</string>
     <string name="tor_when_needed">أساسي</string>
     <string name="tor_default">الافتراضي</string>
@@ -568,7 +564,6 @@
     <string name="zap_split_search_and_add_user">البحث و إضافة مستخدم</string>
     <string name="zap_split_search_and_add_user_placeholder">اسم المستخدم أو إسم العرض</string>
     <string name="zap_split_weight">النسبة المئوية</string>
-    <string name="zap_split_weight_placeholder">25</string>
     <string name="splitting_zaps_with">تقسيم الزاب مع</string>
     <string name="forwarding_zaps_to">تحويل الزاب إلى</string>
     <string name="paid">تم الدفع</string>
@@ -607,7 +602,6 @@
 مثل [Ntfy](https://ntfy.sh/).
 بعد تثبيتك التطبيق قم باختياره من الإعدادات</string>
     <string name="classifieds_title">العنوان</string>
-    <string name="classifieds_title_placeholder">iPhone 13</string>
     <string name="classifieds_condition">الشرط</string>
     <string name="classifieds_category">الفئة</string>
     <string name="classifieds_location">الموقع الجغرافيّ</string>
