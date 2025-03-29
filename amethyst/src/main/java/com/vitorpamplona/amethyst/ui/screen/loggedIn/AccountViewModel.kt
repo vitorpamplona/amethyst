@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -1221,24 +1222,15 @@ class AccountViewModel(
 
     fun markAllAsRead(
         notes: ImmutableList<Note>,
+        accountViewModel: AccountViewModel,
         onDone: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             for (note in notes) {
-                note.event?.let { noteEvent ->
-                    val channelHex = note.channelHex()
-                    val route =
-                        if (channelHex != null) {
-                            "Channel/$channelHex"
-                        } else if (note.event is ChatroomKeyable) {
-                            val withKey = (note.event as ChatroomKeyable).chatroomKey(userProfile().pubkeyHex)
-                            "Room/${withKey.hashCode()}"
-                        } else {
-                            null
-                        }
-
+                note.event?.createdAt?.let { date ->
+                    val route = routeFor(note, accountViewModel.account.userProfile())
                     route?.let {
-                        account.markAsRead(route, noteEvent.createdAt)
+                        account.markAsRead(route, date)
                     }
                 }
             }

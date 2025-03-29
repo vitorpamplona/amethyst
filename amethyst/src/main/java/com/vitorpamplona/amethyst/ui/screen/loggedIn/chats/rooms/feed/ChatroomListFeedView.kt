@@ -102,7 +102,7 @@ private fun FeedLoaded(
 
     LaunchedEffect(key1 = markAsRead.value) {
         if (markAsRead.value) {
-            accountViewModel.markAllAsRead(items.list) { markAsRead.value = false }
+            accountViewModel.markAllAsRead(items.list, accountViewModel) { markAsRead.value = false }
         }
     }
 
