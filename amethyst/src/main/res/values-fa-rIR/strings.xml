@@ -1,0 +1,931 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="point_to_the_qr_code">کد QR را نشانه بگیرید</string>
+    <string name="show_qr">کد QR را نشان بده</string>
+    <string name="profile_image">تصویر نمایه</string>
+    <string name="your_profile_image">تصویر نمایه شما</string>
+    <string name="scan_qr">اسکن کد QR</string>
+    <string name="show_anyway">بهر حال نشان بده</string>
+    <string name="post_was_hidden">این پست پنهان شده چون به کلمات یا کاربران پنهان شده شما اشاره دارد</string>
+    <string name="post_was_flagged_as_inappropriate_by">این یادداشت توسط این افراد گزارش شده:</string>
+    <string name="post_not_found">این یادداشت یافت نشد</string>
+    <string name="post_not_found_short">👀</string>
+    <string name="channel_image">تصویر کانال</string>
+    <string name="referenced_event_not_found">رویداد مورد نظر یافت نشد</string>
+    <string name="could_not_decrypt_the_message">پیام رمزگشایی نشد</string>
+    <string name="group_picture">تصویر گروه</string>
+    <string name="explicit_content">محتوای نامناسب</string>
+    <string name="spam">اسپم</string>
+    <string name="spam_description">تعداد رویدادهای اسپم که از این رله می آید</string>
+    <string name="impersonation">جعل هویت</string>
+    <string name="illegal_behavior">رفتار ناهنجار</string>
+    <string name="other">سایر</string>
+    <string name="unknown">ناشناس</string>
+    <string name="relay_icon">آیکن رله</string>
+    <string name="unknown_author">نویسنده ناشناس</string>
+    <string name="copy_text">کپی متن</string>
+    <string name="copy_user_pubkey">کپی شناسه نویسنده</string>
+    <string name="copy_note_id">کپی شناسه یادداشت</string>
+    <string name="broadcast">انتشار</string>
+    <string name="timestamp_it">مهر زمان و تاریخ بزن</string>
+    <string name="timestamp_pending">مهر زمان: در انتظار تایید</string>
+    <string name="timestamp_pending_short">OTS: در حال انتظار</string>
+    <string name="request_deletion">درخواست حذف/string&gt;</string>
+    <string name="block_report">مسدود/گزارش</string>
+    <string name="block_hide_user"><![CDATA[بلاک/پنهان کردن کاربر]]></string>
+    <string name="report_spam_scam">گزارش اسپم/کلاهبرداری</string>
+    <string name="report_impersonation">گزارش جعل هویت</string>
+    <string name="report_explicit_content">گزارش محتوای نامناسب</string>
+    <string name="report_illegal_behaviour">گزارش رفتار ناهنجار</string>
+    <string name="report_malware">گزارش بدافزار</string>
+    <string name="report_mod">گزارش مود</string>
+    <string name="malware">بدافزار</string>
+    <string name="mod">مود</string>
+    <string name="login_with_a_private_key_to_be_able_to_reply">با کلید خصوصی وارد شوید تا بتوانید پاسخ دهید</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">با کلید خصوصی وارد شوید تا بتوانید یادداشت را بازنشر کنید</string>
+    <string name="login_with_a_private_key_to_like_posts">با کلید خصوصی وارد شوید تا بتوانید یادداشت را لایک کنید</string>
+    <string name="no_zap_amount_setup_long_press_to_change">مقداری برای زپ تعیین نشده. نگه دارید تا تغییر دهید</string>
+    <string name="login_with_a_private_key_to_be_able_to_send_zaps">با کلید خصوصی وارد شوید تا بتوانید زپ کنید</string>
+    <string name="login_with_a_private_key_to_be_able_to_follow">با یک کلید خصوصی وارد شوید تا بتوانید دنبال کنید</string>
+    <string name="login_with_a_private_key_to_be_able_to_unfollow">با یک کلید خصوصی وارد شوید تا بتوانید دنبال کردن را لغو کنید</string>
+    <string name="login_with_a_private_key_to_be_able_to_hide_word">دارید از کلید عمومی استفاده می کنید و با کلید عمومی فقط می توان خواند. با کلید خصوصی وارد شوید تا بتوانید کلمه یا جمله ای را پنهان کنید.</string>
+    <string name="login_with_a_private_key_to_be_able_to_show_word">دارید از کلید عمومی استفاده می کنید و با کلید عمومی فقط می توان خواند. با کلید خصوصی وارد شوید تا بتوانید کلمه یا جمله ای را آشکار کنید</string>
+    <string name="zaps">زپ</string>
+    <string name="view_count">دیدن تعداد</string>
+    <string name="boost">بازنشر</string>
+    <string name="boosted">بازنشر شده</string>
+    <string name="edited">ویرایش شده</string>
+    <string name="edited_number">ویرایش#%1$s</string>
+    <string name="original">اورجینال</string>
+    <string name="quote">نقل قول</string>
+    <string name="fork">فورک</string>
+    <string name="propose_an_edit">پیشنهاد ویرایش</string>
+    <string name="new_amount_in_sats">مبلغ جدید به ساتوشی</string>
+    <string name="add">افزودن</string>
+    <string name="replying_to">" پاسخ به"</string>
+    <string name="and">" و "</string>
+    <string name="in_channel">"در کانال "</string>
+    <string name="profile_banner">بنر پروفایل</string>
+    <string name="payment_successful">پرداخت موفق</string>
+    <string name="error_parsing_error_message">خطا در تفسیر پیغام خطا</string>
+    <string name="following">"دنبال شونده"</string>
+    <string name="followers">"دنبال کننده"</string>
+    <string name="profile">پروفایل</string>
+    <string name="security_filters">فیلترهای ایمنی</string>
+    <string name="log_out">خروج</string>
+    <string name="show_more">ادامه</string>
+    <string name="lightning_invoice">صورتحساب لایتنینگ</string>
+    <string name="pay">پرداخت</string>
+    <string name="lightning_tips">انعام لایتنینگ</string>
+    <string name="note_to_receiver">یادداشت برای گیرنده</string>
+    <string name="thank_you_so_much">!خیلی ممنون</string>
+    <string name="amount_in_sats">مبلغ به ساتوشی</string>
+    <string name="send_sats">ارسال ساتوشی</string>
+    <string name="error_parsing_preview_for">" %1$s : %2$s خطا در تبدیل"</string>
+    <string name="preview_card_image_for">"%1$s پیش نمایش تصویر کارت برای"</string>
+    <string name="new_channel">کانال جدید</string>
+    <string name="channel_name">نام کانال</string>
+    <string name="my_awesome_group">گروه باحال من</string>
+    <string name="picture_url">آدرس تصویر</string>
+    <string name="description">توصیف</string>
+    <string name="about_us">"درباره ما.. "</string>
+    <string name="what_s_on_your_mind">به چی فکر میکنی؟</string>
+    <string name="post">ارسال</string>
+    <string name="save">ذخیره</string>
+    <string name="create">ساختن</string>
+    <string name="cancel">لغو</string>
+    <string name="failed_to_upload_the_image">تصویر بارگذاری نشد</string>
+    <string name="relay_address">آدرس رله</string>
+    <string name="posts">یادداشت ها</string>
+    <string name="bytes">بایت</string>
+    <string name="errors">خطاها</string>
+    <string name="errors_description">تعداد خطاهای اتصال در این نوبت</string>
+    <string name="home_feed">خبرنامه اصلی</string>
+    <string name="private_message_feed">پیام خصوصی</string>
+    <string name="public_chat_feed">گفتگوی عمومی</string>
+    <string name="global_feed">خبرنامه همگانی</string>
+    <string name="search_feed">جستجو در خبرنامه</string>
+    <string name="add_a_relay">افزودن رله</string>
+    <string name="display_name">نمایش نام</string>
+    <string name="my_display_name">نام من</string>
+    <string name="my_awesome_name">استریچ باحالیان</string>
+    <string name="welcome">خوش آمدی استریچ!</string>
+    <string name="username">نام کاربری</string>
+    <string name="my_username">نام کاربری من</string>
+    <string name="about_me">درباره من</string>
+    <string name="avatar_url">آدرس آواتار</string>
+    <string name="banner_url">آدرس بنر</string>
+    <string name="website_url">آدری وبسایت</string>
+    <string name="pronouns">ضمیرها</string>
+    <string name="ln_address">آدرس لایتنینگ</string>
+    <string name="ln_url_outdated">آدرس لایتنینگ(نقل شده)</string>
+    <string name="save_to_gallery">در گالری ذخیره کن</string>
+    <string name="image_saved_to_the_gallery">تصویر در گالری ذخیره شد</string>
+    <string name="video_download_has_started_toast">بارگیری ویدئو آغاز شد…</string>
+    <string name="media_download_has_started_toast">بارگیری رسانه آغاز شد…</string>
+    <string name="failed_to_save_the_image">تصویر ذخیره نشد</string>
+    <string name="video_saved_to_the_gallery">ویدئو در گالری گوشی ذخیره شد</string>
+    <string name="failed_to_save_the_video">ویدئو ذخیره نشد</string>
+    <string name="upload_image">بارگذاری تصویر</string>
+    <string name="uploading">...در حال بارگذاری</string>
+    <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
+    <string name="reply_here">"...اینجا پاسخ دهید "</string>
+    <string name="copies_the_note_id_to_the_clipboard_for_sharing">شناسه یادداشت را برای اشتراک گذاری در کلیپبورد ذخیره می کند </string>
+    <string name="copy_channel_id_note_to_the_clipboard">ذخیره شناسه کانال در کلیپبورد</string>
+    <string name="edits_the_channel_metadata">متادیتای کانال را ذخیره می کند</string>
+    <string name="join">پیوستن</string>
+    <string name="known">شناس</string>
+    <string name="new_requests">در خواست جدید</string>
+    <string name="blocked_users">کاربران بلاک شده</string>
+    <string name="new_threads">رشته جدید</string>
+    <string name="conversations">گفتگوها</string>
+    <string name="notes">یادداشت ها</string>
+    <string name="replies">پاسخ ها</string>
+    <string name="gallery">گالری</string>
+    <string name="follows">"دنبال شوندگان"</string>
+    <string name="reports">"گزارش ها"</string>
+    <string name="more_options">انتخاب های بیشتر</string>
+    <string name="relays">"رله ها"</string>
+    <string name="website">وبسایت</string>
+    <string name="lightning_address">آدرس لایتنینگ</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">شناسه کلید خصوصی (پسوردتان) را در کلیپبورد کپی می کند(</string>
+    <string name="copy_private_key_to_the_clipboard">کپی کردن کلید خصوصی در کلیپبورد</string>
+    <string name="show_private_key_qr_code">نمایش کد QR کلید خصوصی</string>
+    <string name="show_encrypted_private_key_qr_code">نمایش کد QR کلید خصوصی رمزنگاری شده</string>
+    <string name="copies_the_public_key_to_the_clipboard_for_sharing">کلید عمومی را برای اشتراک گذاری در کلیپبورد ذخیره می کند</string>
+    <string name="copy_public_key_npub_to_the_clipboard">کپی کردن کلید عمومی در کلیپبورد</string>
+    <string name="send_a_direct_message">ارسال پیام مستقیم</string>
+    <string name="edits_the_user_s_metadata">متادیتای کاربر را ویرایش می کند</string>
+    <string name="follow">دنبال کردن</string>
+    <string name="follow_back">دنبال کردن متقابل</string>
+    <string name="unblock">از بلاک درآوردن</string>
+    <string name="copy_user_id">کپی شناسه کاربر</string>
+    <string name="unblock_user">از بلاک درآوردن کاربر</string>
+    <string name="npub_hex_username">"npub, hex, نام کاربری "</string>
+    <string name="clear">پاک کردن</string>
+    <string name="app_logo">لوگوی اپ</string>
+    <string name="nsec_npub_hex_private_key">nsec / npub / hex کلید خصوصی</string>
+    <string name="ncryptsec_password">پسورد باز کردن کلید</string>
+    <string name="show_password">نشان دادن گذرواژه</string>
+    <string name="hide_password">پنهان کردن گذرواژه</string>
+    <string name="invalid_key">کلید نامعتبر</string>
+    <string name="invalid_key_with_message">کلید نامعتبر: %1$s</string>
+    <string name="i_accept_the">"می پذیرم "</string>
+    <string name="terms_of_use">شرایط استفاده</string>
+    <string name="acceptance_of_terms_is_required">پذیرش شرایط الازمیست</string>
+    <string name="password_is_required">رمز عبور لازم است</string>
+    <string name="key_is_required">کلید الزامیست</string>
+    <string name="name_is_required">نام الزامی است</string>
+    <string name="login">ورود</string>
+    <string name="sign_up">ثبت نام</string>
+    <string name="create_account">ایجاد حساب کاربری</string>
+    <string name="how_should_we_call_you">شما را چی صدا بزنیم؟</string>
+    <string name="don_t_have_an_account">حساب کاربری ناستر ندارید؟</string>
+    <string name="already_have_an_account">از قبل حساب کاربری ناستر دارید؟</string>
+    <string name="create_a_new_account">ایجاد حساب کاربری جدید</string>
+    <string name="generate_a_new_key">ساختن جفت کلید جدید</string>
+    <string name="loading_feed">در حال بارگیری خبرنامه</string>
+    <string name="loading_account">بارگذاری حساب کاربری</string>
+    <string name="error_loading_replies">" :خطا در بارگیری پاسخ ها"</string>
+    <string name="try_again">دوباره تلاش کنید</string>
+    <string name="notification_feed_is_empty">هنوز هیچ اعلانی نیست.</string>
+    <string name="feed_is_empty">خبرنامه خالیست</string>
+    <string name="refresh">تازه‌سازی</string>
+    <string name="created">ساخته شد</string>
+    <string name="with_description_of">با توصیف</string>
+    <string name="and_picture">و تصویر</string>
+    <string name="changed_chat_name_to">نام گفتگو تغییر کرد به</string>
+    <string name="description_to">تصویر</string>
+    <string name="and_picture_to">و تصویر به</string>
+    <string name="leave">ترک کردن</string>
+    <string name="unfollow">دنبال نکردن</string>
+    <string name="channel_created">کانال ساخته شد</string>
+    <string name="channel_information_changed_to">"اطلاعات کانال تغییر کرد به"</string>
+    <string name="public_chat">گفتگوی عمومی</string>
+    <string name="posts_received">یادداشت های دریافت شده</string>
+    <string name="remove">بیرون کردن</string>
+    <string name="translations_auto">خودکار</string>
+    <string name="translations_translated_from">ترجمه از</string>
+    <string name="translations_to">به</string>
+    <string name="translations_show_in_lang_first">ابتدا به  نشان بده %1$s</string>
+    <string name="chat_about_topic">گفتگوی عمومی درباره %1$s</string>
+    <string name="community_about_topic">انجمن عمومی درباره %1$s</string>
+    <string name="translations_always_translate_to_lang">همیشه به  ترجمه کن %1$s</string>
+    <string name="translations_never_translate_from_lang">هرگز به  ترجمه نکن %1$s</string>
+    <string name="nip_05">آدرس ناستر</string>
+    <string name="never">هرگز</string>
+    <string name="now">اکنون</string>
+    <string name="h">ساعت</string>
+    <string name="m">دقیقه</string>
+    <string name="d">روز</string>
+    <string name="nudity">برهنگی</string>
+    <string name="profanity_hateful_speech">ناسزا / نفرت پراکنی</string>
+    <string name="report_hateful_speech">گزارش نفرت پراکنی</string>
+    <string name="report_nudity_porn">گزارش برهنگی / پورن</string>
+    <string name="others">سایر</string>
+    <string name="mark_all_known_as_read">همه شناس ها خوانده شده کن</string>
+    <string name="mark_all_new_as_read">همه جدیدها را خوانده شده کن</string>
+    <string name="mark_all_as_read">همه را خوانده شده کن</string>
+    <string name="backup_keys">بازیابی کلیدها</string>
+    <string name="account_backup_tips2_md" tools:ignore="Typos">نکات ایمنی و ذخیره کلید
+
+حساب کاربری شما با یک کلید خصوصی محافظت می شود. این کلید دنباله ای بلند از کاراکترها است که با **nsec1** آغاز می گردد. هر کس به این کلید خصوصی دسترسی داشته باشد می تواند بجای شما یادداشت پست کرده یا هویت شما را تغییر دهد.
+هرگز کلید خصوصی خود را در هیچ وبسایت با نرم افزاری که به آن اطمینان ندارید **وارد نکنید**.
+سازندگان امتیست **هرگز** کلیدتان را از شما نمی خواهند.
+یک پشتیبان یدکی مخفی از کلید خود به منظور بازیابی **نگه دارید**. ما استفاده از نرم افزار مدیریت پسورد را توصیه می کنیم.</string>
+    <string name="account_backup_tips3_md" tools:ignore="Typos">برای ایمنی بیشتر، می توانید کلید خود را با یک رمزعبور رمزنگاری کنید. این نوع کلید با **ncryptsec1** آغاز می شود و نمی تواند بدون رمز عبور شما استفاده شود.
+اگر پسوردتان را گم کنید، نخواهید توانست کلیدتان را بازیابی کنید.</string>
+    <string name="failed_to_encrypt_key">کلید خصوصی شما رمزنگاری نشد</string>
+    <string name="secret_key_copied_to_clipboard">کلید خصوصی در کلیپبورد کپی شد</string>
+    <string name="copy_my_secret_key">کلید خصوصیم را کپی کن</string>
+    <string name="encrypt_and_copy_my_secret_key">رمزنگاری و کپی کلید من</string>
+    <string name="biometric_authentication_failed">احراز هویت انجام نشد</string>
+    <string name="biometric_authentication_failed_explainer">مشخصات بیومتریک نتوانست مالک این تلفن را احراز هویت کند</string>
+    <string name="biometric_authentication_failed_explainer_with_error">مشخصات بیومتریک نتوانست مالک این تلفن را احراز هویت کند. خطا: %1$s</string>
+    <string name="biometric_error">خطا</string>
+    <string name="badge_created_by">"ساخته شده توسط %1$s"</string>
+    <string name="badge_award_image_for">"تصویر مدال پاداش برای %1$s"</string>
+    <string name="new_badge_award_notif">یک مدال پاداش دریافت کردید</string>
+    <string name="award_granted_to">مدال پاداش داده شد به</string>
+    <string name="copied_note_text_to_clipboard">یادداشت در کلیپبورد کپی شد</string>
+    <string name="copied_user_id_to_clipboard" tools:ignore="Typos">\@npubنویسنده در کلیپبورد کپی شد </string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">(@note1)شناسه یادداشت در کلیپبورد کپی شد</string>
+    <string name="select_text_dialog_top">انتخاب متن</string>
+    <string name="private_conversation_notification">"&lt;پیام خصوصی رمزگشایی نشد&gt;\\n\nدر یک پیام خصوصی/رمزنگاری شده بین %1$s و %2$s نام شما آمده بود."</string>
+    <string name="account_switch_add_account_dialog_title">افزودن حساب کاربری جدید</string>
+    <string name="drawer_accounts">حساب های کاربری</string>
+    <string name="account_switch_select_account">انتخاب حساب کارگری</string>
+    <string name="account_switch_add_account_btn">افزودن حساب کاربری جدید</string>
+    <string name="account_switch_active_account">حساب کاربری فعال</string>
+    <string name="account_switch_has_private_key">کلید خصوصی دارد</string>
+    <string name="account_switch_pubkey_only">فقط خواندن، کلید خصوصی ندارد</string>
+    <string name="back">بازگشت</string>
+    <string name="quick_action_select">انتخاب</string>
+    <string name="quick_action_share_browser_link">اشتراک گذاری لینک مرورگر</string>
+    <string name="quick_action_share">اشتراک گذاری</string>
+    <string name="quick_action_copy_user_id">شناسه نویسنده</string>
+    <string name="quick_action_copy_note_id">شناسه یادداشت</string>
+    <string name="quick_action_copy_text">کپی متن</string>
+    <string name="quick_action_delete">حذف</string>
+    <string name="quick_action_unfollow">دنبال نکردن</string>
+    <string name="quick_action_follow">دنبال کردن</string>
+    <string name="quick_action_request_deletion_gallery_title">حذف از گالری</string>
+    <string name="quick_action_request_deletion_gallery_alert_body">حذف این رسانه از گالری، بعدا می توانید آن را بخوانید</string>
+    <string name="quick_action_request_deletion_alert_title">درخواست حذف</string>
+    <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که یادداشت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که یادداشت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
+    <string name="quick_action_block_dialog_btn">بلاک</string>
+    <string name="quick_action_delete_dialog_btn">حذف</string>
+    <string name="quick_action_block">بلاک</string>
+    <string name="quick_action_report">گزارش</string>
+    <string name="quick_action_delete_button">حذف</string>
+    <string name="quick_action_dont_show_again_button">دوباره نشان نده</string>
+    <string name="report_dialog_spam">اسپم یا کلاهبرداری</string>
+    <string name="report_dialog_profanity">محتوای نفرت پراکنی یا ناسزا</string>
+    <string name="report_dialog_impersonation">جعل هویت بدخواهانه</string>
+    <string name="report_dialog_nudity">محتوای برهنگی یا نمایان</string>
+    <string name="report_dialog_illegal">رفتار ناهنجار</string>
+    <string name="report_dialog_malware">نرم‌افزار خرابکار</string>
+    <string name="report_dialog_blocking_a_user">بلاک کردن کاربر محتوای ایشان را در اپ شما پنهان می کند. یادداشت های شما همچنان بطور عمومی دیده می شوند که شامل کاربران بلاک شده توسط شما نیز هست. کاربران بلاک شده در صفحه فیلترهای ایمنی فهرست می شوند.</string>
+    <string name="report_dialog_block_hide_user_btn"><![CDATA[مسدود و پنهان کردن کاربر]]></string>
+    <string name="report_dialog_report_btn">گزارش سواستفاده</string>
+    <string name="report_dialog_reminder_public">تمام گزارش ها بطور عمومی دیده می شوند</string>
+    <string name="report_dialog_additional_reason_placeholder">در صورت تمایل توضیحاتی به گزارش خود بیفزایید...</string>
+    <string name="report_dialog_additional_reason_label">توضیحات اضافه</string>
+    <string name="report_dialog_select_reason_label">دلایل</string>
+    <string name="report_dialog_select_reason_placeholder">دلیلی انتخاب کنید...</string>
+    <string name="report_dialog_post_report_btn">گزارش یادداشت</string>
+    <string name="report_dialog_title">بلاک و گزارش</string>
+    <string name="block_only">بلاک</string>
+    <string name="bookmarks">علامت گذاشته ها</string>
+    <string name="drafts">پیش‌نویس‌</string>
+    <string name="private_bookmarks">علامت گاشته های خصوصی</string>
+    <string name="public_bookmarks">علامت گذاشته های عمومی</string>
+    <string name="add_to_private_bookmarks">افزودن به علامت گذاشته های خصوصی</string>
+    <string name="add_to_public_bookmarks">افزودن به علامت گذاشته های عمومی</string>
+    <string name="remove_from_private_bookmarks">برداشتن از علامت گذاشته های خصوصی</string>
+    <string name="remove_from_public_bookmarks">برداشتن از علامت گذاشته های خصوصی</string>
+    <string name="wallet_connect_service">خدمات اتصال به کیف پول</string>
+    <string name="wallet_connect_service_explainer">به رمز ناستر اجازه بده زپ را بدون ترک اپ برداخت کند. این رمز را امن نگه دارید و درصورت امکان از رله خصوصی استفاده کنید</string>
+    <string name="wallet_connect_service_pubkey">کلید عمومی اتصال به کیف پول</string>
+    <string name="wallet_connect_service_relay">رله اتصال به کیف پول</string>
+    <string name="wallet_connect_service_secret">رمز اتصال به کیف پول</string>
+    <string name="wallet_connect_service_show_secret">نمایش کلید خصوصی</string>
+    <string name="wallet_connect_service_secret_placeholder">nsec / hex کلید خصوصی</string>
+    <string name="pledge_amount_in_sats">مبلغ وثیقه به ساتوشی</string>
+    <string name="post_poll">ارسال نظرسنجی</string>
+    <string name="poll_heading_required">قسمت های الزامی:</string>
+    <string name="poll_zap_recipients">دریافت کنندگان زپ</string>
+    <string name="poll_primary_description">توضیحات اولیه نظرسنجی…</string>
+    <string name="poll_option_index">گزینه ها %s</string>
+    <string name="poll_option_description">توضیح گزینه های نظرسنجی</string>
+    <string name="poll_heading_optional">قسمت های اختیاری:</string>
+    <string name="poll_zap_value_min">حداقل زپ</string>
+    <string name="poll_zap_value_max">حداکثر زپ</string>
+    <string name="poll_consensus_threshold">توافق نظر</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_time">بسته شدن پس از</string>
+    <string name="poll_closing_time_days">روز</string>
+    <string name="poll_unable_to_vote">نمی توان رای داد</string>
+    <string name="poll_is_closed_explainer">این نظرسنجی برای رای جدید بسته شده است</string>
+    <string name="poll_zap_amount">مبلغ زپ</string>
+    <string name="one_vote_per_user_on_atomic_votes">فقط یک رای به ازای هر کاربر در این نوع نظرسنجی مجاز است</string>
+    <string name="looking_for_event">"جستجوی رویداد %1$s"</string>
+    <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
+    <string name="custom_zaps_add_a_message_private">افزودن پیام خصوصی</string>
+    <string name="custom_zaps_add_a_message_nonzap">افزودن پیام صورتحساب</string>
+    <string name="custom_zaps_add_a_message_example">از زحمات شما متشکریم!</string>
+    <string name="lightning_create_and_add_invoice">ساختن و افزودن</string>
+    <string name="poll_author_no_vote">سازندگان نظرسنجی نمی توانند در نظر سنجی خود رای دهند.</string>
+    <string name="hash_verification_info_title">این به چه معناست؟</string>
+    <string name="hash_verification_passed">تصویر از زمان ارسال یکسان است</string>
+    <string name="hash_verification_failed">تصویر تغییر کرده است. ممکن است نویسنده تغییر را ندیده باشد.</string>
+    <string name="content_description_add_media">افزودن رسانه</string>
+    <string name="content_description_add_image">افزودن تصویر</string>
+    <string name="content_description_add_video">افزودن فیلم</string>
+    <string name="content_description_add_document">افزودن مدارک</string>
+    <string name="add_content">افزودن به پیام</string>
+    <string name="add_caption">افزودن عنوان</string>
+    <string name="add_caption_example">دوست عزیز من</string>
+    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
+    <string name="content_description">توصیف محتوا</string>
+    <string name="content_description_example">قایقی آبی در ساحل شنی سفید هنگام غروب</string>
+    <string name="zap_type">نوع زپ</string>
+    <string name="zap_type_explainer">نوع زپ برای همه گزینه ها</string>
+    <string name="zap_type_public">عمومی</string>
+    <string name="zap_type_public_explainer">همه می توانند تراکنش و پیام را ببینند</string>
+    <string name="zap_type_private">خصوصی</string>
+    <string name="zap_type_private_explainer">فرستنده و گیرنده می توانند یکدیگر و پیام را ببینند</string>
+    <string name="zap_type_anonymous">ناشناس</string>
+    <string name="zap_type_anonymous_explainer">گیرنده و دیگران نمی دانند چه کسی پرداخت کرده است</string>
+    <string name="zap_type_nonzap">غیرزپ</string>
+    <string name="zap_type_nonzap_explainer">هیچ ردی در نوستر نمی ماند، فقط در شبکه لایتنینگ انجام می شود</string>
+    <string name="file_server">سرور فایل</string>
+    <string name="file_server_description">یک سرور برای بارگذاری این فایل انتخاب کنید</string>
+    <string name="zap_forward_lnAddress">آدرس لایتنینگ یا @User</string>
+    <string name="media_servers">سرورهای رسانه</string>
+    <string name="set_preferred_media_servers">سرورهای مورد علاقه خود برای بارگزاری رسانه را انتخاب کنید.</string>
+    <string name="no_nip96_server_message">هیچ مجموعه سرور NIP-96 ندارید. می توانید از لیست امتیست استفاده کنید، یا از لیست زیر اضافه کنید↓</string>
+    <string name="no_blossom_server_message">هیچ سروری برای Blossom ندارید. می توانید از لیست امتیست استفاده کنید، یا از لیست زیر اضافه کنید↓</string>
+    <string name="built_in_media_servers_title">سرورهای داخلی رسانه</string>
+    <string name="built_in_servers_description">لیست پیش فرض امتیست. می توانید تک به تک یا تمام لیست را اضافه کنید.</string>
+    <string name="use_default_servers">استفاده از لیست پیش فرض</string>
+    <string name="add_media_server">افزودن سرور رسانه</string>
+    <string name="delete_media_server">حذف سرور رسانه</string>
+    <string name="uploading_state_ready">آغاز نشده</string>
+    <string name="uploading_state_compressing">فشرده سازی</string>
+    <string name="uploading_state_uploading">درحال بارگذاری</string>
+    <string name="uploading_state_server_processing">در حال پردازش</string>
+    <string name="uploading_state_downloading">در حال بارگیری</string>
+    <string name="uploading_state_hashing">در حال هش کردن</string>
+    <string name="uploading_state_finished">انجام شد</string>
+    <string name="uploading_state_error">خطا</string>
+    <string name="upload_server_relays_nip95">رله های شما (NIP-95)</string>
+    <string name="upload_server_relays_nip95_explainer">فایل ها در رله های شما میزبانی می شوند. NIPجدید: بررسی کنید آیا پشتیبانی می کنند یا خیر </string>
+    <string name="privacy_options">گزینه های حریم خصوصی</string>
+    <string name="connect_via_tor_short">Tor/Orbot تنظیمات</string>
+    <string name="connect_via_tor"> از طریق تنظیم Orbot متصل شوید</string>
+    <string name="connect_via_tor1">تنظیم</string>
+    <string name="connect_via_tor2">تنظیمات تور</string>
+    <string name="do_you_really_want_to_disable_tor_title">قطع اتصال از Orbot/Tor?</string>
+    <string name="do_you_really_want_to_disable_tor_text">داده های شما بلافاصله در شبکه معمولی منتقل می شوند</string>
+    <string name="yes">بله</string>
+    <string name="no">خیر</string>
+    <string name="follow_list_selection">لیست دنبال ها</string>
+    <string name="follow_list_kind3follows">همه دنبال ها</string>
+    <string name="follow_list_aroundme">اطراف من</string>
+    <string name="follow_list_global">همگانی</string>
+    <string name="follow_list_mute_list">لیست خموش</string>
+    <string name="connect_through_your_orbot_setup_short">درگاه پیش فرض 9050 است</string>
+    <string name="connect_through_your_orbot_setup_markdown">        ## از طریق Tor با Orbot متصل شوید
+        \n\n1. نصب کنید [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
+        \n2. شروع Orbot
+        \n3. در Orbot, پورت Socksرا علامت بزنید.مقدار پیش فرض 9050 است.
+        \n4. اگر لازم است پورت Orbot را تغییر دهید
+        \n5. پورت Socks را در این صفحه پیکربندی کنید
+        \n6. دکمه Activate را بفشارید تا از Orbot به عنوان پراکسی استفده نمایید
+    </string>
+    <string name="orbot_socks_port">درگاه Orbot Socks</string>
+    <string name="use_internal_tor">موتور فعال تور</string>
+    <string name="use_internal_tor_explainer">استفاده از نسخه درونی یا Orbot</string>
+    <string name="tor_preset">تنظیمات پیش فرض حریم خصوصی/ تور</string>
+    <string name="tor_preset_explainer">تغییر سریع تمام تنظیمات زیر</string>
+    <string name="tor_use_onion_address">رله ها / آدرس های Onion </string>
+    <string name="tor_use_onion_address_explainer">از تور برای هر آدرس اونیون استفاده کن</string>
+    <string name="tor_use_dm_relays">رله های پیام خصوصی</string>
+    <string name="tor_use_dm_relays_explainer">تور را برای ارسال و دریافت پیام خصوصی الزامی کن</string>
+    <string name="tor_use_new_relays">رله های غیر معتمد</string>
+    <string name="tor_use_new_relays_explainer">تور را برای رله های ارسال/دریافت الزامی کن</string>
+    <string name="tor_use_trusted_relays">رله های معتمد</string>
+    <string name="tor_use_trusted_relays_explainer">تور را برای تمام رله های لیست الزامی کن</string>
+    <string name="tor_use_profile_pictures">تصاویر نمایه</string>
+    <string name="tor_use_profile_pictures_explainer">تور را برای بارگیری تصاویر نمایه اجباری کن</string>
+    <string name="tor_use_url_previews">پیش نمایش URL</string>
+    <string name="tor_use_url_previews_explainer">تور را برای بارگیری پیش نمایش آدرس الزامی کن</string>
+    <string name="tor_use_images">تصاویر</string>
+    <string name="tor_use_images_explainer">تور را برای بارگیری تصاویر الزامی کن</string>
+    <string name="tor_use_videos">ویدئوها</string>
+    <string name="tor_use_videos_explainer">تور را برای بارگیری ویدئوها الزامی کن</string>
+    <string name="tor_use_money_operations">عملیات پولی</string>
+    <string name="tor_use_money_operations_explainer">تور را برای زپ، لایتنینگ و انتقال کَشو الزامی کن</string>
+    <string name="tor_use_nip05_verification">تایید آدرس ناستر</string>
+    <string name="tor_use_nip05_verification_explainer">تور را برای تایید آدرس های NIP-05 الزامی کن</string>
+    <string name="tor_use_nip96_uploads">بارگذاری رسانه</string>
+    <string name="tor_use_nip96_uploads_explainer">تور را برای بارگذاری محتوا الزامی کن</string>
+    <string name="tor_internal">داخلی</string>
+    <string name="tor_external">Orbot</string>
+    <string name="tor_off">خاموش</string>
+    <string name="tor_when_needed">مقدماتی</string>
+    <string name="tor_default">پیش‌فرض</string>
+    <string name="tor_small_payloads">همه بجز رسانه</string>
+    <string name="tor_full_privacy">حریم خصوصی کامل</string>
+    <string name="tor_custom">سفارشی</string>
+    <string name="tor_when_needed_explainer">وقتی توسط سرور الزام شده از تور استفاده کن</string>
+    <string name="tor_default_explainer">IP خود را از رله های غریبه پنهان کن</string>
+    <string name="tor_small_payloads_explainer">IP خود را از همه چیز بجز تصاویر و ویدئوها پنهان کن</string>
+    <string name="tor_full_privacy_explainer">IP خود را در تمام ارتباطات پنهان کن</string>
+    <string name="tor_custom_explainer">خودت را بساز</string>
+    <string name="invalid_port_number">شماره پورت نامعتبر</string>
+    <string name="use_orbot">استفاده از Orbot</string>
+    <string name="disconnect_from_your_orbot_setup">قطع اتصال Tor/Orbot</string>
+    <string name="app_notification_dms_channel_name">پیام خصوصی</string>
+    <string name="app_notification_dms_channel_description">وقتی پیام خصوصی دریافت شود اعلان می کند</string>
+    <string name="app_notification_zaps_channel_name">زپ دریافت شده</string>
+    <string name="app_notification_zaps_channel_description">وقتی کسی زپ کند اعلام می کند</string>
+    <string name="app_notification_zaps_channel_message">%1$s ساتوشی</string>
+    <string name="app_notification_zaps_channel_message_from">از %1$s</string>
+    <string name="app_notification_zaps_channel_message_for">برای %1$s</string>
+    <string name="reply_notify">اعلان: </string>
+    <string name="channel_list_join_conversation">پیوستن به گفتگو</string>
+    <string name="channel_list_user_or_group_id">شناسه گروه یا کاربر</string>
+    <string name="channel_list_user_or_group_id_demo">npub, nevent یا hex</string>
+    <string name="channel_list_create_channel">ساختن</string>
+    <string name="channel_list_join_channel">پیوستن</string>
+    <string name="today">امروز</string>
+    <string name="content_warning">هشدار محتوا</string>
+    <string name="content_warning_explanation">این یادداشت حاوی محتوای حساس است که ممکن است از نظر برخی توهین آمیز یا مشوش کننده باشد</string>
+    <string name="content_warning_hide_all_sensitive_content">همیشه محتوای حساس را پنهان کن</string>
+    <string name="content_warning_show_all_sensitive_content">همیشه محتوای حساس را نشان بده</string>
+    <string name="content_warning_see_warnings">همیشه هشدار محتوا را نشان بده</string>
+    <string name="recommended_apps">توصیه ها: </string>
+    <string name="filter_spam_from_strangers">اسپم غریبه ها را فیلتر کن</string>
+    <string name="warn_when_posts_have_reports_from_your_follows">اگر یادداشت توسط افرادی که فالو می کنید گزارش شده هشدار بده</string>
+    <string name="new_reaction_symbol">نماد جدید واکنش</string>
+    <string name="no_reaction_type_setup_long_press_to_change">هیچ نوع واکنشی انتخاب نشده. نگه دارید تا تغییر دهید</string>
+    <string name="zapraiser">زپ گیری</string>
+    <string name="zapraiser_explainer">یک مبلغ ساتوشی هدف به این یادداشت بیافزایید. کلاینت های سازگار ممکن احتمالا این ویژگی را به شکل نوار پیش رونده نشان می دهند تا مشوق کمک مالی باشد.</string>
+    <string name="zapraiser_target_amount_in_sats">مبلغ هدف به ساتوشی</string>
+    <string name="sats_to_complete">زپ گیری تا %1$s. %2$s مانده تا هدف</string>
+    <string name="read_from_relay">خواندن از رله</string>
+    <string name="write_to_relay">نوشتن به رله</string>
+    <string name="write_to_relay_description">مقدار بایتی که به این رله فرستاده شده، شامل فیلترها و رویدادها</string>
+    <string name="read_from_relay_description">مقدار بایتی که از این رله فرستاده شده، شامل فیلترها و رویدادها</string>
+    <string name="an_error_occurred_trying_to_get_relay_information">در تلاش برای گرفتن اطلاعات رله از %1$s خطایی رخ داد</string>
+    <string name="owner">مالک</string>
+    <string name="version">نگارش</string>
+    <string name="software">نرم‌افزار</string>
+    <string name="contact">مخاطب</string>
+    <string name="supports">NIP های پشتیبانی شده</string>
+    <string name="admission_fees">کارمزد تراکنش</string>
+    <string name="payments_url">Url پرداخت ها</string>
+    <string name="limitations">محدودیت ها</string>
+    <string name="countries">کشورها</string>
+    <string name="languages">زبان‌ها</string>
+    <string name="tags">برچسب‌ها</string>
+    <string name="posting_policy">سیاست ارسال محتوا</string>
+    <string name="relay_error_messages">خطاها و هشدارهای از این رله</string>
+    <string name="message_length">طول پیام</string>
+    <string name="subscriptions">اشتراک</string>
+    <string name="filters">فیلترها</string>
+    <string name="subscription_id_length">طول شناسه اشتراک</string>
+    <string name="minimum_prefix">حداقل پیشوند</string>
+    <string name="maximum_event_tags">حداکثر تعداد برچسب رویداد</string>
+    <string name="content_length">طول محتوا</string>
+    <string name="minimum_pow">حداقل PoW</string>
+    <string name="auth">احراز هویت</string>
+    <string name="payment">پرداخت</string>
+    <string name="cashu">توکن Cashu</string>
+    <string name="cashu_redeem">بازپرداخت</string>
+    <string name="cashu_redeem_to_zap">ارسال به کیف پول زپ</string>
+    <string name="cashu_redeem_to_cashu">باز کردن در کیف پول Cashu</string>
+    <string name="cashu_copy_token">کپی کردن توکن</string>
+    <string name="no_lightning_address_set">آدرس لایتنینگ تنظیم نشده است</string>
+    <string name="copied_token_to_clipboard">توکن به کلیپبورد کپی شد</string>
+    <string name="live_stream_live_tag">زنده</string>
+    <string name="live_stream_offline_tag">آفلاین</string>
+    <string name="live_stream_ended_tag">تمام شد</string>
+    <string name="live_stream_planned_tag">زمان بندی شده</string>
+    <string name="live_stream_is_offline">پخش زنده آفلاین است</string>
+    <string name="live_stream_has_ended">پخش زنده تمام شد</string>
+    <string name="are_you_sure_you_want_to_log_out">خروج همه اطلاعات محلی شما را پاک می کند. مطمئن شوید که کلید خصوصی خود را بکاپ گرفته و ذخیره کرده اید تا حساب کاربری تان را از دست ندهید. می خواهید ادامه دهید؟</string>
+    <string name="followed_tags">برچسب های دنبال شده</string>
+    <string name="relay_setup">رله ها</string>
+    <string name="discover_content">اکتشاف یادداشت</string>
+    <string name="discover_marketplace">بازار</string>
+    <string name="discover_live">زنده</string>
+    <string name="discover_community">انجمن</string>
+    <string name="discover_chat">گپ</string>
+    <string name="community_approved_posts">یادداشت های تایید شده</string>
+    <string name="groups_no_descriptor">این گروه هیچ توصیف و قوانینی ندارد. با مالک گروه برای افزودن آن صحبت کنید.</string>
+    <string name="community_no_descriptor">این انجمن هیچ توضیح و قوانینی ندارد. با مالک گروه برای افزودن آن صحبت کنید.</string>
+    <string name="add_sensitive_content_label">محتوای حساس</string>
+    <string name="add_sensitive_content_description">هشدار محتوای حساس پیش از نمایش محتوا اضافه می کند</string>
+    <string name="preferences">ترجیحات اپ</string>
+    <string name="settings">تنظیمات</string>
+    <string name="connectivity_type_always">همیشه</string>
+    <string name="connectivity_type_wifi_only">فقط Wifi</string>
+    <string name="connectivity_type_unmetered_wifi_only">وای فای بی اندازه</string>
+    <string name="connectivity_type_never">هرگز</string>
+    <string name="ui_feature_set_type_complete">کامل</string>
+    <string name="ui_feature_set_type_simplified">ساده</string>
+    <string name="ui_feature_set_type_performance">عملکرد</string>
+    <string name="gallery_type_classic">کلاسیک</string>
+    <string name="gallery_type_modern">مدرن</string>
+    <string name="system">سیستم</string>
+    <string name="light">روشن</string>
+    <string name="dark">تاریک</string>
+    <string name="application_preferences">ترجیحات اپلیکیشن</string>
+    <string name="wallet_connect">اتصال کیف پول</string>
+    <string name="language">زبان</string>
+    <string name="theme">پوسته</string>
+    <string name="automatically_load_images_gifs">پیش نمایش تصویر</string>
+    <string name="automatically_play_videos">پخش ویدئو</string>
+    <string name="automatically_show_url_preview">پیش نمایش URL</string>
+    <string name="automatically_hide_nav_bars">مرور ژرف</string>
+    <string name="automatically_hide_nav_bars_description">پنهان کردن نوار پیمایش هنگام مرور</string>
+    <string name="ui_style">حالت رابط کاربر</string>
+    <string name="ui_style_description">قیافه پست را انتخاب کن</string>
+    <string name="gallery_style">سبک گالری نمایه</string>
+    <string name="gallery_style_description">انتخاب سبک گالری</string>
+    <string name="load_image">بارگیری تصویر</string>
+    <string name="spamming_users">اسپمر</string>
+    <string name="muted_button">بیصدا شده. برای لغو کلیک کنید</string>
+    <string name="mute_button">باصدا. برای بیصدا کردن کلیک کنید</string>
+    <string name="search_button">سوابق محلی و دور را بگرد</string>
+    <string name="nip05_verified">آدرس ناستر تایید شده بود</string>
+    <string name="nip05_failed">آدرس ناستر تایید نشد</string>
+    <string name="nip05_checking">بررسی آدرس ناستر</string>
+    <string name="select_deselect_all">انتخاب یا لغو انتخاب همه</string>
+    <string name="default_relays">پیش‌فرض</string>
+    <string name="default_relays_longer">بازگشت به حالت پیش فرض</string>
+    <string name="select_a_relay_to_continue">برای ادامه یک رله انتخاب کنید</string>
+    <string name="zap_forward_title">باز ارسال زپ ها به:</string>
+    <string name="zap_forward_explainer">کلاینت هایی که این قابلیت را دارند زپ ها را به جای شما به LNAddress یا نمایه کاربر زیر می فرستند</string>
+    <string name="geohash_title">افشای مکان به عنوان </string>
+    <string name="geohash_explainer">یک هش جغرافیایی از مکان شما به این یادداشت می افزاید. دیگران خواهند دانست که شما در فاصله 5 کیلومتری (3 مایلی) این مکان هستید.</string>
+    <string name="geohash_exclusive">پست اختصاصی مکان</string>
+    <string name="geohash_exclusive_explainer">فقط دنبال کنندگان این مکان می توانند آن را ببینند. دنبال کنندگان معمولی شما آن را نمی بینند.</string>
+    <string name="loading_location">بارگیری مکان</string>
+    <string name="lack_location_permissions">اجازه ثبت مکان داده نشده</string>
+    <string name="add_sensitive_content_explainer">پیش از نمایش محتوای شما، هشدار محتوای حساس به آن می افزاید. این برای هرگونه محتوای نامناسب برای محیط کار یا هر محتوای دیگری که برخی ممکن است توهین آمیز یا مشوش کننده بدانند خوب است.</string>
+    <string name="new_feature_nip17_might_not_be_available_title">ویژگی جدید</string>
+    <string name="new_feature_nip17_might_not_be_available_description">برای فعال سازی این حالت لازم است اماتیست یک پیغام NIP-17 بفرستد (پیغام های GiftWrapped, Sealed Direct and Group). مطمئن شوید که گیرنده از کلاینتی سازگاز استفاده می کند.</string>
+    <string name="new_feature_nip17_activate">فعال‌سازی</string>
+    <string name="messages_create_public_chat">عمومی</string>
+    <string name="messages_create_public_private_chat_description">گروه خصوصی یا عمومی جدید</string>
+    <string name="messages_new_message">خصوصی</string>
+    <string name="messages_new_message_to">به</string>
+    <string name="messages_new_message_subject">موضوع</string>
+    <string name="messages_new_message_subject_caption">موضوع گفتگو</string>
+    <string name="messages_new_message_to_caption">"\@کاربر1, @کاربر2, @کاربر3"</string>
+    <string name="messages_group_descriptor">اعضای گروه</string>
+    <string name="messages_new_subject_message">توضیحات برای اعضا</string>
+    <string name="messages_new_subject_message_placeholder">تعویض نام به خاطر اهداف جدید.</string>
+    <string name="paste_from_clipboard">چسباندن از کلیپبورد</string>
+    <string name="language_description">برای رابط کاربری اپ</string>
+    <string name="theme_description">پوسته مطابق سیستم، روشن، یا تاریک</string>
+    <string name="automatically_load_images_gifs_description">بارگیری خودکار تصاویر و جیف ها</string>
+    <string name="automatically_play_videos_description">پخش خودکار ویدئوها و جیف ها</string>
+    <string name="automatically_show_url_preview_description">نشان دادن پیش نمایش URL</string>
+    <string name="load_image_description">هنگام بارگیری تصاویر</string>
+    <string name="copy_stack_to_clipboard">کپی استک</string>
+    <string name="copy_to_clipboard">کپی به کلیپ‌بورد</string>
+    <string name="copy_npub_to_clipboard">کپی کلید عمومی در کلیپبورد</string>
+    <string name="share_or_save">اشتراک گذاری یا ذخیره‌سازی</string>
+    <string name="copy_url_to_clipboard">کپی URL به کلیپبورد</string>
+    <string name="copy_the_note_id_to_the_clipboard">کپی شناسه یادداشت به کلیپبورد</string>
+    <string name="add_media_to_gallery">افزودن رسانه به گالری</string>
+    <string name="media_added">رسانه افزوده شد</string>
+    <string name="media_added_to_profile_gallery">رسانه به گالری نمایه شما افزوده شد</string>
+    <string name="created_at">ایجاد شده در</string>
+    <string name="rules">قوانین</string>
+    <string name="login_with_external_signer">ورود با Amber</string>
+    <string name="status_update">بارگذاری وضعیت</string>
+    <string name="lightning_wallets_not_found">خطا در تفسیر پیغام خطا</string>
+    <string name="poll_zap_value_min_max_explainer">آراء با مبلغ زپ سنجیده می شوند. می توانید برای جلوگیری از اسپم یک مبلغ حداقل تعیین کنید و برای جلوگیری از دستکاری نتیجه با زپ های بزرگ یک مبلغ حداکثر تعیین کنید. برای اینکه همه آراء ارزش یکسان داشته باشند در هر دو قسمت یک مبلغ را بزنید. یا این قسمت را خالی بگذارید تا هر مبلغ زپی را بپذیرد.</string>
+    <string name="error_dialog_zap_error">زپ فرستاده نمی شود</string>
+    <string name="error_dialog_talk_to_user">پیام به کاربر</string>
+    <string name="error_dialog_talk_to_user_name">پیغام %1$s</string>
+    <string name="error_dialog_button_ok">قبول</string>
+    <string name="relay_information_document_error_assemble_url">به %1$s نرسید: %2$s</string>
+    <string name="relay_information_document_error_failed_to_assemble_url">آدرس NIP-11 ساخته نشد به دلیل %1$s: %2$s</string>
+    <string name="relay_information_document_error_failed_to_reach_server">به %1$s نتوانست برسد: %2$s</string>
+    <string name="relay_information_document_error_failed_to_parse_response">پاسخ %1$s تفسیر نشد: %2$s</string>
+    <string name="relay_information_document_error_failed_with_http">رله درخواست %1$s را رد کرد: %2$s</string>
+    <string name="relay_information_document_error_reach_server">به %1$s نرسید: %2$s</string>
+    <string name="relay_information_document_error_parse_result">نتایج %1$s تفسیر نشد: %2$s</string>
+    <string name="relay_information_document_error_http_status">%1$s کد %2$s را انجام نداد</string>
+    <string name="active_for">فعال برای: </string>
+    <string name="active_for_home">خانه</string>
+    <string name="active_for_msg">پیام های خصوصی</string>
+    <string name="active_for_chats">گپ</string>
+    <string name="active_for_global">همگانی</string>
+    <string name="active_for_search">جستجو</string>
+    <string name="zap_split_title">تقسیم و فرستادن زپ ها</string>
+    <string name="zap_split_explainer">کلاینت هایی که این ویژگی را دارند زپ ها را تقسیم کرده و به جای شما کاربرانی که اینجا افزوده اید می فرستند</string>
+    <string name="zap_split_search_and_add_user">جستجو و افزودن کاربر</string>
+    <string name="zap_split_search_and_add_user_placeholder">نام کاربری یا نام نمایشی</string>
+    <string name="missing_lud16">تنظیمات لایتنینگ موجود نیست</string>
+    <string name="user_x_does_not_have_a_lightning_address_setup_to_receive_sats">کاربر %1$s آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
+    <string name="zap_split_weight">درصد</string>
+    <string name="zap_split_weight_placeholder">۲۵</string>
+    <string name="splitting_zaps_with">تقسیم زپ با</string>
+    <string name="forwarding_zaps_to">بازفرستادن زپ به</string>
+    <string name="lightning_wallets_not_found2">کیف پول لایتنینگی یافت نشد</string>
+    <string name="paid">پرداخت شد</string>
+    <string name="wallet_number">کیف پول %1$s</string>
+    <string name="error_opening_external_signer">خطا در بازکردن اپلیکیشن امضا کننده</string>
+    <string name="error_opening_external_signer_description">اپ امضا کننده یافت نشد. بررسی کنید که اپ حذف نشده باشد.</string>
+    <string name="sign_request_rejected">اپ امضا کننده رد کرد</string>
+    <string name="sign_request_rejected_description">مطمئن شوید که اپ امضا کننده این تراکنش را تایید کرده است</string>
+    <string name="no_wallet_found_with_error">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد (خطا: %1$s). لطفا کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
+    <string name="no_wallet_found">هیچ کیف پولی برای پرداخت صورتحساب لایتنینگ یافت نشد. لطفا یک کیف پول لایتنینگی برای استفاده از زپ نصب کنید</string>
+    <string name="hidden_words">کلمات پنهان</string>
+    <string name="hide_new_word_label">پنهان کردن کلمه یا جمله جدید</string>
+    <string name="automatically_show_profile_picture">تصویر نمایه</string>
+    <string name="automatically_show_profile_picture_description">نمایش تصاویر نمایه</string>
+    <string name="select_an_option">یک گزینه را انتخاب کنید</string>
+    <string name="error_dialog_pay_invoice_error">صورتحساب پرداخت نشد</string>
+    <string name="error_dialog_pay_withdraw_error">برداشت نشد</string>
+    <string name="error_parsing_nip47_title">اتصال کیف پول برقرار نشد</string>
+    <string name="error_parsing_nip47">خطا در تفسیر رشته اتصال NIP-47. بررسی کنید این مشکل مربوط به سازنده کیف پول شما مشکلی نباشد: %1$s. خطا: %2$s</string>
+    <string name="error_parsing_nip47_no_error">خطا در تفسیر رشته اتصال NIP-47. بررسی کنید این مشکل مربوط به سازنده کیف پول شما مشکلی نباشد: %1$s.</string>
+    <string name="cashu_failed_redemption">Cashu بازپرداخت نشد</string>
+    <string name="cashu_failed_redemption_explainer_error_msg">Mint پیام خطای روبرو را داد: %1$s</string>
+    <string name="cashu_failed_redemption_explainer_already_spent">توکن Cashu خرج شده است.</string>
+    <string name="cashu_successful_redemption">Cashu دریافت شد</string>
+    <string name="cashu_successful_redemption_explainer">%1$s ساتوشی به کیف پول شما ارسال شد. (کارمزد: %2$s ساتوشی)</string>
+    <string name="cashu_no_wallet_found">هیچ کیف پول Cashu سازگاری در سیستم یافت نشد</string>
+    <string name="error_unable_to_fetch_invoice">صورتحساب از سرور گیرنده دریافت نشد</string>
+    <string name="wallet_connect_pay_invoice_error_error">ارائه دهنده اتصال کیف پول شما خطای روبرو را داد: %1$s</string>
+    <string name="could_not_connect_to_tor">نمی توان به Tor وصل شد</string>
+    <string name="unable_to_download_relay_document">بارگیری اسناد رله در دسترس نیست</string>
+    <string name="could_not_assemble_lnurl_from_lightning_address_check_the_user_s_setup">LNUrl از آدرس لایتنینگ \"%1$s\" بدست نیامد. تنظیمات کاربر را بررسی کنید.</string>
+    <string name="the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct">خدمات لایتنینگ %1$s گیرنده دردسترس نیست. از آدرس لایتنینگ \"%2$s\" محاسبه شد. خطا: %3$s. بررسی کنید آیا سرور کار می کند و آیا آدرس لایتنینگ صحیح است.</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct">مشکل %1$s حل نشد. بررسی کنید که به اینترنت متصل باشید، سرور کار کند و آدرس لایتنینگ %2$s صحیح باشد.</string>
+    <string name="could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception">مشکل %1$s حل نشد. بررسی کنید که به اینترنت متصل باشید، سرور کار کند و آدرس لایتنینگ %2$s صحیح باشد. \n\nخطای %3$s</string>
+    <string name="could_not_fetch_invoice_from">صورتحساب از %1$s گرفته نشد</string>
+    <string name="could_not_fetch_invoice_from_details">صورتحساب از %1$s گرفته نشد: %2$s</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup">خطا در تفسیر JSON از آدرس لایتنینگ. تنظیمات لایتنینگ کاربر را بررسی کنید.</string>
+    <string name="error_parsing_json_from_lightning_address_check_the_user_s_lightning_setup_with_user">خطا در تفسیر JSON از %1$s. تنظیمات لایتنینگ کاربر را بررسی کنید</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration">URL بازخوانی در پیکربندی سرور آدرس لایتنینگ یافت نشد</string>
+    <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">فراخوانی URL از پاسخ %1$s یافت نشد</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">خطا در تفسیر JSON از فراخوان صورتحساب آدرس لایتنینگ. تنظیمات لایتنینگ کاربر را بررسی کنید.</string>
+    <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">خطا در تفسیر JSON از دریافت صورتحساب %1$s. تنظیمات لایتنینگ کاربر را بررسی کنید.</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">مبلغ نادرست صورتحساب (%1$s ساتوشی). می بایست %3$s ساتوشی باشد.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">نمی توان صورتحساب لایتنینگ را پیش از زپ زدن ارسال کرد. کیف پول لایتنینگی گیرنده خطای روبرو را داد: %1$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">صورت حساب لایتنینگ ساخته نشد. پیغام از %1$s: %2$s</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">نمی توان صورتحساب لایتنینگ را پیش از زپ زدن ارسال کرد. المنت pr در JSON بدست آمده یافت نشد.</string>
+    <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">نمی توان صورتحساب لایتنینگ از %1$s ساخت. المنت pr در JSON بدست آمده یافت نشد.</string>
+    <string name="read_only_user">کاربر با امکان خواندن فقط</string>
+    <string name="no_reactions_setup">هیچ واکنشی تنظیم نشده است</string>
+    <string name="select_push_server">یک اپلیکیشن UnifiedPush انتخاب کنید</string>
+    <string name="push_server_title">اعلان</string>
+    <string name="push_server_explainer">از اپلیکیشن های UnifiedPush نصب شده</string>
+    <string name="push_server_none">هیچ‌کدام</string>
+    <string name="push_server_none_explainer">غیرفعال سازی اعلان ها</string>
+    <string name="push_server_uses_app_explainer">از اپلیکیشن %1$s استفاده می کند</string>
+    <string name="push_server_install_app">تنظیمات اعلان ها</string>
+    <string name="push_server_install_app_description">برای دریافت اعلان ها، می توانید هر اپلیکیشنی که از [Unified Push](https://unifiedpush.org/) پشتیبانی می کند نصب کنید، مانند[Ntfy](https://ntfy.sh/).
+        پس از نصب، اپلیکیشنی را که می خواهید استفاده کنید در تنظیمات انتخاب کنید.
+    </string>
+    <string name="payment_required_title">پیغام از طرف %1$s</string>
+    <string name="thread_title">رسته</string>
+    <string name="send_the_seller_a_message">به فروشنده پیغام دهید</string>
+    <string name="hi_seller_is_this_still_available">سلام %1$s، هنوز موجوده؟</string>
+    <string name="hi_there_is_this_still_available">سلام، هنوز موجوده؟</string>
+    <string name="classifieds">چیزی بفروشید</string>
+    <string name="classifieds_title">عنوان</string>
+    <string name="classifieds_title_placeholder">آیفون 13</string>
+    <string name="classifieds_condition">شرایط</string>
+    <string name="classifieds_category">دسته بندی</string>
+    <string name="classifieds_price">قیمت (به ساتوشی)</string>
+    <string name="classifieds_price_placeholder">1000</string>
+    <string name="classifieds_location">موقعیت مکانی</string>
+    <string name="classifieds_location_placeholder">شهر، استان، کشور</string>
+    <string name="classifieds_condition_new">جدید</string>
+    <string name="classifieds_condition_new_explainer">این مورد نو هست، در بسته بندی اصلی</string>
+    <string name="classifieds_condition_like_new">در حد نو</string>
+    <string name="classifieds_condition_like_new_explainer">دست دوم است، اما ظاهرش تمیز است</string>
+    <string name="classifieds_condition_good">خوب</string>
+    <string name="classifieds_condition_good_explainer">کمی در ظاهر نشان می دهد که دست دوم است</string>
+    <string name="classifieds_condition_fair">منصفانه</string>
+    <string name="classifieds_condition_fair_explainer">هنوز مناسب است و کار می کند</string>
+    <string name="classifieds_category_clothing">پوشاک</string>
+    <string name="classifieds_category_accessories">لوازم جانبی</string>
+    <string name="classifieds_category_electronics">الکترونیکی</string>
+    <string name="classifieds_category_furniture">مبلمان</string>
+    <string name="classifieds_category_collectibles">یادگاری</string>
+    <string name="classifieds_category_books">کتاب</string>
+    <string name="classifieds_category_pets">حیوانات خانگی</string>
+    <string name="classifieds_category_sports">ورزش</string>
+    <string name="classifieds_category_fitness">تناسب اندام</string>
+    <string name="classifieds_category_art">هنر</string>
+    <string name="classifieds_category_crafts">دست سازه</string>
+    <string name="classifieds_category_home">خانه</string>
+    <string name="classifieds_category_office">اداره</string>
+    <string name="classifieds_category_food">خوراکی</string>
+    <string name="classifieds_category_misc">گوناگون</string>
+    <string name="classifieds_category_other">سایر</string>
+    <string name="failed_to_upload_media_no_details">رسانه بارگذاری نشد</string>
+    <string name="could_not_open_the_compressed_file">فایل فشرده باز نشد</string>
+    <string name="error_when_compressing_media">خطا در فشرده سازی رسانه: %1$s</string>
+    <string name="failed_to_upload_media">خطای بارگیری: %1$s</string>
+    <string name="server_did_not_provide_a_url_after_uploading">سرور پس از بارگذاری URL نداد</string>
+    <string name="could_not_download_from_the_server">فایل بارگذاری شده از سرور بارگیری نشد</string>
+    <string name="could_not_check_downloaded_file">فایل بارگیری شده پس از بارگذاری بررسی نشد: %1$s</string>
+    <string name="could_not_prepare_local_file_to_upload">فایل محلی برای بارگذاری آماده نشد: %1$s</string>
+    <string name="failed_to_upload_to_server_with_message">بارگذاری نشد %1$s: %2$s</string>
+    <string name="failed_to_upload_with_message">بارگذاری نشد: %1$s</string>
+    <string name="failed_to_delete_with_message">حذف نشد: %1$s</string>
+    <string name="media_too_big_for_nip95">رسانه برای NIP-95 بسیار بزرگ است</string>
+    <string name="unable_to_load_thumbnail">ریزتصویر بارگیری نشد</string>
+    <string name="could_not_prepare_header">اطلاعات سربرگ آماده نشد: %1$s</string>
+    <string name="compression_cancelled">فشرده سازی لغو شد</string>
+    <string name="compression_returned_null">فشرده سازی فایل خروجی نساخت</string>
+    <string name="media_compression_quality_label">کیفیت رسانه</string>
+    <string name="media_compression_quality_explainer">کیفیت کم را انتخاب کنید تا رسانه را به شکل فایل کوچکتری ذخیره کند، کیفیت بالا برای ذخیره به شکل فایل بزرگتر و نافشرده برای بارگذاری رسانه بدون فشرده سازی است.</string>
+    <string name="media_compression_quality_low">پایین</string>
+    <string name="media_compression_quality_medium">متوسط</string>
+    <string name="media_compression_quality_high">بالا</string>
+    <string name="media_compression_quality_uncompressed">نافشرده</string>
+    <string name="edit_draft">ویرایش پیش‌نویس</string>
+    <string name="login_with_qr_code">ورود با کد QR</string>
+    <string name="route">مسیر</string>
+    <string name="route_home">خانه</string>
+    <string name="route_search">جستجو</string>
+    <string name="route_discover">کاوش</string>
+    <string name="route_messages">پیغام‌ها</string>
+    <string name="route_notifications">اعلان‌ها</string>
+    <string name="route_global">سراسری</string>
+    <string name="route_video">کوتاه</string>
+    <string name="route_security_filters">فیلترهای ایمنی</string>
+    <string name="new_post">نوشته جدید</string>
+    <string name="new_short">رسانه های کوتاه جدید: تصاویر یا ویدئوها</string>
+    <string name="new_community_note">یادداشت جدید در انجمن</string>
+    <string name="open_all_reactions_to_this_post">باز کردن تمام واکنش ها به این پست</string>
+    <string name="close_all_reactions_to_this_post">بستن تمام واکنش ها به این پست</string>
+    <string name="reply_description">پاسخ</string>
+    <string name="boost_or_quote_description">بازنشر یا نقل قول</string>
+    <string name="like_description">پسند</string>
+    <string name="zap_description">زَپ</string>
+    <string name="change_reaction">تغییر واکنش های سریع</string>
+    <string name="profile_image_of_user">تصویر نمایه %1$s</string>
+    <string name="relay_info">رله %1$s</string>
+    <string name="expand_relay_list">گسترش لیست رله</string>
+    <string name="note_options">گزینه های یادداشت</string>
+    <string name="relay_list_selector">انتخابگر لیست رله</string>
+    <string name="poll">نظرسنجی</string>
+    <string name="disable_poll">غیرفعال کردن نظرسنجی</string>
+    <string name="add_bitcoin_invoice">صورت حساب بیتکوین</string>
+    <string name="cancel_bitcoin_invoice">لغو صورت حساب بیتکوین</string>
+    <string name="cancel_classifieds">لغو فروش</string>
+    <string name="add_zapraiser">زپ ریزون</string>
+    <string name="cancel_zapraiser">لغو زپ ریزون</string>
+    <string name="add_location">موقعیت مکانی</string>
+    <string name="remove_location">حذف موقعیت مکانی</string>
+    <string name="add_zap_split">تقسیم زپ</string>
+    <string name="cancel_zap_split">لغو تقسیم زپ</string>
+    <string name="add_content_warning">افزودن هشدار محتوا</string>
+    <string name="remove_content_warning">حذف هشدار محتوا</string>
+    <string name="show_npub_as_a_qr_code">کلید عمومی را به شکل کد QR نشان بده</string>
+    <string name="invalid_nip19_uri">آدرس نامعتبر</string>
+    <string name="invalid_nip19_uri_description">امتیست آدرسی برای باز کردن دریافت کرد ولی آدرس نامعتبر بود: %1$s</string>
+    <string name="dm_relays_title">رله های صندوق دریافت پیام خصوصی</string>
+    <string name="dm_relays_through">رله ها: %1$s</string>
+    <string name="dm_relays_regular">استفاده از رله های معمولی</string>
+    <string name="dm_relays_not_found">تنظیم رله های صندوق دریافت خصوصی</string>
+    <string name="dm_relays_not_found_description">با این تنظیمات همه می توانند بدانند که هنگام ارسال پیام به شما از کدام رله ها استفاده کنند. بدون این تنظیمات ممکن است برخی پیام ها را از دست بدهید.</string>
+    <string name="dm_relays_not_found_examples">گزینه های خوب:
+- inbox.nostr.wine (پولی)
+- auth.nostr1.com (رایگان)
+- you.nostr1.com (رله شخصی - پولی)</string>
+    <string name="dm_relays_not_found_examples2">گزینه های خوب:
+- inbox.nostr.wine (پولی)
+- auth.nostr1.com (رایگان)
+- you.nostr1.com (رله شخصی - پولی)</string>
+    <string name="dm_relays_not_found_editing">از ۱ تا ۳ رله به عنوان رله خصوصی وارد کنید. رله های صندوق دربافت پیام های خصوصی می بایست هر پیامی از هرکس را بپذیرند، ولی تنها به شما اجازه بارگیری پیام ها را می دهند.</string>
+    <string name="dm_relays_not_found_create_now">هم اکنون تنظیم شود</string>
+    <string name="search_relays_title">رله های جستجو</string>
+    <string name="search_relays_not_found">تنظیم رله های جستجو</string>
+    <string name="search_relays_not_found_description">ساخت لیستی از رله های مخصوص جستجو و تگ کردن کاربر باعث بهبود این نتایج خواهد شد.</string>
+    <string name="search_relays_not_found_editing">بین ۱-۳ رله بیافزایید تا هنگام جستجوی محتوا یا تگ کردن کاربران از آنها استفاده شود. حتما رله های انتخابی باید NIP-50 را پیاده‌سازی کرده باشند.</string>
+    <string name="search_relays_not_found_examples">انتخاب های مناسب: \n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
+    <string name="dm_upload">بارگذاری پیام خصوصی</string>
+    <string name="relay_settings">تنظیمات رله</string>
+    <string name="public_home_section">رله های خانه/ صندوق خروجی عمومی</string>
+    <string name="public_home_section_explainer">این نوع از رله تمام محتوای شما را ذخریه می کند. امتیست پست های شما را اینجا می فرستد و دیگران از این رله ها برای یافتن محتوای شما استفاده می کنند. بین ۱-۳ رله وارد کنید. این رله ها ممکن است رله های شخصی، پولی، یا عمومی باشند.</string>
+    <string name="public_notif_section">رله های صندوق دریافت عمومی</string>
+    <string name="public_notif_section_explainer">این نوع رله تمام پاسخ ها، نظرات، پسندها، و زپ های یادداشت های شما را دریافت می کند. این ها می توانند رله های پولی یا رایگان باشند. محدودیتی که گرداننده رله تعیین می کند ممکن است اعلان هایی را که دریافت می کنید محدود کند. این می تواند اثر خوب یا بد داشته باشد. مثلا اگر تحت حمله کامنت اسپم باشید، رله پولی می تواند این اسپم را فیلتر کند. بین ۱-۳ رله وارد کنید.</string>
+    <string name="private_inbox_section">رله های صندوق دریافت پیام خصوصی</string>
+    <string name="private_inbox_section_explainer">بین ۱-۳ رله به عنوان رله صندوق ورودی خصوصی وارد کنید. دیگران از این رله ها برای ارسال پیام خصوصی به شما استفاده خواهند کرد. رله های صندوق دریافت پیام خصوصی می بایست هر پیامی از هر کسی را بپذیرند، اما فقط بگذارند شما آن ها را بارگیری کنید. انتخاب های خوب شامل:
+ - inbox.nostr.wine (پولی) 
+- auth.nostr1.com (رایگان) 
+- you.nostr1.com (رله پولی یا شخصی)</string>
+    <string name="private_outbox_section">رله های خصوصی خانه</string>
+    <string name="private_outbox_section_explainer">بین ۱-۳ رله وارد کنید برای ذخیره رویدادهایی که هیچ کس دیگر نمی بیند ، به عنوان مثال پیش نویس های شما و یا تنظیمات اپلیکیشن. در حالت ایده آل، این رله ها یا محلی هستند یا پیش از بارگیری محتوای کاربر به احراز هویت نیاز دارند.</string>
+    <string name="kind_3_section">رله های کلی</string>
+    <string name="kind_3_section_description">امتیست از این رله ها استفاده می کند تا پست ها را برایتان بارگیری کند.</string>
+    <string name="kind_3_recommended_section">رله های پیشنهادی</string>
+    <string name="kind_3_recommended_section_description">رله های روبرو را به لیست رله های کلی خود بیافزایید تا پست های کاربران لیست شده را دریافت کنید.</string>
+    <string name="search_section">رله های جستجو</string>
+    <string name="search_section_explainer">لیست رله هایی که هنگام جستجوی محتوا یا کاربران مورد استفاده قرار می گیرند. اگر انتخابی در موجود نباشد، تگ کردن یا جستجو کار نخواهد کرد. حتما مطمئن شوید این رله ها را NIP-50 پیاده‌سازی کرده باشند.</string>
+    <string name="local_section">رله های محلی</string>
+    <string name="local_section_explainer">لیست رله هایی که در این دستگاه کار می کنند.</string>
+    <string name="zap_the_devs_title">به توسعه دهندگان رپ دهید!</string>
+    <string name="zap_the_devs_description">هدیه شما به ما برای تاثیرگذاری کمک می کند. هر ساتوشی به حساب می آید!</string>
+    <string name="donate_now">اکنون کمک کنید</string>
+    <string name="brought_to_you_by">تقدیم از طرف: </string>
+    <string name="this_version_brought_to_you_by">این نسخه نرم‌افزار پیشکش از:</string>
+    <string name="version_name">نسخه %1$s</string>
+    <string name="thank_you">متشکریم!</string>
+    <string name="max_limit">حداکثر</string>
+    <string name="restricted_writes">نوشتن محدود</string>
+    <string name="forked_from">انشعاب شده از</string>
+    <string name="forked_tag">انشعاب</string>
+    <string name="git_repository">مخزن گیت: %1$s</string>
+    <string name="git_web_address">وب:</string>
+    <string name="git_clone_address">نسخه برداری:</string>
+    <string name="existed_since">OTS: %1$s</string>
+    <string name="ots_info_title">اثبات مهر زمان</string>
+    <string name="ots_info_description">مدرکی وجود دارد که ثابت کند این پست پیش از %1$s امضا شده است. این مدرک در بلاکچین بیتکوین در آن تاریخ و زمان ثبت شده است.</string>
+    <string name="edit_post">ویرایش نوشته</string>
+    <string name="proposal_to_edit">پیشنهاد برای بهبود یک نوشته</string>
+    <string name="message_to_author">خلاصه تغییرات</string>
+    <string name="message_to_author_placeholder">اصلاحات سریع…</string>
+    <string name="accept_the_suggestion">پذیرش پیشنهاد</string>
+    <string name="accessibility_download_for_offline">بارگيری</string>
+    <string name="accessibility_lyrics_on">روشن کردن متن</string>
+    <string name="accessibility_lyrics_off">متن خاموش</string>
+    <string name="accessibility_turn_on_sealed_message">پیام مهروموم شده خاموش است. برای روشن کردن کلیک کنید.</string>
+    <string name="accessibility_turn_off_sealed_message">پیام مهروموم شده روشن است. برای خاموش کردن کلیک کنید.</string>
+    <string name="accessibility_send">ارسال</string>
+    <string name="accessibility_play_username">نام کاربری را به شکل صوتی بخوان.</string>
+    <string name="accessibility_pushpin">Pushpin</string>
+    <string name="accessibility_scan_qr_code">کد QR را اسکن کنید</string>
+    <string name="accessibility_navigate_to_alby">رفتن به البی، ارائه دهنده کیف پول شخص ثالث.</string>
+    <string name="it_s_not_possible_to_reply_to_a_draft_note">پاسخ به پیش نویس یادداشت ممکن نیست.</string>
+    <string name="it_s_not_possible_to_quote_to_a_draft_note">نقل قول از پیش نویس یادداشت ممکن نیست.</string>
+    <string name="it_s_not_possible_to_react_to_a_draft_note">واکنش به پیش نویس یادداشت ممکن نیست.</string>
+    <string name="it_s_not_possible_to_zap_to_a_draft_note">زپ زدن به پیش نویس یادداشت ممکن نیست.</string>
+    <string name="draft_note">پیش نویس یادداشت</string>
+    <string name="load_from_text">از پیام</string>
+    <string name="dvm_looking_for_app">جستجوی اپلیکیشن</string>
+    <string name="dvm_waiting_status">درخواست شغل ارسال شد، در انتظار پاسخ</string>
+    <string name="dvm_requesting_job">درخواست شغل از DVM</string>
+    <string name="nwc_payment_request">درخواست پرداخت ارسال شد، در انتظار تایید کیف پول</string>
+    <string name="dvm_waiting_to_confirm_payment">در انتظار تایید پرداخت یا ارسال نتیجه توسط DVM</string>
+    <string name="http_status_400">درخواست بد - سرور نمی تواند یا نمی خواهد این درخواست را پردازش کند.</string>
+    <string name="http_status_401">غیرمجاز - کاربر دارای مشخصات معتبر احراز هویت شده نیست</string>
+    <string name="http_status_402">پرداخت الزامی - سرور برای تکمیل درخواست به پرداخت دارد.</string>
+    <string name="http_status_403">ممنوع - کاربر مجاز به انجام این درخواست نیست.</string>
+    <string name="http_status_404">یافت نشد - سرور نتوانست آدرس درخواست شده را بیابد.</string>
+    <string name="http_status_405">این روش مجاز نیست - سرور روش درخواست را پیشتیبانی می کند ولی مرجع هدف را نه.</string>
+    <string name="http_status_406">غیرقابل قبول - سرور نتوانست محتوایی مناسب درخواست بیابد.</string>
+    <string name="http_status_407">احراز هویت الزامی پروکسی - کاربر اعتبارات احراز هویت معتبر ندارد</string>
+    <string name="http_status_408">زمان درخواست سپری شد - زمان درخواست در انتظار شخصی دیگر تمام شد</string>
+    <string name="http_status_409">تعارض - سرور نتوانست درخواست را انجام دهد چون در مرجع تعارض وجود دارد</string>
+    <string name="http_status_410">نیست - محتوای درخواست شده برای همیشه از سرور پاک شده و بازیابی نخواهد شد</string>
+    <string name="http_status_411">الزام طول - سرور درخواست را رد کرد چون نیاز به اندازه تعریف شده دارد</string>
+    <string name="http_status_412">پیش شرط انجام نشد - پیش شرطی در سربرگ وجود دارد که سرور نمی تواند براورده کند</string>
+    <string name="http_status_413">حجم زیادی - درخواست از محدودیت های تعریف شده سرور بزرگتر است و سرور آن را پردازش نمی کند</string>
+    <string name="http_status_414">آدرس زیادی بلند - آدرس درخواست شده توسط کاربر زیادی برای پردازش سرور بلند است. </string>
+    <string name="http_status_415">نوع رسانه پشتیبانی نشده - درخواست از نوعی رسانه استفاده می کند که توسط سرور پشتیبانی نمی شود</string>
+    <string name="http_status_416">بازه براورده نشد - سرور نتوانست مقدار مورد نظر در سربرگ بازه را براورده کند. </string>
+    <string name="http_status_417">انتظارات براورده نشد - سرور نتوانست انتظارات تعیین شده در سربرگ توقع درخواست را براورده کند</string>
+    <string name="http_status_426">ارتقاء الزامی - سرور درخواست را با پروتکل فعلی پردازش نمی کند تا کلاینت پروتکل را ارتقاء دهد.</string>
+    <string name="http_status_500">خطای سرور داخلی - سرور به خطایی غیرمنتظره برخورد و نمی تواند درخواست را کامل کند</string>
+    <string name="http_status_501">انجام نشد - سرور نمی تواند درخواست را انجام دهد یا روش درخواست را تشخیص نمی دهد</string>
+    <string name="http_status_502">درگاه غیرمجاز - سرور به عنوان یک درگاه پاسخی نامعتبر از هاست دریافت کرد</string>
+    <string name="http_status_503">خدمت در دسترس نیست - این اغلب هنگامی که یک سرور بیش از حد شلوغ است یا برای تعمیرات تعطیل است پیش می آید</string>
+    <string name="http_status_504">مهلت درگاه تمام شد - مهلت سرور در نقش یک درگاه یا پراکسی تمام شد، در انتظار پاسخ</string>
+    <string name="http_status_505">نسخه HTTP پشتیبانی نمی شود - سرور ورژن HTTP درخواست را پشتیبانی نمی کند</string>
+    <string name="http_status_506">Variant Also Negotiates - سرور یک مشکل پیکربندی داخلی دارد</string>
+    <string name="http_status_507">فضای ذخیره ناکافی - سرور فضای کافی برای پردازش موفق درخواست ندارد</string>
+    <string name="http_status_508">حلقه دیده شد - سرور یک حلقه بینهایت در پردازش این درخواست شناسایی کرد</string>
+    <string name="http_status_511">احراز هویت الزامی - کلاینت برای دسترسی به شبکه می بایست احراز هویت شده باشد</string>
+    <string name="media_servers_nip96_section">سرورهای NIP-96</string>
+    <string name="media_servers_nip96_explainer">هر تعداد سرور که می خواهید اضافه کنید. می توانید بعدا هنگام بارگذاری تصویرتان انتخاب کنید که از کدام سرور استفاده شود</string>
+    <string name="media_servers_blossom_section">سرورهای Blossom</string>
+    <string name="media_servers_blossom_explainer">هر تعداد سرور که می خواهید اضافه کنید. می توانید بعدا هنگام بارگذاری تصویرتان انتخاب کنید که از کدام سرور استفاده شود</string>
+    <string name="add_a_nip96_server">یک سرور NIP-96 بیافزایید</string>
+    <string name="add_a_blossom_server">یک سرور Blossom بیافزایید</string>
+    <string name="delete_all">حذف همه</string>
+    <string name="delete_all_drafts_confirmation">مطمئنید می خواهید حذف کنید؟</string>
+    <string name="stack">استک:</string>
+    <string name="torrent_file">فایل تورنت</string>
+    <string name="torrent_download">بارگيری</string>
+    <string name="torrent_failure">فایل باز نشد</string>
+    <string name="torrent_no_apps">هیچ اپ تورنتی برای باز کردن و بارگیری فایل نصب نیست.</string>
+    <string name="select_list_to_filter">لیستی را برای فیلتر خبرنامه انتخاب کنید</string>
+    <string name="temporary_account">با قفل کردن دستگاه از حساب کاربری خارج شو</string>
+</resources>
