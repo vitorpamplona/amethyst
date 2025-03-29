@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.map
@@ -56,7 +57,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.ui.note.LoadCityName
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.AroundMeFeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.CommunityName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -138,8 +139,15 @@ fun FeedFilterSpinner(
                                 LoadCityName(
                                     geohashStr = myLocation.geoHash.toString(),
                                     onLoading = {
-                                        Spacer(modifier = StdHorzSpacer)
-                                        LoadingAnimation()
+                                        Row {
+                                            Text(
+                                                text = "(${myLocation.geoHash})",
+                                                fontSize = 12.sp,
+                                                lineHeight = 12.sp,
+                                            )
+                                            Spacer(modifier = StdHorzSpacer)
+                                            LoadingAnimation(indicatorSize = 12.dp, circleWidth = 2.dp)
+                                        }
                                     },
                                 ) { cityName ->
                                     Text(
