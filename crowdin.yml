@@ -9,22 +9,3 @@ files:
     translation: amethyst/src/main/res/values-%android_code%/%original_file_name%
     type: android
     skip_untranslated_strings: true
-    languages_mapping:
-      android_code:
-        ar: ar
-        cs: cs
-        de: de
-        eo: eo
-        es: es
-        fa: fa
-        fr: fr
-        hu: hu
-        in: in
-        ja: ja
-        nl: nl
-        ru: ru
-        ta: ta
-        th: th
-        tr: tr
-        uk: uk
-        zh: zh

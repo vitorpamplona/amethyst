@@ -27,14 +27,11 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.location.CachedGeoLocations
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
@@ -188,41 +185,6 @@ fun LoadOts(
         if (pendingAttestations[id] != null) {
             whenPending()
         }
-    }
-}
-
-@Composable
-fun LoadCityName(
-    geohashStr: String,
-    onLoading: (@Composable () -> Unit)? = null,
-    content: @Composable (String) -> Unit,
-) {
-    var cityName by remember(geohashStr) { mutableStateOf(CachedGeoLocations.cached(geohashStr)) }
-
-    if (cityName == null) {
-        if (onLoading != null) {
-            onLoading()
-        }
-
-        val context = LocalContext.current
-
-        LaunchedEffect(key1 = geohashStr, context) {
-            launch(Dispatchers.IO) {
-                val geoHash = runCatching { geohashStr.toGeoHash() }.getOrNull()
-                if (geoHash != null) {
-                    val newCityName =
-                        CachedGeoLocations
-                            .geoLocate(geohashStr, geoHash.toLocation(), context)
-                            ?.ifBlank { null }
-
-                    if (newCityName != null && newCityName != cityName) {
-                        cityName = newCityName
-                    }
-                }
-            }
-        }
-    } else {
-        cityName?.let { content(it) }
     }
 }
 

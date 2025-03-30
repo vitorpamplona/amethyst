@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.ui.note.LoadCityName
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

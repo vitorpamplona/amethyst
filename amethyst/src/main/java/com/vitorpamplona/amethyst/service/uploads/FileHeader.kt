@@ -22,11 +22,8 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
 import android.media.MediaDataSource
 import android.media.MediaMetadataRetriever
-import android.media.MediaMetadataRetriever.BitmapParams
-import android.os.Build
 import android.util.Log
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.service.Blurhash
@@ -105,62 +102,6 @@ class FileHeader(
                 Log.e("ImageDownload", "Couldn't convert image in to File Header: ${e.message}")
                 Result.failure(e)
             }
-    }
-}
-
-fun MediaMetadataRetriever.getThumbnail(): Bitmap? {
-    val raw: ByteArray? = getEmbeddedPicture()
-    if (raw != null) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return ImageDecoder.decodeBitmap(ImageDecoder.createSource(raw))
-        }
-    }
-
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        val params = BitmapParams()
-        params.preferredConfig = Bitmap.Config.ARGB_8888
-
-        // Fall back to middle of video
-        // Note: METADATA_KEY_DURATION unit is in ms, not us.
-        val thumbnailTimeUs: Long =
-            (extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0) * 1000 / 2
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getFrameAtTime(thumbnailTimeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, params)
-        } else {
-            null
-        }
-    } else {
-        null
-    }
-}
-
-fun MediaMetadataRetriever.prepareDimFromVideo(): DimensionTag? {
-    val width = prepareVideoWidth() ?: return null
-    val height = prepareVideoHeight() ?: return null
-
-    return if (width > 0 && height > 0) {
-        DimensionTag(width, height)
-    } else {
-        null
-    }
-}
-
-fun MediaMetadataRetriever.prepareVideoWidth(): Int? {
-    val widthData = extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
-    return if (widthData.isNullOrEmpty()) {
-        null
-    } else {
-        widthData.toInt()
-    }
-}
-
-fun MediaMetadataRetriever.prepareVideoHeight(): Int? {
-    val heightData = extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
-    return if (heightData.isNullOrEmpty()) {
-        null
-    } else {
-        heightData.toInt()
     }
 }
 

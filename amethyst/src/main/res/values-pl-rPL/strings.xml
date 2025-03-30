@@ -98,6 +98,7 @@
     <string name="description">Opis</string>
     <string name="about_us">"Informacja o grupie.. "</string>
     <string name="what_s_on_your_mind">Co masz na myśli?</string>
+    <string name="write_a_message">Napisz wiadomość...</string>
     <string name="post">Wyślij</string>
     <string name="save">Zapisz</string>
     <string name="create">Utwórz</string>
@@ -604,6 +605,8 @@
     <string name="messages_new_message_subject">Temat</string>
     <string name="messages_new_message_subject_caption">Temat dyskusji</string>
     <string name="messages_new_message_to_caption">"\@Użytkownik1, @Użytkownik2, @Użytkownik3"</string>
+    <string name="messages_cant_upload_title">Nie można wysłać</string>
+    <string name="messages_cant_upload_explainer">Najpierw podaj adresata wiadomości</string>
     <string name="messages_group_descriptor">Członkowie tej grupy</string>
     <string name="messages_new_subject_message">Wyjaśnienie dla członków</string>
     <string name="messages_new_subject_message_placeholder">Zmiana nazwy dla nowych celów.</string>
@@ -753,7 +756,7 @@
     <string name="classifieds_category_food">Żywność</string>
     <string name="classifieds_category_misc">Różne</string>
     <string name="classifieds_category_other">Inne</string>
-    <string name="failed_to_upload_media_no_details">Nie udało się załadować załącznika</string>
+    <string name="failed_to_upload_media_no_details">Nie udało się wgrać załącznika</string>
     <string name="could_not_open_the_compressed_file">Nie można otworzyć skompresowanego pliku</string>
     <string name="error_when_compressing_media">Błąd podczas kompresji plików: %1$s</string>
     <string name="failed_to_upload_media">Błąd wysyłania: %1$s</string>
@@ -937,4 +940,5 @@
     <string name="torrent_no_apps">Brak zainstalowanych aplikacji torrent do otwarcia i pobrania pliku.</string>
     <string name="select_list_to_filter">Wybierz listę, aby filtrować kanał</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
+    <string name="private_message">Wiadomość prywatna</string>
 </resources>
