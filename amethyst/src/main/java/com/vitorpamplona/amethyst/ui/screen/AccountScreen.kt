@@ -39,13 +39,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,8 +61,13 @@ import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun AccountScreen(
@@ -136,6 +144,8 @@ fun LoggedInPage(
         accountViewModel.restartServices()
     }
 
+    ManageTorInstance(accountViewModel)
+
     ListenToExternalSignerIfNeeded(accountViewModel)
 
     AppNavigation(
@@ -143,6 +153,55 @@ fun LoggedInPage(
         accountStateViewModel = accountStateViewModel,
         sharedPreferencesViewModel = sharedPreferencesViewModel,
     )
+}
+
+@Composable
+fun ManageTorInstance(accountViewModel: AccountViewModel) {
+    val torSettings by accountViewModel.account.settings.torSettings.torType
+        .collectAsStateWithLifecycle()
+    if (torSettings == TorType.INTERNAL) {
+        ManageTorInstanceInner(accountViewModel)
+    }
+}
+
+@Composable
+fun ManageTorInstanceInner(accountViewModel: AccountViewModel) {
+    val context = LocalContext.current.applicationContext
+    val lifeCycleOwner = LocalLifecycleOwner.current
+
+    val scope = rememberCoroutineScope()
+    var job = remember<Job?> { null }
+
+    DisposableEffect(key1 = accountViewModel) {
+        job?.cancel()
+        job = null
+        TorManager.startTorIfNotAlreadyOn(context)
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        job?.cancel()
+                        job = null
+                        TorManager.startTorIfNotAlreadyOn(context)
+                    }
+                    Lifecycle.Event.ON_PAUSE -> {
+                        job =
+                            scope.launch {
+                                delay(5000) // 5 seconds
+                                TorManager.stopTor(context)
+                            }
+                    }
+                    else -> {}
+                }
+            }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+            TorManager.stopTor(context)
+        }
+    }
 }
 
 @Composable

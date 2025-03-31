@@ -98,6 +98,7 @@
     <string name="description">Descrição</string>
     <string name="about_us">"Sobre nós.. "</string>
     <string name="what_s_on_your_mind">O que você está pensando?</string>
+    <string name="write_a_message">Escreva uma mensagem…</string>
     <string name="post">Salvar</string>
     <string name="save">Salvar</string>
     <string name="create">Criar</string>
@@ -205,6 +206,7 @@
     <string name="with_description_of">com descrição de</string>
     <string name="and_picture">e foto</string>
     <string name="changed_chat_name_to">mudou nome do canal para</string>
+    <string name="changed_chat_profile_to">Novo perfil de chat:</string>
     <string name="description_to">descrição para</string>
     <string name="and_picture_to">e foto para</string>
     <string name="leave">Sair</string>
@@ -524,6 +526,7 @@
     <string name="cashu_redeem_to_zap">Enviar para Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Abrir na Carteira Cashu</string>
     <string name="cashu_copy_token">Copiar Token</string>
+    <string name="quick_actions_open_in_another_app">Abrir em outro aplicativo</string>
     <string name="no_lightning_address_set">Nenhum endereço Lightning definido</string>
     <string name="copied_token_to_clipboard">Token copiado para a área de transferência</string>
     <string name="live_stream_live_tag">AO VIVO</string>
@@ -603,6 +606,8 @@
     <string name="messages_new_message_subject">Assunto</string>
     <string name="messages_new_message_subject_caption">Tema da conversa</string>
     <string name="messages_new_message_to_caption">"\@Usuário1, @Usuário2, @Usuário3"</string>
+    <string name="messages_cant_upload_title">Não pode enviar</string>
+    <string name="messages_cant_upload_explainer">Insira o destino da mensagem primeiro</string>
     <string name="messages_group_descriptor">Membros deste grupo</string>
     <string name="messages_new_subject_message">Explicação aos membros</string>
     <string name="messages_new_subject_message_placeholder">Mudando o nome dos novos objetivos.</string>
@@ -936,4 +941,5 @@
     <string name="torrent_no_apps">Nenhum aplicativo torrent instalado para abrir e baixar o arquivo.</string>
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
+    <string name="private_message">Mensagem Privada</string>
 </resources>

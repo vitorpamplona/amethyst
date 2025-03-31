@@ -20,6 +20,7 @@
     <string name="impersonation">Suplantación de identidad</string>
     <string name="illegal_behavior">Comportamiento ilegal</string>
     <string name="other">Otro</string>
+    <string name="harassment">Acoso</string>
     <string name="unknown">Desconocido</string>
     <string name="relay_icon">Ícono de relé</string>
     <string name="unknown_author">Autor desconocido</string>
@@ -81,6 +82,13 @@
     <string name="thank_you_so_much">¡Muchas gracias!</string>
     <string name="amount_in_sats">Cantidad en sats</string>
     <string name="send_sats">Enviar sats</string>
+    <string name="secret_emoji_maker">Creador de emojis secretos</string>
+    <string name="secret_emoji_maker_explainer">Agrega un emoji con mensaje oculto para publicar.</string>
+    <string name="secret_note_to_receiver">Nota secreta al destinatario</string>
+    <string name="secret_note_to_receiver_placeholder">Mi mensaje oculto</string>
+    <string name="secret_visible_text">Prefijo visible</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Agregar a publicación</string>
     <string name="error_parsing_preview_for">"Error al analizar la vista previa de %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Vista previa de imagen de tarjeta para %1$s"</string>
     <string name="new_channel">Nuevo canal</string>
@@ -90,6 +98,7 @@
     <string name="description">Descripción</string>
     <string name="about_us">"Quiénes somos..."</string>
     <string name="what_s_on_your_mind">¿Qué estás pensando?</string>
+    <string name="write_a_message">Escribir un mensaje...</string>
     <string name="post">Publicar</string>
     <string name="save">Guardar</string>
     <string name="create">Crear</string>
@@ -106,6 +115,7 @@
     <string name="global_feed">Feed global</string>
     <string name="search_feed">Feed de búsqueda</string>
     <string name="add_a_relay">Agregar un relé</string>
+    <string name="profile_name">Nombre</string>
     <string name="display_name">Nombre para mostrar</string>
     <string name="my_display_name">Mi nombre para mostrar</string>
     <string name="my_awesome_name">Avestruz Maravillosa</string>
@@ -141,6 +151,7 @@
     <string name="conversations">Conversaciones</string>
     <string name="notes">Notas</string>
     <string name="replies">Respuestas</string>
+    <string name="mutual">Tuyo</string>
     <string name="gallery">Galería</string>
     <string name="follows">"Seguidos"</string>
     <string name="reports">"Reportes"</string>
@@ -195,6 +206,7 @@
     <string name="with_description_of">con la descripción de</string>
     <string name="and_picture">e imagen</string>
     <string name="changed_chat_name_to">cambió el nombre del chat a</string>
+    <string name="changed_chat_profile_to">Nuevo perfil de chat:</string>
     <string name="description_to">descripción a</string>
     <string name="and_picture_to">e imagen a</string>
     <string name="leave">Salir</string>
@@ -202,6 +214,13 @@
     <string name="channel_created">Canal creado</string>
     <string name="channel_information_changed_to">"La información del canal cambió a"</string>
     <string name="public_chat">Chat público</string>
+    <string name="public_chat_title">Metadatos públicos del chat</string>
+    <string name="public_chat_explainer">Los chats públicos son visibles para todos en Nostr y cualquiera
+        puede participar en ellos. Son ideales para comunidades abiertas alrededor de temas específicos.
+        La moderación puede controlarse eliminando publicaciones en sus relés.</string>
+    <string name="public_chat_relays_title">Relés</string>
+    <string name="public_chat_relays_explainer">Inserta entre 1 y 3 relés que alojan este grupo.
+        Los clientes de Nostr utilizan esta configuración para saber de dónde descargar y adónde enviar los mensajes.</string>
     <string name="posts_received">publicaciones recibidas</string>
     <string name="remove">Eliminar</string>
     <string name="translations_auto">Automático</string>
@@ -509,6 +528,7 @@
     <string name="cashu_redeem_to_zap">Enviar a billetera de zaps</string>
     <string name="cashu_redeem_to_cashu">Abrir en billetera de Cashu</string>
     <string name="cashu_copy_token">Copiar token</string>
+    <string name="quick_actions_open_in_another_app">Abrir en otra app</string>
     <string name="no_lightning_address_set">La dirección de Lightning no está configurada</string>
     <string name="copied_token_to_clipboard">Token copiado al portapapeles</string>
     <string name="live_stream_live_tag">EN VIVO</string>
@@ -539,6 +559,8 @@
     <string name="ui_feature_set_type_complete">Completo</string>
     <string name="ui_feature_set_type_simplified">Simplificado</string>
     <string name="ui_feature_set_type_performance">Rendimiento</string>
+    <string name="gallery_type_classic">Clásico</string>
+    <string name="gallery_type_modern">Moderno</string>
     <string name="system">Sistema</string>
     <string name="light">Claro</string>
     <string name="dark">Oscuro</string>
@@ -553,6 +575,8 @@
     <string name="automatically_hide_nav_bars_description">Ocultar barras de navegación al desplazarse</string>
     <string name="ui_style">Modo de interfaz</string>
     <string name="ui_style_description">Elegir el estilo de publicación</string>
+    <string name="gallery_style">Estilo de galería de perfil</string>
+    <string name="gallery_style_description">Elige el estilo de galería</string>
     <string name="load_image">Cargar imagen</string>
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Silenciado. Hacer clic para reactivar el sonido.</string>
@@ -584,6 +608,8 @@
     <string name="messages_new_message_subject">Asunto</string>
     <string name="messages_new_message_subject_caption">Tema de la conversación</string>
     <string name="messages_new_message_to_caption">"\@Usuario1, @Usuario2, @Usuario3"</string>
+    <string name="messages_cant_upload_title">No se puede subir</string>
+    <string name="messages_cant_upload_explainer">Ingresa primero el destino del mensaje</string>
     <string name="messages_group_descriptor">Miembros de este grupo</string>
     <string name="messages_new_subject_message">Explicación para los miembros</string>
     <string name="messages_new_subject_message_placeholder">Cambio de nombre para los nuevos objetivos.</string>
@@ -851,6 +877,7 @@
     <string name="message_to_author">Resumen de cambios</string>
     <string name="message_to_author_placeholder">Correcciones rápidas…</string>
     <string name="accept_the_suggestion">Aceptar la sugerencia</string>
+    <string name="enter_picture_in_picture">Iniciar video en una ventana emergente</string>
     <string name="accessibility_download_for_offline">Descargar</string>
     <string name="accessibility_lyrics_on">Letra activada</string>
     <string name="accessibility_lyrics_off">Letra desactivada</string>
@@ -916,4 +943,5 @@
     <string name="torrent_no_apps">No hay aplicaciones torrent instaladas para abrir y descargar el archivo.</string>
     <string name="select_list_to_filter">Selecciona una lista para filtrar el feed</string>
     <string name="temporary_account">Cerrar sesión al bloquear dispositivo</string>
+    <string name="private_message">Mensaje privado</string>
 </resources>

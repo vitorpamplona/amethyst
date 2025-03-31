@@ -98,6 +98,7 @@
     <string name="description">Popis</string>
     <string name="about_us">"O nás.. "</string>
     <string name="what_s_on_your_mind">Co vás napadá?</string>
+    <string name="write_a_message">Napište zprávu...</string>
     <string name="post">Příspěvek</string>
     <string name="save">Uložit</string>
     <string name="create">Vytvořit</string>
@@ -205,6 +206,7 @@
     <string name="with_description_of">s popisem</string>
     <string name="and_picture">a obrázkem</string>
     <string name="changed_chat_name_to">změnil název chatu na</string>
+    <string name="changed_chat_profile_to">Nový chatový profil:</string>
     <string name="description_to">popis na</string>
     <string name="and_picture_to">a obrázek na</string>
     <string name="leave">Opustit</string>
@@ -524,6 +526,7 @@
     <string name="cashu_redeem_to_zap">Poslat do Zap peněženky</string>
     <string name="cashu_redeem_to_cashu">Otevřít v Cashu Wallet</string>
     <string name="cashu_copy_token">Kopírovat token</string>
+    <string name="quick_actions_open_in_another_app">Otevřít v jiné aplikaci</string>
     <string name="no_lightning_address_set">Není nastavena žádná Lightning adresa</string>
     <string name="copied_token_to_clipboard">Token zkopírován do schránky</string>
     <string name="live_stream_live_tag">ŽIVĚ</string>
@@ -603,6 +606,8 @@
     <string name="messages_new_message_subject">Předmět</string>
     <string name="messages_new_message_subject_caption">Téma konverzace</string>
     <string name="messages_new_message_to_caption">"\@Uživatel1, @Uživatel2, @Uživatel3"</string>
+    <string name="messages_cant_upload_title">Nelze nahrát</string>
+    <string name="messages_cant_upload_explainer">Nejdříve vložte cíl zprávy</string>
     <string name="messages_group_descriptor">Členové této skupiny</string>
     <string name="messages_new_subject_message">Vysvětlení členům</string>
     <string name="messages_new_subject_message_placeholder">Změna názvu pro nové cíle.</string>
@@ -936,4 +941,5 @@
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
+    <string name="private_message">Soukromá zpráva</string>
 </resources>

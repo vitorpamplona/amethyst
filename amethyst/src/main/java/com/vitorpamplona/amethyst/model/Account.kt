@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -3666,12 +3665,6 @@ class Account(
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
-
-    fun httpClientForCoil() = HttpClientManager.getHttpClient(shouldUseTorForImageDownload())
-
-    fun httpClientForRelay(dirtyUrl: String) = HttpClientManager.getHttpClient(shouldUseTorForDirty(dirtyUrl))
-
-    fun httpClientForPreviewUrl(url: String) = HttpClientManager.getHttpClient(shouldUseTorForPreviewUrl(url))
 
     fun shouldUseTorForImageDownload() =
         when (settings.torSettings.torType.value) {

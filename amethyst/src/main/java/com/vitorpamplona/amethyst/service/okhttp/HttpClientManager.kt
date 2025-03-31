@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import android.R.attr.port
 import android.util.Log
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import okhttp3.OkHttpClient
@@ -35,6 +36,8 @@ object HttpClientManager {
             .followSslRedirects(true)
             .build()
 
+    val DEFAULT_TOR_PROXY = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", 9050))
+
     val DEFAULT_TIMEOUT_ON_WIFI: Duration = Duration.ofSeconds(10L)
     val DEFAULT_TIMEOUT_ON_MOBILE: Duration = Duration.ofSeconds(30L)
 
@@ -43,13 +46,13 @@ object HttpClientManager {
     private var defaultHttpClientWithoutProxy: OkHttpClient? = null
     private var userAgent: String = "Amethyst"
 
-    private var currentProxy: Proxy? = null
+    private var currentProxy: Proxy? = DEFAULT_TOR_PROXY
 
     private val cache = EncryptionKeyCache()
 
     fun setDefaultProxy(proxy: Proxy?) {
         if (currentProxy != proxy) {
-            Log.d("HttpClient", "Changing proxy to: ${proxy != null}")
+            Log.d("HttpClient", "Changing proxy to: $proxy")
             currentProxy = proxy
 
             // recreates singleton
@@ -116,6 +119,11 @@ object HttpClientManager {
             }
             defaultHttpClientWithoutProxy!!
         }
+
+    fun setProxyNotReady() {
+        // this blocks all connections unless Orbot is live.
+        setDefaultProxy(DEFAULT_TOR_PROXY)
+    }
 
     fun setDefaultProxyOnPort(port: Int) {
         setDefaultProxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port)))

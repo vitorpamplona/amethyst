@@ -98,6 +98,7 @@
     <string name="description">Beschreibung</string>
     <string name="about_us">"Über uns.. "</string>
     <string name="what_s_on_your_mind">Was beschäftigt dich?</string>
+    <string name="write_a_message">Eine Nachricht schreiben...</string>
     <string name="post">Beitrag</string>
     <string name="save">Speichern</string>
     <string name="create">Erstellen</string>
@@ -209,6 +210,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="with_description_of">mit Beschreibung von</string>
     <string name="and_picture">und Bild</string>
     <string name="changed_chat_name_to">Chat-Namen geändert zu</string>
+    <string name="changed_chat_profile_to">Neues Chat-Profil:</string>
     <string name="description_to">Beschreibung zu</string>
     <string name="and_picture_to">und Bild zu</string>
     <string name="leave">Verlassen</string>
@@ -529,6 +531,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_redeem_to_zap">An Zap Wallet senden</string>
     <string name="cashu_redeem_to_cashu">In Cashu Wallet öffnen</string>
     <string name="cashu_copy_token">Token kopieren</string>
+    <string name="quick_actions_open_in_another_app">In anderer App öffnen</string>
     <string name="no_lightning_address_set">Keine Lightning-Adresse festgelegt</string>
     <string name="copied_token_to_clipboard">Token in die Zwischenablage kopiert</string>
     <string name="live_stream_live_tag">LIVE</string>
@@ -608,6 +611,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="messages_new_message_subject">Betreff</string>
     <string name="messages_new_message_subject_caption">Gesprächsthema</string>
     <string name="messages_new_message_to_caption">"\@Benutzer1, @Benutzer2, @Benutzer3"</string>
+    <string name="messages_cant_upload_title">Kann nicht hochladen</string>
+    <string name="messages_cant_upload_explainer">Füge das Ziel der Nachricht zuerst ein</string>
     <string name="messages_group_descriptor">Mitglieder dieser Gruppe</string>
     <string name="messages_new_subject_message">Erklärung an Mitglieder</string>
     <string name="messages_new_subject_message_placeholder">Ändern des Namens für die neuen Ziele.</string>
@@ -941,4 +946,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="torrent_no_apps">Keine Torrent-Apps installiert, um die Datei zu öffnen und herunterzuladen.</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
+    <string name="private_message">Private Nachricht</string>
 </resources>
