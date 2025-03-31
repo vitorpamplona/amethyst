@@ -98,6 +98,7 @@
     <string name="description">Beskrivning</string>
     <string name="about_us">"Om oss.. "</string>
     <string name="what_s_on_your_mind">Vad tänker du på?</string>
+    <string name="write_a_message">Skriv ett meddelande...</string>
     <string name="post">Dela</string>
     <string name="save">Spara</string>
     <string name="create">Skapa</string>
@@ -205,6 +206,7 @@
     <string name="with_description_of">med beskrivning av</string>
     <string name="and_picture">och bild</string>
     <string name="changed_chat_name_to">ändra chat namn till</string>
+    <string name="changed_chat_profile_to">Ny chattprofil:</string>
     <string name="description_to">beskrivning till</string>
     <string name="and_picture_to">och bild till</string>
     <string name="leave">Lämna</string>
@@ -523,6 +525,7 @@
     <string name="cashu_redeem_to_zap">Skicka till Zap Plånbok</string>
     <string name="cashu_redeem_to_cashu">Öppna i Cashu Plånbok</string>
     <string name="cashu_copy_token">Kopiera Token</string>
+    <string name="quick_actions_open_in_another_app">Öppna i annan app</string>
     <string name="no_lightning_address_set">Ingen Lightning-adress angiven</string>
     <string name="copied_token_to_clipboard">Kopierade token till urklipp</string>
     <string name="live_stream_live_tag">LIVE</string>
@@ -602,6 +605,8 @@
     <string name="messages_new_message_subject">Ämne</string>
     <string name="messages_new_message_subject_caption">Samtalsämne</string>
     <string name="messages_new_message_to_caption">"\@Användare1, @Användare2, @Användare3"</string>
+    <string name="messages_cant_upload_title">Kan inte ladda upp</string>
+    <string name="messages_cant_upload_explainer">Infoga destinationen för meddelandet först</string>
     <string name="messages_group_descriptor">Medlemmar i denna grupp</string>
     <string name="messages_new_subject_message">Förklaring till medlemmar</string>
     <string name="messages_new_subject_message_placeholder">Ändra namnet för de nya målen.</string>
@@ -935,4 +940,5 @@
     <string name="torrent_no_apps">Inga torrent-appar installerade för att öppna och ladda ner filen.</string>
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
+    <string name="private_message">Privat meddelande</string>
 </resources>
