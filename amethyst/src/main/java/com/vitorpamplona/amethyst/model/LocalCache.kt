@@ -1961,7 +1961,7 @@ object LocalCache {
         }
     }
 
-    fun getFollowSetsFor(user: User): List<AddressableNote> {
+    fun getFollowSetNotesFor(user: User): List<AddressableNote> {
         checkNotInMainThread()
 
         return addressables

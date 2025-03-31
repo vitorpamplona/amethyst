@@ -162,6 +162,7 @@ class NostrBookmarkPrivateFeedViewModel(
     }
 }
 
+@Stable
 class NostrUserFollowSetFeedViewModel(
     val account: Account,
 ) : FollowSetFeedViewModel(FollowSetFeedFilter(account)) {

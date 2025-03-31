@@ -175,7 +175,7 @@ class AccountViewModel(
             .map { followSetsState ->
                 checkNotInMainThread()
                 account.getFollowSetNotes()
-                followSetsState.user.followSets.map {
+                followSetsState.user.followSetNotes.map {
                     account.mapNoteToFollowSet(it)
                 }
             }.flowOn(Dispatchers.Default)
