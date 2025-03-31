@@ -71,6 +71,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Stable
 class ServiceManager(
@@ -83,6 +84,8 @@ class ServiceManager(
     private var account: Account? = null
 
     private var collectorJob: Job? = null
+
+    var isTrimmingMemoryMutex = AtomicBoolean(false)
 
     private fun start(account: Account) {
         this.account = account
@@ -259,20 +262,26 @@ class ServiceManager(
     }
 
     suspend fun trimMemory() {
-        LocalCache.cleanObservers()
+        if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
+            try {
+                LocalCache.cleanObservers()
 
-        val accounts =
-            LocalPreferences.allSavedAccounts().mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
+                val accounts =
+                    LocalPreferences.allSavedAccounts().mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
 
-        account?.let {
-            LocalCache.pruneOldAndHiddenMessages(it)
-            NostrChatroomDataSource.clearEOSEs(it)
+                account?.let {
+                    LocalCache.pruneOldAndHiddenMessages(it)
+                    NostrChatroomDataSource.clearEOSEs(it)
 
-            LocalCache.pruneHiddenMessages(it)
-            LocalCache.pruneContactLists(accounts)
-            LocalCache.pruneRepliesAndReactions(accounts)
-            LocalCache.prunePastVersionsOfReplaceables()
-            LocalCache.pruneExpiredEvents()
+                    LocalCache.pruneHiddenMessages(it)
+                    LocalCache.pruneContactLists(accounts)
+                    LocalCache.pruneRepliesAndReactions(accounts)
+                    LocalCache.prunePastVersionsOfReplaceables()
+                    LocalCache.pruneExpiredEvents()
+                }
+            } finally {
+                isTrimmingMemoryMutex.getAndSet(false)
+            }
         }
     }
 
