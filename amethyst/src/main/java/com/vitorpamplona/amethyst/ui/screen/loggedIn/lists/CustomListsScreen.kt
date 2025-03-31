@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
 import android.util.Log
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,6 +62,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.NostrUserFollowSetFeedViewModel
@@ -71,6 +74,9 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun ListsScreen(
@@ -83,6 +89,7 @@ fun ListsScreen(
             factory = NostrUserFollowSetFeedViewModel.Factory(accountViewModel.account),
         )
 
+    val currentCoroutineScope = rememberCoroutineScope()
     val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifeCycleOwner) {
@@ -109,6 +116,17 @@ fun ListsScreen(
         refresh = {
             followSetsViewModel.invalidateData()
         },
+        openItem = {
+            currentCoroutineScope.launch(Dispatchers.IO) {
+                val note = followSetsViewModel.getFollowSetAddressable(it, accountViewModel.account)
+                if (note != null) {
+                    val event = note.event as PeopleListEvent
+                    println("Found list, with title: ${event.nameOrTitle()}")
+                } else {
+                    println("No corresponding note found for this list.")
+                }
+            }
+        },
         accountViewModel,
         nav,
     )
@@ -118,6 +136,7 @@ fun ListsScreen(
 fun CustomListsScreen(
     followSetState: FollowSetState,
     refresh: () -> Unit,
+    openItem: (identifier: String) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -130,7 +149,11 @@ fun CustomListsScreen(
             TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
         },
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
+        Column(
+            Modifier
+                .padding(it)
+                .fillMaxHeight(),
+        ) {
             when (followSetState) {
                 FollowSetState.Loading -> LoadingFeed()
 
@@ -139,6 +162,7 @@ fun CustomListsScreen(
                     FollowListLoaded(
                         loadedFeedState = followSetFeed,
                         onRefresh = refresh,
+                        onItemClick = openItem,
                     )
                 }
 
@@ -164,16 +188,26 @@ fun FollowListLoaded(
     modifier: Modifier = Modifier,
     loadedFeedState: List<FollowSet>,
     onRefresh: () -> Unit = {},
+    onItemClick: (String) -> Unit = {},
 ) {
     Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")
 
     val listState = rememberLazyListState()
-    LazyColumn(
-        state = listState,
-        contentPadding = FeedPadding,
+    RefresheableBox(
+        onRefresh = onRefresh,
     ) {
-        itemsIndexed(loadedFeedState, key = { _, item -> item.title }) { index, set ->
-            CustomListItem(followSet = set)
+        LazyColumn(
+            state = listState,
+            contentPadding = FeedPadding,
+        ) {
+            itemsIndexed(loadedFeedState, key = { _, item -> item.identifierTag }) { index, set ->
+                CustomListItem(
+                    followSet = set,
+                    onFollowSetClick = {
+                        onItemClick(set.identifierTag)
+                    },
+                )
+            }
         }
     }
 }
@@ -182,10 +216,12 @@ fun FollowListLoaded(
 fun CustomListItem(
     modifier: Modifier = Modifier,
     followSet: FollowSet,
+    onFollowSetClick: () -> Unit,
 ) {
     Row(
         modifier =
             modifier
+                .clickable(onClick = onFollowSetClick)
                 .border(
                     width = Dp.Hairline,
                     color = Color.Gray,
@@ -261,15 +297,19 @@ fun CustomListItem(
 private fun ListItemPreview() {
     val sampleFollowSet =
         FollowSet(
-            visibility = ListVisibility.Mixed,
+            identifierTag = "00001-2222",
             title = "Sample List Title",
             description = "Sample List Description",
+            visibility = ListVisibility.Mixed,
             emptySet(),
         )
     ThemeComparisonColumn {
         CustomListItem(
             modifier = Modifier,
             sampleFollowSet,
+            onFollowSetClick = {
+                println("follow set: ${sampleFollowSet.identifierTag}")
+            },
         )
     }
 }

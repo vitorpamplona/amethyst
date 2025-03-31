@@ -26,9 +26,10 @@ import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 
 @Stable
 data class FollowSet(
-    val visibility: ListVisibility,
+    val identifierTag: String,
     val title: String,
     val description: String?,
+    val visibility: ListVisibility,
     val profileList: Set<String>,
 ) : NostrList(listVisibility = visibility, content = profileList) {
     companion object {
@@ -36,6 +37,7 @@ data class FollowSet(
             event: PeopleListEvent,
             signer: NostrSigner,
         ): FollowSet {
+            val address = event.address()
             val dTag = event.dTag()
             val listTitle = event.nameOrTitle() ?: dTag
             val listDescription = event.description() ?: ""
@@ -44,16 +46,18 @@ data class FollowSet(
             event.privateTaggedUsers(signer) { userList -> privateFollows.addAll(userList) }
             return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
                 FollowSet(
-                    visibility = ListVisibility.Private,
+                    identifierTag = address.toValue(),
                     title = listTitle,
                     description = listDescription,
+                    visibility = ListVisibility.Private,
                     profileList = privateFollows.toSet(),
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
                 FollowSet(
-                    visibility = ListVisibility.Public,
+                    identifierTag = address.toValue(),
                     title = listTitle,
                     description = listDescription,
+                    visibility = ListVisibility.Public,
                     profileList = publicFollows.toSet(),
                 )
             } else {

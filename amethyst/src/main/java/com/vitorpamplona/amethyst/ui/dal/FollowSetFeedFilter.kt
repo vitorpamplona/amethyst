@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -30,12 +29,10 @@ import kotlin.coroutines.cancellation.CancellationException
 class FollowSetFeedFilter(
     val account: Account,
 ) : FeedFilter<FollowSet>() {
-    private val followSetEventPairs: MutableMap<AddressableNote, FollowSet> = mutableMapOf()
-
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
     override fun feed(): List<FollowSet> {
-        val userFollowSets = account.userProfile().followSets
+        val userFollowSets = account.userProfile().followSetNotes
         if (userFollowSets.isEmpty()) {
             account.scope.launch {
                 try {
@@ -47,14 +44,7 @@ class FollowSetFeedFilter(
                 }
             }
         }
-        updateFollowSetEventPairs(userFollowSets)
-        return followSetEventPairs.values.toList()
-    }
-
-    private fun updateFollowSetEventPairs(notes: Set<AddressableNote>) {
-        notes.forEach { note ->
-            val noteAndSetPair = note to account.mapNoteToFollowSet(note)
-            followSetEventPairs.putIfAbsent(noteAndSetPair.first, noteAndSetPair.second)
-        }
+        val followSets = userFollowSets.map { account.mapNoteToFollowSet(it) }
+        return followSets
     }
 }
