@@ -30,20 +30,40 @@ import androidx.appcompat.app.AppCompatActivity.BIND_AUTO_CREATE
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import org.torproject.jni.TorService
 import org.torproject.jni.TorService.LocalBinder
+import java.util.concurrent.atomic.AtomicBoolean
 
 object TorManager {
+    var runningIntent: Intent? = null
     var torService: TorService? = null
 
+    // To make sure we don't start two services.
+    var isConnectingMutex = AtomicBoolean(false)
+
     fun startTorIfNotAlreadyOn(ctx: Context) {
-        if (torService == null) {
-            startTor(ctx)
+        if (runningIntent == null && isConnectingMutex.compareAndSet(false, true)) {
+            try {
+                startTor(ctx)
+            } finally {
+                isConnectingMutex.set(false)
+            }
         }
     }
 
-    fun startTor(ctx: Context) {
+    fun stopTor(ctx: Context) {
+        Log.d("TorManager", "Stopping Tor Service")
+        runningIntent?.let {
+            ctx.stopService(runningIntent)
+        }
+        runningIntent = null
+        torService = null
+    }
+
+    private fun startTor(ctx: Context) {
         Log.d("TorManager", "Binding Tor Service")
+        val currentIntent = Intent(ctx, TorService::class.java)
+        runningIntent = currentIntent
         ctx.bindService(
-            Intent(ctx, TorService::class.java),
+            currentIntent,
             object : ServiceConnection {
                 override fun onServiceConnected(
                     name: ComponentName,
@@ -66,18 +86,13 @@ object TorManager {
                 }
 
                 override fun onServiceDisconnected(name: ComponentName) {
+                    runningIntent = null
                     torService = null
                     Log.d("TorManager", "Tor Service Disconected")
                 }
             },
             BIND_AUTO_CREATE,
         )
-    }
-
-    fun stopTor(ctx: Context) {
-        Log.d("TorManager", "Stopping Tor Service")
-        torService = null
-        ctx.stopService(Intent(ctx, TorService::class.java))
     }
 
     fun isSocksReady() =

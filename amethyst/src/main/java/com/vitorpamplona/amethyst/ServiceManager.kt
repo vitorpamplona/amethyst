@@ -103,10 +103,21 @@ class ServiceManager(
         if (myAccount != null) {
             when (myAccount.settings.torSettings.torType.value) {
                 TorType.INTERNAL -> {
-                    Log.d("TorManager", "Relays Service Connected ${TorManager.socksPort()}")
-                    HttpClientManager.setDefaultProxyOnPort(TorManager.socksPort())
+                    // Tor's lib will automatically set this port.
+                    if (TorManager.isSocksReady()) {
+                        HttpClientManager.setDefaultProxyOnPort(TorManager.socksPort())
+                    } else {
+                        HttpClientManager.setProxyNotReady()
+                    }
                 }
-                TorType.EXTERNAL -> HttpClientManager.setDefaultProxyOnPort(myAccount.settings.torSettings.externalSocksPort.value)
+                TorType.EXTERNAL -> {
+                    val port = myAccount.settings.torSettings.externalSocksPort.value
+                    if (port > 0) {
+                        HttpClientManager.setDefaultProxyOnPort(port)
+                    } else {
+                        HttpClientManager.setProxyNotReady()
+                    }
+                }
                 else -> HttpClientManager.setDefaultProxy(null)
             }
 

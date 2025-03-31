@@ -50,6 +50,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -246,7 +247,9 @@ private fun DialogContent(
                     val writeStoragePermissionState =
                         rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
                             if (isGranted) {
-                                saveMediaToGallery(myContent, localContext, accountViewModel)
+                                scope.launch {
+                                    saveMediaToGallery(myContent, localContext, accountViewModel)
+                                }
                                 scope.launch {
                                     Toast
                                         .makeText(
@@ -264,7 +267,9 @@ private fun DialogContent(
                                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                                 writeStoragePermissionState.status.isGranted
                             ) {
-                                saveMediaToGallery(myContent, localContext, accountViewModel)
+                                scope.launch {
+                                    saveMediaToGallery(myContent, localContext, accountViewModel)
+                                }
                                 scope.launch {
                                     Toast
                                         .makeText(

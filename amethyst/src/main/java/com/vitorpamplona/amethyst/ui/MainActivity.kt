@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -112,8 +111,6 @@ class MainActivity : AppCompatActivity() {
             checkLanguage(locales.get(0).language)
         }
 
-        TorManager.startTor(this)
-
         Log.d("Lifetime Event", "MainActivity.onResume")
 
         // starts muted every time
@@ -159,8 +156,6 @@ class MainActivity : AppCompatActivity() {
 
         (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
             .unregisterNetworkCallback(networkCallback)
-
-        TorManager.stopTor(this)
 
         super.onPause()
     }
