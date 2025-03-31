@@ -22,16 +22,18 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
 import android.util.Log
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -41,8 +43,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-@Stable
-open class FollowSetFeedViewModel(
+abstract class FollowSetFeedViewModel(
     val dataSource: FeedFilter<FollowSet>,
 ) : ViewModel(),
     InvalidatableContent {
@@ -53,6 +54,15 @@ open class FollowSetFeedViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             refreshSuspended()
         }
+    }
+
+    fun getFollowSetAddressable(
+        addressValue: String,
+        account: Account,
+    ): AddressableNote? {
+        checkNotInMainThread()
+        val potentialNote = LocalCache.getAddressableNoteIfExists(Address.parse(addressValue)!!)
+        return potentialNote
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)

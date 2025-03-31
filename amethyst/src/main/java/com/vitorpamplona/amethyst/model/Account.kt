@@ -3067,8 +3067,8 @@ class Account(
 
     suspend fun getFollowSetNotes() =
         withContext(Dispatchers.Default) {
-            val followSetNotes = LocalCache.getFollowSetsFor(userProfile())
-            userProfile().updateFollowSets(followSetNotes)
+            val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
+            userProfile().updateFollowSetNotes(followSetNotes)
 //            userProfile().followSets = followSetNotes
             println("Number of follow sets: ${followSetNotes.size}")
         }

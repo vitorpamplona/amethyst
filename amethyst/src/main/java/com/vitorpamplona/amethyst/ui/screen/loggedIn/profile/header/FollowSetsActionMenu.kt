@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 @Composable
 fun FollowSetsActionMenu(
@@ -174,14 +175,15 @@ private fun DropDownMenuHeader(
 fun generateFollowLists(): List<FollowSet> =
     List(10) { index: Int ->
         FollowSet(
+            identifierTag = UUID.randomUUID().toString(),
+            title = "List No $index",
+            description = null,
             visibility =
                 when {
                     index % 2 == 0 -> ListVisibility.Private
                     index in listOf(3, 7, 9) -> ListVisibility.Mixed
                     else -> ListVisibility.Public
                 },
-            title = "List No $index",
-            description = null,
             profileList = emptySet(),
         )
     }
