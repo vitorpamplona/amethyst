@@ -43,6 +43,7 @@ class PlaybackService : MediaSessionService() {
     fun newPool(okHttp: OkHttpClient): MediaSessionPool =
         MediaSessionPool(
             ExoPlayerPool(ExoPlayerBuilder(okHttp)),
+            okHttpClient = okHttp,
             reset = { session ->
                 (session.player as ExoPlayer).apply {
                     repeatMode = Player.REPEAT_MODE_ONE
