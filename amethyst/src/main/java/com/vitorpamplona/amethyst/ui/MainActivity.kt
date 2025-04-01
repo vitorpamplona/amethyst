@@ -70,6 +70,8 @@ class MainActivity : AppCompatActivity() {
         Log.d("Lifetime Event", "MainActivity.onCreate")
 
         setContent {
+            StringResSetup()
+
             val sharedPreferencesViewModel = prepareSharedViewModel()
             AmethystTheme(sharedPreferencesViewModel) {
                 val accountStateViewModel: AccountStateViewModel = viewModel()
@@ -86,11 +88,6 @@ class MainActivity : AppCompatActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
-
-        val locales = this.applicationContext.resources.configuration.locales
-        if (!locales.isEmpty) {
-            checkLanguage(locales.get(0).language)
-        }
 
         Log.d("Lifetime Event", "MainActivity.onResume")
 
