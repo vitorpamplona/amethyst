@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorStatus
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
@@ -160,6 +161,7 @@ fun ManageTorInstance(accountViewModel: AccountViewModel) {
     val torSettings by accountViewModel.account.settings.torSettings.torType
         .collectAsStateWithLifecycle()
     if (torSettings == TorType.INTERNAL) {
+        WatchConnection(accountViewModel)
         ManageTorInstanceInner(accountViewModel)
     }
 }
@@ -200,6 +202,17 @@ fun ManageTorInstanceInner(accountViewModel: AccountViewModel) {
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
             TorManager.stopTor(context)
+        }
+    }
+}
+
+@Composable
+fun WatchConnection(accountViewModel: AccountViewModel) {
+    val status by TorManager.status.collectAsStateWithLifecycle()
+
+    LaunchedEffect(key1 = status, key2 = accountViewModel) {
+        if (status is TorStatus.Active) {
+            accountViewModel.changeProxyPort((status as TorStatus.Active).port)
         }
     }
 }

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.tryAndWait
+import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
@@ -151,8 +152,8 @@ class RegisterAccounts(
                     .post(body)
                     .build()
 
-            // Always try via Tor for Amethyst.
-            val client = HttpClientManager.getHttpClient(true)
+            // Always try via Tor if active.
+            val client = HttpClientManager.getHttpClient(TorManager.isSocksReady())
 
             val isSucess = client.newCall(request).execute().use { it.isSuccessful }
             Log.i(tag, "Server registration $isSucess")

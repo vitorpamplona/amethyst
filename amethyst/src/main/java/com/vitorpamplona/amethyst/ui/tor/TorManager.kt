@@ -27,20 +27,33 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity.BIND_AUTO_CREATE
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.torproject.jni.TorService
 import org.torproject.jni.TorService.LocalBinder
 import java.util.concurrent.atomic.AtomicBoolean
 
+sealed class TorStatus {
+    data class Active(
+        val port: Int,
+    ) : TorStatus()
+
+    object Off : TorStatus()
+
+    object Connecting : TorStatus()
+}
+
 object TorManager {
     var runningIntent: Intent? = null
     var torService: TorService? = null
+
+    val status = MutableStateFlow<TorStatus>(TorStatus.Off)
 
     // To make sure we don't start two services.
     var isConnectingMutex = AtomicBoolean(false)
 
     fun startTorIfNotAlreadyOn(ctx: Context) {
         if (runningIntent == null && isConnectingMutex.compareAndSet(false, true)) {
+            status.tryEmit(TorStatus.Connecting)
             try {
                 startTor(ctx)
             } finally {
@@ -54,6 +67,7 @@ object TorManager {
         runningIntent?.let {
             ctx.stopService(runningIntent)
         }
+        status.tryEmit(TorStatus.Off)
         runningIntent = null
         torService = null
     }
@@ -80,14 +94,14 @@ object TorManager {
                         }
                     }
 
-                    HttpClientManager.setDefaultProxyOnPort(socksPort())
-
+                    status.tryEmit(TorStatus.Active(socksPort()))
                     Log.d("TorManager", "Tor Service Connected ${socksPort()}")
                 }
 
                 override fun onServiceDisconnected(name: ComponentName) {
                     runningIntent = null
                     torService = null
+                    status.tryEmit(TorStatus.Off)
                     Log.d("TorManager", "Tor Service Disconected")
                 }
             },
@@ -95,10 +109,7 @@ object TorManager {
         )
     }
 
-    fun isSocksReady() =
-        torService?.let {
-            it.socksPort > 0
-        } ?: false
+    fun isSocksReady() = torService?.let { it.socksPort > 0 } == true
 
     fun socksPort(): Int = torService?.socksPort ?: 9050
 

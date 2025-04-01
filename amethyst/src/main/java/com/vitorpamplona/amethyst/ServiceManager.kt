@@ -121,7 +121,7 @@ class ServiceManager(
                         HttpClientManager.setProxyNotReady()
                     }
                 }
-                else -> HttpClientManager.setDefaultProxy(null)
+                else -> HttpClientManager.setProxyNotReady()
             }
 
             OtsResolver.ots =
@@ -136,7 +136,7 @@ class ServiceManager(
                     OkHttpCalendarBuilder { false },
                 )
 
-            HttpClientManager.setDefaultProxy(null)
+            HttpClientManager.setProxyNotReady()
         }
 
         // Convert this into a flow

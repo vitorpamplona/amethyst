@@ -1265,6 +1265,12 @@ class AccountViewModel(
         }
     }
 
+    fun changeProxyPort(port: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            Amethyst.instance.serviceManager.forceRestart()
+        }
+    }
+
     class Factory(
         val accountSettings: AccountSettings,
         val settings: SettingsState,

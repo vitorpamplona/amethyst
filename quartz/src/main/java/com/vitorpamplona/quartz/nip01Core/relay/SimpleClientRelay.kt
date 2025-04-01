@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
@@ -312,10 +313,7 @@ class SimpleClientRelay(
         if (isConnectionStarted()) {
             if (isReady) {
                 if (filters.isNotEmpty()) {
-                    writeToSocket(
-                        com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-                            .toJson(requestId, filters),
-                    )
+                    writeToSocket(ReqCmd.toJson(requestId, filters))
                     afterEOSEPerSubscription[requestId] = false
                 }
             }
