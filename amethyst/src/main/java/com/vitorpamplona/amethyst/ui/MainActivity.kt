@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.prepareSharedViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -69,8 +70,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("Lifetime Event", "MainActivity.onCreate")
 
         setContent {
-            val sharedPreferencesViewModel = prepareSharedViewModel(act = this)
-
+            val sharedPreferencesViewModel = prepareSharedViewModel()
             AmethystTheme(sharedPreferencesViewModel) {
                 val accountStateViewModel: AccountStateViewModel = viewModel()
 

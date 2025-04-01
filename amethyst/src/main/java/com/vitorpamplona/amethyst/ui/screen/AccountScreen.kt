@@ -24,24 +24,16 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.LoginOrSignupScreen
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -56,61 +48,54 @@ fun AccountScreen(
     Crossfade(
         targetState = accountState,
         animationSpec = tween(durationMillis = 100),
-        label = "AccountState",
     ) { state ->
         when (state) {
-            is AccountState.Loading -> {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    LoadingAccounts()
-                }
-            }
-            is AccountState.LoggedOff -> { // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    LoginOrSignupScreen(null, accountStateViewModel, isFirstLogin = true)
-                }
-            }
-            is AccountState.LoggedIn -> {
-                CompositionLocalProvider(
-                    LocalViewModelStoreOwner provides state.currentViewModelStore,
-                ) {
-                    LoggedInPage(
-                        state.accountSettings,
-                        state.route,
-                        accountStateViewModel,
-                        sharedPreferencesViewModel,
-                    )
-                }
-
-                DisposableEffect(key1 = accountState) {
-                    onDispose {
-                        state.currentViewModelStore.viewModelStore.clear()
-                    }
-                }
-            }
+            is AccountState.Loading -> LoadingSetup()
+            is AccountState.LoggedOff -> LoggedOffSetup(accountStateViewModel)
+            is AccountState.LoggedIn -> LoggedInSetup(state, accountStateViewModel, sharedPreferencesViewModel)
         }
     }
 }
 
-class AccountCentricViewModelStore(
-    val accountSettings: AccountSettings,
-) : ViewModelStoreOwner {
-    override val viewModelStore = ViewModelStore()
+@Composable
+fun LoadingSetup() {
+    // A surface container using the 'background' color from the theme
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(stringRes(R.string.loading_account))
+        }
+    }
 }
 
 @Composable
-fun LoadingAccounts() {
-    Column(
-        Modifier.fillMaxHeight().fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+fun LoggedOffSetup(accountStateViewModel: AccountStateViewModel) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Text(stringRes(R.string.loading_account))
+        LoginOrSignupScreen(null, accountStateViewModel, isFirstLogin = true)
+    }
+}
+
+@Composable
+fun LoggedInSetup(
+    state: AccountState.LoggedIn,
+    accountStateViewModel: AccountStateViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+) {
+    SetAccountCentricViewModelStore(state) {
+        LoggedInPage(
+            state.accountSettings,
+            state.route,
+            accountStateViewModel,
+            sharedPreferencesViewModel,
+        )
     }
 }

@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui
+package com.vitorpamplona.amethyst.ui.screen
 
-import android.app.Activity
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -36,31 +35,37 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun prepareSharedViewModel(act: Activity): SharedPreferencesViewModel {
+fun prepareSharedViewModel(): SharedPreferencesViewModel {
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-
-    val displayFeatures = calculateDisplayFeatures(act)
-    val windowSizeClass = calculateWindowSizeClass(act)
 
     LaunchedEffect(key1 = sharedPreferencesViewModel) {
         sharedPreferencesViewModel.init()
     }
 
-    LaunchedEffect(sharedPreferencesViewModel, displayFeatures, windowSizeClass) {
-        sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
-    }
-
+    MonitorDisplaySize(sharedPreferencesViewModel)
     ManageConnectivity(sharedPreferencesViewModel)
 
     return sharedPreferencesViewModel
+}
+
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@Composable
+fun MonitorDisplaySize(sharedPreferencesViewModel: SharedPreferencesViewModel) {
+    val act = LocalContext.current.getActivity()
+
+    val displayFeatures = calculateDisplayFeatures(act)
+    val windowSizeClass = calculateWindowSizeClass(act)
+
+    LaunchedEffect(sharedPreferencesViewModel, displayFeatures, windowSizeClass) {
+        sharedPreferencesViewModel.updateDisplaySettings(windowSizeClass, displayFeatures)
+    }
 }
 
 @Composable

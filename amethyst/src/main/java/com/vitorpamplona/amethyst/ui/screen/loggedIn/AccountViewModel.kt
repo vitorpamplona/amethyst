@@ -67,8 +67,8 @@ import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
-import com.vitorpamplona.amethyst.ui.screen.SettingsState
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.screen.SharedSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -140,7 +140,7 @@ import kotlinx.coroutines.withContext
 @Stable
 class AccountViewModel(
     accountSettings: AccountSettings,
-    val settings: SettingsState,
+    val settings: SharedSettingsState,
 ) : ViewModel(),
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
@@ -1281,7 +1281,7 @@ class AccountViewModel(
 
     class Factory(
         val accountSettings: AccountSettings,
-        val settings: SettingsState,
+        val settings: SharedSettingsState,
     ) : ViewModelProvider.Factory {
         override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel = AccountViewModel(accountSettings, settings) as AccountViewModel
     }
