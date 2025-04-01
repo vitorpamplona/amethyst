@@ -53,8 +53,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
@@ -149,11 +152,51 @@ fun LoggedInPage(
 
     ListenToExternalSignerIfNeeded(accountViewModel)
 
+    NotificationRegistration(accountViewModel)
+
     AppNavigation(
         accountViewModel = accountViewModel,
         accountStateViewModel = accountStateViewModel,
         sharedPreferencesViewModel = sharedPreferencesViewModel,
     )
+}
+
+@Composable
+fun NotificationRegistration(accountViewModel: AccountViewModel) {
+    val lifeCycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    var job = remember<Job?> { null }
+
+    LaunchedEffect(accountViewModel) {
+        job?.cancel()
+        job =
+            launch {
+                val okHttpClient = HttpClientManager.getHttpClient(accountViewModel.account.shouldUseTorForTrustedRelays())
+                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), okHttpClient)
+            }
+    }
+
+    DisposableEffect(key1 = accountViewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        job?.cancel()
+                        job =
+                            scope.launch {
+                                val okHttpClient = HttpClientManager.getHttpClient(accountViewModel.account.shouldUseTorForTrustedRelays())
+                                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), okHttpClient)
+                            }
+                    }
+                    else -> {}
+                }
+            }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 }
 
 @Composable

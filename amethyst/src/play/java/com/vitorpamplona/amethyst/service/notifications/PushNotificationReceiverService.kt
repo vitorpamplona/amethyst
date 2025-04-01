@@ -29,6 +29,8 @@ import com.google.firebase.messaging.RemoteMessage
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateDMChannel
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CoroutineScope
@@ -82,7 +84,10 @@ class PushNotificationReceiverService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         scope.launch(Dispatchers.IO) {
-            RegisterAccounts(LocalPreferences.allSavedAccounts()).go(token)
+            Log.d("Lifetime Event", "PushNotificationReceiverService.onNewToken")
+            // if the app is running, try to get tor. if not, goes open web.
+            val okHttpClient = HttpClientManager.getHttpClient(TorManager.isSocksReady())
+            PushNotificationUtils.checkAndInit(token, LocalPreferences.allSavedAccounts(), okHttpClient)
             notificationManager().getOrCreateZapChannel(applicationContext)
             notificationManager().getOrCreateDMChannel(applicationContext)
         }

@@ -64,7 +64,7 @@ class PlaybackService : MediaSessionService() {
             poolWithProxy?.let { pool ->
                 // with proxy, check if the port is the same.
                 val okHttp = HttpClientManager.getHttpClient(true)
-                if (okHttp.proxy == pool.exoPlayerPool.builder.okHttp.proxy) {
+                if (okHttp.proxy != null && okHttp.proxy == pool.exoPlayerPool.builder.okHttp.proxy) {
                     return pool
                 }
 

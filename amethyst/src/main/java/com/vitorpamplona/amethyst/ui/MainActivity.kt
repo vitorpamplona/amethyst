@@ -34,11 +34,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
-import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -120,10 +118,6 @@ class MainActivity : AppCompatActivity() {
         Log.d("shouldPauseService", "shouldPauseService onResume: $shouldPauseService")
         if (shouldPauseService) {
             GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.justStart() }
-        }
-
-        GlobalScope.launch(Dispatchers.IO) {
-            PushNotificationUtils.init(LocalPreferences.allSavedAccounts())
         }
 
         val connectivityManager =
