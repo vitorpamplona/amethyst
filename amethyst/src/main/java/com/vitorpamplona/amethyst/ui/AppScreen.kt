@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui
 
+import android.app.Activity
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -43,7 +44,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun prepareSharedViewModel(act: MainActivity): SharedPreferencesViewModel {
+fun prepareSharedViewModel(act: Activity): SharedPreferencesViewModel {
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
 
     val displayFeatures = calculateDisplayFeatures(act)

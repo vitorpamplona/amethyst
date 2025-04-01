@@ -28,7 +28,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -62,10 +61,6 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
-    val isOnMobileDataState = mutableStateOf(false)
-
-    private var shouldPauseService = true
-
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -106,21 +101,11 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         Log.d("Lifetime Event", "MainActivity.onPause")
 
-        GlobalScope.launch(Dispatchers.IO) {
-            LanguageTranslatorService.clear()
-        }
+        GlobalScope.launch(Dispatchers.IO) { LanguageTranslatorService.clear() }
 
-        // if (BuildConfig.DEBUG) {
         GlobalScope.launch(Dispatchers.IO) { debugState(this@MainActivity) }
-        // }
 
         super.onPause()
-    }
-
-    override fun onStart() {
-        super.onStart()
-
-        Log.d("Lifetime Event", "MainActivity.onStart")
     }
 
     override fun onStop() {
