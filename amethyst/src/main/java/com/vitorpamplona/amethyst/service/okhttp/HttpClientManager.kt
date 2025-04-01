@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.okhttp
 
 import android.R.attr.port
 import android.util.Log
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
@@ -44,7 +45,7 @@ object HttpClientManager {
     private var defaultTimeout = DEFAULT_TIMEOUT_ON_WIFI
     private var defaultHttpClient: OkHttpClient? = null
     private var defaultHttpClientWithoutProxy: OkHttpClient? = null
-    private var userAgent: String = "Amethyst"
+    private var userAgent: String = "Amethyst/${BuildConfig.VERSION_NAME}"
 
     private var currentProxy: Proxy? = DEFAULT_TOR_PROXY
 

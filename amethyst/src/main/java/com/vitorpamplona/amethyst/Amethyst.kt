@@ -39,7 +39,6 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.ui.MainActivity
@@ -108,8 +107,6 @@ class Amethyst : Application() {
         super.onCreate()
 
         instance = this
-
-        HttpClientManager.setDefaultUserAgent("Amethyst/${BuildConfig.VERSION_NAME}")
 
         if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
             StrictMode.setThreadPolicy(
