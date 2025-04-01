@@ -20,12 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
 import com.vitorpamplona.amethyst.AccountInfo
-import kotlinx.coroutines.CancellationException
+import com.vitorpamplona.amethyst.service.retryIfException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import okhttp3.OkHttpClient
 
@@ -66,30 +64,4 @@ object PushNotificationUtils {
         lastToken = token
         hasInit = accounts.toList()
     }
-}
-
-suspend fun <T> retryIfException(
-    debugTag: String = "RetryIfException",
-    maxRetries: Int = 10,
-    delayMs: Long = 1000,
-    func: suspend () -> T,
-) {
-    var tentative = 0
-    var currentDelay = delayMs
-    while (tentative < maxRetries) {
-        try {
-            func()
-
-            // if it works, finishes.
-            return
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e(debugTag, "Tentative $tentative failed", e)
-
-            delay(currentDelay)
-            tentative++
-            currentDelay = currentDelay * 2
-        }
-    }
-    // gives up
 }

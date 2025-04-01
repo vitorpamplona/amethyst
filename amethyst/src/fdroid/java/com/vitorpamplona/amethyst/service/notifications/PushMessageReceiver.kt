@@ -29,6 +29,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateDMChannel
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.getOrCreateZapChannel
+import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CancellationException
@@ -89,7 +91,8 @@ class PushMessageReceiver : MessagingReceiver() {
             Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint")
             pushHandler.setEndpoint(sanitizedEndpoint)
             scope.launch(Dispatchers.IO) {
-                RegisterAccounts(LocalPreferences.allSavedAccounts()).go(sanitizedEndpoint)
+                val okHttpClient = HttpClientManager.getHttpClient(TorManager.isSocksReady())
+                PushNotificationUtils.checkAndInit(sanitizedEndpoint, LocalPreferences.allSavedAccounts(), okHttpClient)
                 notificationManager().getOrCreateZapChannel(appContext)
                 notificationManager().getOrCreateDMChannel(appContext)
             }

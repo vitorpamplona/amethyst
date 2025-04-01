@@ -20,28 +20,53 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.util.Log
 import com.vitorpamplona.amethyst.AccountInfo
-import kotlinx.coroutines.CancellationException
+import com.vitorpamplona.amethyst.service.retryIfException
+import kotlinx.coroutines.Dispatchers
+import okhttp3.OkHttpClient
 
 object PushNotificationUtils {
-    var hasInit: Boolean = false
+    var lastToken: String? = null
+    var hasInit: List<AccountInfo>? = null
+
     private val pushHandler = PushDistributorHandler
 
-    suspend fun init(accounts: List<AccountInfo>) {
-        if (hasInit) {
-            return
-        }
-        try {
-            if (pushHandler.savedDistributorExists()) {
-                val currentDistributor = PushDistributorHandler.getSavedDistributor()
-                PushDistributorHandler.saveDistributor(currentDistributor)
+    suspend fun checkAndInit(
+        accounts: List<AccountInfo>,
+        okHttpClient: OkHttpClient,
+    ) = with(Dispatchers.IO) {
+        if (!pushHandler.savedDistributorExists()) return
 
-                RegisterAccounts(accounts).go(pushHandler.getSavedEndpoint())
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d("Amethyst-OSSPushUtils", "Failed to get endpoint.")
+        val currentDistributor = PushDistributorHandler.getSavedDistributor()
+        PushDistributorHandler.saveDistributor(currentDistributor)
+        val token = pushHandler.getSavedEndpoint()
+
+        if (hasInit?.equals(accounts) == true && lastToken == token) {
+            return@with
         }
+
+        registerToken(token, accounts, okHttpClient)
+    }
+
+    suspend fun checkAndInit(
+        token: String,
+        accounts: List<AccountInfo>,
+        okHttpClient: OkHttpClient,
+    ) = with(Dispatchers.IO) {
+        // initializes if the accounts are different or if the token has changed
+        if (hasInit?.equals(accounts) == true && lastToken == token) {
+            return@with
+        }
+        registerToken(token, accounts, okHttpClient)
+    }
+
+    private suspend fun registerToken(
+        token: String,
+        accounts: List<AccountInfo>,
+        okHttpClient: OkHttpClient,
+    ) = retryIfException("RegisterAccounts") {
+        RegisterAccounts(accounts, okHttpClient).go(token)
+        lastToken = token
+        hasInit = accounts.toList()
     }
 }

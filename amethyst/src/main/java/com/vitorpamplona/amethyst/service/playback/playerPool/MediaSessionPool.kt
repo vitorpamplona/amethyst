@@ -83,7 +83,7 @@ class MediaSessionPool(
             }
         }
 
-    @UnstableApi
+    @OptIn(UnstableApi::class)
     fun newSession(
         id: String,
         context: Context,
