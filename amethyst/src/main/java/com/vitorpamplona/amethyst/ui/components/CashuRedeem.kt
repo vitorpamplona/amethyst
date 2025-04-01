@@ -53,18 +53,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
-import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.service.CachedCashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.CopyIcon
 import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
@@ -124,11 +121,6 @@ fun CashuPreview(
 @Composable
 @Preview()
 fun CashuPreviewPreview() {
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
-
-    sharedPreferencesViewModel.init()
-    sharedPreferencesViewModel.updateTheme(ThemeType.DARK)
-
     ThemeComparisonColumn {
         CashuPreviewNew(
             token = CashuToken("token", "mint", 32400, listOf()),
