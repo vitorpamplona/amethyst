@@ -85,7 +85,11 @@ class AccountStateViewModel : ViewModel() {
 
     fun tryLoginExistingAccountAsync() {
         // pulls account from storage.
-        viewModelScope.launch { tryLoginExistingAccount() }
+        if (_accountContent.value !is AccountState.LoggedIn) {
+            viewModelScope.launch {
+                tryLoginExistingAccount()
+            }
+        }
     }
 
     private suspend fun tryLoginExistingAccount(route: String? = null) =
