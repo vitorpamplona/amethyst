@@ -179,7 +179,9 @@ class AccountStateViewModel : ViewModel() {
         collectorJob =
             viewModelScope.launch(Dispatchers.IO) {
                 accountSettings.saveable.debounce(1000).collect {
-                    LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    if (it.accountSettings != null) {
+                        LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    }
                 }
             }
     }
