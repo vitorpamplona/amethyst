@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui
 
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -33,11 +30,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -65,12 +60,9 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.Timer
-import kotlin.concurrent.schedule
 
 class MainActivity : AppCompatActivity() {
     val isOnMobileDataState = mutableStateOf(false)
-    private val isOnWifiDataState = mutableStateOf(false)
 
     private var shouldPauseService = true
 
@@ -96,10 +88,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun prepareToLaunchSigner() {
-        shouldPauseService = false
-    }
-
     @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
@@ -113,22 +101,6 @@ class MainActivity : AppCompatActivity() {
 
         // starts muted every time
         DEFAULT_MUTED_SETTING.value = true
-
-        // Keep connection alive if it's calling the signer app
-        Log.d("shouldPauseService", "shouldPauseService onResume: $shouldPauseService")
-        if (shouldPauseService) {
-            GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.justStart() }
-        }
-
-        val connectivityManager =
-            (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
-        connectivityManager.registerDefaultNetworkCallback(networkCallback)
-        connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.let {
-            updateNetworkCapabilities(it)
-        }
-
-        // resets state until next External Signer Call
-        Timer().schedule(350) { shouldPauseService = true }
     }
 
     override fun onPause() {
@@ -137,19 +109,10 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             LanguageTranslatorService.clear()
         }
-        Amethyst.instance.serviceManager.cleanObservers()
 
         // if (BuildConfig.DEBUG) {
         GlobalScope.launch(Dispatchers.IO) { debugState(this@MainActivity) }
         // }
-
-        Log.d("shouldPauseService", "shouldPauseService onPause: $shouldPauseService")
-        if (shouldPauseService) {
-            GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseForGood() }
-        }
-
-        (getSystemService(ConnectivityManager::class.java) as ConnectivityManager)
-            .unregisterNetworkCallback(networkCallback)
 
         super.onPause()
     }
@@ -178,72 +141,6 @@ class MainActivity : AppCompatActivity() {
 
         super.onDestroy()
     }
-
-    fun updateNetworkCapabilities(networkCapabilities: NetworkCapabilities): Boolean {
-        val unmetered = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-
-        val isOnMobileData = !unmetered || networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-        val isOnWifi = unmetered && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-
-        var changedNetwork = false
-
-        if (isOnMobileDataState.value != isOnMobileData) {
-            isOnMobileDataState.value = isOnMobileData
-
-            changedNetwork = true
-        }
-
-        if (isOnWifiDataState.value != isOnWifi) {
-            isOnWifiDataState.value = isOnWifi
-
-            changedNetwork = true
-        }
-
-        if (changedNetwork) {
-            if (isOnMobileData) {
-                HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_MOBILE)
-            } else {
-                HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_WIFI)
-            }
-        }
-
-        return changedNetwork
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    private val networkCallback =
-        object : ConnectivityManager.NetworkCallback() {
-            var lastNetwork: Network? = null
-
-            override fun onAvailable(network: Network) {
-                super.onAvailable(network)
-
-                Log.d("ServiceManager NetworkCallback", "onAvailable: $shouldPauseService")
-                if (shouldPauseService && lastNetwork != null && lastNetwork != network) {
-                    GlobalScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.forceRestart() }
-                }
-
-                lastNetwork = network
-            }
-
-            // Network capabilities have changed for the network
-            override fun onCapabilitiesChanged(
-                network: Network,
-                networkCapabilities: NetworkCapabilities,
-            ) {
-                super.onCapabilitiesChanged(network, networkCapabilities)
-
-                GlobalScope.launch(Dispatchers.IO) {
-                    Log.d(
-                        "ServiceManager NetworkCallback",
-                        "onCapabilitiesChanged: ${network.networkHandle} hasMobileData ${isOnMobileDataState.value} hasWifi ${isOnWifiDataState.value}",
-                    )
-                    if (updateNetworkCapabilities(networkCapabilities) && shouldPauseService) {
-                        Amethyst.instance.serviceManager.forceRestart()
-                    }
-                }
-            }
-        }
 }
 
 fun uriToRoute(uri: String?): String? =

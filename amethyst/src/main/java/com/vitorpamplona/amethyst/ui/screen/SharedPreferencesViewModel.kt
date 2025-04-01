@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +59,8 @@ class SettingsState {
     var featureSet by mutableStateOf(FeatureSetType.SIMPLIFIED)
     var gallerySet by mutableStateOf(ProfileGalleryType.CLASSIC)
 
-    var isOnMobileData: State<Boolean> = mutableStateOf(false)
+    var isOnMobileOrMeteredConnection by mutableStateOf(false)
+    var currentNetworkId by mutableStateOf(0L)
 
     var windowSizeClass = mutableStateOf<WindowSizeClass?>(null)
     var displayFeatures = mutableStateOf<List<DisplayFeature>>(emptyList())
@@ -67,7 +68,7 @@ class SettingsState {
     val showProfilePictures =
         derivedStateOf {
             when (automaticallyShowProfilePictures) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
+                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
                 ConnectivityType.NEVER -> false
                 ConnectivityType.ALWAYS -> true
             }
@@ -84,7 +85,7 @@ class SettingsState {
     val showUrlPreview =
         derivedStateOf {
             when (automaticallyShowUrlPreview) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
+                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
                 ConnectivityType.NEVER -> false
                 ConnectivityType.ALWAYS -> true
             }
@@ -93,7 +94,7 @@ class SettingsState {
     val startVideoPlayback =
         derivedStateOf {
             when (automaticallyStartPlayback) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
+                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
                 ConnectivityType.NEVER -> false
                 ConnectivityType.ALWAYS -> true
             }
@@ -102,7 +103,7 @@ class SettingsState {
     val showImages =
         derivedStateOf {
             when (automaticallyShowImages) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
+                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
                 ConnectivityType.NEVER -> false
                 ConnectivityType.ALWAYS -> true
             }
@@ -223,9 +224,17 @@ class SharedPreferencesViewModel : ViewModel() {
         }
     }
 
-    fun updateConnectivityStatusState(isOnMobileDataState: State<Boolean>) {
-        if (sharedPrefs.isOnMobileData != isOnMobileDataState) {
-            sharedPrefs.isOnMobileData = isOnMobileDataState
+    fun updateConnectivityStatusState(isOnMobileDataState: Boolean) {
+        if (sharedPrefs.isOnMobileOrMeteredConnection != isOnMobileDataState) {
+            Log.d("Connectivity", "updateConnectivityStatusState ${sharedPrefs.currentNetworkId}: ${sharedPrefs.isOnMobileOrMeteredConnection} -> $isOnMobileDataState")
+            sharedPrefs.isOnMobileOrMeteredConnection = isOnMobileDataState
+        }
+    }
+
+    fun updateNetworkState(networkId: Long) {
+        if (sharedPrefs.currentNetworkId != networkId) {
+            Log.d("Connectivity", "updateNetworkState ${sharedPrefs.currentNetworkId} -> $networkId")
+            sharedPrefs.currentNetworkId = networkId
         }
     }
 

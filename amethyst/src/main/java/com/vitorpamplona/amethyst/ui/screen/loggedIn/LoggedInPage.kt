@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +53,8 @@ import com.vitorpamplona.amethyst.ui.tor.TorStatus
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -75,9 +78,7 @@ fun LoggedInPage(
 
     accountViewModel.firstRoute = route
 
-    LaunchedEffect(key1 = accountViewModel) {
-        accountViewModel.restartServices()
-    }
+    ManageRelayServices(accountViewModel, sharedPreferencesViewModel)
 
     ManageTorInstance(accountViewModel)
 
@@ -93,39 +94,58 @@ fun LoggedInPage(
 }
 
 @Composable
+fun ManageRelayServices(
+    accountViewModel: AccountViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+) {
+    var job = remember<Job?> { null }
+
+    LaunchedEffect(
+        sharedPreferencesViewModel.sharedPrefs.currentNetworkId,
+        sharedPreferencesViewModel.sharedPrefs.isOnMobileOrMeteredConnection,
+    ) {
+        Log.d("ManageRelayServices", "Change Network Id/State ${sharedPreferencesViewModel.sharedPrefs.currentNetworkId}, forcing restart")
+        if (sharedPreferencesViewModel.sharedPrefs.isOnMobileOrMeteredConnection) {
+            HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_MOBILE)
+        } else {
+            HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_WIFI)
+        }
+        accountViewModel.forceRestartServices()
+    }
+
+    LifecycleResumeEffect(sharedPreferencesViewModel, accountViewModel) {
+        job?.cancel()
+        Log.d("ManageRelayServices", "Starting Relay Services")
+        job = accountViewModel.justStart()
+
+        onPauseOrDispose {
+            job?.cancel()
+            job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    delay(30000) // 30 seconds
+                    Log.d("ManageRelayServices", "Pausing Relay Services")
+                    accountViewModel.justPause()
+                }
+        }
+    }
+}
+
+@Composable
 fun NotificationRegistration(accountViewModel: AccountViewModel) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     var job = remember<Job?> { null }
 
-    LaunchedEffect(accountViewModel) {
+    LifecycleResumeEffect(key1 = accountViewModel) {
+        Log.d("RegisterAccounts", "Registering for push notifications")
         job?.cancel()
         job =
-            launch {
+            scope.launch {
                 val okHttpClient = HttpClientManager.getHttpClient(accountViewModel.account.shouldUseTorForTrustedRelays())
                 PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), okHttpClient)
             }
-    }
 
-    DisposableEffect(key1 = accountViewModel) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> {
-                        job?.cancel()
-                        job =
-                            scope.launch {
-                                val okHttpClient = HttpClientManager.getHttpClient(accountViewModel.account.shouldUseTorForTrustedRelays())
-                                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), okHttpClient)
-                            }
-                    }
-                    else -> {}
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
+        onPauseOrDispose {
+            job.cancel()
         }
     }
 }
@@ -143,39 +163,21 @@ fun ManageTorInstance(accountViewModel: AccountViewModel) {
 @Composable
 fun ManageTorInstanceInner(accountViewModel: AccountViewModel) {
     val context = LocalContext.current.applicationContext
-    val lifeCycleOwner = LocalLifecycleOwner.current
 
     val scope = rememberCoroutineScope()
     var job = remember<Job?> { null }
 
-    DisposableEffect(key1 = accountViewModel) {
+    LifecycleResumeEffect(key1 = accountViewModel) {
         job?.cancel()
         job = null
         TorManager.startTorIfNotAlreadyOn(context)
 
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> {
-                        job?.cancel()
-                        job = null
-                        TorManager.startTorIfNotAlreadyOn(context)
-                    }
-                    Lifecycle.Event.ON_PAUSE -> {
-                        job =
-                            scope.launch {
-                                delay(5000) // 5 seconds
-                                TorManager.stopTor(context)
-                            }
-                    }
-                    else -> {}
+        onPauseOrDispose {
+            job =
+                scope.launch {
+                    delay(30000) // 5 seconds
+                    TorManager.stopTor(context)
                 }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-            TorManager.stopTor(context)
         }
     }
 }
@@ -186,6 +188,7 @@ fun WatchConnection(accountViewModel: AccountViewModel) {
 
     LaunchedEffect(key1 = status, key2 = accountViewModel) {
         if (status is TorStatus.Active) {
+            Log.d("ServiceManager", "Tor is Active, force restart connections")
             accountViewModel.changeProxyPort((status as TorStatus.Active).port)
         }
     }
@@ -224,7 +227,6 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                         accountViewModel.account.signer.launcher.registerLauncher(
                             launcher = {
                                 try {
-                                    activity.prepareToLaunchSigner()
                                     launcher.launch(it)
                                 } catch (e: Exception) {
                                     if (e is CancellationException) throw e
@@ -244,7 +246,6 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
             accountViewModel.account.signer.launcher.registerLauncher(
                 launcher = {
                     try {
-                        activity.prepareToLaunchSigner()
                         launcher.launch(it)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e

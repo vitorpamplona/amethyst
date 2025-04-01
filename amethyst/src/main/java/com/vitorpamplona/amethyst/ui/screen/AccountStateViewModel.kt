@@ -96,7 +96,7 @@ class AccountStateViewModel : ViewModel() {
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
 
-        viewModelScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseForGoodAndClearAccount() }
+        viewModelScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseAndLogOff() }
     }
 
     suspend fun loginAndStartUI(

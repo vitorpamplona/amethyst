@@ -1250,26 +1250,34 @@ class AccountViewModel(
         }
     }
 
-    fun setTorSettings(newTorSettings: TorSettings) {
+    fun setTorSettings(newTorSettings: TorSettings) =
         viewModelScope.launch(Dispatchers.IO) {
             // Only restart relay connections if port or type changes
             if (account.settings.setTorSettings(newTorSettings)) {
                 Amethyst.instance.serviceManager.forceRestart()
             }
         }
-    }
 
-    fun restartServices() {
+    fun forceRestartServices() =
         viewModelScope.launch(Dispatchers.IO) {
-            Amethyst.instance.serviceManager.restartIfDifferentAccount(account)
+            Amethyst.instance.serviceManager.setAccountAndRestart(account)
         }
-    }
 
-    fun changeProxyPort(port: Int) {
+    fun justStart() =
+        viewModelScope.launch(Dispatchers.IO) {
+            Amethyst.instance.serviceManager.justStartIfItHasAccount()
+        }
+
+    fun justPause() =
+        viewModelScope.launch(Dispatchers.IO) {
+            Amethyst.instance.serviceManager.cleanObservers()
+            Amethyst.instance.serviceManager.pauseForGood()
+        }
+
+    fun changeProxyPort(port: Int) =
         viewModelScope.launch(Dispatchers.IO) {
             Amethyst.instance.serviceManager.forceRestart()
         }
-    }
 
     class Factory(
         val accountSettings: AccountSettings,

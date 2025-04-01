@@ -293,6 +293,7 @@ class ServiceManager(
         start: Boolean = true,
         pause: Boolean = true,
     ) {
+        Log.d("ManageRelayServices", "Force Restart $account $start $pause")
         if (pause) {
             pause()
         }
@@ -306,25 +307,25 @@ class ServiceManager(
         }
     }
 
-    fun restartIfDifferentAccount(account: Account) {
-        if (this.account != account) {
-            forceRestart(account, true, true)
-        }
+    fun setAccountAndRestart(account: Account) {
+        forceRestart(account, true, true)
     }
 
     fun forceRestart() {
         forceRestart(null, true, true)
     }
 
-    fun justStart() {
-        forceRestart(null, true, false)
+    fun justStartIfItHasAccount() {
+        if (account != null) {
+            forceRestart(null, true, false)
+        }
     }
 
     fun pauseForGood() {
         forceRestart(null, false, true)
     }
 
-    fun pauseForGoodAndClearAccount() {
+    fun pauseAndLogOff() {
         account = null
         forceRestart(null, false, true)
     }
