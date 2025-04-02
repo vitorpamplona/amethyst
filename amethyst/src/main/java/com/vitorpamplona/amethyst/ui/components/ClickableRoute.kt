@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.LocalContentColor
@@ -60,6 +61,8 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -200,7 +203,7 @@ private fun DisplayNoteLink(
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
-            route = remember(noteState) { "Channel/$hex" },
+            route = remember(noteState) { Route.Channel(hex) },
             nav = nav,
         )
     } else if (note.event is PrivateDmEvent || kind == PrivateDmEvent.KIND) {
@@ -208,7 +211,7 @@ private fun DisplayNoteLink(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
             route =
-                remember(noteState) { (note.author?.pubkeyHex ?: hex).let { "RoomByAuthor/$it" } },
+                remember(noteState) { (note.author?.pubkeyHex ?: hex).let { Route.RoomByAuthor(it) } },
             nav = nav,
         )
     } else if (channelHex != null) {
@@ -222,7 +225,7 @@ private fun DisplayNoteLink(
             CreateClickableText(
                 clickablePart = channelDisplayName,
                 suffix = addedCharts,
-                route = remember(noteState) { "Channel/${baseChannel.idHex}" },
+                route = remember(noteState) { Route.Channel(baseChannel.idHex) },
                 nav = nav,
             )
         }
@@ -230,7 +233,7 @@ private fun DisplayNoteLink(
         CreateClickableText(
             clickablePart = noteIdDisplayNote,
             suffix = addedCharts,
-            route = remember(noteState) { "Event/$hex" },
+            route = remember(noteState) { Route.EventRedirect(hex) },
             nav = nav,
         )
     }
@@ -255,7 +258,7 @@ private fun DisplayAddress(
     noteBase?.let {
         val noteState by it.live().metadata.observeAsState()
 
-        val route = remember(noteState) { "Note/${nip19.aTag()}" }
+        val route = remember(noteState) { Route.Note(nip19.aTag()) }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
 
         CreateClickableText(
@@ -329,7 +332,7 @@ public fun RenderUserAsClickableText(
         clickablePart = userState?.bestName() ?: ("@" + baseUser.pubkeyDisplayHex()),
         suffix = additionalChars?.ifBlank { null },
         maxLines = 1,
-        route = "User/${baseUser.pubkeyHex}",
+        route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,
         tags = userState?.tags ?: EmptyTagList,
     )
@@ -343,7 +346,7 @@ fun CreateClickableText(
     overrideColor: Color? = null,
     fontWeight: FontWeight? = null,
     fontSize: TextUnit = TextUnit.Unspecified,
-    route: String,
+    route: Route,
     nav: INav,
 ) {
     CreateClickableText(
@@ -635,7 +638,7 @@ fun CreateClickableTextWithEmoji(
     overrideColor: Color? = null,
     fontWeight: FontWeight = FontWeight.Normal,
     fontSize: TextUnit = TextUnit.Unspecified,
-    route: String,
+    route: Route,
     nav: INav,
     tags: ImmutableListOfLists<String>?,
 ) {

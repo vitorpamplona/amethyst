@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -96,7 +97,7 @@ fun DisplayReward(
         ) {
             ClickableText(
                 text = AnnotatedString("#bounty"),
-                onClick = { nav.nav("Hashtag/bounty") },
+                onClick = { nav.nav(Route.Hashtag("bounty")) },
                 style =
                     LocalTextStyle.current.copy(
                         color =

@@ -32,7 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
@@ -43,8 +43,7 @@ fun NewNoteButton(
 ) {
     FloatingActionButton(
         onClick = {
-            val route = buildNewPostRoute(enableGeolocation = enableGeolocation)
-            nav.nav(route)
+            nav.nav(Route.NewPost(enableGeolocation = enableGeolocation))
         },
         modifier = Size55Modifier,
         shape = CircleShape,

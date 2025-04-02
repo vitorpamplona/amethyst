@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
@@ -230,7 +231,7 @@ fun ZapTheDevsCard(
                                 append("#value4value")
                             }
                         },
-                    onClick = { nav.nav("Hashtag/value4value") },
+                    onClick = { nav.nav(Route.Hashtag("value4value")) },
                 )
 
                 Spacer(modifier = StdVertSpacer)

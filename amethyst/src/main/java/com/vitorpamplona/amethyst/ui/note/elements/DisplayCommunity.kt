@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -57,7 +58,7 @@ private fun DisplayCommunity(
         remember(note) { note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.KIND) } ?: return
 
     val displayTag = remember(note) { AnnotatedString(getCommunityShortName(communityTag)) }
-    val route = remember(note) { "Community/${communityTag.toTag()}" }
+    val route = remember(note) { Route.Community(communityTag.toTag()) }
 
     ClickableText(
         text = displayTag,

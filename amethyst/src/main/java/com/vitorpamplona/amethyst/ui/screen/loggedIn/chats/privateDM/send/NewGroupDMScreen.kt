@@ -74,6 +74,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -136,6 +137,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
+@Composable
+fun NewGroupDMScreen(
+    message: String? = null,
+    attachment: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+) {
+    NewGroupDMScreen(message, attachment?.ifBlank { null }?.toUri(), accountViewModel, nav)
+}
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable

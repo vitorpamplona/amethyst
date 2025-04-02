@@ -112,7 +112,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -572,7 +572,7 @@ private fun BoostWithDialog(
         accountViewModel,
         onQuotePress = {
             nav.nav {
-                buildNewPostRoute(
+                Route.NewPost(
                     quote = baseNote.idHex,
                     version =
                         (editState.value as? GenericLoadable.Loaded)
@@ -594,7 +594,7 @@ private fun BoostWithDialog(
                         null
                     }
 
-                buildNewPostRoute(
+                Route.NewPost(
                     baseReplyTo = replyTo?.idHex,
                     fork = baseNote.idHex,
                     version =
@@ -624,7 +624,7 @@ private fun ReplyReactionWithDialog(
                     room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
                     draftMessage = null,
                     replyId = noteEvent.id,
-                    quoteId = null,
+                    draftId = null,
                     accountViewModel = accountViewModel,
                 )
             }
@@ -634,13 +634,13 @@ private fun ReplyReactionWithDialog(
                     room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
                     draftMessage = null,
                     replyId = noteEvent.id,
-                    quoteId = null,
+                    draftId = null,
                     accountViewModel = accountViewModel,
                 )
             }
         } else {
             nav.nav {
-                buildNewPostRoute(
+                Route.NewPost(
                     baseReplyTo = baseNote.idHex,
                     quote = null,
                 )

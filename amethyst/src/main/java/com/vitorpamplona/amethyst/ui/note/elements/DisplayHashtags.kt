@@ -37,6 +37,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
 
@@ -70,7 +71,7 @@ private fun DisplayTagList(
     nav: INav,
 ) {
     val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
-    val route = remember(firstTag) { "Hashtag/$firstTag" }
+    val route = remember(firstTag) { Route.Hashtag(firstTag) }
 
     ClickableText(
         text = displayTag,

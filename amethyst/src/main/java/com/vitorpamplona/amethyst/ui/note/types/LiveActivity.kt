@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -253,7 +254,7 @@ fun RenderLiveActivityEventInner(
             modifier =
                 Modifier
                     .padding(vertical = 5.dp)
-                    .clickable { nav.nav("User/${it.second.pubkeyHex}") },
+                    .clickable { nav.nav(routeFor(it.second)) },
         ) {
             ClickableUserPicture(it.second, 25.dp, accountViewModel)
             Spacer(StdHorzSpacer)

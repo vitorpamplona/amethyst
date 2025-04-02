@@ -223,7 +223,7 @@ fun LongCommunityHeader(
 
     participantUsers.forEach {
         Row(
-            lineModifier.clickable { nav.nav("User/${it.second.pubkeyHex}") },
+            lineModifier.clickable { nav.nav(routeFor(it.second)) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             it.first.role?.let { it1 ->

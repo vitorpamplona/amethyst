@@ -216,16 +216,16 @@ private fun DisplayQuoteAuthor(
 
 @Composable
 fun DisplayEntryForUser(
-    userBase: User,
+    baseUser: User,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userMetadata by userBase.live().userMetadataInfo.observeAsState()
+    val userMetadata by baseUser.live().userMetadataInfo.observeAsState()
 
     CreateClickableTextWithEmoji(
-        clickablePart = userMetadata?.bestName() ?: userBase.pubkeyDisplayHex(),
+        clickablePart = userMetadata?.bestName() ?: baseUser.pubkeyDisplayHex(),
         maxLines = 1,
-        route = "User/${userBase.pubkeyHex}",
+        route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,
         tags = userMetadata?.tags,
     )

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -105,7 +106,7 @@ fun DisplayUncitedHashtags(
             unusedHashtags.forEach { hashtag ->
                 ClickableText(
                     text = remember { AnnotatedString("#$hashtag ") },
-                    onClick = { nav.nav("Hashtag/$hashtag") },
+                    onClick = { nav.nav(Route.Hashtag(hashtag)) },
                     style = style,
                 )
             }

@@ -74,7 +74,6 @@ import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
@@ -149,11 +148,11 @@ fun VideoScreen(
             StoriesTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Video, accountViewModel) { route, _ ->
+            AppBottomBar(Route.Video, accountViewModel) { route ->
                 if (route == Route.Video) {
                     videoFeedContentState.sendToTop()
                 } else {
-                    nav.newStack(route.base)
+                    nav.newStack(route)
                 }
             }
         },
@@ -448,12 +447,11 @@ fun ReactionsColumn(
             iconSizeModifier = Size40Modifier,
             iconSize = Size40dp,
             onQuotePress = {
-//                wantsToQuote = baseNote
-                val route =
-                    buildNewPostRoute(
+                nav.nav(
+                    Route.NewPost(
                         quote = baseNote.idHex,
-                    )
-                nav.nav(route)
+                    ),
+                )
             },
             onForkPress = {
             },

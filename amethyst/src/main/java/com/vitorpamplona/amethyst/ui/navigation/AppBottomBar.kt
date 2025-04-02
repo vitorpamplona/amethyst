@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BottomAppBarDefaults.windowInsets
 import androidx.compose.material3.HorizontalDivider
@@ -50,20 +51,23 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import kotlinx.collections.immutable.persistentListOf
 
 val bottomNavigationItems =
     persistentListOf(
-        Route.Home,
-        Route.Message,
-        Route.Video,
-        Route.Discover,
-        Route.Notification,
+        BottomBarRoute(Route.Home, R.drawable.ic_home, R.string.route_home, Modifier.size(Size25dp), Modifier.size(Size24dp)),
+        BottomBarRoute(Route.Message, R.drawable.ic_dm, R.string.route_messages),
+        BottomBarRoute(Route.Video, R.drawable.ic_video, R.string.route_video),
+        BottomBarRoute(Route.Discover, R.drawable.ic_sensors, R.string.route_discover),
+        BottomBarRoute(Route.Notification, R.drawable.ic_notifications, R.string.route_notifications),
     )
 
 enum class Keyboard {
@@ -119,7 +123,7 @@ fun IfKeyboardClosed(inner: @Composable () -> Unit) {
 fun AppBottomBar(
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
-    nav: (Route, Boolean) -> Unit,
+    nav: (Route) -> Unit,
 ) {
     IfKeyboardClosed { RenderBottomMenu(selectedRoute, accountViewModel, nav) }
 }
@@ -128,7 +132,7 @@ fun AppBottomBar(
 private fun RenderBottomMenu(
     selectedRoute: Route?,
     accountViewModel: AccountViewModel,
-    nav: (Route, Boolean) -> Unit,
+    nav: (Route) -> Unit,
 ) {
     Column(
         modifier =
@@ -146,7 +150,7 @@ private fun RenderBottomMenu(
             tonalElevation = Size0dp,
         ) {
             bottomNavigationItems.forEach { item ->
-                HasNewItemsIcon(item == selectedRoute, item, accountViewModel, nav)
+                HasNewItemsIcon(item.route == selectedRoute, item, accountViewModel, nav)
             }
         }
     }
@@ -155,28 +159,28 @@ private fun RenderBottomMenu(
 @Composable
 private fun RowScope.HasNewItemsIcon(
     selected: Boolean,
-    route: Route,
+    bottomNav: BottomBarRoute,
     accountViewModel: AccountViewModel,
-    nav: (Route, Boolean) -> Unit,
+    nav: (Route) -> Unit,
 ) {
     NavigationBarItem(
         alwaysShowLabel = false,
         icon = {
             NotifiableIcon(
                 selected,
-                route,
+                bottomNav,
                 accountViewModel,
             )
         },
         selected = selected,
-        onClick = { nav(route, selected) },
+        onClick = { nav(bottomNav.route) },
     )
 }
 
 @Composable
 private fun NotifiableIcon(
     selected: Boolean,
-    route: Route,
+    route: BottomBarRoute,
     accountViewModel: AccountViewModel,
 ) {
     Box(route.notifSize) {
@@ -187,7 +191,7 @@ private fun NotifiableIcon(
             tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
         )
 
-        AddNotifIconIfNeeded(route, accountViewModel, Modifier.align(Alignment.TopEnd))
+        AddNotifIconIfNeeded(route.route, accountViewModel, Modifier.align(Alignment.TopEnd))
     }
 }
 

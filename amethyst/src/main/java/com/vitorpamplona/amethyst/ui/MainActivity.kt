@@ -58,8 +58,6 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
@@ -125,39 +123,39 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun uriToRoute(uri: String?): String? =
+fun uriToRoute(uri: String?): Route? =
     if (uri?.startsWith("notifications", true) == true || uri?.startsWith("nostr:notifications", true) == true) {
-        Route.Notification.route.replace("{scrollToTop}", "true")
+        Route.Notification
     } else {
         if (uri?.startsWith("hashtag?id=") == true || uri?.startsWith("nostr:hashtag?id=") == true) {
-            Route.Hashtag.route.replace("{id}", uri.removePrefix("nostr:").removePrefix("hashtag?id="))
+            Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id="))
         } else {
             val nip19 = Nip19Parser.uriToRoute(uri)?.entity
             when (nip19) {
-                is NPub -> "User/${nip19.hex}"
-                is NProfile -> "User/${nip19.hex}"
-                is Note -> "Note/${nip19.hex}"
+                is NPub -> Route.Profile(nip19.hex)
+                is NProfile -> Route.Profile(nip19.hex)
+                is Note -> Route.Note(nip19.hex)
                 is NEvent -> {
                     if (nip19.kind == PrivateDmEvent.KIND) {
-                        nip19.author?.let { "RoomByAuthor/$it" }
+                        nip19.author?.let { Route.RoomByAuthor(it) }
                     } else if (
                         nip19.kind == ChannelMessageEvent.KIND ||
                         nip19.kind == ChannelCreateEvent.KIND ||
                         nip19.kind == ChannelMetadataEvent.KIND
                     ) {
-                        "Channel/${nip19.hex}"
+                        Route.Channel(nip19.hex)
                     } else {
-                        "Event/${nip19.hex}"
+                        Route.EventRedirect(nip19.hex)
                     }
                 }
 
                 is NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        "Community/${nip19.aTag()}"
+                        Route.Community(nip19.aTag())
                     } else if (nip19.kind == LiveActivitiesEvent.KIND) {
-                        "Channel/${nip19.aTag()}"
+                        Route.Channel(nip19.aTag())
                     } else {
-                        "Event/${nip19.aTag()}"
+                        Route.EventRedirect(nip19.aTag())
                     }
                 }
 
@@ -165,7 +163,7 @@ fun uriToRoute(uri: String?): String? =
                     if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
                         LocalCache.verifyAndConsume(nip19.event, null)
                     }
-                    "Event/${nip19.event.id}"
+                    Route.EventRedirect(nip19.event.id)
                 }
 
                 else -> null
@@ -174,8 +172,7 @@ fun uriToRoute(uri: String?): String? =
             ?: try {
                 uri?.let {
                     Nip47WalletConnect.parse(it)
-                    val encodedUri = URLEncoder.encode(it, StandardCharsets.UTF_8.toString())
-                    Route.NIP47Setup.base + "?nip47=" + encodedUri
+                    Route.Nip47NWCSetup(it)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

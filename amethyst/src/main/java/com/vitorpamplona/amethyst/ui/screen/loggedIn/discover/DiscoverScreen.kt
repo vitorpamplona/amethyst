@@ -129,28 +129,28 @@ fun DiscoverScreen(
                     TabItem(
                         R.string.discover_content,
                         discoveryContentNIP89FeedContentState,
-                        Route.Discover.base + "DiscoverContent",
+                        "DiscoverDiscoverContent",
                         ScrollStateKeys.DISCOVER_CONTENT,
                         AppDefinitionEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_live,
                         discoveryLiveFeedContentState,
-                        Route.Discover.base + "Live",
+                        "DiscoverLive",
                         ScrollStateKeys.DISCOVER_LIVE,
                         LiveActivitiesEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_community,
                         discoveryCommunityFeedContentState,
-                        Route.Discover.base + "Community",
+                        "DiscoverCommunity",
                         ScrollStateKeys.DISCOVER_COMMUNITY,
                         CommunityDefinitionEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_marketplace,
                         discoveryMarketplaceFeedContentState,
-                        Route.Discover.base + "Marketplace",
+                        "DiscoverMarketplace",
                         ScrollStateKeys.DISCOVER_MARKETPLACE,
                         ClassifiedsEvent.KIND,
                         useGridLayout = true,
@@ -158,7 +158,7 @@ fun DiscoverScreen(
                     TabItem(
                         R.string.discover_chat,
                         discoveryChatFeedContentState,
-                        Route.Discover.base + "Chats",
+                        "DiscoverChats",
                         ScrollStateKeys.DISCOVER_CHATS,
                         ChannelCreateEvent.KIND,
                     ),
@@ -229,11 +229,11 @@ private fun DiscoverPages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Discover, accountViewModel) { route, _ ->
+            AppBottomBar(Route.Discover, accountViewModel) { route ->
                 if (route == Route.Discover) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
-                    nav.newStack(route.base)
+                    nav.newStack(route)
                 }
             }
         },

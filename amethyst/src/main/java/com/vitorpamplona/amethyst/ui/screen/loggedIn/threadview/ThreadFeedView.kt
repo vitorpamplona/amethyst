@@ -882,7 +882,7 @@ private fun RenderClassifiedsReaderForThread(
                                 nav.nav {
                                     routeToMessage(
                                         it,
-                                        note.toNostrUri() + "\n\n" + msg,
+                                        draftMessage = note.toNostrUri() + "\n\n" + msg,
                                         accountViewModel = accountViewModel,
                                     )
                                 }

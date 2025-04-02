@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.R.attr.onClick
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -433,8 +434,6 @@ fun ListContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val route = remember(accountViewModel) { "User/${accountViewModel.userProfile().pubkeyHex}" }
-
     var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
@@ -445,39 +444,39 @@ fun ListContent(
 
     Column(modifier) {
         NavigationRow(
-            title = stringRes(R.string.profile),
-            icon = Route.Profile.icon,
+            title = R.string.profile,
+            icon = R.drawable.ic_profile,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
-            route = route,
+            route = remember { Route.Profile(accountViewModel.userProfile().pubkeyHex) },
         )
 
         NavigationRow(
-            title = stringRes(R.string.bookmarks),
-            icon = Route.Bookmarks.icon,
+            title = R.string.bookmarks,
+            icon = R.drawable.ic_bookmarks,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Bookmarks.route,
+            route = Route.Bookmarks,
         )
 
         NavigationRow(
-            title = stringRes(R.string.drafts),
-            icon = Route.Drafts.icon,
+            title = R.string.drafts,
+            icon = R.drawable.ic_topics,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Drafts.route,
+            route = Route.Drafts,
         )
 
         IconRowRelays(
             accountViewModel = accountViewModel,
             onClick = {
                 nav.closeDrawer()
-                nav.nav(Route.EditRelays.base)
+                nav.nav(Route.EditRelays())
             },
         )
 
         IconRow(
-            title = stringRes(R.string.media_servers),
+            title = R.string.media_servers,
             icon = Icons.Outlined.CloudUpload,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
@@ -487,15 +486,15 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringRes(R.string.security_filters),
-            icon = Route.BlockedUsers.icon,
+            title = R.string.security_filters,
+            icon = R.drawable.ic_security,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.BlockedUsers.route,
+            route = Route.SecurityFilters,
         )
 
         IconRow(
-            title = stringRes(R.string.privacy_options),
+            title = R.string.privacy_options,
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
@@ -506,7 +505,7 @@ fun ListContent(
 
         accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
-                title = stringRes(R.string.backup_keys),
+                title = R.string.backup_keys,
                 icon = R.drawable.ic_key,
                 tint = MaterialTheme.colorScheme.onBackground,
                 onClick = {
@@ -517,17 +516,17 @@ fun ListContent(
         }
 
         NavigationRow(
-            title = stringRes(R.string.preferences),
-            icon = Route.Settings.icon,
+            title = R.string.preferences,
+            icon = R.drawable.ic_settings,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Settings.route,
+            route = Route.Settings,
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            title = stringRes(R.string.drawer_accounts),
+            title = R.string.drawer_accounts,
             icon = Icons.Outlined.GroupAdd,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
@@ -594,11 +593,11 @@ private fun RenderRelayStatus(relayPool: RelayPoolStatus) {
 
 @Composable
 fun NavigationRow(
-    title: String,
+    title: Int,
     icon: Int,
     tint: Color,
     nav: INav,
-    route: String,
+    route: Route,
 ) {
     IconRow(
         title,
@@ -613,7 +612,7 @@ fun NavigationRow(
 
 @Composable
 fun IconRow(
-    title: String,
+    title: Int,
     icon: Int,
     tint: Color,
     onClick: () -> Unit,
@@ -632,13 +631,13 @@ fun IconRow(
         ) {
             Icon(
                 painter = painterResource(icon),
-                null,
+                contentDescription = stringRes(title),
                 modifier = Size22Modifier,
                 tint = tint,
             )
             Text(
                 modifier = IconRowTextModifier,
-                text = title,
+                text = stringRes(title),
                 fontSize = Font18SP,
             )
         }
@@ -647,7 +646,7 @@ fun IconRow(
 
 @Composable
 fun IconRow(
-    title: String,
+    title: Int,
     icon: ImageVector,
     tint: Color,
     onClick: () -> Unit,
@@ -657,7 +656,7 @@ fun IconRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(
-                    onClickLabel = title,
+                    onClickLabel = stringRes(title),
                     onClick = onClick,
                 ),
     ) {
@@ -667,13 +666,13 @@ fun IconRow(
         ) {
             Icon(
                 imageVector = icon,
-                null,
+                contentDescription = stringRes(title),
                 modifier = Size22Modifier,
                 tint = tint,
             )
             Text(
                 modifier = IconRowTextModifier,
-                text = title,
+                text = stringRes(title),
                 fontSize = Font18SP,
             )
         }
@@ -754,7 +753,7 @@ fun BottomContent(
                         }
                     },
                 onClick = {
-                    nav.nav("Note/${BuildConfig.RELEASE_NOTES_ID}")
+                    nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
                     nav.closeDrawer()
                 },
                 modifier = Modifier.padding(start = 16.dp),

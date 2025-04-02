@@ -30,13 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 
 @Composable
 fun ClickableUserTag(
     user: User,
     nav: INav,
 ) {
-    val route = remember { "User/${user.pubkeyHex}" }
+    val route = remember(user) { routeFor(user) }
 
     val innerUserState by user.live().metadata.observeAsState()
 

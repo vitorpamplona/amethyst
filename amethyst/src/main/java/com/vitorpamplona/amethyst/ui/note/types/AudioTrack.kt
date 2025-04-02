@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVi
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -118,7 +119,7 @@ fun AudioTrackHeader(
                         Modifier
                             .padding(top = 5.dp, start = 10.dp, end = 10.dp)
                             .clickable {
-                                nav.nav("User/${it.second.pubkeyHex}")
+                                nav.nav(routeFor(it.second))
                             },
                 ) {
                     ClickableUserPicture(it.second, 25.dp, accountViewModel)

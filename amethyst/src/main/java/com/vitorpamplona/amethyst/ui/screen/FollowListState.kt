@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -168,6 +169,7 @@ class FollowListState(
                             "Community/${communityNote.idHex}",
                             CommunityName(communityNote),
                             CodeNameType.ROUTE,
+                            route = Route.Community(communityNote.idHex),
                             kinds = DEFAULT_COMMUNITY_FEEDS,
                             aTags = listOf(communityNote.idHex),
                             relays = account.activeGlobalRelays().toList(),
@@ -181,6 +183,7 @@ class FollowListState(
                         "Hashtag/$it",
                         HashtagName(it),
                         CodeNameType.ROUTE,
+                        route = Route.Hashtag(it),
                         kinds = DEFAULT_FEED_KINDS,
                         tTags = listOf(it),
                         relays = account.activeGlobalRelays().toList(),
@@ -193,6 +196,7 @@ class FollowListState(
                         "Geohash/$it",
                         GeoHashName(it),
                         CodeNameType.ROUTE,
+                        route = Route.Geohash(it),
                         kinds = DEFAULT_FEED_KINDS,
                         gTags = listOf(it),
                         relays = account.activeGlobalRelays().toList(),
@@ -298,6 +302,7 @@ abstract class FeedDefinition(
     val code: String,
     val name: Name,
     val type: CodeNameType,
+    val route: Route?,
 )
 
 @Immutable
@@ -307,13 +312,14 @@ class GlobalFeedDefinition(
     type: CodeNameType,
     val kinds: List<Int>,
     val relays: List<String>,
-) : FeedDefinition(code, name, type)
+) : FeedDefinition(code, name, type, null)
 
 @Immutable
 class TagFeedDefinition(
     code: String,
     name: Name,
     type: CodeNameType,
+    route: Route?,
     val kinds: List<Int>,
     val relays: List<String>,
     val pTags: List<String>? = null,
@@ -321,7 +327,7 @@ class TagFeedDefinition(
     val aTags: List<String>? = null,
     val tTags: List<String>? = null,
     val gTags: List<String>? = null,
-) : FeedDefinition(code, name, type)
+) : FeedDefinition(code, name, type, route)
 
 @Immutable
 class AroundMeFeedDefinition(
@@ -329,7 +335,7 @@ class AroundMeFeedDefinition(
     name: Name,
     type: CodeNameType,
     val kinds: List<Int>,
-) : FeedDefinition(code, name, type)
+) : FeedDefinition(code, name, type, null)
 
 @Immutable
 class PeopleListOutBoxFeedDefinition(
@@ -338,7 +344,7 @@ class PeopleListOutBoxFeedDefinition(
     type: CodeNameType,
     val kinds: List<Int>,
     val unpackList: List<String>,
-) : FeedDefinition(code, name, type)
+) : FeedDefinition(code, name, type, null)
 
 val DEFAULT_FEED_KINDS =
     listOf(

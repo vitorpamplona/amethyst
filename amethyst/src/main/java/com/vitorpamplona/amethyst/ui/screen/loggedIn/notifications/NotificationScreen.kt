@@ -100,11 +100,11 @@ fun NotificationScreen(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Notification, accountViewModel) { route, _ ->
+            AppBottomBar(Route.Notification, accountViewModel) { route ->
                 if (route == Route.Notification) {
                     notifFeedContentState.invalidateDataAndSendToTop(true)
                 } else {
-                    nav.newStack(route.base)
+                    nav.newStack(route)
                 }
             }
         },
@@ -117,7 +117,7 @@ fun NotificationScreen(
                 feedContent = notifFeedContentState,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = Route.Notification.base,
+                routeForLastRead = "Notification",
                 scrollStateKey = ScrollStateKeys.NOTIFICATION_SCREEN,
             )
         }

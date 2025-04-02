@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -349,7 +350,7 @@ private fun RenderSearchResults(
                     key = { _, item -> "u" + item.pubkeyHex },
                 ) { _, item ->
                     UserComposeForChat(item, accountViewModel) {
-                        accountViewModel.createChatRoomFor(item) { nav.nav("Room/$it") }
+                        accountViewModel.createChatRoomFor(item) { nav.nav(Route.Room(it)) }
 
                         searchBarViewModel.clear()
                     }
@@ -368,7 +369,7 @@ private fun RenderSearchResults(
                         loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                     ) {
-                        nav.nav("Channel/${item.idHex}")
+                        nav.nav(Route.Channel(item.idHex))
                         searchBarViewModel.clear()
                     }
 

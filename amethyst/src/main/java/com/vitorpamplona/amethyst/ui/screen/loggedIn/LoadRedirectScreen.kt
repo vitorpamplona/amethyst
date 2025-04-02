@@ -157,15 +157,15 @@ fun redirect(
         }
     } else {
         if (event is ChannelCreateEvent) {
-            nav.popUpTo("Channel/${event.id}", Route.Event.route)
+            nav.popUpTo(Route.Channel(event.id), Route.EventRedirect::class)
         } else if (event is ChatroomKeyable) {
             val withKey = event.chatroomKey(accountViewModel.userProfile().pubkeyHex)
             accountViewModel.userProfile().createChatroom(withKey)
-            nav.popUpTo("Room/${withKey.hashCode()}", Route.Event.route)
+            nav.popUpTo(Route.Room(withKey.hashCode()), Route.EventRedirect::class)
         } else if (channelHex != null) {
-            nav.popUpTo("Channel/$channelHex", Route.Event.route)
+            nav.popUpTo(Route.Channel(channelHex), Route.EventRedirect::class)
         } else {
-            nav.popUpTo("Note/${event.id}", Route.Event.route)
+            nav.popUpTo(Route.Note(event.id), Route.EventRedirect::class)
         }
     }
 }

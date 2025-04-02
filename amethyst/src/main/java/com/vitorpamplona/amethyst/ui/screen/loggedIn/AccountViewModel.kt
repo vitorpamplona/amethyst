@@ -145,7 +145,7 @@ class AccountViewModel(
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
 
-    var firstRoute: String? = null
+    var firstRoute: Route? = null
 
     // TODO: contact lists are not notes yet
     // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
@@ -1230,7 +1230,11 @@ class AccountViewModel(
                 note.event?.createdAt?.let { date ->
                     val route = routeFor(note, accountViewModel.account.userProfile())
                     route?.let {
-                        account.markAsRead(route, date)
+                        if (route is Route.Room) {
+                            account.markAsRead("Room/${route.id}", date)
+                        } else if (route is Route.Channel) {
+                            account.markAsRead("Channel/${route.id}", date)
+                        }
                     }
                 }
             }

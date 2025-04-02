@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -53,7 +54,7 @@ fun MessageButton(
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            scope.launch(Dispatchers.IO) { accountViewModel.createChatRoomFor(user) { nav.nav("Room/$it") } }
+            scope.launch(Dispatchers.IO) { accountViewModel.createChatRoomFor(user) { nav.nav(Route.Room(it)) } }
         },
         contentPadding = ZeroPadding,
     ) {

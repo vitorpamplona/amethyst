@@ -88,7 +88,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -173,11 +173,11 @@ fun NoteQuickActionMenu(
         note = note,
         onDismiss = onDismiss,
         onWantsToEditDraft = {
-            val route =
-                buildNewPostRoute(
+            nav.nav(
+                Route.NewPost(
                     draft = note.idHex,
-                )
-            nav.nav(route)
+                ),
+            )
         },
         accountViewModel = accountViewModel,
         nav = nav,

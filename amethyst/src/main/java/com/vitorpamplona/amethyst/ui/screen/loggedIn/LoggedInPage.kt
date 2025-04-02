@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.tor.TorManager
@@ -62,7 +63,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoggedInPage(
     accountSettings: AccountSettings,
-    route: String?,
+    route: Route?,
     accountStateViewModel: AccountStateViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {

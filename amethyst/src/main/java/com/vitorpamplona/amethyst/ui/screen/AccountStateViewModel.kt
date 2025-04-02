@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
@@ -92,7 +93,7 @@ class AccountStateViewModel : ViewModel() {
         }
     }
 
-    private suspend fun tryLoginExistingAccount(route: String? = null) =
+    private suspend fun tryLoginExistingAccount(route: Route? = null) =
         withContext(Dispatchers.IO) {
             LocalPreferences.loadCurrentAccountFromEncryptedStorage()
         }?.let { startUI(it, route) } ?: run { requestLoginUI() }
@@ -175,7 +176,7 @@ class AccountStateViewModel : ViewModel() {
     @OptIn(FlowPreview::class)
     suspend fun startUI(
         accountSettings: AccountSettings,
-        route: String? = null,
+        route: Route? = null,
     ) = withContext(Dispatchers.Main) {
         _accountContent.update { AccountState.LoggedIn(accountSettings, route) }
 
@@ -332,7 +333,7 @@ class AccountStateViewModel : ViewModel() {
 
     suspend fun switchUserSync(
         npub: String,
-        route: String,
+        route: Route,
     ): Boolean {
         if (npub != LocalPreferences.currentAccount()) {
             val account = LocalPreferences.allSavedAccounts().firstOrNull { it.npub == npub }
@@ -346,7 +347,7 @@ class AccountStateViewModel : ViewModel() {
 
     suspend fun switchUserSync(
         accountInfo: AccountInfo,
-        route: String? = null,
+        route: Route? = null,
     ) {
         prepareLogoutOrSwitch()
         LocalPreferences.switchToAccount(accountInfo)

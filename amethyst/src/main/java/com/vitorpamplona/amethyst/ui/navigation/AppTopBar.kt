@@ -76,7 +76,7 @@ fun GenericMainTopBar(
             LoggedInUserPictureDrawer(accountViewModel, nav::openDrawer)
         },
         actions = {
-            IconButton(onClick = { nav.nav(Route.Search.route) }) {
+            IconButton(onClick = { nav.nav(Route.Search) }) {
                 SearchIcon(modifier = Size22Modifier, MaterialTheme.colorScheme.placeholderText)
             }
         },

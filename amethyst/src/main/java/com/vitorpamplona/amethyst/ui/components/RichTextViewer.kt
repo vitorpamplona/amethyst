@@ -90,6 +90,8 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -183,7 +185,7 @@ fun RenderRegularPreview() {
                         word.segmentText.substring(0, 10),
                         "",
                         1,
-                        route = "",
+                        route = Route.EventRedirect(word.segmentText),
                         nav = nav,
                     )
                 }
@@ -650,7 +652,7 @@ fun HashTag(
         modifier =
             remember {
                 Modifier.clickable {
-                    nav.nav("Hashtag/${segment.hashtag}")
+                    nav.nav(Route.Hashtag(segment.hashtag))
                 }
             },
         inlineContent =
@@ -779,7 +781,7 @@ private fun DisplayUserFromTag(
             CreateClickableTextWithEmoji(
                 clickablePart = remember(meta) { it?.bestName() ?: baseUser.pubkeyDisplayHex() },
                 maxLines = 1,
-                route = "User/${baseUser.pubkeyHex}",
+                route = remember(baseUser) { routeFor(baseUser) },
                 nav = nav,
                 tags = it?.tags,
             )

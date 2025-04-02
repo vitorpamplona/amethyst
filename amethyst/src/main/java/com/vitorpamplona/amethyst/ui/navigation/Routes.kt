@@ -20,367 +20,160 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.R.attr.type
-import android.net.Uri
-import android.os.Bundle
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
-import androidx.navigation.NamedNavArgument
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
+import androidx.navigation.toRoute
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size23dp
-import com.vitorpamplona.amethyst.ui.theme.Size24dp
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import java.net.URLEncoder
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.serialization.Serializable
+import kotlin.String
 
-@Immutable
-sealed class Route(
-    val route: String,
-    val base: String = route.substringBefore("?"),
+class BottomBarRoute(
+    val route: Route,
     val icon: Int,
+    val contentDescriptor: Int = R.string.route,
     val notifSize: Modifier = Modifier.size(Size23dp),
     val iconSize: Modifier = Modifier.size(Size20dp),
-    val contentDescriptor: Int = R.string.route,
-    val arguments: ImmutableList<NamedNavArgument> = persistentListOf(),
-) {
-    object Home :
-        Route(
-            route = "Home",
-            icon = R.drawable.ic_home,
-            notifSize = Modifier.size(Size25dp),
-            iconSize = Modifier.size(Size24dp),
-            contentDescriptor = R.string.route_home,
-        )
+)
 
-    object Global :
-        Route(
-            route = "Global",
-            icon = R.drawable.ic_globe,
-            contentDescriptor = R.string.route_global,
-        )
+sealed class Route {
+    @Serializable object Home : Route()
 
-    object Search :
-        Route(
-            route = "Search",
-            icon = R.drawable.ic_moments,
-            contentDescriptor = R.string.route_search,
-        )
+    @Serializable object Message : Route()
 
-    object Video :
-        Route(
-            route = "Video",
-            icon = R.drawable.ic_video,
-            contentDescriptor = R.string.route_video,
-        )
+    @Serializable object Video : Route()
 
-    object Discover :
-        Route(
-            route = "Discover",
-            icon = R.drawable.ic_sensors,
-            contentDescriptor = R.string.route_discover,
-        )
+    @Serializable object Discover : Route()
 
-    object Notification :
-        Route(
-            route = "Notification",
-            icon = R.drawable.ic_notifications,
-            contentDescriptor = R.string.route_notifications,
-        )
+    @Serializable object Notification : Route()
 
-    object Message :
-        Route(
-            route = "Message",
-            icon = R.drawable.ic_dm,
-            contentDescriptor = R.string.route_messages,
-        )
+    @Serializable object Search : Route()
 
-    object NewGroupDM :
-        Route(
-            route = "NewGroupDM?message={message}&attachment={attachment}",
-            icon = R.drawable.ic_dm,
-            contentDescriptor = R.string.route_messages,
-            arguments =
-                listOf(
-                    navArgument("message") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                    navArgument("attachment") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ).toImmutableList(),
-        )
+    @Serializable object SecurityFilters : Route()
 
-    object BlockedUsers :
-        Route(
-            route = "BlockedUsers",
-            icon = R.drawable.ic_security,
-            contentDescriptor = R.string.route_security_filters,
-        )
+    @Serializable object Bookmarks : Route()
 
-    object Bookmarks :
-        Route(
-            route = "Bookmarks",
-            icon = R.drawable.ic_bookmarks,
-            contentDescriptor = R.string.route_home,
-        )
+    @Serializable object Drafts : Route()
 
-    object ContentDiscovery :
-        Route(
-            icon = R.drawable.ic_bookmarks,
-            contentDescriptor = R.string.discover_content,
-            route = "ContentDiscovery/{id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable object Settings : Route()
 
-    object Drafts :
-        Route(
-            route = "Drafts",
-            icon = R.drawable.ic_topics,
-            contentDescriptor = R.string.drafts,
-        )
+    @Serializable object EditProfile : Route()
 
-    object Profile :
-        Route(
-            route = "User/{id}",
-            icon = R.drawable.ic_profile,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class EditRelays(
+        val toAdd: String? = null,
+    ) : Route()
 
-    object Note :
-        Route(
-            route = "Note/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class Nip47NWCSetup(
+        val nip47: String? = null,
+    ) : Route()
 
-    object Hashtag :
-        Route(
-            route = "Hashtag/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class Profile(
+        val id: String,
+    ) : Route()
 
-    object Geohash :
-        Route(
-            route = "Geohash/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class ContentDiscovery(
+        val id: String,
+    ) : Route()
 
-    object Community :
-        Route(
-            route = "Community/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class Note(
+        val id: String,
+    ) : Route()
 
-    object Room :
-        Route(
-            route = "Room/{id}?message={message}&replyId={replyId}&draftId={draftId}",
-            icon = R.drawable.ic_moments,
-            arguments =
-                listOf(
-                    navArgument("id") { type = NavType.StringType },
-                    navArgument("message") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                    navArgument("replyId") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                    navArgument("draftId") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ).toImmutableList(),
-        )
+    @Serializable data class Hashtag(
+        val id: String,
+    ) : Route()
 
-    object RoomByAuthor :
-        Route(
-            route = "RoomByAuthor/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class Geohash(
+        val id: String,
+    ) : Route()
 
-    object Channel :
-        Route(
-            route = "Channel/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class Community(
+        val id: String,
+    ) : Route()
 
-    object ChannelMetadataEdit :
-        Route(
-            route = "ChannelMetadataEdit?id={id}",
-            icon = R.drawable.ic_moments,
-            arguments =
-                listOf(
-                    navArgument("id") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ).toImmutableList(),
-        )
+    @Serializable data class Channel(
+        val id: String,
+    ) : Route()
 
-    object Event :
-        Route(
-            route = "Event/{id}",
-            icon = R.drawable.ic_moments,
-            arguments = listOf(navArgument("id") { type = NavType.StringType }).toImmutableList(),
-        )
+    @Serializable data class ChannelMetadataEdit(
+        val id: String? = null,
+    ) : Route()
 
-    object Settings :
-        Route(
-            route = "Settings",
-            icon = R.drawable.ic_settings,
-        )
+    @Serializable data class NewGroupDM(
+        val message: String? = null,
+        val attachment: String? = null,
+    ) : Route()
 
-    object EditProfile :
-        Route(
-            route = "EditProfile",
-            icon = R.drawable.ic_settings,
-        )
+    @Serializable data class Room(
+        val id: Int,
+        val message: String? = null,
+        val replyId: HexKey? = null,
+        val draftId: HexKey? = null,
+    ) : Route()
 
-    object EditRelays :
-        Route(
-            route = "EditRelays?toAdd={toAdd}",
-            icon = R.drawable.ic_globe,
-            contentDescriptor = R.string.relays,
-            arguments =
-                listOf(
-                    navArgument("toAdd") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ).toImmutableList(),
-        )
+    @Serializable data class RoomByAuthor(
+        val id: String,
+    ) : Route()
 
-    object NIP47Setup :
-        Route(
-            route = "NIP47Setup?nip47={nip47}",
-            icon = R.drawable.ic_home,
-            arguments =
-                listOf(
-                    navArgument("nip47") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ).toImmutableList(),
-        )
+    @Serializable data class EventRedirect(
+        val id: String,
+    ) : Route()
 
-    object NewPost :
-        Route(
-            route = "NewPost?message={message}&attachment={attachment}&baseReplyTo={baseReplyTo}&quote={quote}&fork={fork}&version={version}&draft={draft}&enableGeolocation={enableGeolocation}",
-            icon = R.drawable.ic_moments,
-            arguments =
-                listOf(
-                    navArgument("message") { type = NavType.StringType },
-                    navArgument("attachment") { type = NavType.StringType },
-                    navArgument("baseReplyTo") { type = NavType.StringType },
-                    navArgument("quote") { type = NavType.StringType },
-                    navArgument("fork") { type = NavType.StringType },
-                    navArgument("version") { type = NavType.StringType },
-                    navArgument("draft") { type = NavType.StringType },
-                    navArgument("enableGeolocation") { type = NavType.BoolType },
-                ).toImmutableList(),
-        )
+    @Serializable
+    data class NewPost(
+        val message: String? = null,
+        val attachment: String? = null,
+        val baseReplyTo: String? = null,
+        val quote: String? = null,
+        val fork: String? = null,
+        val version: String? = null,
+        val draft: String? = null,
+        val enableGeolocation: Boolean = false,
+    ) : Route()
 }
 
-fun isBaseRoute(
-    navController: NavHostController,
-    startsWith: String,
-): Boolean =
-    navController.currentBackStackEntry
-        ?.destination
-        ?.route
-        ?.startsWith(startsWith) ?: false
+inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
 
-fun getRouteWithArguments(navController: NavHostController): String? {
-    val currentEntry = navController.currentBackStackEntry ?: return null
-    return getRouteWithArguments(currentEntry.destination, currentEntry.arguments)
-}
+fun getRouteWithArguments(navController: NavHostController): Route? {
+    val entry = navController.currentBackStackEntry ?: return null
+    val dest = entry.destination
 
-fun getRouteWithArguments(navState: State<NavBackStackEntry?>): String? = navState.value?.let { getRouteWithArguments(it.destination, it.arguments) }
+    return when {
+        dest.hasRoute<Route.Home>() -> entry.toRoute<Route.Home>()
+        dest.hasRoute<Route.Message>() -> entry.toRoute<Route.Message>()
+        dest.hasRoute<Route.Video>() -> entry.toRoute<Route.Video>()
+        dest.hasRoute<Route.Discover>() -> entry.toRoute<Route.Discover>()
+        dest.hasRoute<Route.Notification>() -> entry.toRoute<Route.Notification>()
 
-private fun getRouteWithArguments(
-    destination: NavDestination,
-    arguments: Bundle?,
-): String? {
-    var route = destination.route ?: return null
-    arguments?.let { bundle ->
-        destination.arguments.forEach {
-            val key = it.key
-            val value = it.value.type[bundle, key]?.toString()
-            if (value == null) {
-                val keyStart = route.indexOf("{$key}")
-                // if it is a parameter, removes the complete segment `var={key}` and adjust connectors `#`,
-                // `&` or `&`
-                if (keyStart > 0 && route[keyStart - 1] == '=') {
-                    val end = keyStart + "{$key}".length
-                    var start = keyStart
-                    for (i in keyStart downTo 0) {
-                        if (route[i] == '#' || route[i] == '?' || route[i] == '&') {
-                            start = i + 1
-                            break
-                        }
-                    }
-                    if (end < route.length && route[end] == '&') {
-                        route = route.removeRange(start, end + 1)
-                    } else if (end < route.length && route[end] == '#') {
-                        route = route.removeRange(start - 1, end)
-                    } else if (end == route.length) {
-                        route = route.removeRange(start - 1, end)
-                    } else {
-                        route = route.removeRange(start, end)
-                    }
-                } else {
-                    route = route.replaceFirst("{$key}", "")
-                }
-            } else {
-                route = route.replaceFirst("{$key}", value)
-            }
+        dest.hasRoute<Route.Search>() -> entry.toRoute<Route.Search>()
+        dest.hasRoute<Route.SecurityFilters>() -> entry.toRoute<Route.SecurityFilters>()
+        dest.hasRoute<Route.Bookmarks>() -> entry.toRoute<Route.Bookmarks>()
+        dest.hasRoute<Route.ContentDiscovery>() -> entry.toRoute<Route.ContentDiscovery>()
+        dest.hasRoute<Route.Drafts>() -> entry.toRoute<Route.Drafts>()
+        dest.hasRoute<Route.Settings>() -> entry.toRoute<Route.Settings>()
+        dest.hasRoute<Route.EditProfile>() -> entry.toRoute<Route.EditProfile>()
+
+        dest.hasRoute<Route.Profile>() -> entry.toRoute<Route.Profile>()
+        dest.hasRoute<Route.Note>() -> entry.toRoute<Route.Note>()
+        dest.hasRoute<Route.Hashtag>() -> entry.toRoute<Route.Hashtag>()
+        dest.hasRoute<Route.Geohash>() -> entry.toRoute<Route.Geohash>()
+        dest.hasRoute<Route.Community>() -> entry.toRoute<Route.Community>()
+
+        dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
+        dest.hasRoute<Route.Channel>() -> entry.toRoute<Route.Channel>()
+        dest.hasRoute<Route.ChannelMetadataEdit>() -> entry.toRoute<Route.ChannelMetadataEdit>()
+        dest.hasRoute<Route.EventRedirect>() -> entry.toRoute<Route.EventRedirect>()
+        dest.hasRoute<Route.EditRelays>() -> entry.toRoute<Route.EditRelays>()
+        dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
+        dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
+        dest.hasRoute<Route.NewPost>() -> entry.toRoute<Route.NewPost>()
+
+        else -> {
+            null
         }
     }
-    return route
 }
-
-fun buildNewPostRoute(
-    draftMessage: String? = null,
-    attachment: Uri? = null,
-    baseReplyTo: String? = null,
-    quote: String? = null,
-    fork: String? = null,
-    version: String? = null,
-    draft: String? = null,
-    enableGeolocation: Boolean = false,
-): String =
-    "NewPost?" +
-        "message=${draftMessage?.let { URLEncoder.encode(it, "utf-8") } ?: ""}&" +
-        "attachment=${attachment?.let { URLEncoder.encode(it.toString(), "utf-8") } ?: ""}&" +
-        "baseReplyTo=${baseReplyTo ?: ""}&" +
-        "quote=${quote ?: ""}&" +
-        "fork=${fork ?: ""}&" +
-        "version=${version ?: ""}&" +
-        "draft=${draft ?: ""}&" +
-        "enableGeolocation=$enableGeolocation&"

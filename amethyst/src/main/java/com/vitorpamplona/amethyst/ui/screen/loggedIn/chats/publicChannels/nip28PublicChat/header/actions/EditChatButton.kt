@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
@@ -50,7 +51,7 @@ fun EditButton(
             Modifier
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
-        onClick = { nav.nav("ChannelMetadataEdit?id=${channel.idHex}") },
+        onClick = { nav.nav(Route.ChannelMetadataEdit(channel.idHex)) },
         contentPadding = ZeroPadding,
     ) {
         Icon(
