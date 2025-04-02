@@ -138,6 +138,13 @@ sealed class Route(
             contentDescriptor = R.string.route_home,
         )
 
+    object Lists :
+        Route(
+            route = "Lists",
+            icon = R.drawable.format_list_bulleted_type,
+            contentDescriptor = R.string.my_lists,
+        )
+
     object ContentDiscovery :
         Route(
             icon = R.drawable.ic_bookmarks,

@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSet
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.FeedType
@@ -198,6 +199,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.czeal.rfc3986.URIReference
 import java.math.BigDecimal
 import java.util.Base64
@@ -3062,6 +3064,23 @@ class Account(
     fun getBlockListNote() = LocalCache.getOrCreateAddressableNote(PeopleListEvent.createBlockAddress(userProfile().pubkeyHex))
 
     fun getMuteListNote() = LocalCache.getOrCreateAddressableNote(MuteListEvent.createAddress(userProfile().pubkeyHex))
+
+    suspend fun getFollowSetNotes() =
+        withContext(Dispatchers.Default) {
+            val followSetNotes = LocalCache.getFollowSetNotesFor(userProfile())
+            userProfile().updateFollowSetNotes(followSetNotes)
+//            userProfile().followSets = followSetNotes
+            println("Number of follow sets: ${followSetNotes.size}")
+        }
+
+    fun mapNoteToFollowSet(note: Note): FollowSet =
+        FollowSet
+            .mapEventToSet(
+                event = note.event as PeopleListEvent,
+                signer,
+            )
+
+//    fun followSetNotesFlow() = MutableStateFlow(userProfile().followSets)
 
     fun getMuteListFlow(): StateFlow<NoteState> = getMuteListNote().flow().metadata.stateFlow
 
