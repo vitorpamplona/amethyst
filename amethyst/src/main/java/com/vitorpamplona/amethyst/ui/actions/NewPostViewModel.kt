@@ -239,17 +239,27 @@ open class NewPostViewModel :
 
     fun user(): User? = account?.userProfile()
 
+    open fun init(accountVM: AccountViewModel) {
+        this.accountViewModel = accountVM
+        this.account = accountVM.account
+        this.canAddInvoice = hasLnAddress()
+        this.canAddZapRaiser = hasLnAddress()
+
+        this.userSuggestions?.reset()
+        this.userSuggestions = UserSuggestionState(accountVM)
+
+        this.emojiSuggestions?.reset()
+        this.emojiSuggestions = EmojiSuggestionState(accountVM)
+    }
+
     open fun load(
-        accountViewModel: AccountViewModel,
         replyingTo: Note?,
         quote: Note?,
         fork: Note?,
         version: Note?,
         draft: Note?,
     ) {
-        this.accountViewModel = accountViewModel
-        this.account = accountViewModel.account
-
+        val accountViewModel = accountViewModel ?: return
         val noteEvent = draft?.event
         val noteAuthor = draft?.author
 
