@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,6 +36,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -87,13 +87,13 @@ fun ForkInformationRowLightColor(
 
     if (route != null) {
         Row(modifier) {
-            ClickableText(
+            Text(
                 text =
                     buildAnnotatedString {
-                        append(stringRes(id = R.string.forked_from))
-                        append(" ")
+                        appendLink(stringRes(id = R.string.forked_from) + " ") {
+                            nav.nav(route)
+                        }
                     },
-                onClick = { nav.nav(route) },
                 style =
                     LocalTextStyle.current.copy(
                         color = MaterialTheme.colorScheme.nip05,

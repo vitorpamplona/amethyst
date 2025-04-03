@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
@@ -49,10 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
@@ -178,54 +175,25 @@ private fun TranslationMessage(
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
     ) {
-        val clickableTextStyle = SpanStyle(color = MaterialTheme.colorScheme.lessImportantLink)
+        val textColor = MaterialTheme.colorScheme.lessImportantLink
 
-        val annotatedTranslationString =
-            buildAnnotatedString {
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("langSettings", true.toString())
-                    append(stringRes(R.string.translations_auto))
-                    pop()
-                }
-
-                append("-${stringRes(R.string.translations_translated_from)} ")
-
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("showOriginal", true.toString())
-                    append(Locale(source).displayName)
-                    pop()
-                }
-
-                append(" ${stringRes(R.string.translations_to)} ")
-
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("showOriginal", false.toString())
-                    append(Locale(target).displayName)
-                    pop()
-                }
-            }
-
-        ClickableText(
-            text = annotatedTranslationString,
+        Text(
+            text =
+                buildAnnotatedString {
+                    appendLink(stringRes(R.string.translations_auto), textColor) { langSettingsPopupExpanded = !langSettingsPopupExpanded }
+                    append("-${stringRes(R.string.translations_translated_from)} ")
+                    appendLink(Locale(source).displayName, textColor) { onChangeWhatToShow(true) }
+                    append(" ${stringRes(R.string.translations_to)} ")
+                    appendLink(Locale(target).displayName, textColor) { onChangeWhatToShow(false) }
+                },
             style =
                 LocalTextStyle.current.copy(
-                    color =
-                        MaterialTheme.colorScheme.onSurface.copy(
-                            alpha = 0.32f,
-                        ),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f),
                     fontSize = Font14SP,
                 ),
             overflow = TextOverflow.Visible,
             maxLines = 3,
-        ) { spanOffset ->
-            annotatedTranslationString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
-                if (span.tag == "showOriginal") {
-                    onChangeWhatToShow(span.item.toBoolean())
-                } else {
-                    langSettingsPopupExpanded = !langSettingsPopupExpanded
-                }
-            }
-        }
+        )
 
         DropdownMenu(
             expanded = langSettingsPopupExpanded,

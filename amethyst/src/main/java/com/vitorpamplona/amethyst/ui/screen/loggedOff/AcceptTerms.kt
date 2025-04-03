@@ -23,14 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedOff
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.ClickableText
+import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -44,32 +43,18 @@ fun AcceptTerms(
             onCheckedChange = onCheckedChange,
         )
 
-        val regularText = SpanStyle(color = MaterialTheme.colorScheme.onBackground)
-        val clickableTextStyle = SpanStyle(color = MaterialTheme.colorScheme.primary)
-
-        val annotatedTermsString =
-            buildAnnotatedString {
-                withStyle(regularText) { append(stringRes(R.string.i_accept_the)) }
-
-                withStyle(clickableTextStyle) {
-                    pushStringAnnotation("openTerms", "")
-                    append(stringRes(R.string.terms_of_use))
-                    pop()
-                }
-            }
-
         val uri = LocalUriHandler.current
+        val primary = MaterialTheme.colorScheme.primary
 
-        ClickableText(
-            annotatedTermsString,
-        ) { spanOffset ->
-            annotatedTermsString.getStringAnnotations(spanOffset, spanOffset).firstOrNull()?.also { span ->
-                if (span.tag == "openTerms") {
+        Text(
+            buildAnnotatedString {
+                append(stringRes(R.string.i_accept_the))
+                appendLink(stringRes(R.string.terms_of_use), primary) {
                     runCatching {
                         uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
                     }
                 }
-            }
-        }
+            },
+        )
     }
 }

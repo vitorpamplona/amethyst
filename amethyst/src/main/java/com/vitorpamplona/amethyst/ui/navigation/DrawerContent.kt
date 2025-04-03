@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.R.attr.maxLines
 import android.R.attr.onClick
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -73,13 +74,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,7 +93,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
-import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -740,23 +742,33 @@ fun BottomContent(
                     .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ClickableText(
-                text =
+            val string =
+                remember {
                     buildAnnotatedString {
-                        withStyle(
-                            SpanStyle(
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
+                        withLink(
+                            LinkAnnotation.Clickable(
+                                "clickable",
+                                TextLinkStyles(
+                                    SpanStyle(
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    ),
+                                ),
+                            ) {
+                                nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
+                                nav.closeDrawer()
+                            },
                         ) {
-                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                            append("v12" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
                         }
-                    },
-                onClick = {
-                    nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
-                    nav.closeDrawer()
-                },
+                    }
+                }
+
+            Text(
+                text = string,
                 modifier = Modifier.padding(start = 16.dp),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
             )
             Box(modifier = Modifier.weight(1F))
             IconButton(

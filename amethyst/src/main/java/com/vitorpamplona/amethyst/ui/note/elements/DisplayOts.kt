@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,10 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.buildLinkString
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -61,26 +60,15 @@ fun DisplayOts(
                 )
             }
 
-            ClickableText(
+            Text(
                 text =
-                    buildAnnotatedString {
-                        append(
-                            stringRes(
-                                id = R.string.existed_since,
-                                timeStr,
-                            ),
+                    buildLinkString(stringRes(R.string.existed_since, timeStr)) {
+                        accountViewModel.toastManager.toast(
+                            R.string.ots_info_title,
+                            R.string.ots_info_description,
+                            SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000)),
                         )
                     },
-                onClick = {
-                    val fullDateTime =
-                        SimpleDateFormat.getDateTimeInstance().format(Date(unixtimestamp * 1000))
-
-                    accountViewModel.toastManager.toast(
-                        R.string.ots_info_title,
-                        R.string.ots_info_description,
-                        fullDateTime,
-                    )
-                },
                 style =
                     LocalTextStyle.current.copy(
                         color = MaterialTheme.colorScheme.lessImportantLink,

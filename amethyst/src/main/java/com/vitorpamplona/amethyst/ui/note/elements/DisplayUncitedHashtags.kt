@@ -22,16 +22,13 @@ package com.vitorpamplona.amethyst.ui.note.elements
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
@@ -95,19 +92,14 @@ fun DisplayUncitedHashtags(
         }
 
     if (unusedHashtags.isNotEmpty()) {
-        val style =
-            LocalTextStyle.current.copy(
-                color = MaterialTheme.colorScheme.lessImportantLink,
-            )
-
         FlowRow(
             modifier = HalfTopPadding,
         ) {
             unusedHashtags.forEach { hashtag ->
-                ClickableText(
-                    text = remember { AnnotatedString("#$hashtag ") },
+                ClickableTextColor(
+                    text = "#$hashtag ",
                     onClick = { nav.nav(Route.Hashtag(hashtag)) },
-                    style = style,
+                    linkColor = MaterialTheme.colorScheme.lessImportantLink,
                 )
             }
         }

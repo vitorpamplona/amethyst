@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.LocalContentColor
@@ -41,18 +39,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -367,7 +365,7 @@ fun CreateClickableText(
     overrideColor: Color? = null,
     fontWeight: FontWeight? = null,
     fontSize: TextUnit = TextUnit.Unspecified,
-    onClick: (Int) -> Unit,
+    onClick: () -> Unit,
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val onBackgroundColor = MaterialTheme.colorScheme.onBackground
@@ -381,61 +379,34 @@ fun CreateClickableText(
                     fontWeight = fontWeight,
                 )
 
-            val nonClickablePartStyle =
-                SpanStyle(
-                    fontSize = fontSize,
-                    color = overrideColor ?: onBackgroundColor,
-                    fontWeight = fontWeight,
-                )
-
             buildAnnotatedString {
-                withStyle(clickablePartStyle) { append(clickablePart) }
-                if (!suffix.isNullOrBlank()) {
-                    withStyle(nonClickablePartStyle) { append(suffix) }
+                withLink(
+                    LinkAnnotation.Clickable(
+                        tag = "clickable",
+                        styles = TextLinkStyles(clickablePartStyle),
+                    ) {
+                        onClick()
+                    },
+                ) {
+                    append(clickablePart)
                 }
-            }
-        }
+                if (!suffix.isNullOrBlank()) {
+                    val nonClickablePartStyle =
+                        SpanStyle(
+                            fontSize = fontSize,
+                            color = overrideColor ?: onBackgroundColor,
+                            fontWeight = fontWeight,
+                        )
 
-    ClickableText(
-        text = text,
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-        onClick = onClick,
-    )
-}
-
-@Composable
-fun ClickableText(
-    text: AnnotatedString,
-    modifier: Modifier = Modifier,
-    style: TextStyle = LocalTextStyle.current,
-    softWrap: Boolean = true,
-    overflow: TextOverflow = TextOverflow.Clip,
-    maxLines: Int = Int.MAX_VALUE,
-    onTextLayout: (TextLayoutResult) -> Unit = {},
-    onClick: (Int) -> Unit,
-) {
-    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val pressIndicator =
-        Modifier.pointerInput(onClick) {
-            detectTapGestures { pos ->
-                layoutResult.value?.let { layoutResult ->
-                    onClick(layoutResult.getOffsetForPosition(pos))
+                    withStyle(nonClickablePartStyle) { append(suffix) }
                 }
             }
         }
 
     Text(
         text = text,
-        modifier = modifier.then(pressIndicator),
-        style = style,
-        softWrap = softWrap,
-        overflow = overflow,
         maxLines = maxLines,
-        onTextLayout = {
-            layoutResult.value = it
-            onTextLayout(it)
-        },
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -611,21 +582,29 @@ fun CreateClickableTextWithEmoji(
     maxLines: Int = Int.MAX_VALUE,
     tags: ImmutableListOfLists<String>?,
     style: TextStyle,
-    onClick: (Int) -> Unit,
+    onClick: () -> Unit,
 ) {
     CustomEmojiChecker(
         text = clickablePart,
         tags = tags,
         onRegularText = {
-            ClickableText(
-                text = AnnotatedString(clickablePart),
+            Text(
+                text =
+                    buildAnnotatedString {
+                        withLink(
+                            LinkAnnotation.Clickable("me") {
+                                onClick()
+                            },
+                        ) {
+                            append(clickablePart)
+                        }
+                    },
                 style = style,
                 maxLines = maxLines,
-                onClick = onClick,
             )
         },
         onEmojiText = {
-            ClickableInLineIconRenderer(it, maxLines, style.toSpanStyle()) { onClick(it) }
+            ClickableInLineIconRenderer(it, maxLines, style.toSpanStyle(), onClick = onClick)
         },
     )
 }
@@ -683,15 +662,11 @@ fun ClickableInLineIconRenderer(
     style: SpanStyle,
     suffix: String? = null,
     nonClickableStype: SpanStyle? = null,
-    onClick: (Int) -> Unit,
+    onClick: () -> Unit,
 ) {
     val placeholderSize =
         remember(style) {
-            if (style.fontSize == TextUnit.Unspecified) {
-                22.sp
-            } else {
-                style.fontSize.times(1.1f)
-            }
+            if (style.fontSize == TextUnit.Unspecified) 22.sp else style.fontSize.times(1.1f)
         }
 
     val inlineContent =
@@ -725,8 +700,10 @@ fun ClickableInLineIconRenderer(
     val annotatedText =
         buildAnnotatedString {
             wordsInOrder.forEachIndexed { idx, value ->
-                withStyle(
-                    style,
+                withLink(
+                    LinkAnnotation.Clickable("link", TextLinkStyles(style)) {
+                        onClick()
+                    },
                 ) {
                     if (value is CustomEmoji.TextType) {
                         append(value.text)
@@ -743,20 +720,10 @@ fun ClickableInLineIconRenderer(
             }
         }
 
-    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val pressIndicator =
-        Modifier.pointerInput(onClick) {
-            detectTapGestures { pos ->
-                layoutResult.value?.let { layoutResult -> onClick(layoutResult.getOffsetForPosition(pos)) }
-            }
-        }
-
     Text(
         text = annotatedText,
-        modifier = pressIndicator,
         inlineContent = inlineContent,
         maxLines = maxLines,
-        onTextLayout = { layoutResult.value = it },
     )
 }
 
@@ -771,11 +738,7 @@ fun InLineIconRenderer(
 ) {
     val placeholderSize =
         remember(fontSize) {
-            if (fontSize == TextUnit.Unspecified) {
-                22.sp
-            } else {
-                fontSize.times(1.1f)
-            }
+            if (fontSize == TextUnit.Unspecified) 22.sp else fontSize.times(1.1f)
         }
 
     val inlineContent =

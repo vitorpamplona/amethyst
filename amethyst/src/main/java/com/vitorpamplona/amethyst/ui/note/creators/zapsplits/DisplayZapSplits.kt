@@ -24,13 +24,10 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.AnnotatedString
+import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -76,11 +73,7 @@ fun DisplayZapSplits(
             list.forEach {
                 when (it) {
                     is ZapSplitSetupLnAddress ->
-                        ClickableText(
-                            text = AnnotatedString(it.lnAddress),
-                            onClick = {},
-                            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-                        )
+                        ClickableTextPrimary(it.lnAddress) { }
                     is ZapSplitSetup ->
                         UserPicture(
                             userHex = it.pubKeyHex,

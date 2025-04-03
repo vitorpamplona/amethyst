@@ -762,7 +762,10 @@ private fun DisplayNoteFromTag(
             nav = nav,
         )
     } else {
-        ClickableNoteTag(baseNote, accountViewModel, nav)
+        ClickableTextPrimary(
+            text = "@${baseNote.idNote().toShortenHex()}",
+            onClick = { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
+        )
     }
 
     addedChars?.ifBlank { null }?.let { Text(text = it) }
