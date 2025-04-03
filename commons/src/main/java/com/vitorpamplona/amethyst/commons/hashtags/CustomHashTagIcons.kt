@@ -43,6 +43,7 @@ val CustomHashTagIcons.AllIcons: ____KtList<ImageVector>
                 Cashu,
                 Grownostr,
                 Footstr,
+                Flowerstr,
                 Btc,
                 Zap,
                 Tunestr,
