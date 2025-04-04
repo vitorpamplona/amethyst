@@ -41,6 +41,4 @@
 # Keep All enums
 -keep enum ** { *; }
 
--keep class com.vitorpamplona.ammolite.service.** { *; }
--keep class com.vitorpamplona.ammolite.relays.** { *; }
--keep class com.vitorpamplona.ammolite.sockets.** { *; }
+-keep class com.vitorpamplona.ammolite.** { *; }
