@@ -31,18 +31,16 @@ import coil3.key.Keyer
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
 
-class Blurhash(
+data class BlurhashWrapper(
     val blurhash: String,
 )
 
 @Stable
 class BlurHashFetcher(
     private val options: Options,
-    private val data: Blurhash,
+    private val data: BlurhashWrapper,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult {
-        checkNotInMainThread()
-
         val hash = data.blurhash
 
         val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: throw Exception("Unable to convert Blurhash $data")
@@ -54,17 +52,17 @@ class BlurHashFetcher(
         )
     }
 
-    object Factory : Fetcher.Factory<Blurhash> {
+    object Factory : Fetcher.Factory<BlurhashWrapper> {
         override fun create(
-            data: Blurhash,
+            data: BlurhashWrapper,
             options: Options,
             imageLoader: ImageLoader,
         ): Fetcher = BlurHashFetcher(options, data)
     }
 
-    object BKeyer : Keyer<Blurhash> {
+    object BKeyer : Keyer<BlurhashWrapper> {
         override fun key(
-            data: Blurhash,
+            data: BlurhashWrapper,
             options: Options,
         ): String = data.blurhash
     }

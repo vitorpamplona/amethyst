@@ -79,7 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.Blurhash
+import com.vitorpamplona.amethyst.service.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
@@ -637,7 +637,7 @@ fun DisplayBlurHash(
     if (blurhash == null) return
 
     AsyncImage(
-        model = Blurhash(blurhash),
+        model = BlurhashWrapper(blurhash),
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,
