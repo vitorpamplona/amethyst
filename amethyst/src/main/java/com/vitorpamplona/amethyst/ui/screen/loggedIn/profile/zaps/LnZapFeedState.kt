@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable data class ZapReqResponse(
     val zapRequest: Note,
@@ -36,7 +36,7 @@ sealed class LnZapFeedState {
     object Loading : LnZapFeedState()
 
     class Loaded(
-        val feed: MutableState<ImmutableList<ZapReqResponse>>,
+        val feed: MutableStateFlow<ImmutableList<ZapReqResponse>>,
     ) : LnZapFeedState()
 
     object Empty : LnZapFeedState()

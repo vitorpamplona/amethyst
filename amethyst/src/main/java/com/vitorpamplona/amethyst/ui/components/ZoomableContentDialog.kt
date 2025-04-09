@@ -308,17 +308,16 @@ private fun saveMediaToGallery(
     val failure = if (isImage) R.string.failed_to_save_the_image else R.string.failed_to_save_the_video
 
     if (content is MediaUrlContent) {
-        val useTor =
-            if (isImage) {
-                accountViewModel.account.shouldUseTorForImageDownload()
-            } else {
-                accountViewModel.account.shouldUseTorForVideoDownload()
-            }
-
         MediaSaverToDisk.downloadAndSave(
             content.url,
             mimeType = content.mimeType,
-            forceProxy = useTor,
+            okHttpClient = {
+                if (isImage) {
+                    accountViewModel.okHttpClientForImage(it)
+                } else {
+                    accountViewModel.okHttpClientForVideo(it)
+                }
+            },
             localContext,
             onSuccess = {
                 accountViewModel.toastManager.toast(success, success)

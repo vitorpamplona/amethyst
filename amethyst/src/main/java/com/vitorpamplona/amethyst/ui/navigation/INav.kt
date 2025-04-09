@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
@@ -118,13 +119,14 @@ class Nav(
         }
     }
 
+    @SuppressLint("RestrictedApi")
     override fun <T : Route> popUpTo(
         route: Route,
         upToClass: KClass<T>,
     ) {
         scope.launch {
             controller.navigate(route) {
-                popUpTo(upToClass) { inclusive = true }
+                popUpTo<T>(upToClass) { inclusive = true }
             }
         }
     }

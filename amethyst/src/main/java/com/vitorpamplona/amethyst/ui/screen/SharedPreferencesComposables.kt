@@ -20,26 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.util.Log
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.adaptive.calculateDisplayFeatures
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun prepareSharedViewModel(): SharedPreferencesViewModel {
@@ -70,61 +61,12 @@ fun MonitorDisplaySize(sharedPreferencesViewModel: SharedPreferencesViewModel) {
 
 @Composable
 fun ManageConnectivity(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var job = remember<Job?> { null }
+    val status =
+        Amethyst.instance.connManager.status
+            .collectAsStateWithLifecycle()
 
-    val networkCallback =
-        remember {
-            object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    super.onAvailable(network)
-                    sharedPreferencesViewModel.updateNetworkState(network.networkHandle)
-                }
-
-                // Network capabilities have changed for the network
-                override fun onCapabilitiesChanged(
-                    network: Network,
-                    networkCapabilities: NetworkCapabilities,
-                ) {
-                    super.onCapabilitiesChanged(network, networkCapabilities)
-                    sharedPreferencesViewModel.updateNetworkState(network.networkHandle)
-                    sharedPreferencesViewModel.updateConnectivityStatusState(networkCapabilities)
-                }
-            }
-        }
-
-    LifecycleResumeEffect(sharedPreferencesViewModel) {
-        job?.cancel()
-        job =
-            scope.launch(Dispatchers.IO) {
-                Log.d("ManageConnectivity", "Register network listener from Resume")
-                val connectivityManager = context.getConnectivityManager()
-                connectivityManager.registerDefaultNetworkCallback(networkCallback)
-                connectivityManager.activeNetwork?.let { network ->
-                    sharedPreferencesViewModel.updateNetworkState(network.networkHandle)
-                    connectivityManager.getNetworkCapabilities(network)?.let {
-                        sharedPreferencesViewModel.updateConnectivityStatusState(it)
-                    }
-                }
-            }
-
-        onPauseOrDispose {
-            job?.cancel()
-            job =
-                scope.launch(Dispatchers.IO) {
-                    delay(30000) // 30 seconds
-                    Log.d("ManageConnectivity", "Unregister network listener from Pause")
-                    context.getConnectivityManager().unregisterNetworkCallback(networkCallback)
-                }
-        }
+    (status.value as? ConnectivityStatus.Active)?.let {
+        sharedPreferencesViewModel.updateNetworkState(it.networkId)
+        sharedPreferencesViewModel.updateConnectivityStatusState(it.isMobile)
     }
 }
-
-fun SharedPreferencesViewModel.updateConnectivityStatusState(networkCapabilities: NetworkCapabilities) {
-    val metered = !networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-    val mobileData = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-    updateConnectivityStatusState(metered || mobileData)
-}
-
-fun Context.getConnectivityManager() = getSystemService(ConnectivityManager::class.java) as ConnectivityManager

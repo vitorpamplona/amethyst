@@ -26,6 +26,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -43,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import org.junit.Assert
 import org.junit.Ignore
 import org.junit.Test
@@ -52,11 +54,21 @@ import kotlin.random.Random
 
 @RunWith(AndroidJUnit4::class)
 class ImageUploadTesting {
-    val account =
-        Account(
-            AccountSettings(KeyPair()),
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-        )
+    companion object {
+        val account =
+            Account(
+                AccountSettings(KeyPair()),
+                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            )
+    }
+
+    val client =
+        OkHttpClient
+            .Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .addInterceptor(DefaultContentTypeInterceptor("Amethyst/${BuildConfig.VERSION_NAME}"))
+            .build()
 
     private suspend fun getBitmap(): ByteArray {
         val bitmap = Bitmap.createBitmap(200, 300, Bitmap.Config.ARGB_8888)
@@ -94,7 +106,7 @@ class ImageUploadTesting {
                     alt = null,
                     sensitiveContent = null,
                     serverBaseUrl = server.baseUrl,
-                    forceProxy = { false },
+                    okHttpClient = { client },
                     httpAuth = account::createBlossomUploadAuth,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
@@ -105,7 +117,7 @@ class ImageUploadTesting {
         assertEquals("${server.baseUrl}/$initialHash", result.url?.removeSuffix(".png"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(result.url!!, false)?.bytes
+            ImageDownloader().waitAndGetImage(result.url!!, { client })?.bytes
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return
@@ -120,7 +132,7 @@ class ImageUploadTesting {
             ServerInfoRetriever()
                 .loadInfo(
                     server.baseUrl,
-                    false,
+                    { client },
                 )
 
         val paylod = getBitmap()
@@ -134,7 +146,7 @@ class ImageUploadTesting {
                     alt = null,
                     sensitiveContent = null,
                     server = serverInfo,
-                    forceProxy = { false },
+                    okHttpClient = { client },
                     onProgress = {},
                     httpAuth = account::createHTTPAuthorization,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
@@ -148,7 +160,7 @@ class ImageUploadTesting {
         Assert.assertTrue("${server.name}: Invalid result url", url.startsWith("http"))
 
         val imageData: ByteArray =
-            ImageDownloader().waitAndGetImage(url, false)?.bytes
+            ImageDownloader().waitAndGetImage(url, { client })?.bytes
                 ?: run {
                     fail("${server.name}: Should not be null")
                     return
@@ -255,6 +267,7 @@ class ImageUploadTesting {
         }
 
     @Test()
+    @Ignore("Not Working anymore/ Timeout")
     fun testNostrCheckBlossom() =
         runBlocking {
             testBase(ServerName("nostrcheck", "https://cdn.nostrcheck.me", ServerType.Blossom))

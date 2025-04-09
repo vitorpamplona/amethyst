@@ -21,17 +21,20 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.EncryptedBlobInterceptor
+import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
 import junit.framework.TestCase.assertEquals
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class DMDecryptionTest {
-    val okHttp = HttpClientManager.getHttpClient(false)
+class DMFileDecryptionTest {
+    // Key cache to download and decrypt encrypted files before caching them.
+    val keyCache = EncryptionKeyCache()
 
     val url = "https://cdn.satellite.earth/812fd4cf9d4d4b59c141ecd6a6c08c7571b5872237ad6477916cb2d119b5cacd"
     val cipher =
@@ -44,7 +47,13 @@ class DMDecryptionTest {
 
     @Test
     fun runDownloadAndDecryptVideo() {
-        HttpClientManager.addCipherToCache(url, cipher, "video/mp4")
+        val client =
+            OkHttpClient
+                .Builder()
+                .addNetworkInterceptor(EncryptedBlobInterceptor(keyCache))
+                .build()
+
+        keyCache.add(url, cipher, "video/mp4")
 
         val request =
             Request
@@ -54,7 +63,7 @@ class DMDecryptionTest {
                 .get()
                 .build()
 
-        okHttp.newCall(request).execute().use {
+        client.newCall(request).execute().use {
             assertEquals(decryptedSize, it.body.bytes().size)
             assertEquals(expectedMimeType, it.body.contentType().toString())
         }

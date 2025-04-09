@@ -20,98 +20,41 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
-import android.util.Log
-import androidx.appcompat.app.AppCompatActivity.BIND_AUTO_CREATE
-import kotlinx.coroutines.flow.MutableStateFlow
+import android.app.Application
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import org.torproject.jni.TorService
-import org.torproject.jni.TorService.LocalBinder
-import java.util.concurrent.atomic.AtomicBoolean
 
-sealed class TorStatus {
-    data class Active(
-        val port: Int,
-    ) : TorStatus()
-
-    object Off : TorStatus()
-
-    object Connecting : TorStatus()
-}
-
-object TorManager {
-    var runningIntent: Intent? = null
-    var torService: TorService? = null
-
-    val status = MutableStateFlow<TorStatus>(TorStatus.Off)
-
-    // To make sure we don't start two services.
-    var isConnectingMutex = AtomicBoolean(false)
-
-    fun startTorIfNotAlreadyOn(ctx: Context) {
-        if (runningIntent == null && isConnectingMutex.compareAndSet(false, true)) {
-            status.tryEmit(TorStatus.Connecting)
-            try {
-                startTor(ctx)
-            } finally {
-                isConnectingMutex.set(false)
-            }
-        }
-    }
-
-    fun stopTor(ctx: Context) {
-        Log.d("TorManager", "Stopping Tor Service")
-        runningIntent?.let {
-            ctx.stopService(runningIntent)
-        }
-        status.tryEmit(TorStatus.Off)
-        runningIntent = null
-        torService = null
-    }
-
-    private fun startTor(ctx: Context) {
-        Log.d("TorManager", "Binding Tor Service")
-        val currentIntent = Intent(ctx, TorService::class.java)
-        runningIntent = currentIntent
-        ctx.bindService(
-            currentIntent,
-            object : ServiceConnection {
-                override fun onServiceConnected(
-                    name: ComponentName,
-                    service: IBinder,
-                ) {
-                    // moved torService to a local variable, since we only need it once
-                    torService = (service as LocalBinder).service
-
-                    while (!isSocksReady()) {
-                        try {
-                            Thread.sleep(100)
-                        } catch (e: InterruptedException) {
-                            e.printStackTrace()
-                        }
-                    }
-
-                    status.tryEmit(TorStatus.Active(socksPort()))
-                    Log.d("TorManager", "Tor Service Connected ${socksPort()}")
-                }
-
-                override fun onServiceDisconnected(name: ComponentName) {
-                    runningIntent = null
-                    torService = null
-                    status.tryEmit(TorStatus.Off)
-                    Log.d("TorManager", "Tor Service Disconected")
-                }
-            },
-            BIND_AUTO_CREATE,
+/**
+ * There should be only one instance of the Tor binding per app.
+ *
+ * Tor will connect as soon as status is listened to.
+ */
+class TorManager(
+    app: Application,
+    scope: CoroutineScope,
+) {
+    val status: StateFlow<TorServiceStatus> =
+        TorService(app).status.stateIn(
+            scope,
+            SharingStarted.WhileSubscribed(30000),
+            TorServiceStatus.Off,
         )
-    }
 
-    fun isSocksReady() = torService?.let { it.socksPort > 0 } == true
+    val activePortOrNull: StateFlow<Int?> =
+        status
+            .map {
+                (status.value as? TorServiceStatus.Active)?.port
+            }.stateIn(
+                scope,
+                SharingStarted.WhileSubscribed(2000),
+                (status.value as? TorServiceStatus.Active)?.port,
+            )
 
-    fun socksPort(): Int = torService?.socksPort ?: 9050
+    fun isSocksReady() = status.value is TorServiceStatus.Active
 
-    fun httpPort(): Int = torService?.httpTunnelPort ?: 9050
+    fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 9050
 }

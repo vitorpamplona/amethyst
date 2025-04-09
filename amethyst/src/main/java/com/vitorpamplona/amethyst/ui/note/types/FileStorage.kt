@@ -77,7 +77,7 @@ private fun ObserverAndRenderNIP95(
             // Creates a new object when the event arrives to force an update of the image.
             val note = noteState?.note
             val uri = header.toNostrUri()
-            val localDir = note?.idHex?.let { File(Amethyst.instance.nip95cache(), it) }
+            val localDir = note?.idHex?.let { File(Amethyst.instance.nip95cache, it) }
             val blurHash = eventHeader.blurhash()
             val dimensions = eventHeader.dimensions()
             val description = eventHeader.alt() ?: eventHeader.content

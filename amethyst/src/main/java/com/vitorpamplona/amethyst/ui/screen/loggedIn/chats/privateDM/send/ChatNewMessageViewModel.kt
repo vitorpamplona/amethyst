@@ -655,7 +655,7 @@ class ChatNewMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.url.url,
-                accountViewModel?.account?.shouldUseTorForImageDownload() ?: false,
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
             )
         }
 

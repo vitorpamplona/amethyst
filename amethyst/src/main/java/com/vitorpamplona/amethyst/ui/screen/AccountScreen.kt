@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,8 @@ fun AccountScreen(
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
+
+    Log.d("ManageRelayServices", "AccountScreen $accountState $accountStateViewModel")
 
     Crossfade(
         targetState = accountState,

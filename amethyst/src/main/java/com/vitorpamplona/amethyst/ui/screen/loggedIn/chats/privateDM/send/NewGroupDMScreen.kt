@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
@@ -85,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -599,7 +599,7 @@ fun ShowImageUploadGallery(
     val isImage = data.result.mimeTypeBeforeEncryption?.startsWith("image/") == true || RichTextParser.isImageUrl(data.result.url)
 
     if (data.cipher != null) {
-        HttpClientManager.addCipherToCache(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
+        Amethyst.instance.keyCache.add(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
     }
 
     val content by remember(data) {

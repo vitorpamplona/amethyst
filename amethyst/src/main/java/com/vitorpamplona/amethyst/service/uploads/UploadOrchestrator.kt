@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.uploads
 
 import android.content.Context
 import android.net.Uri
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
@@ -32,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
 sealed class UploadingState {
@@ -149,7 +151,7 @@ class UploadOrchestrator {
                     alt = alt,
                     sensitiveContent = contentWarningReason,
                     serverBaseUrl = serverBaseUrl,
-                    forceProxy = account::shouldUseTorForNIP96,
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
                     onProgress = { percent: Float ->
                         updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
                     },
@@ -162,7 +164,7 @@ class UploadOrchestrator {
                 localContentType = contentType,
                 originalContentType = contentTypeForResult,
                 originalHash = originalHash,
-                forceProxy = account::shouldUseTorForNIP96,
+                okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -193,7 +195,7 @@ class UploadOrchestrator {
                         alt = alt,
                         sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
-                        forceProxy = account::shouldUseTorForNIP96,
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )
@@ -201,7 +203,7 @@ class UploadOrchestrator {
             verifyHeader(
                 uploadResult = result,
                 localContentType = contentType,
-                forceProxy = account::shouldUseTorForNIP96,
+                okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
                 originalHash = originalHash,
                 originalContentType = contentTypeForResult,
             )
@@ -216,7 +218,7 @@ class UploadOrchestrator {
         localContentType: String?,
         originalContentType: String?,
         originalHash: String?,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
     ): UploadingFinalState {
         if (uploadResult.url.isNullOrBlank()) {
             return error(R.string.server_did_not_provide_a_url_after_uploading)
@@ -224,7 +226,7 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(uploadResult.url, forceProxy(uploadResult.url))
+        val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(uploadResult.url, okHttpClient)
 
         if (imageData != null) {
             updateState(0.8, UploadingState.Hashing)

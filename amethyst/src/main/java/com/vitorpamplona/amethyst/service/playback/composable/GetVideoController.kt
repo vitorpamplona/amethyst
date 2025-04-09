@@ -61,7 +61,7 @@ fun GetVideoController(
             // If there is a connection, don't wait.
             if (!onlyOnePreparing.getAndSet(true)) {
                 scope.launch {
-                    Log.d("PlaybackService", "Preparing Video ${controllerId.id} $mediaItem.src.videoUri")
+                    Log.d("PlaybackService", "Preparing Video ${controllerId.id} ${mediaItem.src.videoUri}")
                     PlaybackServiceClient.prepareController(
                         controllerId,
                         mediaItem.src.videoUri,

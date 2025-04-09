@@ -21,21 +21,21 @@
 package com.vitorpamplona.amethyst.service.previews
 
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class UrlPreview {
     suspend fun fetch(
         url: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onComplete: suspend (urlInfo: UrlInfoItem) -> Unit,
         onFailed: suspend (t: Throwable) -> Unit,
     ) = try {
-        onComplete(getDocument(url, forceProxy))
+        onComplete(getDocument(url, okHttpClient))
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         onFailed(t)
@@ -43,7 +43,7 @@ class UrlPreview {
 
     suspend fun getDocument(
         url: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
     ): UrlInfoItem =
         withContext(Dispatchers.IO) {
             val request =
@@ -52,7 +52,7 @@ class UrlPreview {
                     .url(url)
                     .get()
                     .build()
-            HttpClientManager.getHttpClient(forceProxy).newCall(request).execute().use {
+            okHttpClient(url).newCall(request).execute().use {
                 checkNotInMainThread()
                 if (it.isSuccessful) {
                     val mimeType =

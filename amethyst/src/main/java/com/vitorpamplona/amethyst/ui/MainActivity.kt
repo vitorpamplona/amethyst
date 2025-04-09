@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -28,7 +30,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
@@ -65,7 +69,7 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        Log.d("Lifetime Event", "MainActivity.onCreate")
+        Log.d("ActivityLifecycle", "MainActivity.onCreate $this")
 
         setContent {
             StringResSetup()
@@ -87,14 +91,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        Log.d("Lifetime Event", "MainActivity.onResume")
+        Log.d("ActivityLifecycle", "MainActivity.onResume $this")
 
         // starts muted every time
         DEFAULT_MUTED_SETTING.value = true
     }
 
     override fun onPause() {
-        Log.d("Lifetime Event", "MainActivity.onPause")
+        Log.d("ActivityLifecycle", "MainActivity.onPause $this")
 
         GlobalScope.launch(Dispatchers.IO) { LanguageTranslatorService.clear() }
 
@@ -111,15 +115,25 @@ class MainActivity : AppCompatActivity() {
         //    serviceManager.trimMemory()
         // }
 
-        Log.d("Lifetime Event", "MainActivity.onStop")
+        Log.d("ActivityLifecycle", "MainActivity.onStop $this")
     }
 
     override fun onDestroy() {
-        Log.d("Lifetime Event", "MainActivity.onDestroy")
+        Log.d("ActivityLifecycle", "MainActivity.onDestroy $this")
 
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
 
         super.onDestroy()
+    }
+
+    companion object {
+        fun createIntent(callbackUri: String): PendingIntent =
+            PendingIntent.getActivity(
+                Amethyst.instance,
+                0,
+                Intent(Intent.ACTION_VIEW, callbackUri.toUri(), Amethyst.instance, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
     }
 }
 

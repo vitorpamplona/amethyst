@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
@@ -44,6 +43,7 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
@@ -62,7 +62,7 @@ class Nip96Uploader {
         alt: String?,
         sensitiveContent: String?,
         serverBaseUrl: String,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
@@ -72,8 +72,8 @@ class Nip96Uploader {
         size,
         alt,
         sensitiveContent,
-        ServerInfoRetriever().loadInfo(serverBaseUrl, forceProxy(serverBaseUrl)),
-        forceProxy,
+        ServerInfoRetriever().loadInfo(serverBaseUrl, okHttpClient),
+        okHttpClient,
         onProgress,
         httpAuth,
         context,
@@ -95,7 +95,7 @@ class Nip96Uploader {
         alt: String?,
         sensitiveContent: String?,
         server: ServerInfo,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
@@ -117,7 +117,7 @@ class Nip96Uploader {
             alt,
             sensitiveContent,
             server,
-            forceProxy,
+            okHttpClient,
             onProgress,
             httpAuth,
             context,
@@ -131,7 +131,7 @@ class Nip96Uploader {
         alt: String?,
         sensitiveContent: String?,
         server: ServerInfo,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
@@ -141,7 +141,7 @@ class Nip96Uploader {
         val fileName = randomChars()
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClientManager.getHttpClient(forceProxy(server.apiUrl))
+        val client = okHttpClient(server.apiUrl)
         val requestBuilder = Request.Builder()
 
         val requestBody: RequestBody =
@@ -182,7 +182,7 @@ class Nip96Uploader {
                 response.body.use { body ->
                     val result = UploadResult.parse(body.string())
                     if (!result.processingUrl.isNullOrBlank()) {
-                        return waitProcessing(result, server, forceProxy, onProgress)
+                        return waitProcessing(result, server, okHttpClient, onProgress)
                     } else if (result.status == "success") {
                         val event = result.nip94Event
                         if (event != null) {
@@ -263,14 +263,14 @@ class Nip96Uploader {
         hash: String,
         contentType: String?,
         server: ServerInfo,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         httpAuth: (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         context: Context,
     ): Boolean {
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
-        val client = HttpClientManager.getHttpClient(forceProxy(server.apiUrl))
+        val client = okHttpClient(server.apiUrl)
 
         val requestBuilder = Request.Builder()
 
@@ -303,7 +303,7 @@ class Nip96Uploader {
     private suspend fun waitProcessing(
         result: UploadResult,
         server: ServerInfo,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
     ): MediaUploadResult {
         var currentResult = result
@@ -320,7 +320,7 @@ class Nip96Uploader {
                     .url(procUrl)
                     .build()
 
-            val client = HttpClientManager.getHttpClient(forceProxy(procUrl))
+            val client = okHttpClient(procUrl)
             client.newCall(request).execute().use {
                 if (it.isSuccessful) {
                     it.body.use { currentResult = UploadResult.parse(it.string()) }

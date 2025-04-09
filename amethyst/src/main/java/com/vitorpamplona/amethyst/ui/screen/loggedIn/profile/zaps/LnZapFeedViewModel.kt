@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps
 
 import android.util.Log
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
@@ -36,7 +36,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
@@ -66,16 +65,14 @@ open class LnZapFeedViewModel(
     }
 
     private fun updateFeed(notes: ImmutableList<ZapReqResponse>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
-            if (notes.isEmpty()) {
-                _feedContent.update { LnZapFeedState.Empty }
-            } else if (currentState is LnZapFeedState.Loaded) {
-                // updates the current list
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update { LnZapFeedState.Loaded(mutableStateOf(notes)) }
-            }
+        val currentState = _feedContent.value
+        if (notes.isEmpty()) {
+            _feedContent.tryEmit(LnZapFeedState.Empty)
+        } else if (currentState is LnZapFeedState.Loaded) {
+            // updates the current list
+            currentState.feed.tryEmit(notes)
+        } else {
+            _feedContent.tryEmit(LnZapFeedState.Loaded(MutableStateFlow(notes)))
         }
     }
 

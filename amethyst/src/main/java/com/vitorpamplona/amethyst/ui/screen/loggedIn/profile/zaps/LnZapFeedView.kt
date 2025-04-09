@@ -73,13 +73,14 @@ private fun LnZapFeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val items by state.feed.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.zapEvent.idHex }) { _, item ->
+        itemsIndexed(items, key = { _, item -> item.zapEvent.idHex }) { _, item ->
             ZapNoteCompose(item, accountViewModel = accountViewModel, nav = nav)
 
             HorizontalDivider(

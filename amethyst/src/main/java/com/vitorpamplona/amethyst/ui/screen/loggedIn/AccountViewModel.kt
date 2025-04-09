@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.proxyPort.ProxyPortFlow
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
@@ -136,6 +137,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 @Stable
 class AccountViewModel(
@@ -144,6 +146,21 @@ class AccountViewModel(
 ) : ViewModel(),
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
+
+    val proxyPortLogic =
+        ProxyPortFlow(
+            account.settings.torSettings.torType,
+            account.settings.torSettings.externalSocksPort,
+            Amethyst.instance.torManager.status,
+        ).status.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(30000),
+            ProxyPortFlow.computePort(
+                account.settings.torSettings.torType.value,
+                account.settings.torSettings.externalSocksPort.value,
+                Amethyst.instance.torManager.status.value,
+            ),
+        )
 
     var firstRoute: Route? = null
 
@@ -675,7 +692,7 @@ class AccountViewModel(
                     message = message,
                     context = context,
                     showErrorIfNoLnAddress = showErrorIfNoLnAddress,
-                    forceProxy = account::shouldUseTorForMoneyOperations,
+                    okHttpClient = ::okHttpClientForMoney,
                     onError = onError,
                     onProgress = {
                         onProgress(it)
@@ -903,7 +920,7 @@ class AccountViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             if (account.updateOptOutOptions(warnReports, filterSpam)) {
-                LocalCache.antiSpam.active = filterSpamFromStrangers()
+                LocalCache.antiSpam.active = filterSpamFromStrangers().value
             }
         }
     }
@@ -962,7 +979,7 @@ class AccountViewModel(
         onResult: suspend (UrlPreviewState) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            UrlCachedPreviewer.previewInfo(url, account.shouldUseTorForPreviewUrl(url), onResult)
+            UrlCachedPreviewer.previewInfo(url, ::okHttpClientForPreview, onResult)
         }
     }
 
@@ -983,7 +1000,9 @@ class AccountViewModel(
             Nip05NostrAddressVerifier()
                 .verifyNip05(
                     nip05,
-                    forceProxy = account::shouldUseTorForNIP05,
+                    okttpClient = {
+                        Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP05(it))
+                    },
                     onSuccess = {
                         // Marks user as verified
                         if (it == pubkeyHex) {
@@ -1020,7 +1039,7 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             Nip11CachedRetriever.loadRelayInfo(
                 dirtyUrl,
-                account.shouldUseTorForDirty(dirtyUrl),
+                okHttpClient = ::okHttpClientForDirty,
                 onInfo,
                 onError,
             )
@@ -1110,7 +1129,7 @@ class AccountViewModel(
     ) {
         onResult(
             withContext(Dispatchers.Default) {
-                LocalCache.findEarliestOtsForNote(note)
+                LocalCache.findEarliestOtsForNote(note, account::otsResolver)
             },
         )
     }
@@ -1197,7 +1216,9 @@ class AccountViewModel(
         onDone: (Boolean) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            onDone(OnlineChecker.isOnline(videoUrl, account.shouldUseTorForVideoDownload(videoUrl)))
+            onDone(
+                OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo),
+            )
         }
     }
 
@@ -1276,6 +1297,12 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             Amethyst.instance.serviceManager.cleanObservers()
             Amethyst.instance.serviceManager.pauseForGood()
+        }
+
+    fun pauseAndLogOff() =
+        viewModelScope.launch(Dispatchers.IO) {
+            Amethyst.instance.serviceManager.cleanObservers()
+            Amethyst.instance.serviceManager.pauseAndLogOff()
         }
 
     fun changeProxyPort(port: Int) =
@@ -1399,7 +1426,7 @@ class AccountViewModel(
                     .melt(
                         token,
                         lud16,
-                        forceProxy = account::shouldUseTorForMoneyOperations,
+                        okHttpClient = ::okHttpClientForMoney,
                         onSuccess = { title, message -> onDone(title, message) },
                         onError = { title, message -> onDone(title, message) },
                         context,
@@ -1490,6 +1517,22 @@ class AccountViewModel(
             }
         }
     }
+
+    fun proxyPortFor(url: String): Int? = Amethyst.instance.okHttpClients.getCurrentProxyPort(account.shouldUseTorForVideoDownload(url))
+
+    fun okHttpClientForNip96(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(url))
+
+    fun okHttpClientForImage(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload())
+
+    fun okHttpClientForVideo(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForVideoDownload(url))
+
+    fun okHttpClientForMoney(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForMoneyOperations(url))
+
+    fun okHttpClientForPreview(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForPreviewUrl(url))
+
+    fun okHttpClientForDirty(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(url))
+
+    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
 
     suspend fun deleteDraft(draftTag: String) {
         account.deleteDraft(draftTag)
@@ -1607,7 +1650,7 @@ class AccountViewModel(
                         milliSats,
                         message,
                         null,
-                        forceProxy = account::shouldUseTorForMoneyOperations,
+                        okHttpClient = ::okHttpClientForMoney,
                         onSuccess = onSuccess,
                         onError = onError,
                         onProgress = onProgress,
@@ -1622,7 +1665,7 @@ class AccountViewModel(
                             milliSats,
                             message,
                             zapRequest.toJson(),
-                            forceProxy = account::shouldUseTorForMoneyOperations,
+                            okHttpClient = ::okHttpClientForMoney,
                             onSuccess = onSuccess,
                             onError = onError,
                             onProgress = onProgress,

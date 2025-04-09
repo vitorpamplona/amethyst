@@ -69,7 +69,7 @@ class TwoPaneNav(
         route: Route,
         upToClass: KClass<T>,
     ) {
-        nav.popUpTo(route, upToClass)
+        nav.popUpTo<T>(route, upToClass)
     }
 
     override fun closeDrawer() {

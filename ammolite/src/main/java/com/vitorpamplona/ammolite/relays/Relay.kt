@@ -101,7 +101,7 @@ class Relay(
 
     val relaySubFilter = RelaySubFilter(url, activeTypes, subs)
     val inner =
-        SimpleClientRelay(url, socketBuilderFactory.build(forceProxy), relaySubFilter, this@Relay, RelayStats.get(url))
+        SimpleClientRelay(url, socketBuilderFactory.build(url, forceProxy), relaySubFilter, this@Relay, RelayStats.get(url))
 
     val brief = RelayBriefInfoCache.get(url)
 

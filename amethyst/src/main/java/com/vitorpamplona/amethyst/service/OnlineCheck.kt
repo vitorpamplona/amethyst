@@ -24,9 +24,9 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.utils.RandomInstance
 import okhttp3.EventListener
+import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
 import okio.ByteString.Companion.toByteString
@@ -51,7 +51,7 @@ object OnlineChecker {
 
     fun isOnline(
         url: String?,
-        forceProxy: Boolean,
+        okttpClient: (String) -> OkHttpClient,
     ): Boolean {
         checkNotInMainThread()
 
@@ -76,8 +76,7 @@ object OnlineChecker {
                             .build()
 
                     val client =
-                        HttpClientManager
-                            .getHttpClient(forceProxy)
+                        okttpClient(url)
                             .newBuilder()
                             .eventListener(EventListener.NONE)
                             .protocols(listOf(Protocol.HTTP_1_1))
@@ -96,7 +95,7 @@ object OnlineChecker {
                             .get()
                             .build()
 
-                    HttpClientManager.getHttpClient(forceProxy).newCall(request).execute().use {
+                    okttpClient(url).newCall(request).execute().use {
                         checkNotInMainThread()
                         it.isSuccessful
                     }

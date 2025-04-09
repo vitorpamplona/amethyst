@@ -41,7 +41,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NostrHiddenWordsFeedViewModel(
@@ -93,16 +92,14 @@ open class StringFeedViewModel(
     }
 
     private fun updateFeed(notes: ImmutableList<String>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
-            if (notes.isEmpty()) {
-                _feedContent.update { StringFeedState.Empty }
-            } else if (currentState is StringFeedState.Loaded) {
-                // updates the current list
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update { StringFeedState.Loaded(mutableStateOf(notes)) }
-            }
+        val currentState = _feedContent.value
+        if (notes.isEmpty()) {
+            _feedContent.tryEmit(StringFeedState.Empty)
+        } else if (currentState is StringFeedState.Loaded) {
+            // updates the current list
+            currentState.feed.tryEmit(notes)
+        } else {
+            _feedContent.tryEmit(StringFeedState.Loaded(MutableStateFlow(notes)))
         }
     }
 

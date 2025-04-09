@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.compose.runtime.MutableState
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
 
 sealed class StringFeedState {
     object Loading : StringFeedState()
 
     class Loaded(
-        val feed: MutableState<ImmutableList<String>>,
+        val feed: MutableStateFlow<ImmutableList<String>>,
     ) : StringFeedState()
 
     object Empty : StringFeedState()

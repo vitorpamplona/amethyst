@@ -33,7 +33,7 @@ object PushNotificationUtils {
 
     suspend fun checkAndInit(
         accounts: List<AccountInfo>,
-        okHttpClient: OkHttpClient,
+        okHttpClient: (String) -> OkHttpClient,
     ) = with(Dispatchers.IO) {
         val token = FirebaseMessaging.getInstance().token.await()
         if (hasInit?.equals(accounts) == true && lastToken == token) {
@@ -46,7 +46,7 @@ object PushNotificationUtils {
     suspend fun checkAndInit(
         token: String,
         accounts: List<AccountInfo>,
-        okHttpClient: OkHttpClient,
+        okHttpClient: (String) -> OkHttpClient,
     ) = with(Dispatchers.IO) {
         // initializes if the accounts are different or if the token has changed
         if (hasInit?.equals(accounts) == true && lastToken == token) {
@@ -58,7 +58,7 @@ object PushNotificationUtils {
     private suspend fun registerToken(
         token: String,
         accounts: List<AccountInfo>,
-        okHttpClient: OkHttpClient,
+        okHttpClient: (String) -> OkHttpClient,
     ) = retryIfException("RegisterAccounts") {
         RegisterAccounts(accounts, okHttpClient).go(token)
         lastToken = token

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.data.DeletionIndex
 import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
+import com.vitorpamplona.amethyst.service.NostrAccountDataSource.account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.Relay
@@ -68,6 +69,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -938,9 +940,6 @@ object LocalCache {
         // Already processed this event.
         if (version.event?.id == event.id) return
 
-        // makes sure the OTS has a valid certificate
-        if (event.cacheVerify() is VerificationState.Error) return // no valid OTS
-
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
             version.liveSet?.innerOts?.invalidateData()
@@ -1630,7 +1629,7 @@ object LocalCache {
         }
 
         try {
-            val cachePath = Amethyst.instance.nip95cache()
+            val cachePath = Amethyst.instance.nip95cache
             cachePath.mkdirs()
             val file = File(cachePath, event.id)
             if (!file.exists()) {
@@ -1978,7 +1977,10 @@ object LocalCache {
             .toImmutableList()
     }
 
-    suspend fun findEarliestOtsForNote(note: Note): Long? {
+    suspend fun findEarliestOtsForNote(
+        note: Note,
+        resolverBuilder: () -> OtsResolver,
+    ): Long? {
         checkNotInMainThread()
 
         var minTime: Long? = null
@@ -1987,7 +1989,7 @@ object LocalCache {
         notes.forEach { _, item ->
             val noteEvent = item.event
             if ((noteEvent is OtsEvent && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time))) {
-                (noteEvent.cacheVerify() as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
+                (Amethyst.instance.otsVerifCache.cacheVerify(noteEvent, resolverBuilder) as? VerificationState.Verified)?.verifiedTime?.let { stampedTime ->
                     if (minTime == null || stampedTime < (minTime ?: Long.MAX_VALUE)) {
                         minTime = stampedTime
                     }

@@ -30,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -41,21 +40,18 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
-import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.amethyst.ui.tor.TorStatus
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -77,7 +73,11 @@ fun LoggedInPage(
                 ),
         )
 
+    Log.d("ManageRelayServices", "LoggedInPage $accountViewModel")
+
     accountViewModel.firstRoute = route
+
+    ManageSpamFilters(accountViewModel)
 
     ManageRelayServices(accountViewModel, sharedPreferencesViewModel)
 
@@ -95,38 +95,64 @@ fun LoggedInPage(
 }
 
 @Composable
+fun ManageSpamFilters(accountViewModel: AccountViewModel) {
+    val isSpamActive by accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers
+        .collectAsStateWithLifecycle(true)
+
+    LocalCache.antiSpam.active = isSpamActive
+}
+
+@Composable
 fun ManageRelayServices(
     accountViewModel: AccountViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ) {
-    var job = remember<Job?> { null }
-
     LaunchedEffect(
         sharedPreferencesViewModel.sharedPrefs.currentNetworkId,
         sharedPreferencesViewModel.sharedPrefs.isOnMobileOrMeteredConnection,
     ) {
-        Log.d("ManageRelayServices", "Change Network Id/State ${sharedPreferencesViewModel.sharedPrefs.currentNetworkId}, forcing restart")
-        if (sharedPreferencesViewModel.sharedPrefs.isOnMobileOrMeteredConnection) {
-            HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_MOBILE)
-        } else {
-            HttpClientManager.setDefaultTimeout(HttpClientManager.DEFAULT_TIMEOUT_ON_WIFI)
-        }
+        Log.d("ManageRelayServices", "Loading/Change Network Id/State ${sharedPreferencesViewModel.sharedPrefs.currentNetworkId}, forcing start/restart of the relay services")
         accountViewModel.forceRestartServices()
     }
 
-    LifecycleResumeEffect(sharedPreferencesViewModel, accountViewModel) {
-        job?.cancel()
-        Log.d("ManageRelayServices", "Starting Relay Services")
-        job = accountViewModel.justStart()
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
-        onPauseOrDispose {
-            job?.cancel()
-            job =
-                GlobalScope.launch(Dispatchers.IO) {
-                    delay(30000) // 30 seconds
-                    Log.d("ManageRelayServices", "Pausing Relay Services")
-                    accountViewModel.justPause()
+    val scope = rememberCoroutineScope()
+    var job = remember<Job?> { null }
+
+    Log.d("ManageRelayServices", "Job $job for $accountViewModel")
+
+    DisposableEffect(key1 = accountViewModel) {
+        job?.cancel()
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        job?.cancel()
+                        Log.d("ManageRelayServices", "Resuming Relay Services $accountViewModel")
+                        job = accountViewModel.justStart()
+                    }
+                    Lifecycle.Event.ON_PAUSE -> {
+                        Log.d("ManageRelayServices", "Prepare to pause Relay Services $accountViewModel")
+                        job?.cancel()
+                        job =
+                            scope.launch {
+                                delay(30000) // 30 seconds
+                                Log.d("ManageRelayServices", "Pausing Relay Services $accountViewModel")
+                                accountViewModel.justPause()
+                            }
+                    }
+                    else -> {}
                 }
+            }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            job?.cancel()
+            lifeCycleOwner.lifecycle.removeObserver(observer)
+            Log.d("ManageRelayServices", "Disposing Relay Services $accountViewModel")
+            // immediately stops upon disposal
+            accountViewModel.pauseAndLogOff()
         }
     }
 }
@@ -141,8 +167,7 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
         job?.cancel()
         job =
             scope.launch {
-                val okHttpClient = HttpClientManager.getHttpClient(accountViewModel.account.shouldUseTorForTrustedRelays())
-                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), okHttpClient)
+                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), accountViewModel::okHttpClientForTrustedRelays)
             }
 
         onPauseOrDispose {
@@ -156,41 +181,19 @@ fun ManageTorInstance(accountViewModel: AccountViewModel) {
     val torSettings by accountViewModel.account.settings.torSettings.torType
         .collectAsStateWithLifecycle()
     if (torSettings == TorType.INTERNAL) {
-        WatchConnection(accountViewModel)
-        ManageTorInstanceInner(accountViewModel)
+        WatchTorConnection(accountViewModel)
     }
 }
 
 @Composable
-fun ManageTorInstanceInner(accountViewModel: AccountViewModel) {
-    val context = LocalContext.current.applicationContext
+fun WatchTorConnection(accountViewModel: AccountViewModel) {
+    val status by Amethyst.instance.torManager.status
+        .collectAsStateWithLifecycle()
 
-    val scope = rememberCoroutineScope()
-    var job = remember<Job?> { null }
-
-    LifecycleResumeEffect(key1 = accountViewModel) {
-        job?.cancel()
-        job = null
-        TorManager.startTorIfNotAlreadyOn(context)
-
-        onPauseOrDispose {
-            job =
-                scope.launch {
-                    delay(30000) // 5 seconds
-                    TorManager.stopTor(context)
-                }
-        }
-    }
-}
-
-@Composable
-fun WatchConnection(accountViewModel: AccountViewModel) {
-    val status by TorManager.status.collectAsStateWithLifecycle()
-
-    LaunchedEffect(key1 = status, key2 = accountViewModel) {
-        if (status is TorStatus.Active) {
-            Log.d("ServiceManager", "Tor is Active, force restart connections")
-            accountViewModel.changeProxyPort((status as TorStatus.Active).port)
+    if (status is TorServiceStatus.Active) {
+        LaunchedEffect(key1 = status, key2 = accountViewModel) {
+            Log.d("TorService", "Tor has just finished connecting, force restart relays $accountViewModel")
+            accountViewModel.changeProxyPort((status as TorServiceStatus.Active).port)
         }
     }
 }

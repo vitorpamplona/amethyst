@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.R.attr.category
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Stable
@@ -1191,7 +1192,7 @@ open class NewPostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.url.url,
-                accountViewModel?.account?.shouldUseTorForImageDownload() ?: false,
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
             )
         }
 

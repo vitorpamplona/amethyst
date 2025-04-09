@@ -33,7 +33,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -191,7 +191,7 @@ class MediaSessionPool(
 
             // set up return call when clicking on the Notification bar
             mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString("callbackUri")?.let {
-                mediaSession.setSessionActivity(Amethyst.Companion.instance.createIntent(it))
+                mediaSession.setSessionActivity(MainActivity.createIntent(it))
             }
 
             return Futures.immediateFuture(mediaItems)

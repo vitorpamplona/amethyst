@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -311,6 +313,11 @@ object NostrAccountDataSource : AmethystNostrDataSource("AccountData") {
         checkNotInMainThread()
 
         when (event) {
+            is OtsEvent -> {
+                // verifies new OTS upon arrival
+                Amethyst.instance.otsVerifCache.cacheVerify(event, account::otsResolver)
+            }
+
             is PrivateOutboxRelayListEvent -> {
                 val note = LocalCache.getAddressableNoteIfExists(event.addressTag())
                 val noteEvent = note?.event

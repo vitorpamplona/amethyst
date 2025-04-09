@@ -27,10 +27,10 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.math.BigDecimal
@@ -55,7 +55,7 @@ class LightningAddressResolver {
 
     private fun fetchLightningAddressJson(
         lnaddress: String,
-        forceProxy: (url: String) -> Boolean,
+        okttpClient: (String) -> OkHttpClient,
         onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -76,7 +76,7 @@ class LightningAddressResolver {
             return
         }
 
-        val client = HttpClientManager.getHttpClient(forceProxy(url))
+        val client = okttpClient(url)
 
         try {
             val request: Request =
@@ -125,7 +125,7 @@ class LightningAddressResolver {
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
-        forceProxy: (url: String) -> Boolean,
+        okttpClient: (String) -> OkHttpClient,
         onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -142,7 +142,7 @@ class LightningAddressResolver {
             url += "&nostr=$encodedNostrRequest"
         }
 
-        val client = HttpClientManager.getHttpClient(forceProxy(url))
+        val client = okttpClient(url)
 
         val request: Request =
             Request
@@ -208,7 +208,7 @@ class LightningAddressResolver {
         milliSats: Long,
         message: String,
         nostrRequest: String? = null,
-        forceProxy: (url: String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onSuccess: (String) -> Unit,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
@@ -218,7 +218,7 @@ class LightningAddressResolver {
 
         fetchLightningAddressJson(
             lnaddress,
-            forceProxy,
+            okHttpClient,
             onSuccess = { lnAddressJson ->
                 onProgress(0.4f)
 
@@ -259,7 +259,7 @@ class LightningAddressResolver {
                         milliSats,
                         message,
                         if (allowsNostr) nostrRequest else null,
-                        forceProxy,
+                        okHttpClient,
                         onSuccess = {
                             onProgress(0.6f)
 

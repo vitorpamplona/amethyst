@@ -40,7 +40,7 @@ import kotlin.coroutines.resume
 
 class RegisterAccounts(
     private val accounts: List<AccountInfo>,
-    private val client: OkHttpClient,
+    private val client: (String) -> OkHttpClient,
 ) {
     val tag =
         if (BuildConfig.FLAVOR == "play") {
@@ -139,6 +139,7 @@ class RegisterAccounts(
         }
         """
 
+        val url = "https://push.amethyst.social/register"
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val body = jsonObject.toRequestBody(mediaType)
 
@@ -146,11 +147,11 @@ class RegisterAccounts(
             Request
                 .Builder()
                 .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                .url("https://push.amethyst.social/register")
+                .url(url)
                 .post(body)
                 .build()
 
-        val isSucess = client.newCall(request).execute().use { it.isSuccessful }
+        val isSucess = client(url).newCall(request).execute().use { it.isSuccessful }
         Log.i(tag, "Server registration $isSucess")
     }
 
