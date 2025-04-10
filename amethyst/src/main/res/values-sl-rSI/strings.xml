@@ -20,6 +20,7 @@
     <string name="impersonation">Oponašanje</string>
     <string name="illegal_behavior">Nedovoljeno obnašanje</string>
     <string name="other">Drugo</string>
+    <string name="harassment">Nadlegovanje</string>
     <string name="unknown">Neznano</string>
     <string name="relay_icon">Ikona releja</string>
     <string name="unknown_author">Avtor neznan</string>
@@ -89,6 +90,13 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="thank_you_so_much">Najlepša hvala!</string>
     <string name="amount_in_sats">Vsota v Sat</string>
     <string name="send_sats">Pošlji Sat</string>
+    <string name="secret_emoji_maker">Orodje za Emoji-je s skrivnostmi</string>
+    <string name="secret_emoji_maker_explainer">Izberi Emoji za pošiljanje s skritim sporočilom</string>
+    <string name="secret_note_to_receiver">Sprejem skrivnosti</string>
+    <string name="secret_note_to_receiver_placeholder">Moja skrita sporočila</string>
+    <string name="secret_visible_text">Vidni prefiksi</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">Dodaj v zapisek</string>
     <string name="error_parsing_preview_for">"Napaka pri razčlembi predogleda za %1$s : %2$s"</string>
     <string name="preview_card_image_for">"Predogled kartne slike za %1$s"</string>
     <string name="new_channel">Nov kanal</string>
@@ -98,6 +106,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="description">Opis</string>
     <string name="about_us">"O nas.. "</string>
     <string name="what_s_on_your_mind">Kaj imaš v mislih?</string>
+    <string name="write_a_message">Napiši sporočilo...</string>
     <string name="post">Pošlji</string>
     <string name="save">Shrani</string>
     <string name="create">Ustvari</string>
@@ -114,6 +123,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="global_feed">Globalni vir</string>
     <string name="search_feed">Išči vir</string>
     <string name="add_a_relay">Dodaj rele</string>
+    <string name="profile_name">Ime</string>
     <string name="display_name">Prikazano ime</string>
     <string name="my_display_name">Moje prikazno ime</string>
     <string name="my_awesome_name">Janez Slovenc</string>
@@ -149,6 +159,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="conversations">Pogovori</string>
     <string name="notes">Zapiski</string>
     <string name="replies">Pogovori</string>
+    <string name="mutual">Tvoje</string>
     <string name="gallery">Galerija</string>
     <string name="follows">"Sledi"</string>
     <string name="reports">"Reportaže"</string>
@@ -203,6 +214,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="with_description_of">z opisom</string>
     <string name="and_picture">in sliko</string>
     <string name="changed_chat_name_to">ime kanala spremenjeno v</string>
+    <string name="changed_chat_profile_to">Nov profil klepeta:</string>
     <string name="description_to">opis za</string>
     <string name="and_picture_to">in fotografijo</string>
     <string name="leave">Zapusti</string>

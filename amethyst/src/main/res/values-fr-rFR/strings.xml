@@ -98,6 +98,7 @@
     <string name="description">Description</string>
     <string name="about_us">"à propos"</string>
     <string name="what_s_on_your_mind">Quoi de neuf ?</string>
+    <string name="write_a_message">Rédiger un message...</string>
     <string name="post">Envoyer</string>
     <string name="save">Sauvegarder</string>
     <string name="create">Créer</string>
@@ -205,6 +206,7 @@
     <string name="with_description_of">avec le descriptif de</string>
     <string name="and_picture">et photo</string>
     <string name="changed_chat_name_to">changé le nom du chat en</string>
+    <string name="changed_chat_profile_to">Nouveau profil de tchat :</string>
     <string name="description_to">descriptif à</string>
     <string name="and_picture_to">et image à</string>
     <string name="leave">Partir</string>
@@ -212,6 +214,13 @@
     <string name="channel_created">Canal créé</string>
     <string name="channel_information_changed_to">"Les informations du canal ont été remplacées par"</string>
     <string name="public_chat">Chat public</string>
+    <string name="public_chat_title">Métadonnées de tchat public</string>
+    <string name="public_chat_explainer">Les conversations publiques sont visibles pour tout le monde sur Nostr et n\'importe qui
+        peut y participer. Elles sont idéales pour les communautés ouvertes autour de sujets spécifiques.
+        La modération peut être contrôlée en supprimant les messages sur ses relais</string>
+    <string name="public_chat_relays_title">Relais</string>
+    <string name="public_chat_relays_explainer">Insérez entre 1 et 3 relais qui hébergent ce groupe.
+         Les clients Nostr utilisent ce paramètre pour savoir où télécharger les messages et où les envoyer.</string>
     <string name="posts_received">messages reçus</string>
     <string name="remove">Retirer</string>
     <string name="translations_auto">Auto</string>
@@ -519,6 +528,7 @@
     <string name="cashu_redeem_to_zap">Envoyer vers le portefeuille Zap</string>
     <string name="cashu_redeem_to_cashu">Ouvrir dans le portefeuille Cashu</string>
     <string name="cashu_copy_token">Copier le Jeton</string>
+    <string name="quick_actions_open_in_another_app">Ouvrir dans une autre application</string>
     <string name="no_lightning_address_set">Adresse Lightning non définie</string>
     <string name="copied_token_to_clipboard">Jeton copié dans le presse-papiers</string>
     <string name="live_stream_live_tag">EN DIRECT</string>
@@ -598,6 +608,8 @@
     <string name="messages_new_message_subject">Sujet</string>
     <string name="messages_new_message_subject_caption">Sujet de la conversation</string>
     <string name="messages_new_message_to_caption">"\@Utilisateur1, @Utilisateur2, @Utilisateur3"</string>
+    <string name="messages_cant_upload_title">Impossible d\'uploader</string>
+    <string name="messages_cant_upload_explainer">Insérer d\'abord la destination du message</string>
     <string name="messages_group_descriptor">Membres de ce groupe</string>
     <string name="messages_new_subject_message">Explication aux membres</string>
     <string name="messages_new_subject_message_placeholder">Changement de nom pour les nouveaux objectifs.</string>
@@ -865,6 +877,7 @@
     <string name="message_to_author">Récapitulatif des modifications</string>
     <string name="message_to_author_placeholder">Corrections rapides ...</string>
     <string name="accept_the_suggestion">Accepter la Suggestion</string>
+    <string name="enter_picture_in_picture">Lancer la vidéo dans une popup</string>
     <string name="accessibility_download_for_offline">Télécharger</string>
     <string name="accessibility_lyrics_on">Paroles activées</string>
     <string name="accessibility_lyrics_off">Paroles désactivées</string>
@@ -930,4 +943,5 @@
     <string name="torrent_no_apps">Aucune application torrent installée pour ouvrir et télécharger le fichier.</string>
     <string name="select_list_to_filter">Sélectionnez une liste pour filtrer le fil</string>
     <string name="temporary_account">Se déconnecter au verrouillage de l\'appareil</string>
+    <string name="private_message">Message privé</string>
 </resources>
