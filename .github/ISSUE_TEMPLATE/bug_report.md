@@ -25,8 +25,9 @@ If applicable, add a video and/or screenshots to help explain your problem.
 
 **Device (please complete the following information):**
  - Phone Brand/Model [e.g. Pixel 7 Pro]:
- - Android Version [e.g. 33]:
- - App Version [e.g. v0.20.3]:
+ - Android Version [e.g. 34]:
+ - App Version [e.g. v0.94.3]:
+ - App Flavour [e.g. Google Play or FDroid]: 
  - Amber Version (if using it to sign):
 
 **Bounty (in Bitcoin sats) offered for a solution**
