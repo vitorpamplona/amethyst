@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.R.attr.maxLines
-import android.R.attr.onClick
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -235,7 +233,7 @@ fun ProfileContentTemplate(
                         .width(100.dp)
                         .height(100.dp)
                         .clip(shape = CircleShape)
-                        .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
+                        .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
@@ -425,7 +423,7 @@ fun WatchFollower(
         .observeAsState()
 
     LaunchedEffect(key1 = accountUserFollowersState) {
-        onReady(baseAccountUser.followerCount().toString() ?: "--")
+        onReady(baseAccountUser.followerCount().toString())
     }
 }
 

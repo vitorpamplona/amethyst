@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.theme
 import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context
-import android.graphics.Color.red
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
