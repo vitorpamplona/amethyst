@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.ui.dal.ThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.FollowSetFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrListFeedViewModel
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -163,13 +163,13 @@ class NostrBookmarkPrivateFeedViewModel(
 }
 
 @Stable
-class NostrUserFollowSetFeedViewModel(
+class NostrUserListFeedViewModel(
     val account: Account,
-) : FollowSetFeedViewModel(FollowSetFeedFilter(account)) {
+) : NostrListFeedViewModel(FollowSetFeedFilter(account)) {
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserFollowSetFeedViewModel : ViewModel> create(modelClass: Class<NostrUserFollowSetFeedViewModel>): NostrUserFollowSetFeedViewModel = NostrUserFollowSetFeedViewModel(account) as NostrUserFollowSetFeedViewModel
+        override fun <NostrUserFollowSetFeedViewModel : ViewModel> create(modelClass: Class<NostrUserFollowSetFeedViewModel>): NostrUserFollowSetFeedViewModel = NostrUserListFeedViewModel(account) as NostrUserFollowSetFeedViewModel
     }
 }
 

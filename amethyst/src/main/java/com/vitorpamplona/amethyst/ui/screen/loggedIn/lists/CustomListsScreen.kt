@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.NostrUserFollowSetFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -83,10 +83,10 @@ fun ListsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsViewModel: NostrUserFollowSetFeedViewModel =
+    val followSetsViewModel: NostrUserListFeedViewModel =
         viewModel(
-            key = "NostrUserFollowSetFeedViewModel",
-            factory = NostrUserFollowSetFeedViewModel.Factory(accountViewModel.account),
+            key = "NostrUserListFeedViewModel",
+            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
         )
 
     val currentCoroutineScope = rememberCoroutineScope()
