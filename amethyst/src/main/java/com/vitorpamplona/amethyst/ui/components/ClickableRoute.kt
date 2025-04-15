@@ -282,7 +282,7 @@ private fun DisplayAddress(
 }
 
 @Composable
-public fun DisplayUser(
+fun DisplayUser(
     userHex: HexKey,
     originalNip19: String,
     additionalChars: String?,
@@ -319,7 +319,7 @@ public fun DisplayUser(
 }
 
 @Composable
-public fun RenderUserAsClickableText(
+fun RenderUserAsClickableText(
     baseUser: User,
     additionalChars: String?,
     nav: INav,
@@ -327,7 +327,7 @@ public fun RenderUserAsClickableText(
     val userState by baseUser.live().userMetadataInfo.observeAsState()
 
     CreateClickableTextWithEmoji(
-        clickablePart = userState?.bestName() ?: ("@" + baseUser.pubkeyDisplayHex()),
+        clickablePart = "@" + (userState?.bestName() ?: baseUser.pubkeyDisplayHex()),
         suffix = additionalChars?.ifBlank { null },
         maxLines = 1,
         route = remember(baseUser) { routeFor(baseUser) },
