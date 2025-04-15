@@ -18,15 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets
 
-sealed class NostrList(
-    val listVisibility: ListVisibility,
-    val content: Collection<String>,
-)
+import androidx.compose.runtime.Composable
 
-class CuratedBookmarkList(
-    val name: String,
-    val visibility: ListVisibility,
-    val listItems: List<String>,
-) : NostrList(visibility, listItems)
+@Composable
+fun FollowSetScreen() {
+}
