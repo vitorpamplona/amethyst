@@ -20,8 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.ui.navigation.Route
 
 sealed class AccountState {
     object Loading : AccountState()
@@ -31,8 +38,30 @@ sealed class AccountState {
     @Stable
     class LoggedIn(
         val accountSettings: AccountSettings,
-        var route: String? = null,
+        var route: Route? = null,
     ) : AccountState() {
-        val currentViewModelStore = AccountCentricViewModelStore(accountSettings)
+        val currentViewModelStore = AccountCentricViewModelStore()
     }
+}
+
+@Composable
+fun SetAccountCentricViewModelStore(
+    state: AccountState.LoggedIn,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalViewModelStoreOwner provides state.currentViewModelStore,
+    ) {
+        content()
+    }
+
+    DisposableEffect(key1 = state) {
+        onDispose {
+            state.currentViewModelStore.viewModelStore.clear()
+        }
+    }
+}
+
+class AccountCentricViewModelStore : ViewModelStoreOwner {
+    override val viewModelStore = ViewModelStore()
 }

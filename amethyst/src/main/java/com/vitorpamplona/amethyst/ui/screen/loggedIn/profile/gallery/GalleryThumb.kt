@@ -51,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -292,7 +291,7 @@ fun UrlVideoView(
                 callbackUri = content.uri,
                 mimeType = content.mimeType,
                 aspectRatio = ratio,
-                proxyPort = HttpClientManager.getCurrentProxyPort(accountViewModel.account.shouldUseTorForVideoDownload(content.url)),
+                proxyPort = accountViewModel.proxyPortFor(content.url),
             ) { mediaItem ->
                 GetVideoController(
                     mediaItem = mediaItem,

@@ -20,21 +20,11 @@
  */
 package com.vitorpamplona.amethyst
 
-import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.Stable
-import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
-import coil3.gif.AnimatedImageDecoder
-import coil3.gif.GifDecoder
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
-import coil3.size.Precision
-import coil3.svg.SvgDecoder
-import coil3.util.DebugLogger
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.Base64Fetcher
-import com.vitorpamplona.amethyst.service.BlurHashFetcher
 import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.service.NostrChannelDataSource
 import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
@@ -51,17 +41,10 @@ import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
 import com.vitorpamplona.amethyst.service.NostrThreadDataSource
 import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
 import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
-import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
-import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
-import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.amethyst.ui.tor.TorType
+import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
-import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +54,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.util.concurrent.atomic.AtomicBoolean
 
 @Stable
 class ServiceManager(
@@ -85,7 +67,7 @@ class ServiceManager(
 
     private var collectorJob: Job? = null
 
-    var isTrimmingMemoryMutex = AtomicBoolean(false)
+    private val trimmingService = MemoryTrimmingService()
 
     private fun start(account: Account) {
         this.account = account
@@ -94,87 +76,17 @@ class ServiceManager(
 
     @OptIn(DelicateCoilApi::class)
     private fun start() {
-        Log.d("ServiceManager", "Pre Starting Relay Services $isStarted $account")
+        Log.d("ServiceManager", "-- May Start (hasStarted: $isStarted) for account $account")
         if (isStarted && account != null) {
+            Log.d("ServiceManager", "---- Restarting innactive relay Services with Tor: ${account?.settings?.torSettings?.torType?.value}")
+            client.reconnect()
             return
         }
-        Log.d("ServiceManager", "Starting Relay Services Tor: ${account?.settings?.torSettings?.torType?.value}")
+        Log.d("ServiceManager", "---- Starting Relay Services with Tor: ${account?.settings?.torSettings?.torType?.value}")
 
         val myAccount = account
 
-        // Resets Proxy Use
-        if (myAccount != null) {
-            when (myAccount.settings.torSettings.torType.value) {
-                TorType.INTERNAL -> {
-                    // Tor's lib will automatically set this port.
-                    if (TorManager.isSocksReady()) {
-                        HttpClientManager.setDefaultProxyOnPort(TorManager.socksPort())
-                    } else {
-                        HttpClientManager.setProxyNotReady()
-                    }
-                }
-                TorType.EXTERNAL -> {
-                    val port = myAccount.settings.torSettings.externalSocksPort.value
-                    if (port > 0) {
-                        HttpClientManager.setDefaultProxyOnPort(port)
-                    } else {
-                        HttpClientManager.setProxyNotReady()
-                    }
-                }
-                else -> HttpClientManager.setDefaultProxy(null)
-            }
-
-            OtsResolver.ots =
-                OpenTimestamps(
-                    OkHttpBlockstreamExplorer(myAccount::shouldUseTorForMoneyOperations),
-                    OkHttpCalendarBuilder(myAccount::shouldUseTorForMoneyOperations),
-                )
-        } else {
-            OtsResolver.ots =
-                OpenTimestamps(
-                    OkHttpBlockstreamExplorer { false },
-                    OkHttpCalendarBuilder { false },
-                )
-
-            HttpClientManager.setDefaultProxy(null)
-        }
-
-        // Convert this into a flow
-        LocalCache.antiSpam.active = account
-            ?.settings
-            ?.syncedSettings
-            ?.security
-            ?.filterSpamFromStrangers ?: true
-
-        SingletonImageLoader.setUnsafe {
-            Amethyst.instance
-                .imageLoaderBuilder()
-                .components {
-                    if (Build.VERSION.SDK_INT >= 28) {
-                        add(AnimatedImageDecoder.Factory())
-                    } else {
-                        add(GifDecoder.Factory())
-                    }
-                    add(SvgDecoder.Factory())
-                    add(Base64Fetcher.Factory)
-                    add(BlurHashFetcher.Factory)
-                    add(Base64Fetcher.BKeyer)
-                    add(BlurHashFetcher.BKeyer)
-                    add(
-                        OkHttpNetworkFetcherFactory(
-                            callFactory = {
-                                myAccount?.shouldUseTorForImageDownload()?.let { HttpClientManager.getHttpClient(it) }
-                                    ?: HttpClientManager.getHttpClient(false)
-                            },
-                        ),
-                    )
-                }.apply {
-                    if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
-                        this.logger(DebugLogger())
-                    }
-                }.precision(Precision.INEXACT)
-                .build()
-        }
+        Amethyst.instance.setImageLoader(myAccount?.shouldUseTorForImageDownload())
 
         if (myAccount != null) {
             val relaySet = myAccount.connectToRelaysWithProxy.value
@@ -230,7 +142,7 @@ class ServiceManager(
     }
 
     private fun pause() {
-        Log.d("ServiceManager", "Pausing Relay Services")
+        Log.d("ServiceManager", "-- Pausing Relay Services")
 
         collectorJob?.cancel()
         collectorJob = null
@@ -262,27 +174,7 @@ class ServiceManager(
     }
 
     suspend fun trimMemory() {
-        if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
-            try {
-                LocalCache.cleanObservers()
-
-                val accounts =
-                    LocalPreferences.allSavedAccounts().mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
-
-                account?.let {
-                    LocalCache.pruneOldAndHiddenMessages(it)
-                    NostrChatroomDataSource.clearEOSEs(it)
-
-                    LocalCache.pruneHiddenMessages(it)
-                    LocalCache.pruneContactLists(accounts)
-                    LocalCache.pruneRepliesAndReactions(accounts)
-                    LocalCache.prunePastVersionsOfReplaceables()
-                    LocalCache.pruneExpiredEvents()
-                }
-            } finally {
-                isTrimmingMemoryMutex.getAndSet(false)
-            }
-        }
+        trimmingService.run(account)
     }
 
     // This method keeps the pause/start in a Syncronized block to
@@ -293,6 +185,7 @@ class ServiceManager(
         start: Boolean = true,
         pause: Boolean = true,
     ) {
+        Log.d("ServiceManager", "-- Force Restart (start:$start) (pause:$pause) for $account")
         if (pause) {
             pause()
         }
@@ -306,25 +199,25 @@ class ServiceManager(
         }
     }
 
-    fun restartIfDifferentAccount(account: Account) {
-        if (this.account != account) {
-            forceRestart(account, true, true)
-        }
+    fun setAccountAndRestart(account: Account) {
+        forceRestart(account, true, true)
     }
 
     fun forceRestart() {
         forceRestart(null, true, true)
     }
 
-    fun justStart() {
-        forceRestart(null, true, false)
+    fun justStartIfItHasAccount() {
+        if (account != null) {
+            forceRestart(null, true, false)
+        }
     }
 
     fun pauseForGood() {
         forceRestart(null, false, true)
     }
 
-    fun pauseForGoodAndClearAccount() {
+    fun pauseAndLogOff() {
         account = null
         forceRestart(null, false, true)
     }

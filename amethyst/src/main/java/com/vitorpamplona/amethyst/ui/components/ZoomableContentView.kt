@@ -79,7 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.Blurhash
+import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
@@ -637,7 +637,7 @@ fun DisplayBlurHash(
     if (blurhash == null) return
 
     AsyncImage(
-        model = Blurhash(blurhash),
+        model = BlurhashWrapper(blurhash),
         contentDescription = description,
         contentScale = contentScale,
         modifier = modifier,
@@ -739,7 +739,7 @@ fun ShareImageAction(
 private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
-    Amethyst.instance.coilCache.openSnapshot(content.url)?.use { snapshot ->
+    Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
         val hash = sha256(snapshot.data.toFile().readBytes()).toHexKey()
 
         Log.d("Image Hash Verification", "$hash == ${content.hash}")

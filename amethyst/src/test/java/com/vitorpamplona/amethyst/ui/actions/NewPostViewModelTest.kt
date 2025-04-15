@@ -36,6 +36,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -75,9 +76,12 @@ class NewPostViewModelTest {
             every { replyingTo.event } returns textNoteEvent
 
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
+            every { accountViewModel.account.userProfile() } returns mockk<User>(relaxed = true)
+            every { accountViewModel.account.myEmojis } returns mockk<StateFlow<List<Account.EmojiMedia>>>(relaxed = true)
 
             // Act: Call load with mentions
-            newPostViewModelUnderTest.load(accountViewModel, replyingTo, quote = null, fork = null, version = null, draft = null)
+            newPostViewModelUnderTest.init(accountViewModel)
+            newPostViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
 
             // Assert
             // Two mentions should call LocalCache.getOrCreateUser twice
@@ -87,9 +91,9 @@ class NewPostViewModelTest {
     @Test
     fun `test load with zero mentions`() =
         runTest {
-            // Arrange: Setup Note with zero mentions
             every { accountViewModel.account } returns mockk<Account>()
 
+            // Arrange: Setup Note with zero mentions
             val textNoteEvent = mockk<TextNoteEvent>(relaxed = true)
             every { textNoteEvent.mentions() } returns emptyList()
             every { replyingTo.event } returns textNoteEvent
@@ -97,7 +101,7 @@ class NewPostViewModelTest {
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
 
             // Act: Call load with empty mentions
-            newPostViewModelUnderTest.load(accountViewModel, replyingTo, quote = null, fork = null, version = null, draft = null)
+            newPostViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
 
             // Assert
             // With no mentions LocalCache.getOrCreateUser should not be called
@@ -107,9 +111,9 @@ class NewPostViewModelTest {
     @Test
     fun `test load with empty mentions`() =
         runTest {
-            // Arrange: Setup empty mentions
             every { accountViewModel.account } returns mockk<Account>()
 
+            // Arrange: Setup empty mentions
             val textNoteEvent = mockk<TextNoteEvent>(relaxed = true)
             every { textNoteEvent.mentions() } returns emptyList()
             every { replyingTo.event } returns textNoteEvent
@@ -117,7 +121,7 @@ class NewPostViewModelTest {
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
 
             // Act: Call load with empty mentions
-            newPostViewModelUnderTest.load(accountViewModel, replyingTo, quote = null, fork = null, version = null, draft = null)
+            newPostViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
 
             // Assert
             // Verify LocalCache.getOrCreateUser(it) is not called with empty hex, it will crash the app

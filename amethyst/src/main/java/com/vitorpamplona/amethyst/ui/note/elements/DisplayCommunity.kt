@@ -20,17 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import android.R.attr.maxLines
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.buildLinkString
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -56,12 +58,13 @@ private fun DisplayCommunity(
     val communityTag =
         remember(note) { note.event?.getTagOfAddressableKind(CommunityDefinitionEvent.KIND) } ?: return
 
-    val displayTag = remember(note) { AnnotatedString(getCommunityShortName(communityTag)) }
-    val route = remember(note) { "Community/${communityTag.toTag()}" }
+    val displayTag =
+        remember(note) {
+            buildLinkString(getCommunityShortName(communityTag)) { nav.nav(Route.Community(communityTag.toTag())) }
+        }
 
-    ClickableText(
+    Text(
         text = displayTag,
-        onClick = { nav.nav(route) },
         style =
             LocalTextStyle.current.copy(
                 color =

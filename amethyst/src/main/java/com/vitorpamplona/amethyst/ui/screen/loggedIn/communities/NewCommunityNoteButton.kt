@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
@@ -59,7 +59,7 @@ fun NewCommunityNoteButton(
     FloatingActionButton(
         onClick = {
             val route =
-                buildNewPostRoute(
+                Route.NewPost(
                     baseReplyTo = note.idHex,
                 )
             nav.nav(route)

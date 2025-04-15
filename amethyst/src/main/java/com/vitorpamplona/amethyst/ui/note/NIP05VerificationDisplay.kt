@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Icon
@@ -390,8 +389,8 @@ fun DisplayNIP05(
 
     NIP05VerifiedSymbol(nip05Verified, NIP05IconSize, accountViewModel)
 
-    ClickableText(
-        text = remember(nip05) { AnnotatedString(domain) },
+    ClickableTextPrimary(
+        text = domain,
         onClick = { runCatching { uri.openUri("https://$domain") } },
         style =
             LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.nip05, fontSize = Font14SP),
@@ -441,7 +440,7 @@ fun DisplayNip05ProfileStatus(
 
                 if (user != "_") {
                     Text(
-                        text = remember { AnnotatedString(user + "@") },
+                        text = "$user@",
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         maxLines = 1,
@@ -450,10 +449,9 @@ fun DisplayNip05ProfileStatus(
                     domainPadStart = 0.dp
                 }
 
-                ClickableText(
-                    text = AnnotatedString(domain),
+                ClickableTextPrimary(
+                    text = domain,
                     onClick = { nip05.let { runCatching { uri.openUri("https://${it.split("@")[1]}") } } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = domainPadStart),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

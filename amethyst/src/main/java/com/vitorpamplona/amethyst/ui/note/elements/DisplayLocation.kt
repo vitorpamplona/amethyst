@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withLink
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 
@@ -36,9 +39,15 @@ fun DisplayLocation(
     nav: INav,
 ) {
     LoadCityName(geohashStr) { cityName ->
-        ClickableText(
-            text = AnnotatedString(cityName),
-            onClick = { nav.nav("Geohash/$geohashStr") },
+        Text(
+            text =
+                buildAnnotatedString {
+                    withLink(
+                        LinkAnnotation.Clickable("cityname") { nav.nav(Route.Geohash(geohashStr)) },
+                    ) {
+                        append(cityName)
+                    }
+                },
             style =
                 LocalTextStyle.current.copy(
                     color =

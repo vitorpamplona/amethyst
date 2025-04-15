@@ -120,13 +120,13 @@ private fun AssembleHomeTabs(
                     TabItem(
                         resource = R.string.new_threads,
                         feedState = newThreadsFeedState,
-                        routeForLastRead = Route.Home.base + "Follows",
+                        routeForLastRead = "HomeFollows",
                         scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
                     ),
                     TabItem(
                         resource = R.string.conversations,
                         feedState = repliesFeedState,
-                        routeForLastRead = Route.Home.base + "FollowsReplies",
+                        routeForLastRead = "HomeFollowsReplies",
                         scrollStateKey = ScrollStateKeys.HOME_REPLIES,
                     ),
                 ).toImmutableList(),
@@ -183,11 +183,11 @@ private fun HomePages(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Home, accountViewModel) { route, _ ->
+            AppBottomBar(Route.Home, accountViewModel) { route ->
                 if (route == Route.Home) {
                     tabs[pagerState.currentPage].feedState.sendToTop()
                 } else {
-                    nav.newStack(route.base)
+                    nav.newStack(route)
                 }
             }
         },

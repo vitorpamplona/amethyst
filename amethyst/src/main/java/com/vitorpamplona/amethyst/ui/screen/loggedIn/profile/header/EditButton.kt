@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 
 @Composable
 fun EditButton(nav: INav) {
-    InnerEditButton { nav.nav(Route.EditProfile.route) }
+    InnerEditButton { nav.nav(Route.EditProfile) }
 }
 
 @Preview

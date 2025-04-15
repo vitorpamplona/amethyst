@@ -24,12 +24,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilderFactory
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 
 class OkHttpWebSocket(
     val url: String,
     val forceProxy: Boolean,
+    val httpClient: (url: String, forceProxy: Boolean) -> OkHttpClient,
     val out: WebSocketListener,
 ) : WebSocket {
     private val listener = OkHttpWebsocketListener()
@@ -38,7 +40,7 @@ class OkHttpWebSocket(
     fun buildRequest() = Request.Builder().url(url.trim()).build()
 
     override fun connect() {
-        socket = HttpClientManager.getHttpClient(forceProxy).newWebSocket(buildRequest(), listener)
+        socket = httpClient(url, forceProxy).newWebSocket(buildRequest(), listener)
     }
 
     inner class OkHttpWebsocketListener : okhttp3.WebSocketListener() {
@@ -76,15 +78,22 @@ class OkHttpWebSocket(
 
     class Builder(
         val forceProxy: Boolean,
+        val httpClient: (String, Boolean) -> OkHttpClient,
     ) : WebsocketBuilder {
+        // Called when connecting.
         override fun build(
             url: String,
             out: WebSocketListener,
-        ) = OkHttpWebSocket(url, forceProxy, out)
+        ) = OkHttpWebSocket(url, forceProxy, httpClient, out)
     }
 
-    class BuilderFactory : WebsocketBuilderFactory {
-        override fun build(forceProxy: Boolean) = Builder(forceProxy)
+    class BuilderFactory(
+        val httpClient: (String, Boolean) -> OkHttpClient,
+    ) : WebsocketBuilderFactory {
+        override fun build(
+            url: String,
+            forceProxy: Boolean,
+        ) = Builder(forceProxy, httpClient)
     }
 
     override fun cancel() {

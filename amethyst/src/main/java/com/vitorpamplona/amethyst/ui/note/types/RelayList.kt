@@ -62,8 +62,6 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun DisplayRelaySet(
@@ -299,11 +297,11 @@ private fun RelayOptionsAction(
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {
-            nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(relay, StandardCharsets.UTF_8.toString()))
+            nav.nav(Route.EditRelays(relay))
         }
     } else {
         RemoveRelayButton {
-            nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(relay, StandardCharsets.UTF_8.toString()))
+            nav.nav(Route.EditRelays(relay))
         }
     }
 }

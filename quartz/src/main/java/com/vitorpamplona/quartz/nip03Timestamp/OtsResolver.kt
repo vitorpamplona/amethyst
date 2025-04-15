@@ -21,7 +21,9 @@
 package com.vitorpamplona.quartz.nip03Timestamp
 
 import android.util.Log
+import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockstreamExplorer
+import com.vitorpamplona.quartz.nip03Timestamp.ots.CalendarBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.ots.CalendarPureJavaBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.ots.DetachedTimestampFile
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Hash
@@ -31,13 +33,11 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA256
 import kotlinx.coroutines.CancellationException
 
-object OtsResolver {
-    // default config
-    var ots =
-        OpenTimestamps(
-            BlockstreamExplorer(),
-            CalendarPureJavaBuilder(),
-        )
+class OtsResolver(
+    explorer: BitcoinExplorer = BlockstreamExplorer(),
+    calendarBuilder: CalendarBuilder = CalendarPureJavaBuilder(),
+) {
+    val ots: OpenTimestamps = OpenTimestamps(explorer, calendarBuilder)
 
     fun info(otsState: ByteArray): String = ots.info(DetachedTimestampFile.deserialize(otsState))
 

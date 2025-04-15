@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst
+package com.vitorpamplona.amethyst.service.logging
 
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
 import android.util.Printer
-import android.view.Choreographer
 import java.text.SimpleDateFormat
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -166,33 +165,5 @@ class StackSampler(
     companion object {
         const val SEPARATOR: String = "\r\n"
         val TIME_FORMATTER: SimpleDateFormat = SimpleDateFormat("MM-dd HH:mm:ss.SSS")
-    }
-}
-
-object ChoreographerHelper {
-    var lastFrameTimeNanos: Long = 0
-
-    fun start() {
-        Choreographer.getInstance().postFrameCallback(
-            object : Choreographer.FrameCallback {
-                override fun doFrame(frameTimeNanos: Long) {
-                    // Last callback time
-                    if (lastFrameTimeNanos == 0L) {
-                        lastFrameTimeNanos = frameTimeNanos
-                        Choreographer.getInstance().postFrameCallback(this)
-                        return
-                    }
-                    val diff = (frameTimeNanos - lastFrameTimeNanos) / 1000000
-                    // only report after 30ms because videos play at 30fps
-                    if (diff > 35) {
-                        // Follow the frame number
-                        val droppedCount = (diff / 16.6).toInt()
-                        Log.w("block-canary", "Dropped $droppedCount frames. Skipped $diff ms")
-                    }
-                    lastFrameTimeNanos = frameTimeNanos
-                    Choreographer.getInstance().postFrameCallback(this)
-                }
-            },
-        )
     }
 }

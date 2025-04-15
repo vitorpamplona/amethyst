@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.theme
 import android.app.Activity
 import android.app.UiModeManager
 import android.content.Context
-import android.graphics.Color.red
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -278,14 +277,14 @@ val darkLargeProfilePictureModifier =
         .width(120.dp)
         .height(120.dp)
         .clip(shape = CircleShape)
-        .border(3.dp, DarkColorPalette.background, CircleShape)
+        .border(3.dp, DarkColorPalette.onBackground, CircleShape)
 
 val lightLargeProfilePictureModifier =
     Modifier
         .width(120.dp)
         .height(120.dp)
         .clip(shape = CircleShape)
-        .border(3.dp, LightColorPalette.background, CircleShape)
+        .border(3.dp, LightColorPalette.onBackground, CircleShape)
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 

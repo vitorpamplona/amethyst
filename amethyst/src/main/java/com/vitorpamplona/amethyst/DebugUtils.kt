@@ -91,7 +91,7 @@ fun debugState(context: Context) {
 
     Log.d(
         "STATE DUMP",
-        "Image Disk Cache ${(Amethyst.instance.coilCache.size) / (1024 * 1024)}/${(Amethyst.instance.coilCache.maxSize) / (1024 * 1024)} MB",
+        "Image Disk Cache ${(Amethyst.instance.diskCache.size) / (1024 * 1024)}/${(Amethyst.instance.diskCache.maxSize) / (1024 * 1024)} MB",
     )
     Log.d(
         "STATE DUMP",

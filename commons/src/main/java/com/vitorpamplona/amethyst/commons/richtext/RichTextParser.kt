@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.Patterns
 import com.linkedin.urls.detection.UrlDetector
 import com.linkedin.urls.detection.UrlDetectorOptions
+import com.vitorpamplona.amethyst.commons.base64Image.Base64Image
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
@@ -101,11 +102,6 @@ class RichTextParser {
         } else {
             null
         }
-    }
-
-    private fun checkBase64(content: String): Boolean {
-        val matcher = base64contentPattern.matcher(content)
-        return matcher.find()
     }
 
     fun parseValidUrls(content: String): LinkedHashSet<String> {
@@ -239,9 +235,7 @@ class RichTextParser {
     ): Segment {
         if (word.isEmpty()) return RegularTextSegment(word)
 
-        if (word.startsWith("data:image/")) {
-            if (checkBase64(word)) return Base64Segment(word)
-        }
+        if (word.startsWith("data:image/") && Base64Image.isBase64(word)) return Base64Segment(word)
 
         if (images.contains(word)) return ImageSegment(word)
 
@@ -360,8 +354,6 @@ class RichTextParser {
 
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
         val videoExtensions = videoExt + videoExt.map { it.uppercase() }
-
-        val base64contentPattern = Pattern.compile("data:image/(${imageExtensions.joinToString(separator = "|") { it } });base64,([a-zA-Z0-9+/]+={0,2})")
 
         val tagIndex = Pattern.compile("\\#\\[([0-9]+)\\](.*)")
         val hashTagsPattern: Pattern =

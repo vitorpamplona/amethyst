@@ -24,6 +24,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.previews.UrlPreview
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import okhttp3.OkHttpClient
 
 @Stable
 object UrlCachedPreviewer {
@@ -32,7 +33,7 @@ object UrlCachedPreviewer {
 
     suspend fun previewInfo(
         url: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onReady: suspend (UrlPreviewState) -> Unit,
     ) {
         cache[url]?.let {
@@ -42,7 +43,7 @@ object UrlCachedPreviewer {
 
         UrlPreview().fetch(
             url,
-            forceProxy,
+            okHttpClient,
             onComplete = { urlInfo ->
                 cache[url]?.let {
                     if (it is UrlPreviewState.Loaded || it is UrlPreviewState.Empty) {

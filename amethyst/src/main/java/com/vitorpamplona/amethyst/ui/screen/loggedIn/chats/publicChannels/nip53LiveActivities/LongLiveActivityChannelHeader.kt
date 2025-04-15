@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
@@ -175,7 +176,7 @@ fun LongLiveActivityChannelHeader(
 
     participantUsers.forEach {
         Row(
-            lineModifier.clickable { nav.nav("User/${it.second.pubkeyHex}") },
+            lineModifier.clickable { nav.nav(routeFor(it.second)) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             it.first.role?.let { it1 ->

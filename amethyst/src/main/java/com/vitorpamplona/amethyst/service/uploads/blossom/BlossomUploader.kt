@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -40,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
@@ -70,7 +70,7 @@ class BlossomUploader {
         alt: String?,
         sensitiveContent: String?,
         serverBaseUrl: String,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
@@ -103,7 +103,7 @@ class BlossomUploader {
             alt,
             sensitiveContent,
             serverBaseUrl,
-            forceProxy,
+            okHttpClient,
             httpAuth,
             context,
         )
@@ -123,7 +123,7 @@ class BlossomUploader {
         alt: String?,
         sensitiveContent: String?,
         serverBaseUrl: String,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
     ): MediaUploadResult {
@@ -135,7 +135,7 @@ class BlossomUploader {
 
         val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
 
-        val client = HttpClientManager.getHttpClient(forceProxy(apiUrl))
+        val client = okHttpClient(apiUrl)
         val requestBuilder = Request.Builder()
 
         val requestBody: RequestBody =
@@ -191,7 +191,7 @@ class BlossomUploader {
         hash: String,
         contentType: String?,
         serverBaseUrl: String,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         httpAuth: (hash: HexKey, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
     ): Boolean {
@@ -213,7 +213,7 @@ class BlossomUploader {
                 .delete()
                 .build()
 
-        HttpClientManager.getHttpClient(forceProxy(apiUrl)).newCall(request).execute().use { response ->
+        okHttpClient(apiUrl).newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 return true
             } else {

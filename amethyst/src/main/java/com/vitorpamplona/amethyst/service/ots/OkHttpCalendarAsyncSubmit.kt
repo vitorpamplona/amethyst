@@ -21,14 +21,13 @@
 package com.vitorpamplona.amethyst.service.ots
 
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendarAsyncSubmit
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Optional
-import java.util.concurrent.BlockingQueue
 
 /**
  * For making async calls to a calendar server
@@ -36,19 +35,10 @@ import java.util.concurrent.BlockingQueue
 class OkHttpCalendarAsyncSubmit(
     private val url: String,
     private val digest: ByteArray,
-    private val forceProxy: Boolean,
+    private val client: OkHttpClient,
 ) : ICalendarAsyncSubmit {
-    private var queue: BlockingQueue<Optional<Timestamp>>? = null
-
-    fun setQueue(queue: BlockingQueue<Optional<Timestamp>>?) {
-        this.queue = queue
-    }
-
-    @Throws(Exception::class)
     override fun call(): Optional<Timestamp> {
-        val client = HttpClientManager.getHttpClient(forceProxy)
         val url = "$url/digest"
-
         val mediaType = "application/x-www-form-urlencoded; charset=utf-8".toMediaType()
         val requestBody = digest.toRequestBody(mediaType)
 
@@ -69,11 +59,8 @@ class OkHttpCalendarAsyncSubmit(
                         it.body.bytes(),
                     )
                 val timestamp = Timestamp.deserialize(ctx, digest)
-                val of = Optional.of(timestamp)
-                queue!!.add(of)
-                return of
+                return Optional.of(timestamp)
             } else {
-                queue!!.add(Optional.empty())
                 return Optional.empty()
             }
         }

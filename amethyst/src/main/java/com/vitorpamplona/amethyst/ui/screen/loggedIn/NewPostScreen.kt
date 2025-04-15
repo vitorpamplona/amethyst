@@ -159,7 +159,7 @@ fun NewPostScreen(
     nav: Nav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
-    postViewModel.account = accountViewModel.account
+    postViewModel.init(accountViewModel)
     postViewModel.wantsToAddGeoHash = enableGeolocation
 
     val context = LocalContext.current
@@ -183,7 +183,7 @@ fun NewPostScreen(
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
-            postViewModel.load(accountViewModel, baseReplyTo, quote, fork, version, draft)
+            postViewModel.load(baseReplyTo, quote, fork, version, draft)
             message?.ifBlank { null }?.let {
                 postViewModel.updateMessage(TextFieldValue(it))
             }

@@ -72,13 +72,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -89,7 +91,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
-import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -232,7 +233,7 @@ fun ProfileContentTemplate(
                         .width(100.dp)
                         .height(100.dp)
                         .clip(shape = CircleShape)
-                        .border(3.dp, MaterialTheme.colorScheme.background, CircleShape)
+                        .border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
                         .clickable(onClick = onClick),
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
@@ -422,7 +423,7 @@ fun WatchFollower(
         .observeAsState()
 
     LaunchedEffect(key1 = accountUserFollowersState) {
-        onReady(baseAccountUser.followerCount().toString() ?: "--")
+        onReady(baseAccountUser.followerCount().toString())
     }
 }
 
@@ -433,8 +434,6 @@ fun ListContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val route = remember(accountViewModel) { "User/${accountViewModel.userProfile().pubkeyHex}" }
-
     var editMediaServers by remember { mutableStateOf(false) }
 
     var backupDialogOpen by remember { mutableStateOf(false) }
@@ -445,11 +444,11 @@ fun ListContent(
 
     Column(modifier) {
         NavigationRow(
-            title = stringRes(R.string.profile),
-            icon = Route.Profile.icon,
+            title = R.string.profile,
+            icon = R.drawable.ic_profile,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
-            route = route,
+            route = remember { Route.Profile(accountViewModel.userProfile().pubkeyHex) },
         )
 
         NavigationRow(
@@ -461,31 +460,31 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringRes(R.string.bookmarks),
-            icon = Route.Bookmarks.icon,
+            title = R.string.bookmarks,
+            icon = R.drawable.ic_bookmarks,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Bookmarks.route,
+            route = Route.Bookmarks,
         )
 
         NavigationRow(
-            title = stringRes(R.string.drafts),
-            icon = Route.Drafts.icon,
+            title = R.string.drafts,
+            icon = R.drawable.ic_topics,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Drafts.route,
+            route = Route.Drafts,
         )
 
         IconRowRelays(
             accountViewModel = accountViewModel,
             onClick = {
                 nav.closeDrawer()
-                nav.nav(Route.EditRelays.base)
+                nav.nav(Route.EditRelays())
             },
         )
 
         IconRow(
-            title = stringRes(R.string.media_servers),
+            title = R.string.media_servers,
             icon = Icons.Outlined.CloudUpload,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
@@ -495,15 +494,15 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringRes(R.string.security_filters),
-            icon = Route.BlockedUsers.icon,
+            title = R.string.security_filters,
+            icon = R.drawable.ic_security,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.BlockedUsers.route,
+            route = Route.SecurityFilters,
         )
 
         IconRow(
-            title = stringRes(R.string.privacy_options),
+            title = R.string.privacy_options,
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
@@ -514,7 +513,7 @@ fun ListContent(
 
         accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
-                title = stringRes(R.string.backup_keys),
+                title = R.string.backup_keys,
                 icon = R.drawable.ic_key,
                 tint = MaterialTheme.colorScheme.onBackground,
                 onClick = {
@@ -525,17 +524,17 @@ fun ListContent(
         }
 
         NavigationRow(
-            title = stringRes(R.string.preferences),
-            icon = Route.Settings.icon,
+            title = R.string.preferences,
+            icon = R.drawable.ic_settings,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Settings.route,
+            route = Route.Settings,
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
-            title = stringRes(R.string.drawer_accounts),
+            title = R.string.drawer_accounts,
             icon = Icons.Outlined.GroupAdd,
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = openSheet,
@@ -602,11 +601,11 @@ private fun RenderRelayStatus(relayPool: RelayPoolStatus) {
 
 @Composable
 fun NavigationRow(
-    title: String,
+    title: Int,
     icon: Int,
     tint: Color,
     nav: INav,
-    route: String,
+    route: Route,
 ) {
     IconRow(
         title,
@@ -621,7 +620,7 @@ fun NavigationRow(
 
 @Composable
 fun IconRow(
-    title: String,
+    title: Int,
     icon: Int,
     tint: Color,
     onClick: () -> Unit,
@@ -640,13 +639,13 @@ fun IconRow(
         ) {
             Icon(
                 painter = painterResource(icon),
-                null,
+                contentDescription = stringRes(title),
                 modifier = Size22Modifier,
                 tint = tint,
             )
             Text(
                 modifier = IconRowTextModifier,
-                text = title,
+                text = stringRes(title),
                 fontSize = Font18SP,
             )
         }
@@ -655,7 +654,7 @@ fun IconRow(
 
 @Composable
 fun IconRow(
-    title: String,
+    title: Int,
     icon: ImageVector,
     tint: Color,
     onClick: () -> Unit,
@@ -665,7 +664,7 @@ fun IconRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(
-                    onClickLabel = title,
+                    onClickLabel = stringRes(title),
                     onClick = onClick,
                 ),
     ) {
@@ -675,13 +674,13 @@ fun IconRow(
         ) {
             Icon(
                 imageVector = icon,
-                null,
+                contentDescription = stringRes(title),
                 modifier = Size22Modifier,
                 tint = tint,
             )
             Text(
                 modifier = IconRowTextModifier,
-                text = title,
+                text = stringRes(title),
                 fontSize = Font18SP,
             )
         }
@@ -749,23 +748,33 @@ fun BottomContent(
                     .padding(horizontal = 15.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ClickableText(
-                text =
+            val string =
+                remember {
                     buildAnnotatedString {
-                        withStyle(
-                            SpanStyle(
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                            ),
+                        withLink(
+                            LinkAnnotation.Clickable(
+                                "clickable",
+                                TextLinkStyles(
+                                    SpanStyle(
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    ),
+                                ),
+                            ) {
+                                nav.nav(Route.Note(BuildConfig.RELEASE_NOTES_ID))
+                                nav.closeDrawer()
+                            },
                         ) {
-                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                            append("v12" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
                         }
-                    },
-                onClick = {
-                    nav.nav("Note/${BuildConfig.RELEASE_NOTES_ID}")
-                    nav.closeDrawer()
-                },
+                    }
+                }
+
+            Text(
+                text = string,
                 modifier = Modifier.padding(start = 16.dp),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
             )
             Box(modifier = Modifier.weight(1F))
             IconButton(

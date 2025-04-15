@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
@@ -84,7 +85,7 @@ class Nip65RelayListViewModel : ViewModel() {
             _homeRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
-                    forceProxy = account.shouldUseTorForDirty(item.url),
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -95,7 +96,7 @@ class Nip65RelayListViewModel : ViewModel() {
             _notificationRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
-                    forceProxy = account.shouldUseTorForDirty(item.url),
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
                     },

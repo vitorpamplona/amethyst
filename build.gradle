@@ -49,6 +49,6 @@ tasks.register('installGitHook', Copy) {
     from new File(rootProject.rootDir, 'git-hooks/pre-commit')
     from new File(rootProject.rootDir, 'git-hooks/pre-push')
     into { new File(rootProject.rootDir, '.git/hooks') }
-    fileMode 0777
+    filePermissions { unix(0777) }
 }
 tasks.getByPath(':amethyst:preBuild').dependsOn installGitHook

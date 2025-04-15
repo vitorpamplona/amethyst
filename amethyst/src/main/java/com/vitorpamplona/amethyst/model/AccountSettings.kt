@@ -122,13 +122,13 @@ class AccountSettings(
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
 ) {
-    val saveable = MutableStateFlow(AccountSettingsUpdater(this))
+    val saveable = MutableStateFlow(AccountSettingsUpdater(null))
     val syncedSettings: AccountSyncedSettings =
         backupSyncedSettings?.let { AccountSyncedSettings(it) }
             ?: AccountSyncedSettings(AccountSyncedSettingsInternal())
 
     class AccountSettingsUpdater(
-        val accountSettings: AccountSettings,
+        val accountSettings: AccountSettings?,
     )
 
     fun saveAccountSettings() {

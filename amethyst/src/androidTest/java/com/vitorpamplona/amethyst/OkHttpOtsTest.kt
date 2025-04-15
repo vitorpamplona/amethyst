@@ -21,17 +21,17 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.service.ots.OkHttpBlockstreamExplorer
+import com.vitorpamplona.amethyst.service.ots.OkHttpBitcoinExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
+import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
-import com.vitorpamplona.quartz.nip03Timestamp.ots.OpenTimestamps
 import junit.framework.TestCase.assertEquals
+import okhttp3.OkHttpClient
 import org.junit.Assert
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
@@ -44,31 +44,37 @@ class OkHttpOtsTest {
     val otsPendingEvent = "{\"id\":\"12fa15ad4b4cf9dc5940389325b69b93c5c1f59c049c701ee669b275299fdaf1\",\"pubkey\":\"dcaa6c8a2f47b6fef4a34b20e8843c59dbe7c5f07a402338c09fd147dd01d22b\",\"created_at\":1708877521,\"kind\":1040,\"tags\":[[\"e\",\"a8634f5368e17789e8fb3836cad0e4b9fe4f2288afafc28723c04bebc68a18d6\"],[\"alt\",\"Opentimestamps Attestation\"]],\"content\":\"AE9wZW5UaW1lc3RhbXBzAABQcm9vZgC/ieLohOiSlAEIqGNPU2jhd4no+zg2ytDkuf5PIoivr8KHI8BL68aKGNbwELidvzr0usf55CkpKf6OABQI//AQK3sWd2tq+7KO8YNJIARJugjxBGXbZtPwCL0H4/7GL5+SAIPf4w0u+QyOLCtodHRwczovL2JvYi5idGMuY2FsZW5kYXIub3BlbnRpbWVzdGFtcHMub3Jn//AQPDZsJgN1TnJXoUzlsgo93wjwIIfBc7LUqkCbC1BLZRZ+6LXztK50UdH5xe7fn40bupkrCPEEZdtm0/AI0CADXN5ZIncAg9/jDS75DI4uLWh0dHBzOi8vYWxpY2UuYnRjLmNhbGVuZGFyLm9wZW50aW1lc3RhbXBzLm9yZ/AQcELcSrE04cuGKlZQf2LeVwjwILUDSf9vK2GaefKTpn/LV2oUsQaA5WbqaP3C+1ZxQfRNCPEEZdtm0/AIbCtb+yRXFqUAg9/jDS75DI4pKGh0dHBzOi8vZmlubmV5LmNhbGVuZGFyLmV0ZXJuaXR5d2FsbC5jb20=\",\"sig\":\"f6854c0228c15c08aeb70bbabe9ed87bbb7289fab31b13cabac15138bb71179553e06080b83f4a813fbdaf614f63293beea3fc73fe865da6551193fa4d38de04\"}"
 
     val otsEvent2Digest = "a8634f5368e17789e8fb3836cad0e4b9fe4f2288afafc28723c04bebc68a18d6"
+    val otsCache = OtsBlockHeightCache()
 
-    @Before
-    fun setup() {
-        OtsResolver.ots = OpenTimestamps(OkHttpBlockstreamExplorer(forceProxy = { false }), OkHttpCalendarBuilder(forceProxy = { false }))
-    }
+    val resolver =
+        OtsResolver(
+            OkHttpBitcoinExplorer(
+                OkHttpBitcoinExplorer.MEMPOOL_API_URL,
+                client = OkHttpClient.Builder().build(),
+                otsCache,
+            ),
+            OkHttpCalendarBuilder { OkHttpClient.Builder().build() },
+        )
 
     @Test
     fun verifyNostrEvent() {
         val ots = EventMapper.fromJson(otsEvent) as OtsEvent
-        println(OtsResolver.info(ots.otsByteArray()))
-        assertEquals(1707688818L, ots.verify())
+        println(resolver.info(ots.otsByteArray()))
+        assertEquals(1707688818L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrEvent2() {
         val ots = EventMapper.fromJson(otsEvent2) as OtsEvent
-        println(OtsResolver.info(ots.otsByteArray()))
-        assertEquals(1706322179L, ots.verify())
+        println(resolver.info(ots.otsByteArray()))
+        assertEquals(1706322179L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrPendingEvent() {
         val ots = EventMapper.fromJson(otsPendingEvent) as OtsEvent
-        println(OtsResolver.info(ots.otsByteArray()))
-        assertEquals(null, ots.verify())
+        println(resolver.info(ots.otsByteArray()))
+        assertEquals(null, ots.verify(resolver))
     }
 
     @Test
@@ -78,7 +84,7 @@ class OkHttpOtsTest {
 
         val countDownLatch = CountDownLatch(1)
 
-        val otsFile = OtsEvent.stamp(otsEvent2Digest)
+        val otsFile = OtsEvent.stamp(otsEvent2Digest, resolver)
 
         signer.sign(OtsEvent.build(otsEvent2Digest, otsFile)) {
             ots = it
@@ -88,9 +94,9 @@ class OkHttpOtsTest {
         Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
         println(ots!!.toJson())
-        println(OtsResolver.info(ots!!.otsByteArray()))
+        println(resolver.info(ots.otsByteArray()))
 
         // Should not be valid because we need to wait for confirmations
-        assertEquals(null, ots!!.verify())
+        assertEquals(null, ots.verify(resolver))
     }
 }

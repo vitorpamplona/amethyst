@@ -91,7 +91,7 @@ private fun saveMediaToGalleryInner(
 ) {
     MediaSaverToDisk.saveDownloadingIfNeeded(
         videoUri = videoUri,
-        forceProxy = accountViewModel.account.shouldUseTorForVideoDownload(),
+        okHttpClient = accountViewModel::okHttpClientForVideo,
         mimeType = mimeType,
         localContext = localContext,
         onSuccess = {

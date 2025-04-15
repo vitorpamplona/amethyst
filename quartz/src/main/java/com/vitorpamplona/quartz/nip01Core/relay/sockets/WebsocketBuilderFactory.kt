@@ -21,5 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
 interface WebsocketBuilderFactory {
-    fun build(forceProxy: Boolean): WebsocketBuilder
+    fun build(
+        url: String,
+        forceProxy: Boolean,
+    ): WebsocketBuilder
 }

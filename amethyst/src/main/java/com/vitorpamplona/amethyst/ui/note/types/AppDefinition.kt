@@ -36,8 +36,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +58,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
@@ -210,10 +209,9 @@ fun RenderAppDefinition(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
 
-                        ClickableText(
-                            text = AnnotatedString(website.removePrefix("https://")),
+                        ClickableTextPrimary(
+                            text = website.removePrefix("https://"),
                             onClick = { website.let { runCatching { uri.openUri(it) } } },
-                            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
                         )
                     }

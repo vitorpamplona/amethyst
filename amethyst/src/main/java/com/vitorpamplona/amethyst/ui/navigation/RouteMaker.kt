@@ -38,13 +38,12 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import java.net.URLEncoder
 
 fun routeFor(
     note: Note,
     loggedIn: User,
-): String? {
-    val noteEvent = note.event ?: return "Note/${URLEncoder.encode(note.idHex, "utf-8")}"
+): Route? {
+    val noteEvent = note.event ?: return Route.Note(note.idHex)
 
     return routeFor(noteEvent, loggedIn)
 }
@@ -52,57 +51,57 @@ fun routeFor(
 fun routeFor(
     noteEvent: Event,
     loggedIn: User,
-): String? {
+): Route? {
     if (noteEvent is DraftEvent) {
         val innerEvent = noteEvent.preCachedDraft(loggedIn.pubkeyHex)
 
         if (innerEvent is IsInPublicChatChannel) {
             innerEvent.channelId()?.let {
-                return "Channel/$it"
+                return Route.Channel(it)
             }
         } else if (innerEvent is LiveActivitiesEvent) {
             innerEvent.aTag().toTag().let {
-                return "Channel/${URLEncoder.encode(it, "utf-8")}"
+                return Route.Channel(it)
             }
         } else if (innerEvent is LiveActivitiesChatMessageEvent) {
             innerEvent.activity()?.toTag()?.let {
-                return "Channel/${URLEncoder.encode(it, "utf-8")}"
+                return Route.Channel(it)
             }
         } else if (innerEvent is ChatroomKeyable) {
             val room = innerEvent.chatroomKey(loggedIn.pubkeyHex)
             loggedIn.createChatroom(room)
-            return "Room/${room.hashCode()}"
+            return Route.Room(room.hashCode())
         } else if (innerEvent is AddressableEvent) {
-            return "Note/${URLEncoder.encode(noteEvent.aTag().toTag(), "utf-8")}"
+            return Route.Note(noteEvent.aTag().toTag())
         } else {
-            return "Note/${URLEncoder.encode(noteEvent.id, "utf-8")}"
+            return Route.Note(noteEvent.id)
         }
     } else if (noteEvent is AppDefinitionEvent) {
-        return "ContentDiscovery/${noteEvent.id}"
+        return Route.ContentDiscovery(noteEvent.id)
     } else if (noteEvent is IsInPublicChatChannel) {
         noteEvent.channelId()?.let {
-            return "Channel/$it"
+            return Route.Channel(it)
         }
     } else if (noteEvent is ChannelCreateEvent) {
-        return "Channel/${noteEvent.id}"
+        return Route.Channel(noteEvent.id)
     } else if (noteEvent is LiveActivitiesEvent) {
         noteEvent.aTag().toTag().let {
-            return "Channel/${URLEncoder.encode(it, "utf-8")}"
+            return Route.Channel(it)
         }
     } else if (noteEvent is LiveActivitiesChatMessageEvent) {
         noteEvent.activity()?.toTag()?.let {
-            return "Channel/${URLEncoder.encode(it, "utf-8")}"
+            return Route.Channel(it)
         }
     } else if (noteEvent is ChatroomKeyable) {
         val room = noteEvent.chatroomKey(loggedIn.pubkeyHex)
         loggedIn.createChatroom(room)
-        return "Room/${room.hashCode()}"
+        return Route.Room(room.hashCode())
     } else if (noteEvent is CommunityDefinitionEvent) {
-        return "Community/${URLEncoder.encode(noteEvent.aTag().toTag(), "utf-8")}"
+        return Route.Community(noteEvent.aTag().toTag())
     } else if (noteEvent is AddressableEvent) {
-        return "Note/${URLEncoder.encode(noteEvent.aTag().toTag(), "utf-8")}"
+        return Route.Note(noteEvent.aTag().toTag())
     } else {
-        return "Note/${URLEncoder.encode(noteEvent.id, "utf-8")}"
+        return Route.Note(noteEvent.id)
     }
 
     return null
@@ -112,14 +111,14 @@ fun routeToMessage(
     user: HexKey,
     draftMessage: String?,
     replyId: HexKey? = null,
-    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-): String =
+): Route =
     routeToMessage(
         setOf(user),
         draftMessage,
         replyId,
-        quoteId,
+        draftId,
         accountViewModel,
     )
 
@@ -127,13 +126,13 @@ fun routeToMessage(
     users: Set<HexKey>,
     draftMessage: String?,
     replyId: HexKey? = null,
-    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
 ) = routeToMessage(
     ChatroomKey(users),
     draftMessage,
     replyId,
-    quoteId,
+    draftId,
     accountViewModel,
 )
 
@@ -141,44 +140,24 @@ fun routeToMessage(
     room: ChatroomKey,
     draftMessage: String?,
     replyId: HexKey? = null,
-    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-): String {
+): Route {
     accountViewModel.account.userProfile().createChatroom(room)
 
-    val params =
-        listOfNotNull(
-            draftMessage?.let {
-                "message=${URLEncoder.encode(it, "utf-8")}"
-            },
-            replyId?.let {
-                "replyId=${URLEncoder.encode(it, "utf-8")}"
-            },
-            quoteId?.let {
-                "quoteId=${URLEncoder.encode(it, "utf-8")}"
-            },
-        )
-
-    return buildString {
-        append("Room/")
-        append(room.hashCode().toString())
-        if (params.isNotEmpty()) {
-            append("?")
-            append(params.joinToString("&"))
-        }
-    }
+    return Route.Room(room.hashCode(), draftMessage, replyId, draftId)
 }
 
 fun routeToMessage(
     user: User,
     draftMessage: String?,
     replyId: HexKey? = null,
-    quoteId: HexKey? = null,
+    draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-): String = routeToMessage(user.pubkeyHex, draftMessage, replyId, quoteId, accountViewModel)
+): Route = routeToMessage(user.pubkeyHex, draftMessage, replyId, draftId, accountViewModel)
 
-fun routeFor(note: Channel): String = "Channel/${note.idHex}"
+fun routeFor(note: Channel): Route = Route.Channel(note.idHex)
 
-fun routeFor(user: User): String = "User/${user.pubkeyHex}"
+fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 
-fun authorRouteFor(note: Note): String = "User/${note.author?.pubkeyHex}"
+fun authorRouteFor(note: Note): Route.Profile? = note.author?.pubkeyHex?.let { Route.Profile(it) }

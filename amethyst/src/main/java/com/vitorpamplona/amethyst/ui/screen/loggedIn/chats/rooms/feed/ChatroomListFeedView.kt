@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
@@ -80,7 +81,7 @@ private fun CrossFadeState(
                 FeedError(state.errorMessage) { feedContentState.invalidateData() }
             }
             is FeedState.Loaded -> {
-                FeedLoaded(state, accountViewModel, nav, markAsRead)
+                FeedLoaded(state, feedContentState, accountViewModel, nav, markAsRead)
             }
             FeedState.Loading -> {
                 LoadingFeed()
@@ -92,6 +93,7 @@ private fun CrossFadeState(
 @Composable
 private fun FeedLoaded(
     loaded: FeedState.Loaded,
+    feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
     markAsRead: MutableState<Boolean>,
@@ -105,6 +107,8 @@ private fun FeedLoaded(
             accountViewModel.markAllAsRead(items.list, accountViewModel) { markAsRead.value = false }
         }
     }
+
+    WatchScrollToTop(feedContentState, listState)
 
     LazyColumn(
         contentPadding = FeedPadding,

@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ZapUserSetCard
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -60,7 +61,7 @@ fun ZapUserSetCompose(
     Column(
         modifier =
             Modifier.background(backgroundColor.value).clickable {
-                nav.nav("User/${zapSetCard.user.pubkeyHex}")
+                nav.nav(routeFor(zapSetCard.user))
             },
     ) {
         Row(

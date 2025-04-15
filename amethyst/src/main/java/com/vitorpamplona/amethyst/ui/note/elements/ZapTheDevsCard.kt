@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import android.R.attr.onClick
 import android.content.Context
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -49,11 +50,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -65,10 +66,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.ClickableText
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
@@ -221,16 +223,12 @@ fun ZapTheDevsCard(
 
                 Spacer(modifier = StdVertSpacer)
 
-                ClickableText(
-                    text =
-                        buildAnnotatedString {
-                            append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
-                            append(" ")
-                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                                append("#value4value")
-                            }
-                        },
-                    onClick = { nav.nav("Hashtag/value4value") },
+                Text(
+                    buildAnnotatedString {
+                        append(stringRes(id = R.string.zap_the_devs_description, BuildConfig.VERSION_NAME))
+                        append(" ")
+                        appendLink("#value4value", MaterialTheme.colorScheme.primary) { nav.nav(Route.Hashtag("value4value")) }
+                    },
                 )
 
                 Spacer(modifier = StdVertSpacer)
@@ -243,15 +241,16 @@ fun ZapTheDevsCard(
                         }
 
                     if (route != null) {
-                        ClickableText(
+                        Text(
                             text =
                                 buildAnnotatedString {
-                                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                                    withLink(
+                                        LinkAnnotation.Clickable("clickable") { nav.nav(route) },
+                                    ) {
                                         append(stringRes(id = R.string.version_name, BuildConfig.VERSION_NAME.substringBefore("-")))
                                     }
                                     append(" " + stringRes(id = R.string.brought_to_you_by))
                                 },
-                            onClick = { nav.nav(route) },
                         )
                     } else {
                         Text(stringRes(id = R.string.this_version_brought_to_you_by))

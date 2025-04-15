@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.service.uploads.nip96
 
 import android.util.Log
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfoParser
 import kotlinx.coroutines.CancellationException
+import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class ServerInfoRetriever {
@@ -33,7 +33,7 @@ class ServerInfoRetriever {
 
     suspend fun loadInfo(
         baseUrl: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
     ): ServerInfo {
         val request: Request =
             Request
@@ -42,7 +42,10 @@ class ServerInfoRetriever {
                 .url(parser.assembleUrl(baseUrl))
                 .build()
 
-        HttpClientManager.getHttpClient(forceProxy).newCall(request).execute().use { response ->
+        println("AABBCC $baseUrl Request ${parser.assembleUrl(baseUrl)}")
+
+        okHttpClient(baseUrl).newCall(request).execute().use { response ->
+            println("AABBCC $baseUrl Response")
             checkNotInMainThread()
             response.use {
                 val body = it.body.string()

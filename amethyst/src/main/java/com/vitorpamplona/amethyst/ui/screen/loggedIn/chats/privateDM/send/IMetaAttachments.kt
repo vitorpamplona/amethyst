@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import okhttp3.OkHttpClient
 import java.util.Locale
 
 class IMetaAttachments {
@@ -45,13 +46,13 @@ class IMetaAttachments {
 
     suspend fun downloadAndPrepare(
         url: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
     ) {
         val fileExtension: String = MimeTypeMap.getFileExtensionFromUrl(url)
         val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(fileExtension.lowercase(Locale.getDefault()))
 
         val imeta =
-            FileHeader.prepare(url, mimeType, null, forceProxy).getOrNull()?.let {
+            FileHeader.prepare(url, mimeType, null, okHttpClient).getOrNull()?.let {
                 IMetaTagBuilder(url)
                     .apply {
                         hash(it.hash)

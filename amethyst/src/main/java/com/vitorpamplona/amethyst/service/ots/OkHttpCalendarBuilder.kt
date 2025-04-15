@@ -23,14 +23,15 @@ package com.vitorpamplona.amethyst.service.ots
 import com.vitorpamplona.quartz.nip03Timestamp.ots.CalendarBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendar
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendarAsyncSubmit
+import okhttp3.OkHttpClient
 
 class OkHttpCalendarBuilder(
-    val forceProxy: (String) -> Boolean,
+    val clientFn: (url: String) -> OkHttpClient,
 ) : CalendarBuilder {
-    override fun newSyncCalendar(url: String): ICalendar = OkHttpCalendar(url, forceProxy(url))
+    override fun newSyncCalendar(url: String): ICalendar = OkHttpCalendar(url, clientFn(url))
 
     override fun newAsyncCalendar(
         url: String,
         digest: ByteArray,
-    ): ICalendarAsyncSubmit = OkHttpCalendarAsyncSubmit(url, digest, forceProxy(url))
+    ): ICalendarAsyncSubmit = OkHttpCalendarAsyncSubmit(url, digest, clientFn(url))
 }

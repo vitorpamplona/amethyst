@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
@@ -168,7 +170,7 @@ fun NormalChatNote(
         parentBackgroundColor = parentBackgroundColor,
         onClick = {
             if (note.event is ChannelCreateEvent) {
-                nav.nav("Channel/${note.idHex}")
+                nav.nav(Route.Channel(note.idHex))
                 true
             } else {
                 false
@@ -176,7 +178,7 @@ fun NormalChatNote(
         },
         onAuthorClick = {
             note.author?.let {
-                nav.nav("User/${it.pubkeyHex}")
+                nav.nav(routeFor(it))
             }
         },
         actionMenu = { onDismiss ->

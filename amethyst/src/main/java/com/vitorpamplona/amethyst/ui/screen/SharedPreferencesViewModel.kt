@@ -20,15 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
+import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -45,76 +41,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Stable
-class SettingsState {
-    var theme by mutableStateOf(ThemeType.SYSTEM)
-    var language by mutableStateOf<String?>(null)
-
-    var automaticallyShowImages by mutableStateOf(ConnectivityType.ALWAYS)
-    var automaticallyStartPlayback by mutableStateOf(ConnectivityType.ALWAYS)
-    var automaticallyShowUrlPreview by mutableStateOf(ConnectivityType.ALWAYS)
-    var automaticallyHideNavigationBars by mutableStateOf(BooleanType.ALWAYS)
-    var automaticallyShowProfilePictures by mutableStateOf(ConnectivityType.ALWAYS)
-    var dontShowPushNotificationSelector by mutableStateOf<Boolean>(false)
-    var dontAskForNotificationPermissions by mutableStateOf<Boolean>(false)
-    var featureSet by mutableStateOf(FeatureSetType.SIMPLIFIED)
-    var gallerySet by mutableStateOf(ProfileGalleryType.CLASSIC)
-
-    var isOnMobileData: State<Boolean> = mutableStateOf(false)
-
-    var windowSizeClass = mutableStateOf<WindowSizeClass?>(null)
-    var displayFeatures = mutableStateOf<List<DisplayFeature>>(emptyList())
-
-    val showProfilePictures =
-        derivedStateOf {
-            when (automaticallyShowProfilePictures) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
-        }
-
-    val modernGalleryStyle =
-        derivedStateOf {
-            when (gallerySet) {
-                ProfileGalleryType.CLASSIC -> false
-                ProfileGalleryType.MODERN -> true
-            }
-        }
-
-    val showUrlPreview =
-        derivedStateOf {
-            when (automaticallyShowUrlPreview) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
-        }
-
-    val startVideoPlayback =
-        derivedStateOf {
-            when (automaticallyStartPlayback) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
-        }
-
-    val showImages =
-        derivedStateOf {
-            when (automaticallyShowImages) {
-                ConnectivityType.WIFI_ONLY -> !isOnMobileData.value
-                ConnectivityType.NEVER -> false
-                ConnectivityType.ALWAYS -> true
-            }
-        }
-}
-
-@Stable
 class SharedPreferencesViewModel : ViewModel() {
-    val sharedPrefs: SettingsState = SettingsState()
+    val sharedPrefs: SharedSettingsState = SharedSettingsState()
 
     fun init() {
         viewModelScope.launch(Dispatchers.IO) {
+            Log.d("SharedPreferencesViewModel", "init")
             val savedSettings =
                 LocalPreferences.loadSharedSettings() ?: Settings()
 
@@ -223,9 +155,17 @@ class SharedPreferencesViewModel : ViewModel() {
         }
     }
 
-    fun updateConnectivityStatusState(isOnMobileDataState: State<Boolean>) {
-        if (sharedPrefs.isOnMobileData != isOnMobileDataState) {
-            sharedPrefs.isOnMobileData = isOnMobileDataState
+    fun updateConnectivityStatusState(isOnMobileDataState: Boolean) {
+        if (sharedPrefs.isOnMobileOrMeteredConnection != isOnMobileDataState) {
+            Log.d("Connectivity", "updateConnectivityStatusState ${sharedPrefs.currentNetworkId}: ${sharedPrefs.isOnMobileOrMeteredConnection} -> $isOnMobileDataState")
+            sharedPrefs.isOnMobileOrMeteredConnection = isOnMobileDataState
+        }
+    }
+
+    fun updateNetworkState(networkId: Long) {
+        if (sharedPrefs.currentNetworkId != networkId) {
+            Log.d("Connectivity", "updateNetworkState ${sharedPrefs.currentNetworkId} -> $networkId")
+            sharedPrefs.currentNetworkId = networkId
         }
     }
 
@@ -243,6 +183,7 @@ class SharedPreferencesViewModel : ViewModel() {
 
     fun saveSharedSettings() {
         viewModelScope.launch(Dispatchers.IO) {
+            Log.d("SharedPreferencesViewModel", "Saving Shared Settings")
             LocalPreferences.saveSharedSettings(
                 Settings(
                     sharedPrefs.theme,

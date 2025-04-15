@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +70,7 @@ fun WatchApp(
             remember {
                 Modifier
                     .size(Size35dp)
-                    .clickable { nav.nav("Note/${baseApp.idHex}") }
+                    .clickable { nav.nav(Route.Note(baseApp.idHex)) }
             },
         ) {
             AsyncImage(

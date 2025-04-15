@@ -28,7 +28,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -40,6 +39,7 @@ import kotlinx.serialization.cbor.ByteString
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Base64
@@ -218,7 +218,7 @@ class CashuProcessor {
     suspend fun melt(
         token: CashuToken,
         lud16: String,
-        forceProxy: (url: String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onSuccess: (String, String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -232,12 +232,12 @@ class CashuProcessor {
                     // Make invoice and leave room for fees
                     milliSats = token.totalAmount * 1000,
                     message = "Calculate Fees for Cashu",
-                    forceProxy = forceProxy,
+                    okHttpClient = okHttpClient,
                     onSuccess = { baseInvoice ->
                         feeCalculator(
                             token.mint,
                             baseInvoice,
-                            forceProxy = forceProxy,
+                            okHttpClient = okHttpClient,
                             onSuccess = { fees ->
                                 LightningAddressResolver()
                                     .lnAddressInvoice(
@@ -245,9 +245,9 @@ class CashuProcessor {
                                         // Make invoice and leave room for fees
                                         milliSats = (token.totalAmount - fees) * 1000,
                                         message = "Redeem Cashu",
-                                        forceProxy = forceProxy,
+                                        okHttpClient = okHttpClient,
                                         onSuccess = { invoice ->
-                                            meltInvoice(token, invoice, fees, forceProxy, onSuccess, onError, context)
+                                            meltInvoice(token, invoice, fees, okHttpClient, onSuccess, onError, context)
                                         },
                                         onProgress = {},
                                         onError = onError,
@@ -268,7 +268,7 @@ class CashuProcessor {
     fun feeCalculator(
         mintAddress: String,
         invoice: String,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onSuccess: (Int) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
@@ -277,7 +277,7 @@ class CashuProcessor {
 
         try {
             val url = "$mintAddress/checkfees" // Melt cashu tokens at Mint
-            val client = HttpClientManager.getHttpClient(forceProxy(url))
+            val client = okHttpClient(url)
 
             val factory = JsonNodeFactory.instance
 
@@ -334,14 +334,14 @@ class CashuProcessor {
         token: CashuToken,
         invoice: String,
         fees: Int,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onSuccess: (String, String) -> Unit,
         onError: (String, String) -> Unit,
         context: Context,
     ) {
         try {
             val url = token.mint + "/melt" // Melt cashu tokens at Mint
-            val client = HttpClientManager.getHttpClient(forceProxy(url))
+            val client = okHttpClient(url)
 
             val factory = JsonNodeFactory.instance
 

@@ -26,11 +26,12 @@ import android.media.MediaDataSource
 import android.media.MediaMetadataRetriever
 import android.util.Log
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
-import com.vitorpamplona.amethyst.service.Blurhash
+import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
+import okhttp3.OkHttpClient
 import java.io.IOException
 
 class FileHeader(
@@ -38,7 +39,7 @@ class FileHeader(
     val hash: String,
     val size: Int,
     val dim: DimensionTag?,
-    val blurHash: Blurhash?,
+    val blurHash: BlurhashWrapper?,
 ) {
     class UnableToDownload(
         val fileUrl: String,
@@ -49,10 +50,10 @@ class FileHeader(
             fileUrl: String,
             mimeType: String?,
             dimPrecomputed: DimensionTag?,
-            forceProxy: Boolean,
+            okHttpClient: (String) -> OkHttpClient,
         ): Result<FileHeader> =
             try {
-                val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(fileUrl, forceProxy)
+                val imageData: ImageDownloader.Blob? = ImageDownloader().waitAndGetImage(fileUrl, okHttpClient)
 
                 if (imageData != null) {
                     prepare(imageData.bytes, mimeType ?: imageData.contentType, dimPrecomputed)
@@ -79,13 +80,13 @@ class FileHeader(
                         val opt = BitmapFactory.Options()
                         opt.inPreferredConfig = Bitmap.Config.ARGB_8888
                         val mBitmap = BitmapFactory.decodeByteArray(data, 0, data.size, opt)
-                        Pair(Blurhash(mBitmap.toBlurhash()), DimensionTag(mBitmap.width, mBitmap.height))
+                        Pair(BlurhashWrapper(mBitmap.toBlurhash()), DimensionTag(mBitmap.width, mBitmap.height))
                     } else if (mimeType?.startsWith("video/") == true) {
                         val mediaMetadataRetriever = MediaMetadataRetriever()
                         mediaMetadataRetriever.setDataSource(ByteArrayMediaDataSource(data))
 
                         val newDim = mediaMetadataRetriever.prepareDimFromVideo() ?: dimPrecomputed
-                        val blurhash = mediaMetadataRetriever.getThumbnail()?.toBlurhash()?.let { Blurhash(it) }
+                        val blurhash = mediaMetadataRetriever.getThumbnail()?.toBlurhash()?.let { BlurhashWrapper(it) }
 
                         if (newDim?.hasSize() == true) {
                             Pair(blurhash, newDim)

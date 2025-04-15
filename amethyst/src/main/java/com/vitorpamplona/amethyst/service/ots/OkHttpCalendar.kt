@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.ots
 
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendar
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
@@ -31,6 +30,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.ExceededSizeExcept
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
 import com.vitorpamplona.quartz.utils.Hex
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
@@ -38,7 +38,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
  */
 class OkHttpCalendar(
     val url: String,
-    val forceProxy: Boolean,
+    val client: OkHttpClient,
 ) : ICalendar {
     /**
      * Submitting a digest to remote calendar. Returns a com.eternitywall.ots.Timestamp committing to that digest.
@@ -52,7 +52,6 @@ class OkHttpCalendar(
     @Throws(ExceededSizeException::class, UrlException::class, DeserializationException::class)
     override fun submit(digest: ByteArray): Timestamp {
         try {
-            val client = HttpClientManager.getHttpClient(forceProxy)
             val url = "$url/digest"
 
             val mediaType = "application/x-www-form-urlencoded; charset=utf-8".toMediaType()
@@ -108,7 +107,6 @@ class OkHttpCalendar(
     )
     override fun getTimestamp(commitment: ByteArray): Timestamp {
         try {
-            val client = HttpClientManager.getHttpClient(forceProxy)
             val url = url + "/timestamp/" + Hex.encode(commitment)
 
             val request =
