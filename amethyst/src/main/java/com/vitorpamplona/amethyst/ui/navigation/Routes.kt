@@ -60,6 +60,7 @@ sealed class Route {
     @Serializable object Drafts : Route()
 
     @Serializable object Settings : Route()
+
     object Lists :
         Route(
             route = "Lists",

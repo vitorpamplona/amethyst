@@ -116,7 +116,6 @@ fun AppNavigation(
                 popExitTransition = { slideOutHorizontallyToEnd },
             ) { ListsScreen(accountViewModel, nav) }
 
-
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
