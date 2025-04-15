@@ -101,6 +101,7 @@ private fun FeedLoaded(
     post: (@Composable () -> Unit)? = null,
     inner: @Composable (String) -> Unit,
 ) {
+    val items by state.feed.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     LazyColumn(
@@ -109,7 +110,7 @@ private fun FeedLoaded(
     ) {
         item { pre?.let { it() } }
 
-        itemsIndexed(state.feed.value, key = { _, item -> item }) { _, item ->
+        itemsIndexed(items, key = { _, item -> item }) { _, item ->
             inner(item)
 
             HorizontalDivider(

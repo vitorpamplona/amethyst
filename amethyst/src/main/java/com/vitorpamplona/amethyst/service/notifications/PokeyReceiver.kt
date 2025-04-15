@@ -20,23 +20,39 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.provider.LiveFolders.INTENT
 import android.util.Log
+import androidx.core.content.ContextCompat.registerReceiver
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class PokeyReceiver : BroadcastReceiver() {
     companion object {
-        val POKEY_ACTION = "com.shared.NOSTR"
-        val TAG = "PokeyReceiver"
+        const val POKEY_ACTION = "com.shared.NOSTR"
+        const val TAG = "PokeyReceiver"
+        val INTENT = IntentFilter(POKEY_ACTION)
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    fun register(app: Application) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            app.registerReceiver(this, INTENT, RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            app.registerReceiver(this, INTENT)
+        }
+    }
+
+    fun unregister(app: Application) {
+        app.unregisterReceiver(this)
+    }
 
     override fun onReceive(
         context: Context,
@@ -48,9 +64,11 @@ class PokeyReceiver : BroadcastReceiver() {
 
             if (eventStr == null) return
 
-            scope.launch(Dispatchers.IO) {
+            val app = context.applicationContext as Amethyst
+
+            app.applicationIOScope.launch {
                 try {
-                    EventNotificationConsumer(context.applicationContext).findAccountAndConsume(
+                    EventNotificationConsumer(app).findAccountAndConsume(
                         Event.fromJson(eventStr),
                     )
                 } catch (e: Exception) {

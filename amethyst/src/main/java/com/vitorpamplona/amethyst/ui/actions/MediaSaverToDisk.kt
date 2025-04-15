@@ -32,10 +32,10 @@ import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okio.BufferedSource
@@ -49,7 +49,7 @@ import java.util.UUID
 object MediaSaverToDisk {
     fun saveDownloadingIfNeeded(
         videoUri: String?,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         mimeType: String?,
         localContext: Context,
         onSuccess: () -> Any?,
@@ -69,7 +69,7 @@ object MediaSaverToDisk {
                 downloadAndSave(
                     url = videoUri,
                     mimeType = mimeType,
-                    forceProxy = forceProxy,
+                    okHttpClient = okHttpClient,
                     context = localContext,
                     onSuccess = onSuccess,
                     onError = onError,
@@ -85,12 +85,12 @@ object MediaSaverToDisk {
     fun downloadAndSave(
         url: String,
         mimeType: String?,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         context: Context,
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        val client = HttpClientManager.getHttpClient(forceProxy)
+        val client = okHttpClient(url)
 
         val request =
             Request

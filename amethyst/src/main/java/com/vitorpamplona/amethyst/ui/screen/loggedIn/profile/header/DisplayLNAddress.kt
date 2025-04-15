@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,11 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.components.ClickableText
+import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -91,10 +88,9 @@ fun DisplayLNAddress(
         Row(verticalAlignment = Alignment.CenterVertically) {
             LightningAddressIcon(modifier = Size16Modifier, tint = BitcoinOrange)
 
-            ClickableText(
-                text = AnnotatedString(lud16),
+            ClickableTextPrimary(
+                text = lud16,
                 onClick = { zapExpanded = !zapExpanded },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                 modifier =
                     Modifier
                         .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)

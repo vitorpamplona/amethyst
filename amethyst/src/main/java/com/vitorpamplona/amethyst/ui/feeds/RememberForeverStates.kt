@@ -27,7 +27,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.vitorpamplona.amethyst.ui.navigation.Route
 import kotlin.math.roundToInt
 
 private val savedScrollStates = mutableMapOf<String, ScrollState>()
@@ -40,17 +39,17 @@ private data class ScrollState(
 object ScrollStateKeys {
     const val NOTIFICATION_SCREEN = "NotificationsFeed"
     const val VIDEO_SCREEN = "VideoFeed"
-    val HOME_FOLLOWS = Route.Home.base + "FollowsFeed"
-    val HOME_REPLIES = Route.Home.base + "FollowsRepliesFeed"
-    val PROFILE_GALLERY = Route.Home.base + "ProfileGalleryFeed"
+    const val HOME_FOLLOWS = "HomeFollowsFeed"
+    const val HOME_REPLIES = "HomeFollowsRepliesFeed"
+    const val PROFILE_GALLERY = "ProfileGalleryFeed"
 
-    val DRAFTS = Route.Home.base + "DraftsFeed"
+    const val DRAFTS = "DraftsFeed"
 
-    val DISCOVER_CONTENT = Route.Home.base + "DiscoverContentFeed"
-    val DISCOVER_MARKETPLACE = Route.Home.base + "MarketplaceFeed"
-    val DISCOVER_LIVE = Route.Home.base + "LiveFeed"
-    val DISCOVER_COMMUNITY = Route.Home.base + "CommunitiesFeed"
-    val DISCOVER_CHATS = Route.Home.base + "ChatsFeed"
+    const val DISCOVER_CONTENT = "DiscoverDiscoverContentFeed"
+    const val DISCOVER_MARKETPLACE = "DiscoverMarketplaceFeed"
+    const val DISCOVER_LIVE = "DiscoverLiveFeed"
+    const val DISCOVER_COMMUNITY = "DiscoverCommunitiesFeed"
+    const val DISCOVER_CHATS = "DiscoverChatsFeed"
 }
 
 object PagerStateKeys {

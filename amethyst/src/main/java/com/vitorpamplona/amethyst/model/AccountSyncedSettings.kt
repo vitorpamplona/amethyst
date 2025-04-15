@@ -49,7 +49,7 @@ class AccountSyncedSettings(
         AccountSecurityPreferences(
             MutableStateFlow(internalSettings.security.showSensitiveContent),
             internalSettings.security.warnAboutPostsWithReports,
-            internalSettings.security.filterSpamFromStrangers,
+            MutableStateFlow(internalSettings.security.filterSpamFromStrangers),
         )
 
     fun toInternal(): AccountSyncedSettingsInternal =
@@ -70,7 +70,7 @@ class AccountSyncedSettings(
                 AccountSecurityPreferencesInternal(
                     security.showSensitiveContent.value,
                     security.warnAboutPostsWithReports,
-                    security.filterSpamFromStrangers,
+                    security.filterSpamFromStrangers.value,
                 ),
         )
 
@@ -105,8 +105,8 @@ class AccountSyncedSettings(
             security.showSensitiveContent.tryEmit(syncedSettingsInternal.security.showSensitiveContent)
         }
 
-        if (security.filterSpamFromStrangers != syncedSettingsInternal.security.filterSpamFromStrangers) {
-            security.filterSpamFromStrangers = syncedSettingsInternal.security.filterSpamFromStrangers
+        if (security.filterSpamFromStrangers.value != syncedSettingsInternal.security.filterSpamFromStrangers) {
+            security.filterSpamFromStrangers.tryEmit(syncedSettingsInternal.security.filterSpamFromStrangers)
         }
 
         if (security.warnAboutPostsWithReports != syncedSettingsInternal.security.warnAboutPostsWithReports) {
@@ -180,7 +180,7 @@ class AccountLanguagePreferences(
 class AccountSecurityPreferences(
     val showSensitiveContent: MutableStateFlow<Boolean?> = MutableStateFlow(null),
     var warnAboutPostsWithReports: Boolean = true,
-    var filterSpamFromStrangers: Boolean = true,
+    var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     fun updateShowSensitiveContent(show: Boolean?): Boolean {
         if (showSensitiveContent.value != show) {
@@ -197,9 +197,9 @@ class AccountSecurityPreferences(
         warnReports: Boolean,
         filterSpam: Boolean,
     ): Boolean =
-        if (warnAboutPostsWithReports != warnReports || filterSpam != filterSpamFromStrangers) {
+        if (warnAboutPostsWithReports != warnReports || filterSpam != filterSpamFromStrangers.value) {
             warnAboutPostsWithReports = warnReports
-            filterSpamFromStrangers = filterSpam
+            filterSpamFromStrangers.tryEmit(filterSpam)
 
             true
         } else {

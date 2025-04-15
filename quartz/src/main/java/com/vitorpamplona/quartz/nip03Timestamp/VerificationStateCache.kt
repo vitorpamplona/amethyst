@@ -24,21 +24,24 @@ import android.util.LruCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-object VerificationStateCache {
+class VerificationStateCache {
     private val cache = LruCache<HexKey, VerificationState>(200)
 
-    fun cacheVerify(event: OtsEvent): VerificationState =
+    fun cacheVerify(
+        event: OtsEvent,
+        resolverBuilder: () -> OtsResolver,
+    ): VerificationState =
         when (val verif = cache[event.id]) {
             is VerificationState.Verified -> verif
             is VerificationState.NetworkError -> {
                 // try again in 5 mins
                 if (verif.time < TimeUtils.fiveMinutesAgo()) {
-                    event.verifyState().also { cache.put(event.id, it) }
+                    event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
                 } else {
                     verif
                 }
             }
             is VerificationState.Error -> verif
-            else -> event.verifyState().also { cache.put(event.id, it) }
+            else -> event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
         }
 }

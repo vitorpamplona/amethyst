@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import android.R.attr.category
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Stable
@@ -239,17 +240,27 @@ open class NewPostViewModel :
 
     fun user(): User? = account?.userProfile()
 
+    open fun init(accountVM: AccountViewModel) {
+        this.accountViewModel = accountVM
+        this.account = accountVM.account
+        this.canAddInvoice = hasLnAddress()
+        this.canAddZapRaiser = hasLnAddress()
+
+        this.userSuggestions?.reset()
+        this.userSuggestions = UserSuggestionState(accountVM)
+
+        this.emojiSuggestions?.reset()
+        this.emojiSuggestions = EmojiSuggestionState(accountVM)
+    }
+
     open fun load(
-        accountViewModel: AccountViewModel,
         replyingTo: Note?,
         quote: Note?,
         fork: Note?,
         version: Note?,
         draft: Note?,
     ) {
-        this.accountViewModel = accountViewModel
-        this.account = accountViewModel.account
-
+        val accountViewModel = accountViewModel ?: return
         val noteEvent = draft?.event
         val noteAuthor = draft?.author
 
@@ -1181,7 +1192,7 @@ open class NewPostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.url.url,
-                accountViewModel?.account?.shouldUseTorForImageDownload() ?: false,
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
             )
         }
 

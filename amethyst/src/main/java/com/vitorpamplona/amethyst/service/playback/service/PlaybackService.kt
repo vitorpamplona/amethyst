@@ -28,7 +28,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
@@ -43,6 +43,7 @@ class PlaybackService : MediaSessionService() {
     fun newPool(okHttp: OkHttpClient): MediaSessionPool =
         MediaSessionPool(
             ExoPlayerPool(ExoPlayerBuilder(okHttp)),
+            okHttpClient = okHttp,
             reset = { session ->
                 (session.player as ExoPlayer).apply {
                     repeatMode = Player.REPEAT_MODE_ONE
@@ -59,12 +60,12 @@ class PlaybackService : MediaSessionService() {
             poolNoProxy?.let { return it }
 
             // creates new
-            return newPool(HttpClientManager.getHttpClient(false)).also { poolNoProxy = it }
+            return newPool(Amethyst.instance.okHttpClients.getHttpClient(false)).also { poolNoProxy = it }
         } else {
             poolWithProxy?.let { pool ->
                 // with proxy, check if the port is the same.
-                val okHttp = HttpClientManager.getHttpClient(true)
-                if (okHttp.proxy == pool.exoPlayerPool.builder.okHttp.proxy) {
+                val okHttp = Amethyst.instance.okHttpClients.getHttpClient(true)
+                if (okHttp.proxy != null && okHttp.proxy == pool.exoPlayerPool.builder.okHttp.proxy) {
                     return pool
                 }
 
@@ -73,12 +74,17 @@ class PlaybackService : MediaSessionService() {
             }
 
             // creates brand new
-            return newPool(HttpClientManager.getHttpClient(true)).also { poolWithProxy = it }
+            return newPool(Amethyst.instance.okHttpClients.getHttpClient(true)).also { poolWithProxy = it }
         }
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("PlaybackService", "PlaybackService.onCreate")
+    }
+
     override fun onDestroy() {
-        Log.d("Lifetime Event", "PlaybackService.onDestroy")
+        Log.d("PlaybackService", "PlaybackService.onDestroy")
 
         poolWithProxy?.destroy()
         poolNoProxy?.destroy()

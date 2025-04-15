@@ -34,8 +34,6 @@ import com.vitorpamplona.amethyst.ui.note.RelayCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 @Composable
 fun RelayFeedView(
@@ -58,10 +56,10 @@ fun RelayFeedView(
                     item,
                     accountViewModel = accountViewModel,
                     onAddRelay = {
-                        nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(item.url, StandardCharsets.UTF_8.toString()))
+                        nav.nav(Route.EditRelays(item.url))
                     },
                     onRemoveRelay = {
-                        nav.nav(Route.EditRelays.base + "?toAdd=" + URLEncoder.encode(item.url, StandardCharsets.UTF_8.toString()))
+                        nav.nav(Route.EditRelays(item.url))
                     },
                 )
                 HorizontalDivider(

@@ -44,6 +44,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import kotlin.math.round
 
 class ZapPaymentHandler(
@@ -64,7 +65,7 @@ class ZapPaymentHandler(
         message: String,
         context: Context,
         showErrorIfNoLnAddress: Boolean,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<Payable>) -> Unit,
@@ -130,7 +131,7 @@ class ZapPaymentHandler(
                 onProgress(0.05f)
             }
 
-            assembleAllInvoices(splitZapRequestPairs, amountMilliSats, message, showErrorIfNoLnAddress, forceProxy, onError, onProgress = {
+            assembleAllInvoices(splitZapRequestPairs, amountMilliSats, message, showErrorIfNoLnAddress, okHttpClient, onError, onProgress = {
                 onProgress(it * 0.7f + 0.05f) // keeps within range.
             }, context) { payables ->
                 if (payables.isEmpty()) {
@@ -228,7 +229,7 @@ class ZapPaymentHandler(
         totalAmountMilliSats: Long,
         message: String,
         showErrorIfNoLnAddress: Boolean,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onError: (String, String, User?) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
@@ -247,7 +248,7 @@ class ZapPaymentHandler(
                     zapValue = calculateZapValue(totalAmountMilliSats, splitZapRequestPair.inputSetup.weight, totalWeight),
                     message = message,
                     showErrorIfNoLnAddress = showErrorIfNoLnAddress,
-                    forceProxy = forceProxy,
+                    okHttpClient = okHttpClient,
                     onError = onError,
                     onProgressStep = { percentStepForThisPayment ->
                         progressAllPayments += percentStepForThisPayment / requests.size
@@ -319,7 +320,7 @@ class ZapPaymentHandler(
         zapValue: Long,
         message: String,
         showErrorIfNoLnAddress: Boolean = true,
-        forceProxy: (String) -> Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onError: (String, String, User?) -> Unit,
         onProgressStep: (percent: Float) -> Unit,
         context: Context,
@@ -341,7 +342,7 @@ class ZapPaymentHandler(
                     milliSats = zapValue,
                     message = message,
                     nostrRequest = nostrZapRequest,
-                    forceProxy = forceProxy,
+                    okHttpClient = okHttpClient,
                     onError = { title, msg ->
                         onError(title, msg, toUser)
                     },

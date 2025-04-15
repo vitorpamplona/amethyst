@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
@@ -87,24 +86,6 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URI
-import java.net.URLDecoder
-
-fun NavBackStackEntry.id(): String? = arguments?.getString("id")
-
-fun NavBackStackEntry.message(): String? =
-    arguments?.getString("message")?.let {
-        URLDecoder.decode(it, "utf-8")
-    }
-
-fun NavBackStackEntry.replyId(): String? =
-    arguments?.getString("replyId")?.let {
-        URLDecoder.decode(it, "utf-8")
-    }
-
-fun NavBackStackEntry.draftId(): String? =
-    arguments?.getString("draftId")?.let {
-        URLDecoder.decode(it, "utf-8")
-    }
 
 @Composable
 fun AppNavigation(
@@ -117,34 +98,15 @@ fun AppNavigation(
     AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountStateViewModel, nav) {
         NavHost(
             navController = nav.controller,
-            startDestination = Route.Home.route,
+            startDestination = Route.Home,
             enterTransition = { fadeIn(animationSpec = tween(200)) },
             exitTransition = { fadeOut(animationSpec = tween(200)) },
         ) {
-            composable(Route.Home.route) { HomeScreen(accountViewModel, nav) }
-            composable(Route.Message.route) { MessagesScreen(accountViewModel, nav) }
-            composable(Route.Video.route) { VideoScreen(accountViewModel, nav) }
-            composable(Route.Discover.route) { DiscoverScreen(accountViewModel, nav) }
-            composable(Route.Notification.route) { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
-            composable(Route.EditProfile.route) { NewUserMetadataScreen(nav, accountViewModel) }
-
-            composable(Route.Search.route) { SearchScreen(accountViewModel, nav) }
-
-            composable(
-                Route.BlockedUsers.route,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) { SecurityFiltersScreen(accountViewModel, nav) }
-
-            composable(
-                Route.Bookmarks.route,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) { BookmarkListScreen(accountViewModel, nav) }
+            composable<Route.Home> { HomeScreen(accountViewModel, nav) }
+            composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
+            composable<Route.Video> { VideoScreen(accountViewModel, nav) }
+            composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
+            composable<Route.Notification> { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
 
             composable(
                 Route.Lists.route,
@@ -154,245 +116,42 @@ fun AppNavigation(
                 popExitTransition = { slideOutHorizontallyToEnd },
             ) { ListsScreen(accountViewModel, nav) }
 
-            composable(
-                Route.Drafts.route,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) { DraftListScreen(accountViewModel, nav) }
 
-            composable(
-                Route.ContentDiscovery.route,
-                Route.ContentDiscovery.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                DvmContentDiscoveryScreen(it.id(), accountViewModel, nav)
-            }
+            composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
+            composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
-            composable(
-                Route.Profile.route,
-                Route.Profile.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                ProfileScreen(it.id(), accountViewModel, nav)
-            }
+            composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+            composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
+            composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
+            composableFromEnd<Route.Settings> { SettingsScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+            composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
+            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(it.toAdd, accountViewModel, nav) }
 
-            composable(
-                Route.Note.route,
-                Route.Note.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                ThreadScreen(it.id(), accountViewModel, nav)
-            }
+            composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Community> { CommunityScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Room> { ChatroomScreen(it.id.toString(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
+            composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
+            composableFromEndArgs<Route.Channel> { ChannelScreen(it.id, accountViewModel, nav) }
 
-            composable(
-                Route.Hashtag.route,
-                Route.Hashtag.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                HashtagScreen(it.id(), accountViewModel, nav)
-            }
+            composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
+            composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
 
-            composable(
-                Route.Geohash.route,
-                Route.Geohash.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                GeoHashScreen(it.id(), accountViewModel, nav)
-            }
+            composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
 
-            composable(
-                Route.Community.route,
-                Route.Community.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                CommunityScreen(it.id(), accountViewModel, nav)
-            }
-
-            composable(
-                Route.Room.route,
-                Route.Room.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                ChatroomScreen(
-                    roomId = it.id(),
-                    draftMessage = it.message(),
-                    replyToNote = it.replyId(),
-                    editFromDraft = it.draftId(),
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composable(
-                Route.RoomByAuthor.route,
-                Route.RoomByAuthor.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                ChatroomByAuthorScreen(it.id(), null, accountViewModel, nav)
-            }
-
-            composable(
-                Route.Channel.route,
-                Route.Channel.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                ChannelScreen(
-                    channelId = it.id(),
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composable(
-                Route.ChannelMetadataEdit.route,
-                Route.ChannelMetadataEdit.arguments,
-                enterTransition = { slideInVerticallyFromBottom },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutVerticallyToBottom },
-                content = {
-                    ChannelMetadataScreen(
-                        channelId = it.id(),
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-
-            composable(
-                Route.NewGroupDM.route,
-                Route.NewGroupDM.arguments,
-                enterTransition = { slideInVerticallyFromBottom },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutVerticallyToBottom },
-                content = {
-                    val draftMessage = it.message()?.ifBlank { null }
-                    val attachment =
-                        it.arguments
-                            ?.getString("attachment")
-                            ?.ifBlank { null }
-                            ?.toUri()
-
-                    NewGroupDMScreen(
-                        draftMessage,
-                        attachment,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-
-            composable(
-                Route.Event.route,
-                Route.Event.arguments,
-            ) {
-                LoadRedirectScreen(
-                    eventId = it.id(),
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            composable(
-                Route.Settings.route,
-                Route.Settings.arguments,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) {
-                SettingsScreen(
-                    sharedPreferencesViewModel,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
-            composable(
-                Route.NIP47Setup.route,
-                Route.NIP47Setup.arguments,
-                enterTransition = { slideInVerticallyFromBottom },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutVerticallyToBottom },
-            ) {
-                val nip47 = it.arguments?.getString("nip47")
-
-                NIP47SetupScreen(accountViewModel, nav, nip47)
-            }
-
-            composable(
-                Route.EditRelays.route,
-                content = {
-                    val relayToAdd = it.arguments?.getString("toAdd")
-
-                    AllRelayListScreen(
-                        relayToAdd = relayToAdd,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                },
-            )
-
-            composable(
-                Route.NewPost.route,
-                Route.NewPost.arguments,
-                enterTransition = { slideInVerticallyFromBottom },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutVerticallyToBottom },
-            ) {
-                val draftMessage = it.message()?.ifBlank { null }
-                val attachment =
-                    it.arguments?.getString("attachment")?.ifBlank { null }?.let {
-                        Uri.parse(it)
-                    }
-                val baseReplyTo = it.arguments?.getString("baseReplyTo")
-                val quote = it.arguments?.getString("quote")
-                val fork = it.arguments?.getString("fork")
-                val version = it.arguments?.getString("version")
-                val draft = it.arguments?.getString("draft")
-                val enableGeolocation = it.arguments?.getBoolean("enableGeolocation") == true
-
+            composableFromBottomArgs<Route.NewPost> {
                 NewPostScreen(
-                    message = draftMessage,
-                    attachment = attachment,
-                    baseReplyTo = baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    quote = quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    fork = fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    version = version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    draft = draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    enableGeolocation = enableGeolocation,
+                    message = it.message,
+                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    baseReplyTo = it.baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    fork = it.fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    enableGeolocation = it.enableGeolocation,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
@@ -425,7 +184,7 @@ private fun NavigateIfIntentRequested(
     if (activity.intent.action == Intent.ACTION_SEND) {
         // avoids restarting the new Post screen when the intent is for the screen.
         // Microsoft's swift key sends Gifs as new actions
-        if (isBaseRoute(nav.controller, Route.NewPost.base)) return
+        if (isBaseRoute<Route.NewPost>(nav.controller)) return
 
         // saves the intent to avoid processing again
         var message by remember {
@@ -442,7 +201,7 @@ private fun NavigateIfIntentRequested(
             )
         }
 
-        nav.newStack(buildNewPostRoute(draftMessage = message, attachment = media))
+        nav.newStack(Route.NewPost(message = message, attachment = media.toString()))
 
         media = null
         message = null
@@ -504,13 +263,13 @@ private fun NavigateIfIntentRequested(
                     if (intent.action == Intent.ACTION_SEND) {
                         // avoids restarting the new Post screen when the intent is for the screen.
                         // Microsoft's swift key sends Gifs as new actions
-                        if (!isBaseRoute(nav.controller, Route.NewPost.base)) {
+                        if (!isBaseRoute<Route.NewPost>(nav.controller)) {
                             intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-                                nav.newStack(buildNewPostRoute(draftMessage = it))
+                                nav.newStack(Route.NewPost(message = it))
                             }
 
                             (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
-                                nav.newStack(buildNewPostRoute(attachment = it))
+                                nav.newStack(Route.NewPost(attachment = it.toString()))
                             }
                         }
                     } else {
@@ -561,8 +320,8 @@ private fun NavigateIfIntentRequested(
 }
 
 private fun isSameRoute(
-    currentRoute: String?,
-    newRoute: String,
+    currentRoute: Route?,
+    newRoute: Route,
 ): Boolean {
     if (currentRoute == null) return false
 
@@ -570,9 +329,11 @@ private fun isSameRoute(
         return true
     }
 
-    if (newRoute.startsWith("Event/") && currentRoute.contains("/")) {
-        if (newRoute.split("/")[1] == currentRoute.split("/")[1]) {
-            return true
+    if (newRoute is Route.EventRedirect) {
+        return when (currentRoute) {
+            is Route.Note -> newRoute.id == currentRoute.id
+            is Route.Channel -> newRoute.id == currentRoute.id
+            else -> false
         }
     }
 

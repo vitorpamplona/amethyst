@@ -18,34 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.service.connectivity
 
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.text.AnnotatedString
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.INav
+sealed class ConnectivityStatus {
+    data class Active(
+        val networkId: Long,
+        val isMobile: Boolean,
+    ) : ConnectivityStatus()
 
-@Composable
-fun ClickableUserTag(
-    user: User,
-    nav: INav,
-) {
-    val route = remember { "User/${user.pubkeyHex}" }
+    object Off : ConnectivityStatus()
 
-    val innerUserState by user.live().metadata.observeAsState()
-
-    val userName =
-        remember(innerUserState) { AnnotatedString("@${innerUserState?.user?.toBestDisplayName()}") }
-
-    ClickableText(
-        text = userName,
-        onClick = { nav.nav(route) },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-    )
+    object Connecting : ConnectivityStatus()
 }

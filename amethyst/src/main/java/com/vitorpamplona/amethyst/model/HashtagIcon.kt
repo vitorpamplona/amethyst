@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Btc
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.Coffee
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.hashtags.Flowerstr
 import com.vitorpamplona.amethyst.commons.hashtags.Footstr
 import com.vitorpamplona.amethyst.commons.hashtags.Gamestr
 import com.vitorpamplona.amethyst.commons.hashtags.Grownostr
@@ -57,7 +58,7 @@ import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 fun RenderHashTagIconsPreview() {
     ThemeComparisonColumn {
         RenderRegular(
-            "Testing rendering of hashtags: #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
+            "Testing rendering of hashtags: #flowerstr #Bitcoin, #nostr, #lightning, #zap, #amethyst, #cashu, #plebs, #coffee, #skullofsatoshi, #grownostr, #footstr, #tunestr, #weed, #mate, #gamestr, #gamechain",
             EmptyTagList,
         ) { word, state ->
             when (word) {
@@ -81,6 +82,7 @@ fun checkForHashtagWithIcon(tag: String): HashtagIcon? =
         "skullofsatoshi" -> skull
         "grownostr", "gardening", "garden" -> growstr
         "footstr" -> footstr
+        "flowerstr" -> flowerstr
         "tunestr", "music", "nowplaying" -> tunestr
         "mate", "matechain", "matestr" -> matestr
         "weed", "weedstr", "420", "cannabis", "marijuana" -> weed
@@ -99,6 +101,7 @@ val coffee = HashtagIcon(CustomHashTagIcons.Coffee, "Coffee", Modifier.padding(s
 val skull = HashtagIcon(CustomHashTagIcons.Skull, "SkullofSatoshi", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
 val growstr = HashtagIcon(CustomHashTagIcons.Grownostr, "GrowNostr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
 val footstr = HashtagIcon(CustomHashTagIcons.Footstr, "Footstr", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
+val flowerstr = HashtagIcon(CustomHashTagIcons.Flowerstr, "Flowerstr", Modifier.padding(start = 2.dp, bottom = 1.dp, top = 1.dp))
 val tunestr = HashtagIcon(CustomHashTagIcons.Tunestr, "Tunestr", Modifier.padding(start = 1.dp, bottom = 1.dp, top = 1.dp))
 val weed = HashtagIcon(CustomHashTagIcons.Weed, "Weed", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))
 val matestr = HashtagIcon(CustomHashTagIcons.Mate, "Mate", Modifier.padding(start = 1.dp, bottom = 0.dp, top = 0.dp))

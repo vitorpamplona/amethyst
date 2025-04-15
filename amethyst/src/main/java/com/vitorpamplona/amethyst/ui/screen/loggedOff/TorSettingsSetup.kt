@@ -22,18 +22,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedOff
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.ClickableText
+import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
@@ -48,20 +47,16 @@ fun TorSettingsSetup(
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
     var activeTor by remember { mutableStateOf(false) }
 
-    val text =
-        buildAnnotatedString {
-            append(stringRes(R.string.connect_via_tor1) + " ")
-            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                append(stringRes(R.string.connect_via_tor2))
-            }
-        }
+    val primary = MaterialTheme.colorScheme.primary
 
-    ClickableText(
-        text = text,
+    Text(
+        text =
+            buildAnnotatedString {
+                append(stringRes(R.string.connect_via_tor1) + " ")
+                appendLink(stringRes(R.string.connect_via_tor2), primary) { connectOrbotDialogOpen = true }
+            },
         modifier = Modifier.padding(vertical = 10.dp),
-    ) {
-        connectOrbotDialogOpen = true
-    }
+    )
 
     if (connectOrbotDialogOpen) {
         ConnectTorDialog(

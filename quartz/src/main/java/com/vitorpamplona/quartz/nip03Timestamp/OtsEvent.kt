@@ -51,27 +51,30 @@ class OtsEvent(
 
     fun otsByteArray(): ByteArray = decodeOtsState(content)
 
-    fun cacheVerify(): VerificationState = VerificationStateCache.cacheVerify(this)
+    fun verifyState(resolver: OtsResolver): VerificationState = digestEventId()?.let { verify(otsByteArray(), it, resolver) } ?: VerificationState.Error("Digest Not found")
 
-    fun verifyState(): VerificationState = digestEventId()?.let { verify(otsByteArray(), it) } ?: VerificationState.Error("Digest Not found")
-
-    fun verify(): Long? = (verifyState() as? VerificationState.Verified)?.verifiedTime
+    fun verify(resolver: OtsResolver): Long? = (verifyState(resolver) as? VerificationState.Verified)?.verifiedTime
 
     companion object {
         const val KIND = 1040
         const val ALT = "Opentimestamps Attestation"
 
-        fun stamp(eventId: HexKey) = OtsResolver.stamp(eventId.hexToByteArray())
+        fun stamp(
+            eventId: HexKey,
+            resolver: OtsResolver,
+        ) = resolver.stamp(eventId.hexToByteArray())
 
         fun upgrade(
             otsState: ByteArray,
             eventId: HexKey,
-        ) = OtsResolver.upgrade(otsState, eventId.hexToByteArray())
+            resolver: OtsResolver,
+        ) = resolver.upgrade(otsState, eventId.hexToByteArray())
 
         fun verify(
             otsState: ByteArray,
             eventId: HexKey,
-        ) = OtsResolver.verify(otsState, eventId.hexToByteArray())
+            resolver: OtsResolver,
+        ) = resolver.verify(otsState, eventId.hexToByteArray())
 
         fun encodeOtsState(otsState: ByteArray) = Base64.getEncoder().encodeToString(otsState)
 

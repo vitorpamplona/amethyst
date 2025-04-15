@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPlayerActiveMutex
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,10 +63,7 @@ fun VideoViewInner(
         nostrUriCallback,
         mimeType,
         aspectRatio,
-        proxyPort =
-            HttpClientManager.getCurrentProxyPort(
-                accountViewModel.account.shouldUseTorForVideoDownload(videoUri),
-            ),
+        proxyPort = accountViewModel.proxyPortFor(videoUri),
     ) { mediaItem ->
         GetVideoController(
             mediaItem = mediaItem,

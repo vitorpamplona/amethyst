@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import android.R.attr.maxLines
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,10 +34,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.buildLinkString
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
 
@@ -69,19 +72,15 @@ private fun DisplayTagList(
     firstTag: String,
     nav: INav,
 ) {
-    val displayTag = remember(firstTag) { AnnotatedString(" #$firstTag") }
-    val route = remember(firstTag) { "Hashtag/$firstTag" }
-
-    ClickableText(
-        text = displayTag,
-        onClick = { nav.nav(route) },
-        style =
-            LocalTextStyle.current.copy(
-                color =
-                    MaterialTheme.colorScheme.primary.copy(
-                        alpha = 0.52f,
-                    ),
-            ),
+    Text(
+        text =
+            remember(firstTag) {
+                buildLinkString(" #$firstTag") {
+                    nav.nav(Route.Hashtag(firstTag))
+                }
+            },
+        style = LocalTextStyle.current.copy(MaterialTheme.colorScheme.primary.copy(alpha = 0.52f)),
+        overflow = TextOverflow.Ellipsis,
         maxLines = 1,
     )
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import android.R.attr.description
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -58,10 +59,12 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrChannelDataSource.channel
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
@@ -181,7 +184,7 @@ private fun ChannelRoomCompose(
 
     val noteEvent = note.event
 
-    val route = "Channel/${channel.idHex}"
+    val route = Route.Channel(channel.idHex)
 
     val description =
         if (noteEvent is ChannelCreateEvent) {
@@ -192,7 +195,7 @@ private fun ChannelRoomCompose(
             noteEvent?.content?.take(200)
         }
 
-    val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("Channel/${channel.idHex}").collectAsStateWithLifecycle()
 
     ChannelName(
         channelIdHex = channel.idHex,
@@ -253,8 +256,6 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val route = "Room/${room.hashCode()}"
-
     ChatHeaderLayout(
         channelPicture = {
             NonClickableUserPictures(
@@ -289,12 +290,12 @@ private fun UserRoomCompose(
                 }
             }
 
-            val lastReadTime by accountViewModel.account.loadLastReadFlow(route).collectAsStateWithLifecycle()
+            val lastReadTime by accountViewModel.account.loadLastReadFlow("Room/${room.hashCode()}").collectAsStateWithLifecycle()
             if ((note.createdAt() ?: Long.MIN_VALUE) > lastReadTime) {
                 NewItemsBubble()
             }
         },
-        onClick = { nav.nav(route) },
+        onClick = { nav.nav(Route.Room(room.hashCode())) },
     )
 }
 

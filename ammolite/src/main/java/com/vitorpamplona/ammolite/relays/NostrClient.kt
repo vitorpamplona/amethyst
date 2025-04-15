@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.ammolite.relays
 
+import android.system.Os.close
 import android.util.Log
+import androidx.core.app.PendingIntentCompat.send
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.RelayState
@@ -51,6 +53,11 @@ class NostrClient(
 
     fun getRelay(url: String): Relay? = relayPool.getRelay(url)
 
+    fun reconnect() {
+        // Reconnects all relays that may have disconnected
+        relayPool.requestAndWatch()
+    }
+
     @Synchronized
     fun reconnect(
         relays: Array<RelaySetupInfoToConnect>?,
@@ -74,6 +81,9 @@ class NostrClient(
                     relayPool.requestAndWatch()
                     this.relays = newRelays.toTypedArray()
                 }
+            } else {
+                // Reconnects all relays that may have disconnected
+                relayPool.requestAndWatch()
             }
         } else {
             if (this.relays.isNotEmpty()) {

@@ -570,7 +570,7 @@ private fun BoxedAuthor(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    Box(modifier = Size35Modifier.clickable(onClick = { nav.nav(authorRouteFor(note)) })) {
+    Box(modifier = Size35Modifier.clickable(onClick = { authorRouteFor(note)?.let { nav.nav(it) } })) {
         WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,

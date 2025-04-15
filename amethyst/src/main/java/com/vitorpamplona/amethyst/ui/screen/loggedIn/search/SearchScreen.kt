@@ -150,8 +150,8 @@ fun SearchScreen(
             SearchBar(searchBarViewModel, listState, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Search, accountViewModel) { route, _ ->
-                nav.newStack(route.base)
+            AppBottomBar(Route.Search, accountViewModel) { route ->
+                nav.newStack(route)
             }
         },
         accountViewModel = accountViewModel,
@@ -305,7 +305,7 @@ private fun DisplaySearchResults(
             hashTags,
             key = { _, item -> "#$item" },
         ) { _, item ->
-            HashtagLine(item) { nav.nav("Hashtag/$item") }
+            HashtagLine(item) { nav.nav(Route.Hashtag(item)) }
 
             HorizontalDivider(
                 modifier = Modifier.padding(top = 10.dp),
@@ -342,7 +342,7 @@ private fun DisplaySearchResults(
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                onClick = { nav.nav("Channel/${item.idHex}") },
+                onClick = { nav.nav(Route.Channel(item.idHex)) },
             )
 
             HorizontalDivider(

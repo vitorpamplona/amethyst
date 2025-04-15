@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import kotlinx.coroutines.channels.Channel
 
 @Composable
 fun MessagesTwoPane(
@@ -80,8 +81,13 @@ fun MessagesTwoPane(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Message, accountViewModel) { route, _ ->
-                nav.newStack(route.base)
+            AppBottomBar(Route.Message, accountViewModel) { route ->
+                if (route == Route.Message) {
+                    knownFeedContentState.sendToTop()
+                    newFeedContentState.sendToTop()
+                } else {
+                    nav.newStack(route)
+                }
             }
         },
         accountViewModel = accountViewModel,
@@ -104,15 +110,15 @@ fun MessagesTwoPane(
             second = {
                 Box(Modifier.fillMaxSize().systemBarsPadding()) {
                     twoPaneNav.innerNav.value?.let {
-                        if (it.route == "Room") {
+                        if (it is Route.Room) {
                             Chatroom(
-                                roomId = it.id,
+                                roomId = it.id.toString(),
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             )
                         }
 
-                        if (it.route == "Channel") {
+                        if (it is Route.Channel) {
                             ChannelView(
                                 channelId = it.id,
                                 accountViewModel = accountViewModel,

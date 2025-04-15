@@ -27,20 +27,20 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import kotlin.coroutines.resume
 
 class RegisterAccounts(
     private val accounts: List<AccountInfo>,
+    private val client: (String) -> OkHttpClient,
 ) {
     val tag =
         if (BuildConfig.FLAVOR == "play") {
@@ -133,33 +133,26 @@ class RegisterAccounts(
     }
 
     fun postRegistrationEvent(events: List<RelayAuthEvent>) {
-        try {
-            val jsonObject =
-                """{
-                "events": [ ${events.joinToString(", ") { it.toJson() }} ]
-            }
-            """
-
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val body = jsonObject.toRequestBody(mediaType)
-
-            val request =
-                Request
-                    .Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                    .url("https://push.amethyst.social/register")
-                    .post(body)
-                    .build()
-
-            // Always try via Tor for Amethyst.
-            val client = HttpClientManager.getHttpClient(true)
-
-            val isSucess = client.newCall(request).execute().use { it.isSuccessful }
-            Log.i(tag, "Server registration $isSucess")
-        } catch (e: java.lang.Exception) {
-            if (e is CancellationException) throw e
-            Log.e(tag, "Unable to register with push server", e)
+        val jsonObject =
+            """{
+            "events": [ ${events.joinToString(", ") { it.toJson() }} ]
         }
+        """
+
+        val url = "https://push.amethyst.social/register"
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = jsonObject.toRequestBody(mediaType)
+
+        val request =
+            Request
+                .Builder()
+                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
+                .url(url)
+                .post(body)
+                .build()
+
+        val isSucess = client(url).newCall(request).execute().use { it.isSuccessful }
+        Log.i(tag, "Server registration $isSucess")
     }
 
     suspend fun go(notificationToken: String) {

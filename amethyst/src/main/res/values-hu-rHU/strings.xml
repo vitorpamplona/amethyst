@@ -98,6 +98,7 @@
     <string name="description">Leírás</string>
     <string name="about_us">"Névjegy… "</string>
     <string name="what_s_on_your_mind">Mi jár a fejében?</string>
+    <string name="write_a_message">Üzenet írása…</string>
     <string name="post">Közzététel</string>
     <string name="save">Mentés</string>
     <string name="create">Létrehozás</string>
@@ -205,6 +206,7 @@
     <string name="with_description_of">a következő leírásával:</string>
     <string name="and_picture">és kép</string>
     <string name="changed_chat_name_to">megváltoztatta a csevegés nevét erre:</string>
+    <string name="changed_chat_profile_to">Új csevegési profil:</string>
     <string name="description_to">leírását erre:</string>
     <string name="and_picture_to">és a képet erre:</string>
     <string name="leave">Elhagyás</string>
@@ -526,6 +528,7 @@
     <string name="cashu_redeem_to_zap">Küldés ide: Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Megnyitás a Cashu pénztárcában</string>
     <string name="cashu_copy_token">Token másolása</string>
+    <string name="quick_actions_open_in_another_app">Megnyitás másik alkalmazásban</string>
     <string name="no_lightning_address_set">Nincs beállítva Lightning-cím</string>
     <string name="copied_token_to_clipboard">Token a vágólapra másolva</string>
     <string name="live_stream_live_tag">ÉLŐ</string>
@@ -605,6 +608,8 @@
     <string name="messages_new_message_subject">Tárgy</string>
     <string name="messages_new_message_subject_caption">A beszélgetés tárgya</string>
     <string name="messages_new_message_to_caption">"\@Felhasználó1, @Felhasználó2, @Felhasználó3"</string>
+    <string name="messages_cant_upload_title">Nem sikerült feltölteni</string>
+    <string name="messages_cant_upload_explainer">Először adja meg az üzenet címzettjét</string>
     <string name="messages_group_descriptor">A csoport tagjai</string>
     <string name="messages_new_subject_message">Kifejtés a csoport tagjai számára</string>
     <string name="messages_new_subject_message_placeholder">Név megváltoztatása az új célok érdekében.</string>
@@ -938,4 +943,5 @@
     <string name="torrent_no_apps">A fájl megnyitásához és letöltéséhez nincsenek torrent-alkalmazások telepítve.</string>
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
+    <string name="private_message">Privát üzenet</string>
 </resources>

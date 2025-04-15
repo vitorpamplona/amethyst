@@ -644,7 +644,6 @@ private fun PrepareExternalSignerReceiver(onLogin: (pubkey: String, packageName:
         externalSignerLauncher.registerLauncher(
             launcher = {
                 try {
-                    activity.prepareToLaunchSigner()
                     launcher.launch(it)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e

@@ -20,29 +20,48 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
-import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
 import com.vitorpamplona.amethyst.AccountInfo
-import kotlinx.coroutines.CancellationException
+import com.vitorpamplona.amethyst.service.retryIfException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import okhttp3.OkHttpClient
 
 object PushNotificationUtils {
+    var lastToken: String? = null
     var hasInit: List<AccountInfo>? = null
 
-    suspend fun init(accounts: List<AccountInfo>) =
-        with(Dispatchers.IO) {
-            if (hasInit?.equals(accounts) == true) {
-                return@with
-            }
-            // get user notification token provided by firebase
-            try {
-                RegisterAccounts(accounts).go(FirebaseMessaging.getInstance().token.await())
-
-                hasInit = accounts.toList()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e("Firebase token", "failed to get firebase token", e)
-            }
+    suspend fun checkAndInit(
+        accounts: List<AccountInfo>,
+        okHttpClient: (String) -> OkHttpClient,
+    ) = with(Dispatchers.IO) {
+        val token = FirebaseMessaging.getInstance().token.await()
+        if (hasInit?.equals(accounts) == true && lastToken == token) {
+            return@with
         }
+
+        registerToken(token, accounts, okHttpClient)
+    }
+
+    suspend fun checkAndInit(
+        token: String,
+        accounts: List<AccountInfo>,
+        okHttpClient: (String) -> OkHttpClient,
+    ) = with(Dispatchers.IO) {
+        // initializes if the accounts are different or if the token has changed
+        if (hasInit?.equals(accounts) == true && lastToken == token) {
+            return@with
+        }
+        registerToken(token, accounts, okHttpClient)
+    }
+
+    private suspend fun registerToken(
+        token: String,
+        accounts: List<AccountInfo>,
+        okHttpClient: (String) -> OkHttpClient,
+    ) = retryIfException("RegisterAccounts") {
+        RegisterAccounts(accounts, okHttpClient).go(token)
+        lastToken = token
+        hasInit = accounts.toList()
+    }
 }

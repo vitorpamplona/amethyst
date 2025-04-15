@@ -21,17 +21,17 @@
 package com.vitorpamplona.amethyst.service
 
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class Nip05NostrAddressVerifier {
     suspend fun fetchNip05Json(
         nip05: String,
-        forceProxy: (String) -> Boolean,
+        okttpClient: (String) -> OkHttpClient,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) = withContext(Dispatchers.IO) {
@@ -52,8 +52,7 @@ class Nip05NostrAddressVerifier {
                     .url(url)
                     .build()
             // Fetchers MUST ignore any HTTP redirects given by the /.well-known/nostr.json endpoint.
-            HttpClientManager
-                .getHttpClient(forceProxy(url))
+            okttpClient(url)
                 .newBuilder()
                 .followRedirects(false)
                 .build()
@@ -78,7 +77,7 @@ class Nip05NostrAddressVerifier {
 
     suspend fun verifyNip05(
         nip05: String,
-        forceProxy: (String) -> Boolean,
+        okttpClient: (String) -> OkHttpClient,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) {
@@ -87,7 +86,7 @@ class Nip05NostrAddressVerifier {
 
         fetchNip05Json(
             nip05,
-            forceProxy,
+            okttpClient,
             onSuccess = {
                 checkNotInMainThread()
 

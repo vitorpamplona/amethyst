@@ -20,15 +20,16 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import android.content.ContentProviderOperation.newCall
 import android.util.Log
 import android.util.LruCache
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
@@ -60,7 +61,7 @@ object Nip11CachedRetriever {
 
     suspend fun loadRelayInfo(
         dirtyUrl: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
@@ -75,24 +76,24 @@ object Nip11CachedRetriever {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_MINUTE) {
                     // just wait.
                 } else {
-                    retrieve(url, dirtyUrl, forceProxy, onInfo, onError)
+                    retrieve(url, dirtyUrl, okHttpClient, onInfo, onError)
                 }
             } else if (doc is RetrieveResultError) {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
                     onError(dirtyUrl, doc.error, null)
                 } else {
-                    retrieve(url, dirtyUrl, forceProxy, onInfo, onError)
+                    retrieve(url, dirtyUrl, okHttpClient, onInfo, onError)
                 }
             }
         } else {
-            retrieve(url, dirtyUrl, forceProxy, onInfo, onError)
+            retrieve(url, dirtyUrl, okHttpClient, onInfo, onError)
         }
     }
 
     private suspend fun retrieve(
         url: String,
         dirtyUrl: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
@@ -100,7 +101,7 @@ object Nip11CachedRetriever {
         retriever.loadRelayInfo(
             url = url,
             dirtyUrl = dirtyUrl,
-            forceProxy = forceProxy,
+            okHttpClient = okHttpClient,
             onInfo = {
                 checkNotInMainThread()
                 relayInformationDocumentCache.put(url, RetrieveResultSuccess(it))
@@ -126,7 +127,7 @@ class Nip11Retriever {
     suspend fun loadRelayInfo(
         url: String,
         dirtyUrl: String,
-        forceProxy: Boolean,
+        okHttpClient: (String) -> OkHttpClient,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (String, ErrorCode, String?) -> Unit,
     ) {
@@ -139,8 +140,7 @@ class Nip11Retriever {
                     .url(url)
                     .build()
 
-            HttpClientManager
-                .getHttpClient(forceProxy)
+            okHttpClient(url)
                 .newCall(request)
                 .enqueue(
                     object : Callback {

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.ClickableText
+import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -171,8 +170,8 @@ fun DrawAdditionalInfo(
                 modifier = Modifier.size(16.dp),
             )
 
-            ClickableText(
-                text = AnnotatedString(website.removePrefix("https://")),
+            ClickableTextPrimary(
+                text = website.removePrefix("https://"),
                 onClick = {
                     website.let {
                         runCatching {
@@ -184,7 +183,6 @@ fun DrawAdditionalInfo(
                         }
                     }
                 },
-                style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
             )
         }
@@ -205,10 +203,9 @@ fun DrawAdditionalInfo(
                     modifier = Modifier.size(16.dp),
                 )
 
-                ClickableText(
-                    text = AnnotatedString(identity.identity),
+                ClickableTextPrimary(
+                    text = identity.identity,
                     onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                    style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
                     modifier =
                         Modifier
                             .padding(top = 1.dp, bottom = 1.dp, start = 5.dp)

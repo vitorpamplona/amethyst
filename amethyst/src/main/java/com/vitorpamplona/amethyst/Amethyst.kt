@@ -21,144 +21,115 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
-import android.app.PendingIntent
 import android.content.ContentResolver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
-import android.os.Looper
-import android.os.StrictMode
-import android.os.StrictMode.ThreadPolicy
-import android.os.StrictMode.VmPolicy
 import android.util.Log
-import androidx.core.net.toUri
 import androidx.security.crypto.EncryptedSharedPreferences
-import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
+import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
+import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
-import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
+import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import okio.Path.Companion.toOkioPath
 import java.io.File
-import kotlin.time.measureTimedValue
 
 class Amethyst : Application() {
-    val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    val appAgent = "Amethyst/${BuildConfig.VERSION_NAME}"
 
-    val client: NostrClient = NostrClient(OkHttpWebSocket.BuilderFactory())
+    val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            Log.e("AmethystCoroutine", "Caught exception: ${throwable.message}", throwable)
+        }
 
-    // Service Manager is only active when the activity is active.
-    val serviceManager = ServiceManager(client, applicationIOScope)
+    val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
+
+    // Key cache to download and decrypt encrypted files before caching them.
+    val keyCache = EncryptionKeyCache()
+
+    // App services that should be run as soon as there are subscribers to their flows
     val locationManager = LocationState(this, applicationIOScope)
+    val torManager = TorManager(this, applicationIOScope)
+    val connManager = ConnectivityManager(this, applicationIOScope)
 
+    // Service that will run at all times.
     val pokeyReceiver = PokeyReceiver()
+
+    val okHttpClients =
+        DualHttpClientManager(
+            userAgent = appAgent,
+            proxyPortProvider = torManager.activePortOrNull,
+            isMobileDataProvider = connManager.isMobileOrNull,
+            keyCache = keyCache,
+            scope = applicationIOScope,
+        )
+
+    val factory =
+        OkHttpWebSocket.BuilderFactory { _, useProxy ->
+            okHttpClients.getHttpClient(useProxy)
+        }
+
+    val client: NostrClient = NostrClient(factory)
+
+    val serviceManager = ServiceManager(client, applicationIOScope)
+
+    val nip95cache: File by lazy { Nip95CacheFactory.new(this) }
+    val videoCache: VideoCache by lazy { VideoCacheFactory.new(this) }
+    val diskCache: DiskCache by lazy { ImageCacheFactory.newDisk(this) }
+    val memoryCache: MemoryCache by lazy { ImageCacheFactory.newMemory(this) }
+
+    val otsVerifCache by lazy { VerificationStateCache() }
+    val otsBlockHeightCache by lazy { OtsBlockHeightCache() }
+
+    override fun onCreate() {
+        super.onCreate()
+        Log.d("AmethystApp", "onCreate $this")
+
+        instance = this
+
+        if (isDebug()) {
+            Logging.setup()
+        }
+
+        // initializes diskcache on an IO thread.
+        applicationIOScope.launch { videoCache }
+
+        // registers to receive events
+        pokeyReceiver.register(this)
+    }
 
     override fun onTerminate() {
         super.onTerminate()
-        unregisterReceiver(pokeyReceiver)
-        applicationIOScope.cancel()
-    }
+        Log.d("AmethystApp", "onTerminate $this")
 
-    fun nip95cache() = safeCacheDir.resolve("NIP95")
-
-    val videoCache: VideoCache by lazy {
-        val newCache = VideoCache()
-        runBlocking {
-            newCache.initFileCache(
-                this@Amethyst,
-                safeCacheDir.resolve("exoplayer"),
-            )
-        }
-        newCache
-    }
-
-    val coilCache: DiskCache by lazy {
-        DiskCache
-            .Builder()
-            .directory(safeCacheDir.resolve("image_cache").toOkioPath())
-            .maxSizePercent(0.2)
-            .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
-            .build()
-    }
-
-    val memoryCache: MemoryCache by lazy {
-        MemoryCache
-            .Builder()
-            .maxSizePercent(this)
-            .build()
+        pokeyReceiver.unregister(this)
+        applicationIOScope.cancel("Application onTerminate $this")
     }
 
     fun contentResolverFn(): ContentResolver = contentResolver
 
-    override fun onCreate() {
-        super.onCreate()
+    fun isDebug() = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
-        instance = this
-
-        HttpClientManager.setDefaultUserAgent("Amethyst/${BuildConfig.VERSION_NAME}")
-
-        if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
-            StrictMode.setThreadPolicy(
-                ThreadPolicy
-                    .Builder()
-                    .detectAll()
-                    .penaltyLog()
-                    .build(),
-            )
-            StrictMode.setVmPolicy(
-                VmPolicy
-                    .Builder()
-                    .detectAll()
-                    .penaltyLog()
-                    .build(),
-            )
-            Looper.getMainLooper().setMessageLogging(LogMonitor())
-            ChoreographerHelper.start()
+    fun setImageLoader(shouldUseTor: Boolean?) =
+        ImageLoaderSetup.setup(this, diskCache, memoryCache, isDebug()) {
+            shouldUseTor?.let { okHttpClients.getHttpClient(it) } ?: okHttpClients.getHttpClient(false)
         }
-
-        GlobalScope.launch(Dispatchers.IO) {
-            val (value, elapsed) =
-                measureTimedValue {
-                    // initializes the video cache in a thread
-                    videoCache
-                }
-            Log.d("Rendering Metrics", "VideoCache initialized in $elapsed")
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                pokeyReceiver,
-                IntentFilter(PokeyReceiver.POKEY_ACTION),
-                RECEIVER_EXPORTED,
-            )
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(
-                pokeyReceiver,
-                IntentFilter(PokeyReceiver.POKEY_ACTION),
-            )
-        }
-    }
-
-    fun imageLoaderBuilder(): ImageLoader.Builder =
-        ImageLoader
-            .Builder(this)
-            .diskCache { coilCache }
-            .memoryCache { memoryCache }
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 
@@ -167,32 +138,16 @@ class Amethyst : Application() {
      *
      * @param level the memory-related event that was raised.
      */
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        println("Trim Memory $level")
-        GlobalScope.launch(Dispatchers.Default) {
-            println("Trim Memory Inside $level")
+        Log.d("AmethystApp", "onTrimMemory $level")
+        applicationIOScope.launch(Dispatchers.Default) {
             serviceManager.trimMemory()
         }
     }
-
-    fun createIntent(callbackUri: String): PendingIntent =
-        PendingIntent.getActivity(
-            this,
-            0,
-            Intent(Intent.ACTION_VIEW, callbackUri.toUri(), this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
 
     companion object {
         lateinit var instance: Amethyst
             private set
     }
 }
-
-internal val Context.safeCacheDir: File
-    get() {
-        val cacheDir = checkNotNull(cacheDir) { "cacheDir == null" }
-        return cacheDir.apply { mkdirs() }
-    }

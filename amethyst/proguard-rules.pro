@@ -61,7 +61,5 @@
 
 # JSON parsing
 -keep class com.vitorpamplona.quartz.** { *; }
--keep class com.vitorpamplona.amethyst.model.** { *; }
--keep class com.vitorpamplona.amethyst.service.** { *; }
--keep class com.vitorpamplona.ammolite.service.** { *; }
--keep class com.vitorpamplona.ammolite.relays.** { *; }
+-keep class com.vitorpamplona.amethyst.** { *; }
+-keep class com.vitorpamplona.ammolite.** { *; }

@@ -81,13 +81,14 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val items by state.feed.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     LazyColumn(
         contentPadding = FeedPadding,
         state = listState,
     ) {
-        itemsIndexed(state.feed.value, key = { _, item -> item.pubkeyHex }) { _, item ->
+        itemsIndexed(items, key = { _, item -> item.pubkeyHex }) { _, item ->
             UserCompose(item, accountViewModel = accountViewModel, nav = nav)
             HorizontalDivider(
                 thickness = DividerThickness,

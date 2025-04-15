@@ -26,7 +26,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.FollowListWithRoutes
 import com.vitorpamplona.amethyst.ui.navigation.GenericMainTopBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.screen.CodeNameType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -42,8 +41,8 @@ fun HomeTopBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
         ) { listName ->
-            if (listName.type == CodeNameType.ROUTE) {
-                nav.nav(listName.code)
+            if (listName.route != null) {
+                nav.nav(listName.route)
             } else {
                 accountViewModel.account.settings.changeDefaultHomeFollowList(listName.code)
             }

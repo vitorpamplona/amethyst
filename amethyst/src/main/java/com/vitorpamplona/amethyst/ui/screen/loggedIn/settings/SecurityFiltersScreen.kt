@@ -158,7 +158,7 @@ fun SecurityFiltersScreen(
             val pagerState = rememberPagerState { 3 }
             val coroutineScope = rememberCoroutineScope()
             var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
-            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers) }
+            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers.value) }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(

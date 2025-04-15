@@ -22,10 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
 class TwoPaneNav(
     val nav: INav,
@@ -33,28 +36,28 @@ class TwoPaneNav(
 ) : INav {
     override val drawerState: DrawerState = nav.drawerState
 
-    val innerNav = mutableStateOf<RouteId?>(null)
+    val innerNav = mutableStateOf<Route?>(null)
 
-    override fun nav(route: String) {
-        if (route.startsWith("Room/") || route.startsWith("Channel/")) {
-            innerNav.value = RouteId(route.substringBefore("/"), route.substringAfter("/"))
+    override fun nav(route: Route) {
+        if (route is Route.Room || route is Route.Channel) {
+            innerNav.value = route
         } else {
             nav.nav(route)
         }
     }
 
-    override fun nav(routeMaker: suspend () -> String) {
+    override fun nav(routeMaker: suspend () -> Route) {
         scope.launch(Dispatchers.Default) {
             val route = routeMaker()
-            if (route.startsWith("Room/") || route.startsWith("Channel/")) {
-                innerNav.value = RouteId(route.substringBefore("/"), route.substringAfter("/"))
+            if (route is Route.Room || route is Route.Channel) {
+                innerNav.value = route
             } else {
                 nav.nav(route)
             }
         }
     }
 
-    override fun newStack(route: String) {
+    override fun newStack(route: Route) {
         nav.newStack(route)
     }
 
@@ -62,11 +65,11 @@ class TwoPaneNav(
         nav.popBack()
     }
 
-    override fun popUpTo(
-        route: String,
-        upTo: String,
+    override fun <T : Route> popUpTo(
+        route: Route,
+        upToClass: KClass<T>,
     ) {
-        nav.popUpTo(route, upTo)
+        nav.popUpTo<T>(route, upToClass)
     }
 
     override fun closeDrawer() {
@@ -76,9 +79,4 @@ class TwoPaneNav(
     override fun openDrawer() {
         nav.openDrawer()
     }
-
-    data class RouteId(
-        val route: String,
-        val id: String,
-    )
 }

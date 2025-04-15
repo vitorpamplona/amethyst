@@ -21,21 +21,19 @@
 package com.vitorpamplona.amethyst.service.ots
 
 import android.util.Log
-import android.util.LruCache
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
+import okhttp3.OkHttpClient
 import okhttp3.Request
 
-class OkHttpBlockstreamExplorer(
-    val forceProxy: (String) -> Boolean,
+class OkHttpBitcoinExplorer(
+    val baseAPI: String,
+    val client: OkHttpClient,
+    val cache: OtsBlockHeightCache,
 ) : BitcoinExplorer {
-    private val cacheHeaders = LruCache<String, BlockHeader>(100)
-    private val cacheHeights = LruCache<Int, String>(100)
-
     /**
      * Retrieve the block information from the block hash.
      *
@@ -44,13 +42,11 @@ class OkHttpBlockstreamExplorer(
      * @throws Exception desc
      */
     override fun block(hash: String): BlockHeader {
-        cacheHeaders.get(hash)?.let {
+        cache.cacheHeaders.get(hash)?.let {
             return it
         }
 
-        val usingTor = forceProxy(BLOCKSTREAM_API_URL)
-        val url = "${getAPI(usingTor)}/block/$hash"
-        val client = HttpClientManager.getHttpClient(forceProxy(url))
+        val url = "$baseAPI/block/$hash"
 
         val request =
             Request
@@ -63,17 +59,15 @@ class OkHttpBlockstreamExplorer(
 
         client.newCall(request).execute().use {
             if (it.isSuccessful) {
+                Log.d("OkHttpBlockstreamExplorer", "$baseAPI/block/$hash")
+
                 val jsonObject = jacksonObjectMapper().readTree(it.body.string())
 
-                val blockHeader =
-                    BlockHeader()
+                val blockHeader = BlockHeader()
                 blockHeader.merkleroot = jsonObject["merkle_root"].asText()
                 blockHeader.setTime(jsonObject["timestamp"].asInt().toString())
                 blockHeader.blockHash = hash
-                Log.d("OkHttpBlockstreamExplorer", "$BLOCKSTREAM_API_URL/block/$hash")
-
-                cacheHeaders.put(hash, blockHeader)
-
+                cache.cacheHeaders.put(hash, blockHeader)
                 return blockHeader
             } else {
                 throw UrlException(
@@ -92,13 +86,11 @@ class OkHttpBlockstreamExplorer(
      */
     @Throws(Exception::class)
     override fun blockHash(height: Int): String {
-        cacheHeights[height]?.let {
+        cache.cacheHeights[height]?.let {
             return it
         }
 
-        val usingTor = forceProxy(BLOCKSTREAM_API_URL)
-        val url = "${getAPI(usingTor)}/block-height/$height"
-        val client = HttpClientManager.getHttpClient(usingTor)
+        val url = "$baseAPI/block-height/$height"
 
         val request =
             Request
@@ -114,25 +106,19 @@ class OkHttpBlockstreamExplorer(
 
                 Log.d("OkHttpBlockstreamExplorer", "$url $blockHash")
 
-                cacheHeights.put(height, blockHash)
+                cache.cacheHeights.put(height, blockHash)
                 return blockHash
             } else {
-                throw UrlException(
-                    "Couldn't open $url: " + it.message + " " + it.code,
-                )
+                throw UrlException("Couldn't open $url: " + it.message + " " + it.code)
             }
         }
     }
 
     companion object {
-        private const val BLOCKSTREAM_API_URL = "https://blockstream.info/api"
-        private const val MEMPOOL_API_URL = "https://mempool.space/api/"
+        // doesn't accept Tor
+        const val BLOCKSTREAM_API_URL = "https://blockstream.info/api"
 
-        fun getAPI(usingTor: Boolean) =
-            if (usingTor) {
-                MEMPOOL_API_URL
-            } else {
-                BLOCKSTREAM_API_URL
-            }
+        // accepts Tor
+        const val MEMPOOL_API_URL = "https://mempool.space/api/"
     }
 }

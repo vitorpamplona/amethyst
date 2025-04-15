@@ -81,11 +81,11 @@ fun MessagesSinglePane(
             }
         },
         bottomBar = {
-            AppBottomBar(Route.Message, accountViewModel) { route, _ ->
+            AppBottomBar(Route.Message, accountViewModel) { route ->
                 if (route == Route.Message) {
                     tabs[pagerState.currentPage].feedContentState.sendToTop()
                 } else {
-                    nav.newStack(route.base)
+                    nav.newStack(route)
                 }
             }
         },

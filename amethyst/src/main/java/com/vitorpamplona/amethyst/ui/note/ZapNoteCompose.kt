@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
@@ -77,15 +78,13 @@ fun ZapNoteCompose(
         }
     }
 
-    val route = remember(baseAuthor) { "User/${baseAuthor?.pubkeyHex}" }
-
     if (baseAuthor == null) {
         BlankNote()
     } else {
         Column(
             modifier =
                 Modifier.clickable(
-                    onClick = { nav.nav(route) },
+                    onClick = { baseAuthor?.let { nav.nav(routeFor(it)) } },
                 ),
             verticalArrangement = Arrangement.Center,
         ) {

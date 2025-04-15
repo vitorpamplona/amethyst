@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -102,6 +103,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.reply
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -1217,7 +1219,7 @@ class Account(
         filterSpam: Boolean,
     ): Boolean {
         if (settings.updateOptOutOptions(warnReports, filterSpam)) {
-            if (!settings.syncedSettings.security.filterSpamFromStrangers) {
+            if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {
                 transientHiddenUsers.update {
                     emptySet()
                 }
@@ -1769,8 +1771,10 @@ class Account(
     suspend fun updateAttestations() {
         Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
 
+        val otsResolver = otsResolver()
+
         settings.pendingAttestations.value.forEach { pair ->
-            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(pair.value), pair.key)
+            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(pair.value), pair.key, otsResolver)
 
             if (otsState != null) {
                 val hint = LocalCache.getNoteIfExists(pair.key)?.toEventHint<Event>()
@@ -1804,8 +1808,9 @@ class Account(
         if (note.isDraft()) return
 
         val id = note.event?.id ?: note.idHex
+        val otsResolver = otsResolver()
 
-        settings.addPendingAttestation(id, Base64.getEncoder().encodeToString(OtsEvent.stamp(id)))
+        settings.addPendingAttestation(id, Base64.getEncoder().encodeToString(OtsEvent.stamp(id, otsResolver)))
     }
 
     fun follow(user: User) {
@@ -3769,6 +3774,13 @@ class Account(
     fun isDMRelay(url: String) = url in normalizedDmRelaySet.value
 
     fun isTrustedRelay(url: String): Boolean = connectToRelays.value.any { it.url == url } || url == settings.zapPaymentRequest?.relayUri
+
+    fun otsResolver(): OtsResolver =
+        OtsResolverBuilder().build(
+            Amethyst.instance.okHttpClients,
+            ::shouldUseTorForMoneyOperations,
+            Amethyst.instance.otsBlockHeightCache,
+        )
 
     init {
         Log.d("AccountRegisterObservers", "Init")

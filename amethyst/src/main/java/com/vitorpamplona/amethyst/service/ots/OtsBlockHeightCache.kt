@@ -18,28 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.components
+package com.vitorpamplona.amethyst.service.ots
 
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.AnnotatedString
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import android.util.LruCache
+import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
 
-@Composable
-fun ClickableNoteTag(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    ClickableText(
-        text = AnnotatedString("@${baseNote.idNote().toShortenHex()}"),
-        onClick = { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
-    )
+class OtsBlockHeightCache {
+    val cacheHeaders = LruCache<String, BlockHeader>(100)
+    val cacheHeights = LruCache<Int, String>(100)
 }

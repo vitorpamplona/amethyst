@@ -28,12 +28,13 @@ import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.CancellationException
 
 @Composable
-fun NIP19QrCodeScanner(onScan: (String?) -> Unit) {
+fun NIP19QrCodeScanner(onScan: (Route?) -> Unit) {
     SimpleQrCodeScanner {
         try {
             onScan(uriToRoute(it))

@@ -20,13 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
+import android.R.attr.maxLines
+import android.R.attr.onClick
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
@@ -36,10 +33,8 @@ fun ClickableUrl(
 ) {
     val uri = LocalUriHandler.current
 
-    val text = remember(urlText) { AnnotatedString(urlText) }
-
-    ClickableText(
-        text = text,
+    ClickableTextPrimary(
+        text = urlText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         onClick = {
@@ -48,6 +43,5 @@ fun ClickableUrl(
                 uri.openUri(doubleCheckedUrl)
             }
         },
-        style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
     )
 }

@@ -43,7 +43,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NostrHiddenAccountsFeedViewModel(
@@ -103,16 +102,14 @@ open class UserFeedViewModel(
     }
 
     private fun updateFeed(notes: ImmutableList<User>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val currentState = _feedContent.value
-            if (notes.isEmpty()) {
-                _feedContent.update { UserFeedState.Empty }
-            } else if (currentState is UserFeedState.Loaded) {
-                // updates the current list
-                currentState.feed.value = notes
-            } else {
-                _feedContent.update { UserFeedState.Loaded(mutableStateOf(notes)) }
-            }
+        val currentState = _feedContent.value
+        if (notes.isEmpty()) {
+            _feedContent.tryEmit(UserFeedState.Empty)
+        } else if (currentState is UserFeedState.Loaded) {
+            // updates the current list
+            currentState.feed.tryEmit(notes)
+        } else {
+            _feedContent.tryEmit(UserFeedState.Loaded(MutableStateFlow(notes)))
         }
     }
 

@@ -25,6 +25,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
 
 /**
  * Cache for stringResource because it seems to be > 1ms function in some phones
@@ -39,6 +40,19 @@ fun checkLanguage(currentLanguage: String) {
         if (resourceCacheLanguage != currentLanguage) {
             resourceCacheLanguage = currentLanguage
             resourceCache.evictAll()
+        }
+    }
+}
+
+@Composable
+fun StringResSetup() {
+    val config = LocalConfiguration.current
+    if (!config.locales.isEmpty) {
+        val language = config.locales.get(0).language
+        LifecycleResumeEffect(language) {
+            checkLanguage(language)
+
+            onPauseOrDispose { }
         }
     }
 }

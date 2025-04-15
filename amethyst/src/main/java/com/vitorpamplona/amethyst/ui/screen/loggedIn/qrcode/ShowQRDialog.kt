@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayNIP05
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.nip05VerificationAsAState
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -109,7 +110,7 @@ fun BackButton(onPress: () -> Unit) {
 fun ShowQRDialog(
     user: User,
     accountViewModel: AccountViewModel,
-    onScan: (String) -> Unit,
+    onScan: (Route) -> Unit,
     onClose: () -> Unit,
 ) {
     var presenting by remember { mutableStateOf(true) }
@@ -220,7 +221,7 @@ fun ShowQRDialog(
                             }
                         } else {
                             NIP19QrCodeScanner {
-                                if (it.isNullOrEmpty()) {
+                                if (it == null) {
                                     presenting = true
                                 } else {
                                     onScan(it)

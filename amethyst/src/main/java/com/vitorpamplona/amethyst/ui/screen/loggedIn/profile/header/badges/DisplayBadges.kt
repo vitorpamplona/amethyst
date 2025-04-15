@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -162,7 +163,7 @@ fun BadgeThumb(
     size: Dp,
     pictureModifier: Modifier = Modifier,
 ) {
-    BadgeThumb(note, loadProfilePicture, loadRobohash, size, pictureModifier) { nav.nav("Note/${note.idHex}") }
+    BadgeThumb(note, loadProfilePicture, loadRobohash, size, pictureModifier) { nav.nav(Route.Note(note.idHex)) }
 }
 
 @Composable

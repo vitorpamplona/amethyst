@@ -89,7 +89,9 @@ class PushMessageReceiver : MessagingReceiver() {
             Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint")
             pushHandler.setEndpoint(sanitizedEndpoint)
             scope.launch(Dispatchers.IO) {
-                RegisterAccounts(LocalPreferences.allSavedAccounts()).go(sanitizedEndpoint)
+                PushNotificationUtils.checkAndInit(sanitizedEndpoint, LocalPreferences.allSavedAccounts()) {
+                    Amethyst.instance.okHttpClients.getHttpClient(Amethyst.instance.torManager.isSocksReady())
+                }
                 notificationManager().getOrCreateZapChannel(appContext)
                 notificationManager().getOrCreateDMChannel(appContext)
             }

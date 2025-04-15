@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.reflect.KClass
 
 @Composable
 fun rememberNav(): Nav {
@@ -52,17 +54,17 @@ fun rememberExtendedNav(
 interface INav {
     val drawerState: DrawerState
 
-    fun nav(route: String)
+    fun nav(route: Route)
 
-    fun nav(computeRoute: suspend () -> String)
+    fun nav(computeRoute: suspend () -> Route)
 
-    fun newStack(route: String)
+    fun newStack(route: Route)
 
     fun popBack()
 
-    fun popUpTo(
-        route: String,
-        upTo: String,
+    fun <T : Route> popUpTo(
+        route: Route,
+        klass: KClass<T>,
     )
 
     fun closeDrawer()
@@ -85,7 +87,7 @@ class Nav(
         scope.launch { drawerState.open() }
     }
 
-    override fun nav(route: String) {
+    override fun nav(route: Route) {
         scope.launch {
             if (getRouteWithArguments(controller) != route) {
                 controller.navigate(route)
@@ -93,7 +95,7 @@ class Nav(
         }
     }
 
-    override fun nav(computeRoute: suspend () -> String) {
+    override fun nav(computeRoute: suspend () -> Route) {
         scope.launch {
             val route = computeRoute()
             if (getRouteWithArguments(controller) != route) {
@@ -102,10 +104,10 @@ class Nav(
         }
     }
 
-    override fun newStack(route: String) {
+    override fun newStack(route: Route) {
         scope.launch {
             controller.navigate(route) {
-                popUpTo(Route.Home.route)
+                popUpTo(Route.Home)
                 launchSingleTop = true
             }
         }
@@ -117,12 +119,15 @@ class Nav(
         }
     }
 
-    override fun popUpTo(
-        route: String,
-        upTo: String,
+    @SuppressLint("RestrictedApi")
+    override fun <T : Route> popUpTo(
+        route: Route,
+        upToClass: KClass<T>,
     ) {
         scope.launch {
-            controller.navigate(route) { popUpTo(upTo) { inclusive = true } }
+            controller.navigate(route) {
+                popUpTo<T>(upToClass) { inclusive = true }
+            }
         }
     }
 }
@@ -132,34 +137,25 @@ object EmptyNav : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
     override fun closeDrawer() {
-        runBlocking {
-            drawerState.close()
-        }
+        runBlocking { drawerState.close() }
     }
 
     override fun openDrawer() {
-        runBlocking {
-            drawerState.open()
-        }
+        runBlocking { drawerState.open() }
     }
 
-    override fun nav(route: String) {
-    }
+    override fun nav(route: Route) {}
 
-    override fun nav(computeRoute: suspend () -> String) {
-    }
+    override fun nav(computeRoute: suspend () -> Route) {}
 
-    override fun newStack(route: String) {
-    }
+    override fun newStack(route: Route) {}
 
-    override fun popBack() {
-    }
+    override fun popBack() {}
 
-    override fun popUpTo(
-        route: String,
-        upTo: String,
-    ) {
-    }
+    override fun <T : Route> popUpTo(
+        route: Route,
+        upToClass: KClass<T>,
+    ) {}
 }
 
 fun INav.onNavigate(runOnNavigate: () -> Unit): INav = ObservableNavigate(this, runOnNavigate)
@@ -170,17 +166,25 @@ class ObservableNavigate(
 ) : INav {
     override val drawerState: DrawerState = nav.drawerState
 
-    override fun nav(route: String) {
+    override fun closeDrawer() {
+        nav.closeDrawer()
+    }
+
+    override fun openDrawer() {
+        nav.openDrawer()
+    }
+
+    override fun nav(route: Route) {
         onNavigate()
         nav.nav(route)
     }
 
-    override fun nav(computeRoute: suspend () -> String) {
+    override fun nav(computeRoute: suspend () -> Route) {
         onNavigate()
         nav.nav(computeRoute)
     }
 
-    override fun newStack(route: String) {
+    override fun newStack(route: Route) {
         onNavigate()
         nav.newStack(route)
     }
@@ -190,19 +194,11 @@ class ObservableNavigate(
         nav.popBack()
     }
 
-    override fun popUpTo(
-        route: String,
-        upTo: String,
+    override fun <T : Route> popUpTo(
+        route: Route,
+        upToClass: KClass<T>,
     ) {
         onNavigate()
-        nav.popUpTo(route, upTo)
-    }
-
-    override fun closeDrawer() {
-        nav.closeDrawer()
-    }
-
-    override fun openDrawer() {
-        nav.openDrawer()
+        nav.popUpTo(route, upToClass)
     }
 }

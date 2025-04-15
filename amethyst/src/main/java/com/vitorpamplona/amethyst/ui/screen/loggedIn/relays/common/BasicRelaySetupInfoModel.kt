@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
@@ -63,7 +64,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
             _relays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     dirtyUrl = item.url,
-                    forceProxy = account.shouldUseTorForDirty(item.url),
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)
                     },

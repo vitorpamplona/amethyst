@@ -162,6 +162,9 @@ open class ChannelNewMessageViewModel :
         this.userSuggestions?.reset()
         this.userSuggestions = UserSuggestionState(accountVM)
 
+        this.emojiSuggestions?.reset()
+        this.emojiSuggestions = EmojiSuggestionState(accountVM)
+
         this.uploadState =
             ChatFileUploadState(
                 account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0],
@@ -566,7 +569,7 @@ open class ChannelNewMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.url.url,
-                accountViewModel?.account?.shouldUseTorForImageDownload() ?: false,
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
             )
         }
 

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
@@ -85,10 +86,14 @@ class AccountStateViewModel : ViewModel() {
 
     fun tryLoginExistingAccountAsync() {
         // pulls account from storage.
-        viewModelScope.launch { tryLoginExistingAccount() }
+        if (_accountContent.value !is AccountState.LoggedIn) {
+            viewModelScope.launch {
+                tryLoginExistingAccount()
+            }
+        }
     }
 
-    private suspend fun tryLoginExistingAccount(route: String? = null) =
+    private suspend fun tryLoginExistingAccount(route: Route? = null) =
         withContext(Dispatchers.IO) {
             LocalPreferences.loadCurrentAccountFromEncryptedStorage()
         }?.let { startUI(it, route) } ?: run { requestLoginUI() }
@@ -96,7 +101,7 @@ class AccountStateViewModel : ViewModel() {
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
 
-        viewModelScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseForGoodAndClearAccount() }
+        viewModelScope.launch(Dispatchers.IO) { Amethyst.instance.serviceManager.pauseAndLogOff() }
     }
 
     suspend fun loginAndStartUI(
@@ -171,7 +176,7 @@ class AccountStateViewModel : ViewModel() {
     @OptIn(FlowPreview::class)
     suspend fun startUI(
         accountSettings: AccountSettings,
-        route: String? = null,
+        route: Route? = null,
     ) = withContext(Dispatchers.Main) {
         _accountContent.update { AccountState.LoggedIn(accountSettings, route) }
 
@@ -179,7 +184,9 @@ class AccountStateViewModel : ViewModel() {
         collectorJob =
             viewModelScope.launch(Dispatchers.IO) {
                 accountSettings.saveable.debounce(1000).collect {
-                    LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    if (it.accountSettings != null) {
+                        LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    }
                 }
             }
     }
@@ -227,7 +234,7 @@ class AccountStateViewModel : ViewModel() {
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 Nip05NostrAddressVerifier().verifyNip05(
                     key,
-                    forceProxy = { false },
+                    okttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
                     onSuccess = { publicKey ->
                         loginSync(Hex.decode(publicKey).toNpub(), torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
                     },
@@ -326,7 +333,7 @@ class AccountStateViewModel : ViewModel() {
 
     suspend fun switchUserSync(
         npub: String,
-        route: String,
+        route: Route,
     ): Boolean {
         if (npub != LocalPreferences.currentAccount()) {
             val account = LocalPreferences.allSavedAccounts().firstOrNull { it.npub == npub }
@@ -340,7 +347,7 @@ class AccountStateViewModel : ViewModel() {
 
     suspend fun switchUserSync(
         accountInfo: AccountInfo,
-        route: String? = null,
+        route: Route? = null,
     ) {
         prepareLogoutOrSwitch()
         LocalPreferences.switchToAccount(accountInfo)

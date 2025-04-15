@@ -46,7 +46,7 @@ import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.buildNewPostRoute
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -238,7 +238,7 @@ fun NoteDropDownMenu(
                 text = { Text(stringRes(R.string.edit_draft)) },
                 onClick = {
                     val route =
-                        buildNewPostRoute(
+                        Route.NewPost(
                             draft = note.idHex,
                         )
                     nav.nav(route)

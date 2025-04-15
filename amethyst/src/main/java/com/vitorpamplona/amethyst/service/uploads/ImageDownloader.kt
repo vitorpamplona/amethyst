@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
-import com.vitorpamplona.amethyst.service.okhttp.HttpClientManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -36,7 +36,7 @@ class ImageDownloader {
 
     suspend fun waitAndGetImage(
         imageUrl: String,
-        forceProxy: Boolean,
+        okHttpClient: (url: String) -> OkHttpClient,
     ): Blob? =
         withContext(Dispatchers.IO) {
             var imageData: Blob? = null
@@ -46,7 +46,7 @@ class ImageDownloader {
             while (imageData == null && tentatives < 15) {
                 imageData =
                     try {
-                        tryGetTheImage(imageUrl, forceProxy)
+                        tryGetTheImage(imageUrl, okHttpClient)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         null
@@ -63,15 +63,16 @@ class ImageDownloader {
 
     private suspend fun tryGetTheImage(
         imageUrl: String,
-        forceProxy: Boolean,
+        okHttpClient: (url: String) -> OkHttpClient,
     ): Blob? =
         withContext(Dispatchers.IO) {
             // TODO: Migrate to OkHttp
             HttpURLConnection.setFollowRedirects(true)
             var url = URL(imageUrl)
+            var clientProxy = okHttpClient(imageUrl).proxy
             var huc =
-                if (forceProxy) {
-                    url.openConnection(HttpClientManager.getCurrentProxy()) as HttpURLConnection
+                if (clientProxy != null) {
+                    url.openConnection(clientProxy) as HttpURLConnection
                 } else {
                     url.openConnection() as HttpURLConnection
                 }
@@ -83,9 +84,10 @@ class ImageDownloader {
 
                 // open the new connnection again
                 url = URL(newUrl)
+                clientProxy = okHttpClient(newUrl).proxy
                 huc =
-                    if (forceProxy) {
-                        url.openConnection(HttpClientManager.getCurrentProxy()) as HttpURLConnection
+                    if (clientProxy != null) {
+                        url.openConnection(clientProxy) as HttpURLConnection
                     } else {
                         url.openConnection() as HttpURLConnection
                     }

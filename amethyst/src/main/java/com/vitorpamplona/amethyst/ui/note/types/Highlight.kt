@@ -26,9 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,10 +38,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayEvent
@@ -216,16 +214,16 @@ private fun DisplayQuoteAuthor(
 
 @Composable
 fun DisplayEntryForUser(
-    userBase: User,
+    baseUser: User,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userMetadata by userBase.live().userMetadataInfo.observeAsState()
+    val userMetadata by baseUser.live().userMetadataInfo.observeAsState()
 
     CreateClickableTextWithEmoji(
-        clickablePart = userMetadata?.bestName() ?: userBase.pubkeyDisplayHex(),
+        clickablePart = userMetadata?.bestName() ?: baseUser.pubkeyDisplayHex(),
         maxLines = 1,
-        route = "User/${userBase.pubkeyHex}",
+        route = remember(baseUser) { routeFor(baseUser) },
         nav = nav,
         tags = userMetadata?.tags,
     )
@@ -253,10 +251,9 @@ fun DisplayEntryForNote(
     Text("-", maxLines = 1)
 
     if (description != null) {
-        ClickableText(
-            text = AnnotatedString(description),
+        ClickableTextPrimary(
+            text = description,
             onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav.nav(it) } },
-            style = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.primary),
         )
     } else {
         DisplayEvent(noteEvent.id, noteEvent.kind, note.toNostrUri(), null, accountViewModel, nav)

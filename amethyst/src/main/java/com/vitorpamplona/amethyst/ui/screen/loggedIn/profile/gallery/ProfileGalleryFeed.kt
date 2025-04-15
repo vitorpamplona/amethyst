@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
@@ -89,14 +88,13 @@ private fun GalleryFeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-    val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
 
-    sharedPreferencesViewModel.init()
-
-    var ratio = 1.0f
-    if (sharedPreferencesViewModel.sharedPrefs.modernGalleryStyle.value) {
-        ratio = 0.8f
-    }
+    val ratio =
+        if (accountViewModel.settings.modernGalleryStyle.value) {
+            0.8f
+        } else {
+            1.0f
+        }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),

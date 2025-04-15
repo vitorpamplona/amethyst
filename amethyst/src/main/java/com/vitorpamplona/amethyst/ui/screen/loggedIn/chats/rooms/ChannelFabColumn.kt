@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route.ChannelMetadataEdit
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.Route.NewGroupDM
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -69,7 +69,7 @@ fun ChannelFabColumn(nav: INav) {
             Column {
                 FloatingActionButton(
                     onClick = {
-                        nav.nav(NewGroupDM.base)
+                        nav.nav(NewGroupDM())
                         isOpen = false
                     },
                     modifier = Size55Modifier,
@@ -88,7 +88,7 @@ fun ChannelFabColumn(nav: INav) {
 
                 FloatingActionButton(
                     onClick = {
-                        nav.nav(ChannelMetadataEdit.base)
+                        nav.nav(Route.ChannelMetadataEdit())
                         isOpen = false
                     },
                     modifier = Size55Modifier,
