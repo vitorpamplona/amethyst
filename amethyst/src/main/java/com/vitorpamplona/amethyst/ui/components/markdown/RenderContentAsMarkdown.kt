@@ -71,6 +71,7 @@ fun RenderContentAsMarkdown(
     nav: INav,
 ) {
     val uri = LocalUriHandler.current
+    val modifiedContent = prependEmojiToLinks(content)
     val onClick =
         remember {
             { link: String ->
@@ -86,12 +87,12 @@ fun RenderContentAsMarkdown(
 
     ProvideTextStyle(MarkdownTextStyle) {
         val astNode =
-            remember(content) {
-                CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content)
+            remember(modifiedContent) {
+                CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(modifiedContent)
             }
 
         val renderer =
-            remember(content) {
+            remember(modifiedContent) {
                 MarkdownMediaRenderer(
                     startOfText = content.take(100),
                     imetaByUrl = tags?.lists?.imetasByUrl() ?: emptyMap(),
@@ -111,6 +112,15 @@ fun RenderContentAsMarkdown(
         ) {
             BasicMarkdown(astNode)
         }
+    }
+}
+
+private fun prependEmojiToLinks(markdownText: String): String {
+    val linkRegex = Regex("""\[(.*?)]\((.*?)\)""")
+    return markdownText.replace(linkRegex) { matchResult ->
+        val label = matchResult.groupValues[1]
+        val url = matchResult.groupValues[2]
+        "[\uD83D\uDD17 $label]($url)"
     }
 }
 
