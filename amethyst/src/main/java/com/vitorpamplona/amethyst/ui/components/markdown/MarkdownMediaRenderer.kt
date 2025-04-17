@@ -189,7 +189,7 @@ class MarkdownMediaRenderer(
         richTextStringBuilder: RichTextString.Builder,
     ) {
         val tagWithoutHash = tag.removePrefix("#")
-        renderAsCompleteLink(tag, "nostr:nashtag?id=$tagWithoutHash", richTextStringBuilder)
+        renderAsCompleteLink(tag, "nostr:hashtag?id=$tagWithoutHash", richTextStringBuilder)
 
         val hashtagIcon: HashtagIcon? = checkForHashtagWithIcon(tagWithoutHash)
         if (hashtagIcon != null) {
