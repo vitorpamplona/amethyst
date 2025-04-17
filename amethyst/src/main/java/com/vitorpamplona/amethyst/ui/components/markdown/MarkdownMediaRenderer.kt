@@ -75,11 +75,7 @@ class MarkdownMediaRenderer(
         uri: String,
     ): Boolean =
         if (canPreview && uri.startsWith("http")) {
-            if (title.isNullOrBlank() || title == uri) {
-                true
-            } else {
-                false
-            }
+            title.isNullOrBlank() || title == uri
         } else {
             false
         }
