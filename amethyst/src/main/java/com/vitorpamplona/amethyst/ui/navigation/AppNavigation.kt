@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
@@ -106,6 +107,8 @@ fun AppNavigation(
             composable<Route.Video> { VideoScreen(accountViewModel, nav) }
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+
+            composableFromEnd<Route.Lists> { ListsScreen(accountViewModel, nav) }
 
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }

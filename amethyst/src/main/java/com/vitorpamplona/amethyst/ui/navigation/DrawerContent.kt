@@ -452,6 +452,14 @@ fun ListContent(
         )
 
         NavigationRow(
+            title = R.string.my_lists,
+            icon = R.drawable.format_list_bulleted_type,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Lists,
+        )
+
+        NavigationRow(
             title = R.string.bookmarks,
             icon = R.drawable.ic_bookmarks,
             tint = MaterialTheme.colorScheme.onBackground,
