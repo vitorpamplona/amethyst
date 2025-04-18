@@ -75,11 +75,7 @@ class MarkdownMediaRenderer(
         uri: String,
     ): Boolean =
         if (canPreview && uri.startsWith("http")) {
-            if (title.isNullOrBlank() || title == uri) {
-                true
-            } else {
-                false
-            }
+            title.isNullOrBlank() || title == uri
         } else {
             false
         }
@@ -189,7 +185,7 @@ class MarkdownMediaRenderer(
         richTextStringBuilder: RichTextString.Builder,
     ) {
         val tagWithoutHash = tag.removePrefix("#")
-        renderAsCompleteLink(tag, "nostr:nashtag?id=$tagWithoutHash", richTextStringBuilder)
+        renderAsCompleteLink(tag, "nostr:hashtag?id=$tagWithoutHash", richTextStringBuilder)
 
         val hashtagIcon: HashtagIcon? = checkForHashtagWithIcon(tagWithoutHash)
         if (hashtagIcon != null) {
