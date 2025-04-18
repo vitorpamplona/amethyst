@@ -452,11 +452,11 @@ fun ListContent(
         )
 
         NavigationRow(
-            title = stringRes(Route.Lists.contentDescriptor),
-            icon = Route.Lists.icon,
+            title = R.string.my_lists,
+            icon = R.drawable.format_list_bulleted_type,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
-            route = Route.Lists.route,
+            route = Route.Lists,
         )
 
         NavigationRow(

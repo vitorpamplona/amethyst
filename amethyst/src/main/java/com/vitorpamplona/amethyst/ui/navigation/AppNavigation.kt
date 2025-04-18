@@ -108,13 +108,7 @@ fun AppNavigation(
             composable<Route.Discover> { DiscoverScreen(accountViewModel, nav) }
             composable<Route.Notification> { NotificationScreen(sharedPreferencesViewModel, accountViewModel, nav) }
 
-            composable(
-                Route.Lists.route,
-                enterTransition = { slideInHorizontallyFromEnd },
-                exitTransition = { scaleOut },
-                popEnterTransition = { scaleIn },
-                popExitTransition = { slideOutHorizontallyToEnd },
-            ) { ListsScreen(accountViewModel, nav) }
+            composableFromEnd<Route.Lists> { ListsScreen(accountViewModel, nav) }
 
             composable<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
