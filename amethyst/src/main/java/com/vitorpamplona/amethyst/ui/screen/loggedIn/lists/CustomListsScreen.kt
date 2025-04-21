@@ -28,15 +28,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -73,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import kotlinx.coroutines.Dispatchers
@@ -141,12 +148,33 @@ fun CustomListsScreen(
     nav: INav,
 ) {
 //    val setsState by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
+    val pagerState = rememberPagerState { 2 }
+    val coroutineScope = rememberCoroutineScope()
 
     DisappearingScaffold(
         isInvertedLayout = false,
         accountViewModel = accountViewModel,
         topBar = {
-            TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
+            Column {
+                TopBarWithBackButton(stringRes(R.string.my_lists), nav::popBack)
+                TabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    modifier = TabRowHeight,
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                ) {
+                    Tab(
+                        selected = pagerState.currentPage == 0,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
+                        text = { Text(text = "Follow Sets") },
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 1,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
+                        text = { Text(text = "Labeled Bookmarks") },
+                    )
+                }
+            }
         },
     ) {
         Column(
@@ -154,32 +182,65 @@ fun CustomListsScreen(
                 .padding(it)
                 .fillMaxHeight(),
         ) {
-            when (followSetState) {
-                FollowSetState.Loading -> LoadingFeed()
+            HorizontalPager(state = pagerState) { page ->
+                when (page) {
+                    0 ->
+                        FollowSetFeedView(
+                            followSetState = followSetState,
+                            onRefresh = refresh,
+                            onOpenItem = openItem,
+                        )
 
-                is FollowSetState.Loaded -> {
-                    val followSetFeed = followSetState.feed
-                    FollowListLoaded(
-                        loadedFeedState = followSetFeed,
-                        onRefresh = refresh,
-                        onItemClick = openItem,
-                    )
+                    1 -> LabeledBookmarksFeedView()
                 }
-
-                is FollowSetState.Empty -> {
-                    FeedEmpty {
-                        refresh()
-                    }
-                }
-
-                is FollowSetState.FeedError ->
-                    FeedError(
-                        followSetState.errorMessage,
-                    ) {
-                        refresh()
-                    }
             }
         }
+    }
+}
+
+@Composable
+fun FollowSetFeedView(
+    modifier: Modifier = Modifier,
+    followSetState: FollowSetState,
+    onRefresh: () -> Unit = {},
+    onOpenItem: (String) -> Unit = {},
+) {
+    when (followSetState) {
+        FollowSetState.Loading -> LoadingFeed()
+
+        is FollowSetState.Loaded -> {
+            val followSetFeed = followSetState.feed
+            FollowListLoaded(
+                loadedFeedState = followSetFeed,
+                onRefresh = onRefresh,
+                onItemClick = onOpenItem,
+            )
+        }
+
+        is FollowSetState.Empty -> {
+            FeedEmpty {
+                onRefresh()
+            }
+        }
+
+        is FollowSetState.FeedError ->
+            FeedError(
+                followSetState.errorMessage,
+            ) {
+                onRefresh()
+            }
+    }
+}
+
+@Composable
+fun LabeledBookmarksFeedView() {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(text = "Not implemented yet.")
+        Spacer(modifier = StdVertSpacer)
     }
 }
 
