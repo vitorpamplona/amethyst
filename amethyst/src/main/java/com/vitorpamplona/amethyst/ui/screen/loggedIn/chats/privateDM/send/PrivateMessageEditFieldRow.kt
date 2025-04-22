@@ -25,16 +25,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -183,30 +177,8 @@ fun KeyboardLeadingIcon(
             onImageChosen = channelScreenModel::pickedMedia,
         )
 
-        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-
-        IconButton(
-            onClick = { channelScreenModel.fetchTextGenerationDvms() },
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.SmartToy,
-                contentDescription = stringRes(R.string.select_dvm),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-
         Spacer(modifier = Modifier.padding(horizontal = 2.dp))
 
         ToggleNip17Button(channelScreenModel, accountViewModel)
-    }
-
-    if (channelScreenModel.showDvmSelectionDialog) {
-        DvmSelectionDialog(
-            dvmList = channelScreenModel.availableDvms,
-            onDismissRequest = { channelScreenModel.dismissDvmDialog() },
-            onDvmSelected = { pubkey -> channelScreenModel.onDvmSelected(pubkey) },
-        )
     }
 }

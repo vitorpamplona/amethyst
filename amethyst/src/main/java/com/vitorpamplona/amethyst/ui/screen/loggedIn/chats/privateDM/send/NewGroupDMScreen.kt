@@ -132,6 +132,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -255,10 +257,12 @@ fun NewGroupDMScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
+            // Pass dialog visibility flag so we can reset icon on cancel
             GroupDMScreenContent(
                 postViewModel = postViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                isDvmDialogVisible = showDvmDialog,
                 showDvmDialog = { show -> showDvmDialog = show },
                 updateDvmList = { list -> dvmListState = list },
             )
@@ -291,6 +295,7 @@ fun GroupDMScreenContent(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isDvmDialogVisible: Boolean,
     showDvmDialog: (Boolean) -> Unit,
     updateDvmList: (List<DvmInfo>) -> Unit,
 ) {
@@ -303,7 +308,14 @@ fun GroupDMScreenContent(
                 Modifier.fillMaxWidth().verticalScroll(scrollState),
                 verticalArrangement = spacedBy(Size10dp),
             ) {
-                SendDirectMessageTo(postViewModel, accountViewModel, showDvmDialog, updateDvmList)
+                // Propagate dialog visibility to reset icon on cancel
+                SendDirectMessageTo(
+                    postViewModel = postViewModel,
+                    accountViewModel = accountViewModel,
+                    isDialogVisible = isDvmDialogVisible,
+                    showDvmDialog = showDvmDialog,
+                    updateDvmList = updateDvmList,
+                )
 
                 MessageFieldRow(postViewModel, accountViewModel)
 
@@ -524,9 +536,38 @@ private fun BottomRowActions(
 fun SendDirectMessageTo(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
+    isDialogVisible: Boolean,
     showDvmDialog: (Boolean) -> Unit,
     updateDvmList: (List<DvmInfo>) -> Unit,
 ) {
+    // Track if user clicked the DVM button
+    var isClicked by remember { mutableStateOf(false) }
+    val toFieldText = postViewModel.toUsers.text
+
+    // Reset highlight when no DVM NPUB in To field
+    LaunchedEffect(toFieldText) {
+        val hasDvmInput =
+            postViewModel.availableDvms.any { dvm ->
+                toFieldText.contains(Hex.decode(dvm.pubkey).toNpub())
+            }
+        if (!hasDvmInput) {
+            isClicked = false
+        }
+    }
+
+    // Reset when dialog closes with no DVM selection
+    LaunchedEffect(isDialogVisible) {
+        if (!isDialogVisible) {
+            val hasDvmInput =
+                postViewModel.availableDvms.any { dvm ->
+                    toFieldText.contains(Hex.decode(dvm.pubkey).toNpub())
+                }
+            if (!hasDvmInput) {
+                isClicked = false
+            }
+        }
+    }
+
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -579,14 +620,24 @@ fun SendDirectMessageTo(
 
             IconButton(
                 onClick = {
-                    updateDvmList(postViewModel.getKind5050DVMs())
+                    // Highlight immediately when clicked
+                    isClicked = true
+                    val dvmList = postViewModel.getKind5050DVMs()
+                    updateDvmList(dvmList)
+                    postViewModel.availableDvms = dvmList
                     showDvmDialog(true)
                 },
             ) {
+                // Highlight when clicked or when a DVM NPUB is in the To field
+                val hasDvmInput =
+                    postViewModel.availableDvms.any { dvm ->
+                        toFieldText.contains(Hex.decode(dvm.pubkey).toNpub())
+                    }
+                val isDvmSelected = isClicked || hasDvmInput
                 Icon(
                     imageVector = Icons.Outlined.SmartToy,
                     contentDescription = stringRes(id = R.string.select_dvm),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = if (isDvmSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.placeholderText,
                 )
             }
 
