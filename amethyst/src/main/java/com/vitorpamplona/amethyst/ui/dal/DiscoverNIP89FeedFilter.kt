@@ -70,12 +70,13 @@ open class DiscoverNIP89FeedFilter(
         }
     }
 
-    fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
+    open fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
         val filterParams = buildFilterParams(account)
+        // only include DVM definitions (kind 5300) announced within the lastAnnounced period (1 year)
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent) &&
             noteEvent.includeKind(5300) &&
-            noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+            noteEvent.createdAt > TimeUtils.now() - lastAnnounced
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
@@ -84,4 +85,34 @@ open class DiscoverNIP89FeedFilter(
         }
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+}
+
+/**
+ * Specialized filter that discovers only Text Generation DVMs (kind 5050)
+ */
+class TextGenerationDVMFeedFilter(
+    account: Account,
+) : DiscoverNIP89FeedFilter(account) {
+    override fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
+        val filterParams = buildFilterParams(account)
+
+        // Include only DVMs that explicitly support kind 5050 (Text Generation)
+        val supportedKinds = noteEvent.supportedKinds()
+        val supportsTextGeneration = noteEvent.includeKind(5050)
+
+        // Log for debugging
+        android.util.Log.d(
+            "DVM-Filter",
+            "Checking DVM with id=${noteEvent.id.take(8)}, " +
+                "kinds=${supportedKinds.joinToString()}, " +
+                "supports5050=$supportsTextGeneration",
+        )
+
+        // Only include DVMs active in the past week
+        val oneWeekAgo = TimeUtils.now() - (7 * 24 * 60 * 60)
+        return noteEvent.appMetaData()?.subscription != true &&
+            filterParams.match(noteEvent) &&
+            supportsTextGeneration &&
+            noteEvent.createdAt > oneWeekAgo
+    }
 }

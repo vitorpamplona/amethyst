@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -73,12 +74,25 @@ fun DvmSelectionDialog(
         return
     }
 
+    // Sort DVMs alphabetically by name (with nulls last)
+    val sortedDvmList =
+        dvmList.sortedWith(
+            compareBy<DvmInfo> { it.name == null }
+                .thenBy { it.name?.lowercase() ?: "" },
+        )
+
+    // Log the DVMs being displayed
+    Log.d("DVM", "Displaying ${sortedDvmList.size} unique Text Generation DVMs in dialog")
+    sortedDvmList.forEachIndexed { index, dvm ->
+        Log.d("DVM", "Dialog item $index: name=${dvm.name ?: "unnamed"}, pubkey=${dvm.pubkey.take(8)}")
+    }
+
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(text = stringResource(id = R.string.select_dvm)) },
         text = {
             LazyColumn {
-                items(dvmList) { dvmInfo ->
+                items(sortedDvmList) { dvmInfo ->
                     Column(
                         modifier =
                             Modifier
@@ -114,7 +128,7 @@ fun DvmSelectionDialog(
 
                         if (displayKinds.isNotEmpty()) {
                             Text(
-                                text = displayKinds,
+                                text = "Text Generation DVM ($displayKinds)",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )

@@ -43,7 +43,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.TextGenerationDVMFeedFilter
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -749,43 +749,12 @@ class ChatNewMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val account = account ?: return@launch
 
-            Log.d("DVM", "Starting to fetch DVMs")
+            Log.d("DVM", "Starting to fetch Text Generation DVMs")
 
-            // Use the existing NIP89 feed filter to find any DVMs
-            val feed = DiscoverNIP89FeedFilter(account)
+            // Use the dedicated method to find Text Generation DVMs
+            val dvmInfoList = getKind5050DVMs()
 
-            val dvmNotes = feed.feed()
-            Log.d("DVM", "Found ${dvmNotes.size} potential DVMs")
-
-            val dvmInfoList =
-                dvmNotes.mapNotNull { note ->
-                    val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
-                    val metadata = appDef.appMetaData() ?: return@mapNotNull null
-                    val supportedKinds = appDef.supportedKinds()
-
-                    val info =
-                        DvmInfo(
-                            pubkey = note.author?.pubkeyHex ?: return@mapNotNull null,
-                            name = metadata.name,
-                            supportedKinds = supportedKinds.toSet(),
-                            description = metadata.about,
-                        )
-
-                    // Only include if it supports Text Generation (kind 5050) or other DVM kinds
-                    if (supportedKinds.any { it in 5000..7000 }) {
-                        Log.d(
-                            "DVM",
-                            "Adding DVM: ${info.name ?: "unnamed"}, pubkey: ${info.pubkey.substring(0, 8)}, " +
-                                "supported kinds: ${supportedKinds.joinToString()}",
-                        )
-                        info
-                    } else {
-                        Log.d("DVM", "Skipping DVM: ${info.name ?: "unnamed"}, no DVM kinds found")
-                        null
-                    }
-                }
-
-            Log.d("DVM", "Final DVM list contains ${dvmInfoList.size} services")
+            Log.d("DVM", "Found ${dvmInfoList.size} Text Generation DVMs")
 
             availableDvms = dvmInfoList
             showDvmSelectionDialog = true
@@ -863,26 +832,57 @@ class ChatNewMessageViewModel :
     fun getKind5050DVMs(): List<DvmInfo> {
         val account = account ?: return emptyList()
 
-        // Use the existing NIP89 feed filter to find DVMs
-        val feed = DiscoverNIP89FeedFilter(account)
+        // Use our specialized filter for Text Generation DVMs
+        val feed = TextGenerationDVMFeedFilter(account)
         val dvmNotes = feed.feed()
 
-        return dvmNotes.mapNotNull { note ->
-            val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
-            val metadata = appDef.appMetaData() ?: return@mapNotNull null
-            val supportedKinds = appDef.supportedKinds()
+        Log.d("DVM", "Found ${dvmNotes.size} DVM notes before processing")
 
-            // Only include if it supports Text Generation (kind 5050)
-            if (supportedKinds.contains(5050)) {
-                DvmInfo(
-                    pubkey = note.author?.pubkeyHex ?: return@mapNotNull null,
-                    name = metadata.name,
-                    supportedKinds = supportedKinds.toSet(),
-                    description = metadata.about,
+        // First, collect all DVM info
+        val allDvmInfo =
+            dvmNotes.mapNotNull { note ->
+                val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
+                val metadata = appDef.appMetaData() ?: return@mapNotNull null
+                val supportedKinds = appDef.supportedKinds()
+                val pubkey = note.author?.pubkeyHex ?: return@mapNotNull null
+                val supportsTextGeneration = supportedKinds.contains(5050)
+
+                // Log every DVM found
+                Log.d(
+                    "DVM-All",
+                    "Found DVM: id=${note.idHex.take(8)}, " +
+                        "name=${metadata.name ?: "unnamed"}, " +
+                        "pubkey=${pubkey.take(8)}, " +
+                        "createdAt=${note.createdAt() ?: 0L}, " +
+                        "kinds=${supportedKinds.joinToString()}, " +
+                        "supports5050=$supportsTextGeneration",
                 )
-            } else {
-                null
+
+                // Only include DVMs that support kind 5050
+                if (supportsTextGeneration) {
+                    DvmInfo(
+                        pubkey = pubkey,
+                        name = metadata.name,
+                        supportedKinds = supportedKinds.toSet(),
+                        description = metadata.about,
+                    )
+                } else {
+                    Log.d("DVM-Filter", "Skipping DVM that doesn't support kind 5050: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
+                    null
+                }
             }
+
+        // Then deduplicate by pubkey, taking the most recent for each
+        val uniqueDvms = mutableMapOf<String, DvmInfo>()
+
+        // Add all DVMs with kind 5050
+        allDvmInfo.forEach { dvm ->
+            uniqueDvms[dvm.pubkey] = dvm
+            Log.d("DVM-Filter", "Added Text Generation DVM: ${dvm.name ?: "unnamed"} (${dvm.pubkey.take(8)})")
         }
+
+        val result = uniqueDvms.values.toList()
+        Log.d("DVM", "Returning ${result.size} unique Text Generation DVMs")
+        return result
     }
 }

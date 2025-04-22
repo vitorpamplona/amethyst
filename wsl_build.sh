@@ -21,6 +21,9 @@
 #
 # 4. To launch with debugging enabled:
 #    adb shell am start -D -n com.vitorpamplona.amethyst.debug/com.vitorpamplona.amethyst.ui.MainActivity
+
+# 5. To view device app logs:
+#    adb logcat *:D | grep -i "com..*\.amethyst"
 #
 # =============================================================================
 

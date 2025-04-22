@@ -132,8 +132,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -207,8 +205,7 @@ fun NewGroupDMScreen(
             dvmList = dvmListState,
             onDismissRequest = { showDvmDialog = false },
             onDvmSelected = { selectedPubkey ->
-                postViewModel.updateToUsers(TextFieldValue("@" + Hex.decode(selectedPubkey).toNpub()))
-                showDvmDialog = false
+                postViewModel.onDvmSelected(selectedPubkey)
             },
         )
     }

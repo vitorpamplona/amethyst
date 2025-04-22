@@ -436,7 +436,7 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     override fun updateChannelFilters() {
         discoveryFeedChannel.typedFilters =
             createLiveStreamFilter()
-                .plus(createNIP89Filter(listOf("5300")))
+                .plus(createNIP89Filter(listOf("5300", "5050")))
                 .plus(createPublicChatFilter())
                 .plus(createMarketplaceFilter())
                 .plus(
