@@ -6,7 +6,7 @@
 #
 # DEBUGGING ON PHYSICAL DEVICE FROM WSL:
 #
-# 1. Connect your phone via USB to your Windows PC
+# 1. Connect your phone via USB to your Windows PC, make sure developer mode and USB debugging are enabled, and usb mode is set to PTP
 #
 # 2. Run these commands in PowerShell:
 #    usbipd bind --busid X-Y  # Replace X-Y with your device's BUSID from 'usbipd list'

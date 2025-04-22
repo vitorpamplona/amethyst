@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -87,6 +88,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.ImmutableList
@@ -95,6 +97,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 @Stable
 class ChatNewMessageViewModel :
@@ -104,6 +108,10 @@ class ChatNewMessageViewModel :
     IZapField,
     IZapRaiser {
     val draftTag = DraftTagState()
+
+    // DVM functionality
+    var showDvmSelectionDialog by mutableStateOf(false)
+    var availableDvms by mutableStateOf<List<DvmInfo>>(emptyList())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -348,6 +356,15 @@ class ChatNewMessageViewModel :
 
     fun sendPost(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (isDvmConversation()) {
+                // Format message as a NIP-90 request if sending to a DVM
+                val originalMessage = message.text
+                val formattedMessage = formatTextGenerationRequest(originalMessage)
+                message = TextFieldValue(formattedMessage)
+
+                Log.d("DVM", "Sending NIP-90 formatted request: $formattedMessage")
+            }
+
             sendPostSync()
             onDone()
         }
@@ -727,4 +744,145 @@ class ChatNewMessageViewModel :
     }
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
+
+    fun fetchTextGenerationDvms() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val account = account ?: return@launch
+
+            Log.d("DVM", "Starting to fetch DVMs")
+
+            // Use the existing NIP89 feed filter to find any DVMs
+            val feed = DiscoverNIP89FeedFilter(account)
+
+            val dvmNotes = feed.feed()
+            Log.d("DVM", "Found ${dvmNotes.size} potential DVMs")
+
+            val dvmInfoList =
+                dvmNotes.mapNotNull { note ->
+                    val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
+                    val metadata = appDef.appMetaData() ?: return@mapNotNull null
+                    val supportedKinds = appDef.supportedKinds()
+
+                    val info =
+                        DvmInfo(
+                            pubkey = note.author?.pubkeyHex ?: return@mapNotNull null,
+                            name = metadata.name,
+                            supportedKinds = supportedKinds.toSet(),
+                            description = metadata.about,
+                        )
+
+                    // Only include if it supports Text Generation (kind 5050) or other DVM kinds
+                    if (supportedKinds.any { it in 5000..7000 }) {
+                        Log.d(
+                            "DVM",
+                            "Adding DVM: ${info.name ?: "unnamed"}, pubkey: ${info.pubkey.substring(0, 8)}, " +
+                                "supported kinds: ${supportedKinds.joinToString()}",
+                        )
+                        info
+                    } else {
+                        Log.d("DVM", "Skipping DVM: ${info.name ?: "unnamed"}, no DVM kinds found")
+                        null
+                    }
+                }
+
+            Log.d("DVM", "Final DVM list contains ${dvmInfoList.size} services")
+
+            availableDvms = dvmInfoList
+            showDvmSelectionDialog = true
+        }
+    }
+
+    fun onDvmSelected(pubkey: String) {
+        val user = LocalCache.getOrCreateUser(pubkey)
+
+        // Set the room for communication with the DVM
+        room = ChatroomKey(setOf(pubkey))
+
+        // Update the To field with the DVM's npub
+        toUsers = TextFieldValue("@${Hex.decode(pubkey).toNpub()}")
+
+        // Enable NIP17 for DVM communication
+        nip17 = true
+        requiresNIP17 = false
+
+        showDvmSelectionDialog = false
+
+        // Update the room status for proper messaging
+        updateNIP17StatusFromRoom()
+    }
+
+    fun dismissDvmDialog() {
+        showDvmSelectionDialog = false
+    }
+
+    private fun isDvmConversation(): Boolean {
+        // Check if we're talking to a DVM
+        return availableDvms.any { dvm ->
+            room?.users?.contains(dvm.pubkey) == true
+        }
+    }
+
+    private fun formatTextGenerationRequest(message: String): String {
+        // If not talking to a DVM, return the original message
+        if (!isDvmConversation()) return message
+
+        try {
+            // Create a NIP-90 kind:5050 formatted request
+            val requestObject = JSONObject()
+
+            // Add input data as text
+            val inputTags = JSONArray()
+            val inputTag = JSONArray()
+            inputTag.put("i")
+            inputTag.put(message)
+            inputTag.put("text")
+            inputTags.put(inputTag)
+
+            // Add basic params
+            val paramTags = JSONArray()
+
+            // Add model param if you want to specify a model
+            val modelParam = JSONArray()
+            modelParam.put("param")
+            modelParam.put("model")
+            modelParam.put("default") // You could let user customize this
+            paramTags.put(modelParam)
+
+            // Create the request object
+            requestObject.put("kind", 5050)
+            requestObject.put("tags", inputTags)
+            requestObject.put("content", "")
+
+            return requestObject.toString(2)
+        } catch (e: Exception) {
+            Log.e("DVM", "Error formatting text generation request", e)
+            return message
+        }
+    }
+
+    fun getKind5050DVMs(): List<DvmInfo> {
+        val account = account ?: return emptyList()
+
+        // Use the existing NIP89 feed filter to find DVMs
+        val feed = DiscoverNIP89FeedFilter(account)
+        val dvmNotes = feed.feed()
+
+        return dvmNotes.mapNotNull { note ->
+            val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
+            val metadata = appDef.appMetaData() ?: return@mapNotNull null
+            val supportedKinds = appDef.supportedKinds()
+
+            // Only include if it supports Text Generation (kind 5050)
+            if (supportedKinds.contains(5050)) {
+                DvmInfo(
+                    pubkey = note.author?.pubkeyHex ?: return@mapNotNull null,
+                    name = metadata.name,
+                    supportedKinds = supportedKinds.toSet(),
+                    description = metadata.about,
+                )
+            } else {
+                null
+            }
+        }
+    }
 }
