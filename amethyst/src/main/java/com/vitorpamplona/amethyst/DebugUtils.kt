@@ -27,6 +27,7 @@ import android.os.Debug
 import android.util.Log
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
+import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 
 val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
@@ -151,19 +152,19 @@ inline fun <T> logTime(
 ): T =
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
-        Log.d("DEBUG-TIME", "$elapsed: $debugMessage")
+        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
         result
     } else {
         block()
     }
 
 inline fun <T> logTime(
-    debugMessage: (T) -> Unit,
+    debugMessage: (T) -> String,
     block: () -> T,
 ): T =
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
-        Log.d("DEBUG-TIME", "$elapsed: ${debugMessage(result)}")
+        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
         result
     } else {
         block()

@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -176,13 +177,17 @@ private fun FeedLoaded(
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->
             Row(Modifier.fillMaxWidth().animateItemPlacement()) {
-                RenderCardItem(
-                    item,
-                    routeForLastRead,
-                    showHidden = items.showHidden,
-                    accountViewModel,
-                    nav,
-                )
+                logTime(
+                    debugMessage = { "CardFeedView $item" },
+                ) {
+                    RenderCardItem(
+                        item,
+                        routeForLastRead,
+                        showHidden = items.showHidden,
+                        accountViewModel,
+                        nav,
+                    )
+                }
             }
             HorizontalDivider(
                 thickness = DividerThickness,

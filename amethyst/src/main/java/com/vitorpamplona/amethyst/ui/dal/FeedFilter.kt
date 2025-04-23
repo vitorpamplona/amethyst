@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import android.util.Log
-import kotlin.time.measureTimedValue
+import com.vitorpamplona.amethyst.logTime
 
 abstract class FeedFilter<T> {
     fun loadTop(): List<T> {
-        val (feed, elapsed) = measureTimedValue { feed() }
-
-        Log.d("Time", "${this.javaClass.simpleName} Full Feed in $elapsed with ${feed.size} objects")
+        val feed =
+            logTime(
+                debugMessage = { "${this.javaClass.simpleName} FeedFilter returning ${it.size} objects" },
+                block = ::feed,
+            )
         return feed.take(limit())
     }
 

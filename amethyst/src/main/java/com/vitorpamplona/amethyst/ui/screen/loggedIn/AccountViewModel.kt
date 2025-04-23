@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
+import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -1339,13 +1341,17 @@ class AccountViewModel(
                 feedStates.init()
                 // awaits for init to finish before starting to capture new events.
                 LocalCache.live.newEventBundles.collect { newNotes ->
-                    Log.d(
-                        "Rendering Metrics",
-                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                    )
-                    feedStates.updateFeedsWith(newNotes)
-                    upgradeAttestations()
-                    precomputeNewEvents(newNotes)
+                    if (isDebug) {
+                        Log.d(
+                            "Rendering Metrics",
+                            "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                        )
+                    }
+                    logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
+                        feedStates.updateFeedsWith(newNotes)
+                        upgradeAttestations()
+                        precomputeNewEvents(newNotes)
+                    }
                 }
             }
     }

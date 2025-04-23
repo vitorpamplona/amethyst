@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
@@ -70,6 +71,8 @@ import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
@@ -91,14 +94,18 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (baseNote.event != null) {
-        ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
-    } else {
-        val hasEvent by observeNoteHasEvent(baseNote)
-        if (hasEvent) {
+    logTime(
+        debugMessage = { "ChatroomHeaderCompose " + externalLinkForNote(baseNote) },
+    ) {
+        if (baseNote.event != null) {
             ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
         } else {
-            BlankNote()
+            val hasEvent by observeNoteHasEvent(baseNote)
+            if (hasEvent) {
+                ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
+            } else {
+                BlankNote()
+            }
         }
     }
 }

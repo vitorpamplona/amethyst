@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import kotlin.time.measureTimedValue
+import com.vitorpamplona.amethyst.logTime
 
 abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
     abstract fun applyFilter(collection: Set<T>): Set<T>
@@ -30,20 +30,16 @@ abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
     open fun updateListWith(
         oldList: List<T>,
         newItems: Set<T>,
-    ): List<T> {
-        val (feed, elapsed) =
-            measureTimedValue {
-                val newItemsToBeAdded = applyFilter(newItems)
-                if (newItemsToBeAdded.isNotEmpty()) {
-                    val newList = oldList.toSet() + newItemsToBeAdded
-                    sort(newList).take(limit())
-                } else {
-                    oldList
-                }
+    ): List<T> =
+        logTime(
+            debugMessage = { "${this.javaClass.simpleName} AdditiveFeedFilter updating ${newItems.size} new items to ${it.size} items" },
+        ) {
+            val newItemsToBeAdded = applyFilter(newItems)
+            if (newItemsToBeAdded.isNotEmpty()) {
+                val newList = oldList.toSet() + newItemsToBeAdded
+                sort(newList).take(limit())
+            } else {
+                oldList
             }
-
-        // Log.d("Time", "${this.javaClass.simpleName} Additive Feed in $elapsed with ${feed.size}
-        // objects")
-        return feed
-    }
+        }
 }
