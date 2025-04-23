@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip19Bech32
 
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
@@ -426,6 +427,17 @@ class NIP19ParserTest {
         assertEquals(
             "nevent1qqsplpuwsgrrmq85rfup6w3w777rxmcmadu590emfx6z4msj2844euqpz3mhxue69uhhyetvv9ujuerpd46hxtnfdupzq3svyhng9ld8sv44950j957j9vchdktj7cxumsep9mvvjthc2pjuqvzqqqqqqye3a70w",
             nevent,
+        )
+    }
+
+    @Test
+    fun decodeBech32WithInvisibleCharacter() {
+        val bomChar = '\uFEFF'
+        val withBom = bomChar + "nsec1lfkarc7439n4l3uahr45ej8mrjc39dd879t0ps355550dj8j9uzs3rnw24"
+
+        assertEquals(
+            "nsec1lfkarc7439n4l3uahr45ej8mrjc39dd879t0ps355550dj8j9uzs3rnw24",
+            withBom.bechToBytes().toNsec(),
         )
     }
 }
