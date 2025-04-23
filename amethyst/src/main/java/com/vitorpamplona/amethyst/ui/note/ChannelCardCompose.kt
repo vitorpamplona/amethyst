@@ -43,7 +43,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,8 +61,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import com.vitorpamplona.amethyst.R
@@ -72,6 +69,10 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
@@ -302,28 +303,16 @@ fun RenderClassifiedsThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? ClassifiedsEvent ?: return
+    if (baseNote.event !is ClassifiedsEvent) return
 
-    val card by
-        baseNote
-            .live()
-            .metadata
-            .map {
-                val noteEvent = it.note.event as? ClassifiedsEvent
-
-                ClassifiedsThumb(
-                    image = noteEvent?.image(),
-                    title = noteEvent?.title(),
-                    price = noteEvent?.price(),
-                )
-            }.distinctUntilChanged()
-            .observeAsState(
-                ClassifiedsThumb(
-                    image = noteEvent.image(),
-                    title = noteEvent.title(),
-                    price = noteEvent.price(),
-                ),
-            )
+    val card by observeNoteAndMap(baseNote) {
+        val noteEvent = it.event as? ClassifiedsEvent
+        ClassifiedsThumb(
+            image = noteEvent?.image(),
+            title = noteEvent?.title(),
+            price = noteEvent?.price(),
+        )
+    }
 
     InnerRenderClassifiedsThumb(card, baseNote)
 }
@@ -425,39 +414,36 @@ fun RenderLiveActivityThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
+    val card by observeNoteAndMap(baseNote) {
+        val noteEvent = it.event as? LiveActivitiesEvent
 
-    val card by
-        baseNote
-            .live()
-            .metadata
-            .map {
-                val noteEvent = it.note.event as? LiveActivitiesEvent
+        LiveActivityCard(
+            name = noteEvent?.dTag() ?: "",
+            cover = noteEvent?.image()?.ifBlank { null },
+            media = noteEvent?.streaming(),
+            subject = noteEvent?.title()?.ifBlank { null },
+            content = noteEvent?.summary(),
+            participants = noteEvent?.participants()?.toImmutableList() ?: persistentListOf(),
+            status = noteEvent?.status(),
+            starts = noteEvent?.starts(),
+        )
+    }
 
-                LiveActivityCard(
-                    name = noteEvent?.dTag() ?: "",
-                    cover = noteEvent?.image()?.ifBlank { null },
-                    media = noteEvent?.streaming(),
-                    subject = noteEvent?.title()?.ifBlank { null },
-                    content = noteEvent?.summary(),
-                    participants = noteEvent?.participants()?.toImmutableList() ?: persistentListOf(),
-                    status = noteEvent?.status(),
-                    starts = noteEvent?.starts(),
-                )
-            }.distinctUntilChanged()
-            .observeAsState(
-                LiveActivityCard(
-                    name = noteEvent.dTag(),
-                    cover = noteEvent.image()?.ifBlank { null },
-                    media = noteEvent.streaming(),
-                    subject = noteEvent.title()?.ifBlank { null },
-                    content = noteEvent.summary(),
-                    participants = noteEvent.participants().toImmutableList(),
-                    status = noteEvent.status(),
-                    starts = noteEvent.starts(),
-                ),
-            )
+    RenderLiveActivityThumb(
+        card,
+        baseNote,
+        accountViewModel,
+        nav,
+    )
+}
 
+@Composable
+fun RenderLiveActivityThumb(
+    card: LiveActivityCard,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -560,31 +546,29 @@ fun RenderCommunitiesThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? CommunityDefinitionEvent ?: return
+    val noteState by observeNote(baseNote)
+    val noteEvent = noteState?.note?.event as? CommunityDefinitionEvent ?: return
 
-    val card by
-        baseNote
-            .live()
-            .metadata
-            .map {
-                val noteEvent = it.note.event as? CommunityDefinitionEvent
+    RenderCommunitiesThumb(
+        CommunityCard(
+            name = noteEvent.dTag(),
+            description = noteEvent.description(),
+            cover = noteEvent.image()?.imageUrl,
+            moderators = noteEvent.moderatorKeys().toImmutableList(),
+        ),
+        baseNote,
+        accountViewModel,
+        nav,
+    )
+}
 
-                CommunityCard(
-                    name = noteEvent?.dTag() ?: "",
-                    description = noteEvent?.description(),
-                    cover = noteEvent?.image()?.imageUrl,
-                    moderators = noteEvent?.moderatorKeys()?.toImmutableList() ?: persistentListOf(),
-                )
-            }.distinctUntilChanged()
-            .observeAsState(
-                CommunityCard(
-                    name = noteEvent.dTag(),
-                    description = noteEvent.description(),
-                    cover = noteEvent.image()?.imageUrl,
-                    moderators = noteEvent.moderatorKeys().toImmutableList(),
-                ),
-            )
-
+@Composable
+fun RenderCommunitiesThumb(
+    card: CommunityCard,
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     LeftPictureLayout(
         onImage = {
             card.cover?.let {
@@ -767,12 +751,7 @@ fun RenderContentDVMThumb(
     nav: INav,
 ) {
     // downloads user metadata to pre-load the NIP-65 relays.
-    val user =
-        baseNote.author
-            ?.live()
-            ?.metadata
-            ?.observeAsState()
-
+    baseNote.author?.let { UserFinderFilterAssemblerSubscription(it) }
     val card = observeAppDefinition(appDefinitionNote = baseNote)
 
     LeftPictureLayout(
@@ -791,7 +770,7 @@ fun RenderContentDVMThumb(
                     )
                 }
             } ?: run {
-                user?.value?.user?.let {
+                baseNote.author?.let {
                     BannerImage(
                         it,
                         Modifier
@@ -930,7 +909,7 @@ fun RenderChannelThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelUpdates by channel.live.observeAsState()
+    val channelUpdates by observeChannel(channel)
 
     val name = remember(channelUpdates) { channelUpdates?.channel?.toBestDisplayName() ?: "" }
     val description = remember(channelUpdates) { channelUpdates?.channel?.summary()?.ifBlank { null } }

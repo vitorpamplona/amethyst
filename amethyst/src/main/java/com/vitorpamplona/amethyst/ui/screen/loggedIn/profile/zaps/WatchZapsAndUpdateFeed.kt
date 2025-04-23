@@ -25,11 +25,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
 
 @Composable
 fun WatchZapsAndUpdateFeed(
     baseUser: User,
-    feedViewModel: NostrUserProfileZapsFeedViewModel,
+    feedViewModel: UserProfileZapsFeedViewModel,
 ) {
     val userState by baseUser.live().zaps.observeAsState()
 

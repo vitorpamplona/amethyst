@@ -28,6 +28,8 @@ fun findHashtags(
     content: String,
     output: MutableSet<String> = mutableSetOf(),
 ): List<String> {
+    if (content.isBlank()) return emptyList()
+
     val matcher = hashtagSearch.matcher(content)
     while (matcher.find()) {
         try {

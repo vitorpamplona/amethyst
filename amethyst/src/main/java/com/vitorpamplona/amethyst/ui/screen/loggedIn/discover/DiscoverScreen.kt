@@ -40,7 +40,6 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,11 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -66,13 +62,15 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -177,22 +175,13 @@ fun DiscoverScreen(
         accountViewModel = accountViewModel,
     )
 
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Discovery Start")
-                    NostrDiscoveryDataSource.start()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Discovery Stop")
-                    NostrDiscoveryDataSource.stop()
-                }
-            }
+    WatchLifecycleAndUpdateModel(discoveryContentNIP89FeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryMarketplaceFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryLiveFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryCommunityFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryChatFeedContentState)
 
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    DiscoveryFilterAssemblerSubscription(accountViewModel.dataSources().discovery, accountViewModel)
 
     DiscoverPages(pagerState, tabs, accountViewModel, nav)
 }
@@ -363,7 +352,6 @@ fun WatchAccountForDiscoveryScreen(
     val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
-        NostrDiscoveryDataSource.resetFilters()
         discoveryContentNIP89FeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryMarketplaceFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryLiveFeedContentState.checkKeysInvalidateDataAndSendToTop()

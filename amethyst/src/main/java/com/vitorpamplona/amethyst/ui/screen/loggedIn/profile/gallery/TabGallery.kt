@@ -29,10 +29,11 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.SaveableGridFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal.UserProfileGalleryFeedViewModel
 
 @Composable
 fun TabGallery(
-    feedViewModel: NostrUserProfileGalleryFeedViewModel,
+    feedViewModel: UserProfileGalleryFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

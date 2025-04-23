@@ -30,7 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportsFeedFilter
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

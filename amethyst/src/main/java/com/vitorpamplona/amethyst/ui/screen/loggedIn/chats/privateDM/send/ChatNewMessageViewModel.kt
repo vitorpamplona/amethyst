@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
@@ -537,8 +536,6 @@ class ChatNewMessageViewModel :
         emojiSuggestions?.reset()
 
         draftTag.rotate()
-
-        NostrSearchEventOrUserDataSource.clear()
     }
 
     fun deleteDraft() {

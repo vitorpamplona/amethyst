@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +51,9 @@ import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNip05
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
@@ -133,7 +135,7 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
+    val nip05 by observeUserNip05(baseUser)
 
     LoadStatuses(baseUser, accountViewModel) { statuses ->
         CrossfadeIfEnabled(
@@ -204,10 +206,9 @@ fun ObserveRotateStatuses(
 
 @Composable
 fun ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses: ImmutableList<AddressableNote>) {
-    statuses
-        .map {
-            it.live().metadata.observeAsState()
-        }
+    statuses.map {
+        EventFinderFilterAssemblerSubscription(it)
+    }
 }
 
 @Composable
@@ -247,7 +248,7 @@ fun DisplayStatus(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by addressableNote.live().metadata.observeAsState()
+    val noteState by observeNote(addressableNote)
     val noteEvent = noteState?.note?.event as? StatusEvent ?: return
 
     DisplayStatus(noteEvent, accountViewModel, nav)

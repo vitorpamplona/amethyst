@@ -33,10 +33,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentQueryState
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -219,14 +219,6 @@ class Account(
     }
 
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
-
-    data class PaymentRequest(
-        val relayUrl: String,
-        val description: String,
-    )
-
-    var transientPaymentRequestDismissals: Set<PaymentRequest> = emptySet()
-    val transientPaymentRequests: MutableStateFlow<Set<PaymentRequest>> = MutableStateFlow(emptySet())
 
     @Immutable
     class LiveFollowList(
@@ -1101,7 +1093,7 @@ class Account(
     val liveHiddenUsers = flowHiddenUsers.asLiveData()
 
     val decryptBookmarks: LiveData<BookmarkListEvent?> by lazy {
-        userProfile().live().innerBookmarks.switchMap { userState ->
+        userProfile().live().bookmarks.switchMap { userState ->
             liveData(Dispatchers.IO) {
                 if (userState.user.latestBookmarkList == null) {
                     emit(null)
@@ -1188,22 +1180,6 @@ class Account(
                 SharingStarted.Eagerly,
                 mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
             )
-    }
-
-    fun addPaymentRequestIfNew(paymentRequest: PaymentRequest) {
-        if (
-            !this.transientPaymentRequests.value.contains(paymentRequest) &&
-            !this.transientPaymentRequestDismissals.contains(paymentRequest)
-        ) {
-            this.transientPaymentRequests.value += paymentRequest
-        }
-    }
-
-    fun dismissPaymentRequest(request: PaymentRequest) {
-        if (this.transientPaymentRequests.value.contains(request)) {
-            this.transientPaymentRequests.value -= request
-            this.transientPaymentRequestDismissals += request
-        }
     }
 
     private var userProfileCache: User? = null
@@ -1564,14 +1540,15 @@ class Account(
                 nip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
 
             LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, signer) { event ->
-                val wcListener =
-                    NostrLnZapPaymentResponseDataSource(
+                val filter =
+                    NWCPaymentQueryState(
                         fromServiceHex = nip47.pubKeyHex,
                         toUserHex = event.pubKey,
                         replyingToHex = event.id,
-                        authSigner = signer,
                     )
-                wcListener.startSync()
+
+                Amethyst.instance.sources.nwc
+                    .subscribe(filter)
 
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 
@@ -1583,9 +1560,12 @@ class Account(
                             forceProxy = shouldUseTorForTrustedRelays(), // this is trusted.
                             read = true,
                             write = true,
-                            feedTypes = wcListener.feedTypes,
+                            feedTypes = setOf(FeedType.WALLET_CONNECT),
                         ),
-                    onDone = { wcListener.destroy() },
+                    onDone = {
+                        Amethyst.instance.sources.nwc
+                            .unsubscribe(filter)
+                    },
                 )
 
                 onSent()

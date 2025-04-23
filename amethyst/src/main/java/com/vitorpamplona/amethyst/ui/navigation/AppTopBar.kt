@@ -29,13 +29,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -89,12 +89,7 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit,
 ) {
     IconButton(onClick = onClick) {
-        val profilePicture by
-            accountViewModel.account
-                .userProfile()
-                .live()
-                .profilePictureChanges
-                .observeAsState()
+        val profilePicture by observeUserPicture(accountViewModel.userProfile())
 
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,

@@ -45,7 +45,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,6 +60,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -214,7 +215,7 @@ private fun AccountPicture(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
 ) {
-    val profilePicture by user.live().profilePictureChanges.observeAsState()
+    val profilePicture by observeUserPicture(user)
 
     RobohashFallbackAsyncImage(
         robot = user.pubkeyHex,
@@ -231,7 +232,7 @@ private fun AccountName(
     acc: AccountInfo,
     user: User,
 ) {
-    val info by user.live().userMetadataInfo.observeAsState()
+    val info by observeUserInfo(user)
 
     info?.let {
         it.bestName()?.let { name ->

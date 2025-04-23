@@ -30,10 +30,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
 
 @Composable
 fun TabBookmarks(
-    feedViewModel: NostrUserProfileBookmarksFeedViewModel,
+    feedViewModel: UserProfileBookmarksFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

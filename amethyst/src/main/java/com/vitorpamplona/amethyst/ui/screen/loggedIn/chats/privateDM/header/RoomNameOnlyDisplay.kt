@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserShortName
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -173,13 +174,7 @@ fun ShortUsernameDisplay(
     fontWeight: FontWeight = FontWeight.Bold,
     accountViewModel: AccountViewModel,
 ) {
-    val userName by
-        baseUser
-            .live()
-            .metadata
-            .map { it.user.toBestShortFirstName() }
-            .distinctUntilChanged()
-            .observeAsState(baseUser.toBestShortFirstName())
+    val userName by observeUserShortName(baseUser)
 
     CrossfadeIfEnabled(targetState = userName, modifier = weight, accountViewModel = accountViewModel) {
         CreateTextWithEmoji(

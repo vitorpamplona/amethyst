@@ -46,6 +46,7 @@ import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -75,7 +76,7 @@ fun LongPublicChatChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by baseChannel.live.observeAsState()
+    val channelState by observeChannel(baseChannel)
     val channel = channelState?.channel as? PublicChatChannel ?: return
 
     Spacer(StdVertSpacer)

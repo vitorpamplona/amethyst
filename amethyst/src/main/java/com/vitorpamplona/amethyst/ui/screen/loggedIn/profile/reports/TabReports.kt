@@ -28,11 +28,12 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 
 @Composable
 fun TabReports(
     baseUser: User,
-    feedViewModel: NostrUserProfileReportFeedViewModel,
+    feedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

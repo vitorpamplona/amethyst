@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,14 +40,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -93,13 +92,9 @@ private fun WatchAndRenderBadgeList(
     loadRobohash: Boolean,
     nav: INav,
 ) {
-    val badgeList by
-        note
-            .live()
-            .metadata
-            .map { (it.note.event as? BadgeProfilesEvent)?.badgeAwardEvents()?.toImmutableList() }
-            .distinctUntilChanged()
-            .observeAsState()
+    val badgeList by observeNoteEventAndMap(note) { event: BadgeProfilesEvent ->
+        event.badgeAwardEvents().toImmutableList()
+    }
 
     badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, loadRobohash, nav) }
 }
@@ -147,10 +142,8 @@ private fun ObserveAndRenderBadge(
     loadRobohash: Boolean,
     nav: INav,
 ) {
-    val badgeAwardState by it.live().metadata.observeAsState()
-    val baseBadgeDefinition by
-        remember(badgeAwardState) { derivedStateOf { badgeAwardState?.note?.replyTo?.firstOrNull() } }
-
+    val badgeAwardState by observeNote(it)
+    val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
     baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, loadRobohash, nav, Size35dp) }
 }
 
@@ -195,7 +188,7 @@ private fun WatchAndRenderBadgeImage(
     pictureModifier: Modifier,
     onClick: ((String) -> Unit)?,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
+    val noteState by observeNote(baseNote)
     val eventId = remember(noteState) { noteState?.note?.idHex } ?: return
     val image by
         remember(noteState) {

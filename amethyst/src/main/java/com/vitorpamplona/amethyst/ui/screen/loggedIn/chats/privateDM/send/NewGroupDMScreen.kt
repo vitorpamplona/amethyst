@@ -53,7 +53,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,7 +84,6 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -181,15 +179,6 @@ fun NewGroupDMScreen(
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.pickedMedia(persistentListOf(SelectedMedia(it, mediaType)))
             }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        NostrSearchEventOrUserDataSource.start()
-
-        onDispose {
-            NostrSearchEventOrUserDataSource.clear()
-            NostrSearchEventOrUserDataSource.stop()
         }
     }
 

@@ -52,12 +52,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -849,14 +853,14 @@ fun ObserveDraftEvent(
     accountViewModel: AccountViewModel,
     render: @Composable (Note) -> Unit,
 ) {
-    val noteState by note.live().metadata.observeAsState()
+    val noteEvent by observeNoteEvent<DraftEvent>(note)
 
-    val noteEvent = noteState?.note?.event as? DraftEvent ?: return
+    noteEvent?.let {
+        val innerNote by produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = it)
 
-    val innerNote = produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = noteEvent)
-
-    innerNote.value?.let {
-        render(it)
+        innerNote?.let {
+            render(it)
+        }
     }
 }
 
@@ -1109,7 +1113,7 @@ fun observeEdits(
             )
         }
 
-    val updatedNote by baseNote.live().innerModifications.observeAsState()
+    val updatedNote by observeNoteEdits(baseNote)
 
     LaunchedEffect(key1 = updatedNote) {
         updatedNote?.note?.let {
@@ -1186,6 +1190,8 @@ private fun ChannelNotePicture(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
 ) {
+    ChannelFinderFilterAssemblerSubscription(baseChannel, Amethyst.instance.sources.channelFinder)
+
     val model by
         baseChannel.live
             .map { it.channel.profilePicture() }

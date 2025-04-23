@@ -34,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +50,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -130,7 +130,7 @@ fun RenderLiveActivityEventInner(
 ) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
-    val eventUpdates by baseNote.live().metadata.observeAsState()
+    val eventUpdates by observeNote(baseNote)
 
     val media = remember(eventUpdates) { noteEvent.streaming() }
     val cover = remember(eventUpdates) { noteEvent.image() }

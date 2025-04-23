@@ -28,26 +28,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.NostrHashtagFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.dal.HashtagFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource.HashtagFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
@@ -69,59 +66,28 @@ fun PrepareViewModelsHashtagScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followsFeedViewModel: NostrHashtagFeedViewModel =
+    val hashtagFeedViewModel: HashtagFeedViewModel =
         viewModel(
             key = tag + "HashtagFeedViewModel",
             factory =
-                NostrHashtagFeedViewModel.Factory(
+                HashtagFeedViewModel.Factory(
                     tag,
                     accountViewModel.account,
                 ),
         )
 
-    HashtagScreen(tag, followsFeedViewModel, accountViewModel, nav)
+    HashtagScreen(tag, hashtagFeedViewModel, accountViewModel, nav)
 }
 
 @Composable
 fun HashtagScreen(
     tag: String,
-    feedViewModel: NostrHashtagFeedViewModel,
+    feedViewModel: HashtagFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    NostrHashtagDataSource.loadHashtag(tag)
-
-    DisposableEffect(tag) {
-        NostrHashtagDataSource.start()
-        feedViewModel.invalidateData()
-
-        onDispose {
-            NostrHashtagDataSource.loadHashtag(null)
-            NostrHashtagDataSource.stop()
-        }
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Hashtag Start")
-                    NostrHashtagDataSource.loadHashtag(tag)
-                    NostrHashtagDataSource.start()
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Hashtag Stop")
-                    NostrHashtagDataSource.loadHashtag(null)
-                    NostrHashtagDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    HashtagFilterAssemblerSubscription(tag, accountViewModel.dataSources().hashtags)
 
     DisappearingScaffold(
         isInvertedLayout = false,

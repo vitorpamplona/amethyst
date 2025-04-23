@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -36,6 +35,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,20 +64,21 @@ fun BannerImage(
     author: User,
     imageModifier: Modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
 ) {
-    val currentInfo by author.live().userMetadataInfo.observeAsState()
-    currentInfo?.banner?.let {
+    val banner by observeUserBanner(author)
+
+    if (banner.isNotBlank()) {
         AsyncImage(
-            model = it,
+            model = banner,
             contentDescription =
                 stringRes(
                     R.string.preview_card_image_for,
-                    it,
+                    banner,
                 ),
             contentScale = ContentScale.Crop,
             modifier = imageModifier,
             placeholder = painterResource(R.drawable.profile_banner),
         )
-    } ?: run {
+    } else {
         Image(
             painter = painterResource(R.drawable.profile_banner),
             contentDescription = stringRes(R.string.profile_banner),

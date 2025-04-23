@@ -102,7 +102,10 @@ class MainActivity : AppCompatActivity() {
 
         GlobalScope.launch(Dispatchers.IO) { LanguageTranslatorService.clear() }
 
-        GlobalScope.launch(Dispatchers.IO) { debugState(this@MainActivity) }
+        GlobalScope.launch(Dispatchers.IO) {
+            debugState(this@MainActivity)
+            Amethyst.instance.sources.printCounters()
+        }
 
         super.onPause()
     }

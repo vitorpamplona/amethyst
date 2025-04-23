@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
-import android.R.attr.category
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Stable
@@ -45,7 +44,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
@@ -1106,8 +1104,6 @@ open class NewPostViewModel :
         emojiSuggestions?.reset()
 
         draftTag = UUID.randomUUID().toString()
-
-        NostrSearchEventOrUserDataSource.clear()
     }
 
     fun deleteDraft() {

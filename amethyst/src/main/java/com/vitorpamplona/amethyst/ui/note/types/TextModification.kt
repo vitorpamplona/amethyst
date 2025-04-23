@@ -35,7 +35,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -45,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -130,7 +130,7 @@ fun RenderTextModificationEvent(
             noteEvent.editedNote()?.let {
                 LoadNote(baseNoteHex = it.eventId, accountViewModel = accountViewModel) { baseNote ->
                     baseNote?.let {
-                        val noteState by baseNote.live().metadata.observeAsState()
+                        val noteState by observeNote(baseNote)
 
                         val editStateOriginalNote =
                             observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)

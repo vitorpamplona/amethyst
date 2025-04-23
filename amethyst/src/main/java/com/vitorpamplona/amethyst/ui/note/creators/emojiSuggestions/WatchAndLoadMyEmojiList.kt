@@ -22,9 +22,8 @@ package com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
@@ -38,23 +37,15 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by usersEmojiList
-                .live()
-                .metadata
-                .map {
-                    (it.note.event as? EmojiPackSelectionEvent)
-                        ?.taggedAddresses()
-                        ?.toImmutableList()
-                }.distinctUntilChanged()
-                .observeAsState(
-                    (usersEmojiList.event as? EmojiPackSelectionEvent)
-                        ?.taggedAddresses()
-                        ?.toImmutableList(),
-                )
+            val collections by observeNoteEventAndMap(usersEmojiList) { event: EmojiPackSelectionEvent ->
+                event.taggedAddresses().toImmutableList()
+            }
 
-            collections?.forEach {
-                LoadAddressableNote(it, accountViewModel) {
-                    it?.live()?.metadata?.observeAsState()
+            collections?.forEach { address ->
+                LoadAddressableNote(address, accountViewModel) { note ->
+                    if (note != null) {
+                        EventFinderFilterAssemblerSubscription(note)
+                    }
                 }
             }
         }

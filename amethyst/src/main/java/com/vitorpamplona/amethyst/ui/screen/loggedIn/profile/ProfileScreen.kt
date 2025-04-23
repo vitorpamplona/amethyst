@@ -41,7 +41,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -57,48 +56,46 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.BookmarkTabHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.NostrUserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.TabBookmarks
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.NostrUserProfileConversationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal.UserProfileBookmarksFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.TabNotesConversations
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.conversations.dal.UserProfileConversationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.FollowersTabHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.NostrUserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.TabFollowers
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.followers.dal.UserProfileFollowersUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.FollowTabHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.NostrUserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.TabFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.NostrUserProfileGalleryFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows.dal.UserProfileFollowsUserFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.TabGallery
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.dal.UserProfileGalleryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.FollowedTagsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags.TabFollowedTags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.NostrUserAppRecommendationsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.NostrUserProfileMutualFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualConversations
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.NostrUserProfileNewThreadsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal.UserProfileNewThreadsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.RelaysTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.TabRelays
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.NostrUserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.ReportsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.TabReports
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.NostrUserProfileZapsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.Dispatchers
@@ -141,99 +138,96 @@ fun PrepareViewModels(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel =
+    val followsFeedViewModel: UserProfileFollowsUserFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileFollowsUserFeedViewModel",
             factory =
-                NostrUserProfileFollowsUserFeedViewModel.Factory(
+                UserProfileFollowsUserFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel =
+    val galleryFeedViewModel: UserProfileGalleryFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserGalleryFeedViewModel",
             factory =
-                NostrUserProfileGalleryFeedViewModel.Factory(
+                UserProfileGalleryFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel =
+    val followersFeedViewModel: UserProfileFollowersUserFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileFollowersUserFeedViewModel",
             factory =
-                NostrUserProfileFollowersUserFeedViewModel.Factory(
+                UserProfileFollowersUserFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val appRecommendations: NostrUserAppRecommendationsFeedViewModel =
+    val appRecommendations: UserAppRecommendationsFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserAppRecommendationsFeedViewModel",
-            factory =
-                NostrUserAppRecommendationsFeedViewModel.Factory(
-                    baseUser,
-                ),
+            factory = UserAppRecommendationsFeedViewModel.Factory(baseUser),
         )
 
-    val zapFeedViewModel: NostrUserProfileZapsFeedViewModel =
+    val zapFeedViewModel: UserProfileZapsFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileZapsFeedViewModel",
             factory =
-                NostrUserProfileZapsFeedViewModel.Factory(
+                UserProfileZapsFeedViewModel.Factory(
                     baseUser,
                 ),
         )
 
-    val threadsViewModel: NostrUserProfileNewThreadsFeedViewModel =
+    val threadsViewModel: UserProfileNewThreadsFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileNewThreadsFeedViewModel",
             factory =
-                NostrUserProfileNewThreadsFeedViewModel.Factory(
+                UserProfileNewThreadsFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val repliesViewModel: NostrUserProfileConversationsFeedViewModel =
+    val repliesViewModel: UserProfileConversationsFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileConversationsFeedViewModel",
             factory =
-                NostrUserProfileConversationsFeedViewModel.Factory(
+                UserProfileConversationsFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val mutualViewModel: NostrUserProfileMutualFeedViewModel =
+    val mutualViewModel: UserProfileMutualFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileMutualFeedViewModel",
             factory =
-                NostrUserProfileMutualFeedViewModel.Factory(
+                UserProfileMutualFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel =
+    val bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileBookmarksFeedViewModel",
             factory =
-                NostrUserProfileBookmarksFeedViewModel.Factory(
+                UserProfileBookmarksFeedViewModel.Factory(
                     baseUser,
                     accountViewModel.account,
                 ),
         )
 
-    val reportsFeedViewModel: NostrUserProfileReportFeedViewModel =
+    val reportsFeedViewModel: UserProfileReportFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileReportFeedViewModel",
             factory =
-                NostrUserProfileReportFeedViewModel.Factory(
+                UserProfileReportFeedViewModel.Factory(
                     baseUser,
                 ),
         )
@@ -258,49 +252,30 @@ fun PrepareViewModels(
 @Composable
 fun ProfileScreen(
     baseUser: User,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    mutualViewModel: NostrUserProfileMutualFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+    threadsViewModel: UserProfileNewThreadsFeedViewModel,
+    repliesViewModel: UserProfileConversationsFeedViewModel,
+    mutualViewModel: UserProfileMutualFeedViewModel,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
+    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NostrUserProfileDataSource.loadUserProfile(baseUser)
+    WatchLifecycleAndUpdateModel(threadsViewModel)
+    WatchLifecycleAndUpdateModel(repliesViewModel)
+    WatchLifecycleAndUpdateModel(mutualViewModel)
+    WatchLifecycleAndUpdateModel(followsFeedViewModel)
+    WatchLifecycleAndUpdateModel(followersFeedViewModel)
+    WatchLifecycleAndUpdateModel(appRecommendations)
+    WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
+    WatchLifecycleAndUpdateModel(galleryFeedViewModel)
+    WatchLifecycleAndUpdateModel(reportsFeedViewModel)
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(accountViewModel) {
-        NostrUserProfileDataSource.start()
-        onDispose {
-            NostrUserProfileDataSource.loadUserProfile(null)
-            NostrUserProfileDataSource.stop()
-        }
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Profidle Start")
-                    NostrUserProfileDataSource.loadUserProfile(baseUser)
-                    NostrUserProfileDataSource.start()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Profile Stop")
-                    NostrUserProfileDataSource.loadUserProfile(null)
-                    NostrUserProfileDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    UserProfileFilterAssemblerSubscription(baseUser, accountViewModel.dataSources().profile)
 
     RenderSurface { tabRowModifier: Modifier, pagerModifier: Modifier ->
         RenderScreen(
@@ -400,16 +375,16 @@ private fun RenderScreen(
     baseUser: User,
     tabRowModifier: Modifier,
     pagerModifier: Modifier,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    mutualViewModel: NostrUserProfileMutualFeedViewModel,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+    threadsViewModel: UserProfileNewThreadsFeedViewModel,
+    repliesViewModel: UserProfileConversationsFeedViewModel,
+    mutualViewModel: UserProfileMutualFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -454,15 +429,15 @@ private fun RenderScreen(
 private fun CreateAndRenderPages(
     page: Int,
     baseUser: User,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
-    mutualViewModel: NostrUserProfileMutualFeedViewModel,
-    followsFeedViewModel: NostrUserProfileFollowsUserFeedViewModel,
-    followersFeedViewModel: NostrUserProfileFollowersUserFeedViewModel,
-    zapFeedViewModel: NostrUserProfileZapsFeedViewModel,
-    bookmarksFeedViewModel: NostrUserProfileBookmarksFeedViewModel,
-    galleryFeedViewModel: NostrUserProfileGalleryFeedViewModel,
-    reportsFeedViewModel: NostrUserProfileReportFeedViewModel,
+    threadsViewModel: UserProfileNewThreadsFeedViewModel,
+    repliesViewModel: UserProfileConversationsFeedViewModel,
+    mutualViewModel: UserProfileMutualFeedViewModel,
+    followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
+    followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
+    zapFeedViewModel: UserProfileZapsFeedViewModel,
+    bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
+    galleryFeedViewModel: UserProfileGalleryFeedViewModel,
+    reportsFeedViewModel: UserProfileReportFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -491,8 +466,8 @@ private fun CreateAndRenderPages(
 @Composable
 fun UpdateThreadsAndRepliesWhenBlockUnblock(
     baseUser: User,
-    threadsViewModel: NostrUserProfileNewThreadsFeedViewModel,
-    repliesViewModel: NostrUserProfileConversationsFeedViewModel,
+    threadsViewModel: UserProfileNewThreadsFeedViewModel,
+    repliesViewModel: UserProfileConversationsFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
     val isHidden by

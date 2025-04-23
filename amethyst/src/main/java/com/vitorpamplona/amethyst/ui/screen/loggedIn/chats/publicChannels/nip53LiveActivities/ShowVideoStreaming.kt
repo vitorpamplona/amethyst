@@ -32,6 +32,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -48,6 +49,7 @@ fun ShowVideoStreaming(
             event = it,
             accountViewModel = accountViewModel,
         ) {
+            ChannelFinderFilterAssemblerSubscription(baseChannel, accountViewModel.dataSources().channelFinder)
             val streamingInfoEvent by
                 baseChannel.live
                     .map {

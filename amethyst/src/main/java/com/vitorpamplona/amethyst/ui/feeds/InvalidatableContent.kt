@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 
 interface InvalidatableContent {
     fun invalidateData(ignoreIfDoing: Boolean = false)
 
-    val isRefreshing: MutableState<Boolean>
+    val isRefreshing: State<Boolean>
 }

@@ -420,6 +420,9 @@ class SimpleClientRelay(
     }
 
     interface Listener {
+        /**
+         * New Event arrives from the relay.
+         */
         fun onEvent(
             relay: SimpleClientRelay,
             subscriptionId: String,
@@ -427,49 +430,76 @@ class SimpleClientRelay(
             afterEOSE: Boolean,
         )
 
+        /**
+         * New EOSE command arrives for a subscription
+         */
         fun onEOSE(
             relay: SimpleClientRelay,
             subscriptionId: String,
         )
 
+        /**
+         * New error
+         */
         fun onError(
             relay: SimpleClientRelay,
             subscriptionId: String,
             error: Error,
         )
 
+        /**
+         * Relay is requesting authentication with the given challenge.
+         */
         fun onAuth(
             relay: SimpleClientRelay,
             challenge: String,
         )
 
+        /**
+         * RelayState changes
+         */
         fun onRelayStateChange(
             relay: SimpleClientRelay,
             type: RelayState,
         )
 
+        /**
+         * NOTIFY command has arrived.
+         */
         fun onNotify(
             relay: SimpleClientRelay,
             description: String,
         )
 
+        /**
+         * Relay closed the subscription
+         */
         fun onClosed(
             relay: SimpleClientRelay,
             subscriptionId: String,
             message: String,
         )
 
+        /**
+         * Triggers this before sending the event.
+         */
         fun onBeforeSend(
             relay: SimpleClientRelay,
             event: Event,
         )
 
+        /**
+         * Triggers after the event has been sent.
+         */
         fun onSend(
             relay: SimpleClientRelay,
             msg: String,
             success: Boolean,
         )
 
+        /**
+         * Relay accepted or rejected the event
+         */
         fun onSendResponse(
             relay: SimpleClientRelay,
             eventId: String,

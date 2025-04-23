@@ -27,21 +27,32 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class VerificationStateCache {
     private val cache = LruCache<HexKey, VerificationState>(200)
 
+    fun verify(
+        event: OtsEvent,
+        resolverBuilder: () -> OtsResolver,
+    ): VerificationState {
+        cache.put(event.id, VerificationState.Verifying)
+        return event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
+    }
+
     fun cacheVerify(
         event: OtsEvent,
         resolverBuilder: () -> OtsResolver,
     ): VerificationState =
         when (val verif = cache[event.id]) {
+            is VerificationState.Verifying -> verif
             is VerificationState.Verified -> verif
             is VerificationState.NetworkError -> {
                 // try again in 5 mins
                 if (verif.time < TimeUtils.fiveMinutesAgo()) {
                     event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
                 } else {
-                    verif
+                    verify(event, resolverBuilder)
                 }
             }
             is VerificationState.Error -> verif
-            else -> event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
+            else -> {
+                verify(event, resolverBuilder)
+            }
         }
 }

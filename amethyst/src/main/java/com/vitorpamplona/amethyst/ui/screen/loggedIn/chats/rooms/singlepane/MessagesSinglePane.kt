@@ -29,15 +29,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.WatchAccountForListScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.WatchLifecycleAndRefreshDataSource
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesPager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.MessagesTabItem
@@ -54,8 +54,10 @@ fun MessagesSinglePane(
     val markKnownAsRead = remember { mutableStateOf(false) }
     val markNewAsRead = remember { mutableStateOf(false) }
 
-    WatchAccountForListScreen(knownFeedContentState, newFeedContentState, accountViewModel)
-    WatchLifecycleAndRefreshDataSource(accountViewModel)
+    WatchLifecycleAndUpdateModel(knownFeedContentState)
+    WatchLifecycleAndUpdateModel(newFeedContentState)
+
+    ChatroomListFilterAssemblerSubscription(accountViewModel.dataSources().chatroomList, accountViewModel)
 
     val tabs by
         remember(knownFeedContentState, markKnownAsRead) {

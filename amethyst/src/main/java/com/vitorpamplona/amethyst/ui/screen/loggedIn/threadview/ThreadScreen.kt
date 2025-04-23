@@ -24,21 +24,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.NostrThreadFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
@@ -49,48 +46,19 @@ fun ThreadScreen(
 ) {
     if (noteId == null) return
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    val feedViewModel: NostrThreadFeedViewModel =
+    val feedViewModel: ThreadFeedViewModel =
         viewModel(
             key = noteId + "NostrThreadFeedViewModel",
-            factory = NostrThreadFeedViewModel.Factory(accountViewModel.account, noteId),
+            factory = ThreadFeedViewModel.Factory(accountViewModel.account, noteId),
         )
 
-    NostrThreadDataSource.loadThread(noteId)
-
-    DisposableEffect(noteId) {
-        feedViewModel.invalidateData(true)
-        onDispose {
-            NostrThreadDataSource.loadThread(null)
-            NostrThreadDataSource.stop()
-        }
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Thread Start")
-                    NostrThreadDataSource.loadThread(noteId)
-                    NostrThreadDataSource.start()
-                    feedViewModel.invalidateData(true)
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Thread Stop")
-                    NostrThreadDataSource.loadThread(null)
-                    NostrThreadDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    ThreadFilterAssemblerSubscription(noteId, accountViewModel.dataSources().thread)
 
     LoadNote(noteId, accountViewModel) {
         if (it != null) {
             // this will force loading every post from this thread.
-            val metadata = it.live().metadata.observeAsState()
+            EventFinderFilterAssemblerSubscription(it)
         }
     }
 

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
@@ -162,7 +163,7 @@ fun LoadOts(
 ) {
     var earliestDate: GenericLoadable<Long> by remember { mutableStateOf(GenericLoadable.Loading()) }
 
-    val noteStatus by note.live().innerOts.observeAsState()
+    val noteStatus by observeNoteOts(note)
 
     LaunchedEffect(key1 = noteStatus) {
         accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->

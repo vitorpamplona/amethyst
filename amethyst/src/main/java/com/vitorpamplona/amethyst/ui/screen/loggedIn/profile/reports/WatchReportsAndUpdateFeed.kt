@@ -25,11 +25,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
 
 @Composable
 fun WatchReportsAndUpdateFeed(
     baseUser: User,
-    feedViewModel: NostrUserProfileReportFeedViewModel,
+    feedViewModel: UserProfileReportFeedViewModel,
 ) {
     val userState by baseUser.live().reports.observeAsState()
     LaunchedEffect(userState) { feedViewModel.invalidateData() }

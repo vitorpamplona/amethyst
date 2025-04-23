@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.commons.data.LargeCache
-import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
@@ -230,12 +229,11 @@ abstract class Channel(
     // Observers line up here.
     val live: ChannelLiveData = ChannelLiveData(this)
 
-    fun pruneOldAndHiddenMessages(account: Account): Set<Note> {
+    fun pruneOldMessages(): Set<Note> {
         val important =
             notes
-                .filter { key, it ->
-                    it.author?.let { author -> account.isHidden(author) } == false
-                }.sortedWith(DefaultFeedOrder)
+                .values()
+                .sortedWith(DefaultFeedOrder)
                 .take(500)
                 .toSet()
 
@@ -244,6 +242,18 @@ abstract class Channel(
         toBeRemoved.forEach { notes.remove(it.idHex) }
 
         return toBeRemoved.toSet()
+    }
+
+    fun pruneHiddenMessages(account: Account): Set<Note> {
+        val hidden =
+            notes
+                .filter { key, it ->
+                    it.author?.let { author -> account.isHidden(author) } == true
+                }.toSet()
+
+        hidden.forEach { notes.remove(it.idHex) }
+
+        return hidden.toSet()
     }
 }
 
@@ -262,16 +272,6 @@ class ChannelLiveData(
                 postValue(ChannelState(channel))
             }
         }
-    }
-
-    override fun onActive() {
-        super.onActive()
-        NostrSingleChannelDataSource.add(channel)
-    }
-
-    override fun onInactive() {
-        super.onInactive()
-        NostrSingleChannelDataSource.remove(channel)
     }
 }
 

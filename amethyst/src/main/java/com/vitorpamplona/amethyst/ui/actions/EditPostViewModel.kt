@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -251,8 +250,6 @@ open class EditPostViewModel : ViewModel() {
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
-
-        NostrSearchEventOrUserDataSource.clear()
     }
 
     open fun findUrlInMessage(): String? =

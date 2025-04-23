@@ -39,13 +39,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPrivateFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrBookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal.BookmarkPrivateFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal.BookmarkPublicFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import kotlinx.coroutines.launch
@@ -55,16 +55,16 @@ fun BookmarkListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val publicFeedViewModel: NostrBookmarkPublicFeedViewModel =
+    val publicFeedViewModel: BookmarkPublicFeedViewModel =
         viewModel(
             key = "NostrBookmarkPublicFeedViewModel",
-            factory = NostrBookmarkPublicFeedViewModel.Factory(accountViewModel.account),
+            factory = BookmarkPublicFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val privateFeedViewModel: NostrBookmarkPrivateFeedViewModel =
+    val privateFeedViewModel: BookmarkPrivateFeedViewModel =
         viewModel(
             key = "NostrBookmarkPrivateFeedViewModel",
-            factory = NostrBookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
+            factory = BookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
     val userState by accountViewModel.account.decryptBookmarks.observeAsState()
@@ -74,16 +74,16 @@ fun BookmarkListScreen(
         privateFeedViewModel.invalidateData()
     }
 
-    RenderBookmarkScreen(privateFeedViewModel, accountViewModel, nav, publicFeedViewModel)
+    RenderBookmarkScreen(publicFeedViewModel, privateFeedViewModel, accountViewModel, nav)
 }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun RenderBookmarkScreen(
-    privateFeedViewModel: NostrBookmarkPrivateFeedViewModel,
+    publicFeedViewModel: BookmarkPublicFeedViewModel,
+    privateFeedViewModel: BookmarkPrivateFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
-    publicFeedViewModel: NostrBookmarkPublicFeedViewModel,
 ) {
     val pagerState = rememberPagerState { 2 }
     val coroutineScope = rememberCoroutineScope()

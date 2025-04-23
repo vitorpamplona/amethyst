@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import android.R.attr.maxLines
-import android.R.attr.onClick
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,12 +90,14 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -183,7 +183,7 @@ fun ProfileContent(
     accountViewModel: AccountViewModel,
     onClickUser: () -> Unit,
 ) {
-    val userInfo by baseAccountUser.live().userMetadataInfo.observeAsState()
+    val userInfo by observeUserInfo(baseAccountUser)
 
     ProfileContentTemplate(
         profilePubHex = baseAccountUser.pubkeyHex,
@@ -270,9 +270,9 @@ private fun EditStatusBoxes(
             StatusEditBar(accountViewModel = accountViewModel, nav = nav)
         } else {
             statuses.forEach {
-                val originalStatus by it.live().content.observeAsState()
+                val noteStatus by observeNote(it)
 
-                StatusEditBar(originalStatus, it.address, accountViewModel, nav)
+                StatusEditBar(noteStatus?.note?.event?.content, it.address, accountViewModel, nav)
             }
         }
     }

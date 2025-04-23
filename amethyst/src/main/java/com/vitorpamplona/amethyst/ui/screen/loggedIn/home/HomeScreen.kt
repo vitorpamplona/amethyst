@@ -33,7 +33,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,14 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AROUND_ME
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
@@ -60,12 +55,14 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
@@ -97,7 +94,9 @@ fun HomeScreen(
 ) {
     WatchAccountForHomeScreen(newThreadsFeedState, repliesFeedState, accountViewModel)
 
-    WatchLifeCycleChanges(accountViewModel)
+    WatchLifecycleAndUpdateModel(newThreadsFeedState)
+    WatchLifecycleAndUpdateModel(repliesFeedState)
+    HomeFilterAssemblerSubscription(accountViewModel.dataSources().home, accountViewModel)
 
     AssembleHomeTabs(newThreadsFeedState, repliesFeedState) { pagerState, tabItems ->
         HomePages(pagerState, tabItems, accountViewModel, nav)
@@ -134,23 +133,6 @@ private fun AssembleHomeTabs(
         }
 
     inner(pagerState, tabs)
-}
-
-@Composable
-private fun WatchLifeCycleChanges(accountViewModel: AccountViewModel) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    NostrHomeDataSource.account = accountViewModel.account
-                    NostrHomeDataSource.invalidateFilters()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
 }
 
 @Composable
@@ -323,8 +305,6 @@ fun WatchAccountForHomeScreen(
     val homeFollowList by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, homeFollowList) {
-        NostrHomeDataSource.account = accountViewModel.account
-        NostrHomeDataSource.invalidateFilters()
         newThreadsFeedState.checkKeysInvalidateDataAndSendToTop()
         repliesFeedState.checkKeysInvalidateDataAndSendToTop()
     }
