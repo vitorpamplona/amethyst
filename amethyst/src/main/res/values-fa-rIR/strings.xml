@@ -81,6 +81,13 @@
     <string name="thank_you_so_much">!خیلی ممنون</string>
     <string name="amount_in_sats">مبلغ به ساتوشی</string>
     <string name="send_sats">ارسال ساتوشی</string>
+    <string name="secret_emoji_maker">شکلک ساز مخفی</string>
+    <string name="secret_emoji_maker_explainer">یک شکلک به همراه پیام مخفی به یادداشت اضافه کنید</string>
+    <string name="secret_note_to_receiver">پیام مخفی به گیرنده</string>
+    <string name="secret_note_to_receiver_placeholder">پیام پنهان من</string>
+    <string name="secret_visible_text">پیشوند نمایان</string>
+    <string name="secret_visible_text_placeholder">😎</string>
+    <string name="secret_add_to_text">افزودن به یادداشت</string>
     <string name="error_parsing_preview_for">" %1$s : %2$s خطا در تبدیل"</string>
     <string name="preview_card_image_for">"%1$s پیش نمایش تصویر کارت برای"</string>
     <string name="new_channel">کانال جدید</string>
@@ -90,6 +97,7 @@
     <string name="description">توصیف</string>
     <string name="about_us">"درباره ما.. "</string>
     <string name="what_s_on_your_mind">به چی فکر میکنی؟</string>
+    <string name="write_a_message">نوشتن یک پیام...</string>
     <string name="post">ارسال</string>
     <string name="save">ذخیره</string>
     <string name="create">ساختن</string>
@@ -106,6 +114,7 @@
     <string name="global_feed">خبرنامه همگانی</string>
     <string name="search_feed">جستجو در خبرنامه</string>
     <string name="add_a_relay">افزودن رله</string>
+    <string name="profile_name">نام</string>
     <string name="display_name">نمایش نام</string>
     <string name="my_display_name">نام من</string>
     <string name="my_awesome_name">استریچ باحالیان</string>
@@ -141,6 +150,7 @@
     <string name="conversations">گفتگوها</string>
     <string name="notes">یادداشت ها</string>
     <string name="replies">پاسخ ها</string>
+    <string name="mutual">مال شما</string>
     <string name="gallery">گالری</string>
     <string name="follows">"دنبال شوندگان"</string>
     <string name="reports">"گزارش ها"</string>
@@ -195,6 +205,7 @@
     <string name="with_description_of">با توصیف</string>
     <string name="and_picture">و تصویر</string>
     <string name="changed_chat_name_to">نام گفتگو تغییر کرد به</string>
+    <string name="changed_chat_profile_to">نمایه جدید گفتگو:</string>
     <string name="description_to">تصویر</string>
     <string name="and_picture_to">و تصویر به</string>
     <string name="leave">ترک کردن</string>
@@ -202,6 +213,13 @@
     <string name="channel_created">کانال ساخته شد</string>
     <string name="channel_information_changed_to">"اطلاعات کانال تغییر کرد به"</string>
     <string name="public_chat">گفتگوی عمومی</string>
+    <string name="public_chat_title">فراداده گفتگوی عمومی</string>
+    <string name="public_chat_explainer">گفتگوهای عمومی در ناستر برای همه نمایان هستند
+     می توانند در آن شرکت کنند. آنها برای انجمن های باز درباره موضوعات به‌خصوص عالی هستند.
+     نظارت می تواند توسط حذف پست ها از رله ها انجام گیرد</string>
+    <string name="public_chat_relays_title">رله ها</string>
+    <string name="public_chat_relays_explainer">برای میزبانی این گروه ۱تا ۳ رله وارد کنید.
+      کلاینت های ناستر از این تنظیمات استفاده می کنند تا بدانند پیام ها را از کجا بارگیری کنند و به کجا بفرستند.</string>
     <string name="posts_received">یادداشت های دریافت شده</string>
     <string name="remove">بیرون کردن</string>
     <string name="translations_auto">خودکار</string>
@@ -508,6 +526,7 @@
     <string name="cashu_redeem_to_zap">ارسال به کیف پول زپ</string>
     <string name="cashu_redeem_to_cashu">باز کردن در کیف پول Cashu</string>
     <string name="cashu_copy_token">کپی کردن توکن</string>
+    <string name="quick_actions_open_in_another_app">در یک اپلیکیشن دیگر باز کن</string>
     <string name="no_lightning_address_set">آدرس لایتنینگ تنظیم نشده است</string>
     <string name="copied_token_to_clipboard">توکن به کلیپبورد کپی شد</string>
     <string name="live_stream_live_tag">زنده</string>
@@ -587,6 +606,8 @@
     <string name="messages_new_message_subject">موضوع</string>
     <string name="messages_new_message_subject_caption">موضوع گفتگو</string>
     <string name="messages_new_message_to_caption">"\@کاربر1, @کاربر2, @کاربر3"</string>
+    <string name="messages_cant_upload_title">نمی توان بارگذاری کرد</string>
+    <string name="messages_cant_upload_explainer">مقصد پیام را وارد کنید</string>
     <string name="messages_group_descriptor">اعضای گروه</string>
     <string name="messages_new_subject_message">توضیحات برای اعضا</string>
     <string name="messages_new_subject_message_placeholder">تعویض نام به خاطر اهداف جدید.</string>
@@ -863,6 +884,7 @@
     <string name="message_to_author">خلاصه تغییرات</string>
     <string name="message_to_author_placeholder">اصلاحات سریع…</string>
     <string name="accept_the_suggestion">پذیرش پیشنهاد</string>
+    <string name="enter_picture_in_picture">ویديو را در قاب جدا باز کن</string>
     <string name="accessibility_download_for_offline">بارگيری</string>
     <string name="accessibility_lyrics_on">روشن کردن متن</string>
     <string name="accessibility_lyrics_off">متن خاموش</string>
@@ -928,4 +950,5 @@
     <string name="torrent_no_apps">هیچ اپ تورنتی برای باز کردن و بارگیری فایل نصب نیست.</string>
     <string name="select_list_to_filter">لیستی را برای فیلتر خبرنامه انتخاب کنید</string>
     <string name="temporary_account">با قفل کردن دستگاه از حساب کاربری خارج شو</string>
+    <string name="private_message">پیام خصوصی</string>
 </resources>
