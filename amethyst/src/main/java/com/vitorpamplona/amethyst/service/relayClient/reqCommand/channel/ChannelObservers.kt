@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ChannelState
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapLatest
 
@@ -38,6 +39,7 @@ fun observeChannel(baseChannel: Channel): State<ChannelState?> {
     return baseChannel.flow.stateFlow.collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeChannelPicture(baseChannel: Channel): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -55,6 +57,7 @@ fun observeChannelPicture(baseChannel: Channel): State<String?> {
     return flow.collectAsStateWithLifecycle(baseChannel.profilePicture())
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeChannelInfo(baseChannel: LiveActivitiesChannel): State<LiveActivitiesEvent?> {
     // Subscribe in the relay for changes in the metadata of this user.

@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
@@ -55,6 +57,7 @@ fun observeUser(user: User): State<UserState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserName(user: User): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -73,6 +76,7 @@ fun observeUserName(user: User): State<String> {
     return flow.collectAsStateWithLifecycle(user.toBestDisplayName())
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserNip05(user: User): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -91,6 +95,7 @@ fun observeUserNip05(user: User): State<String?> {
     return flow.collectAsStateWithLifecycle(user.info?.nip05)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserAboutMe(user: User): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -109,6 +114,7 @@ fun observeUserAboutMe(user: User): State<String> {
     return flow.collectAsStateWithLifecycle(user.info?.about ?: "")
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserInfo(user: User): State<UserMetadata?> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -127,6 +133,7 @@ fun observeUserInfo(user: User): State<UserMetadata?> {
     return flow.collectAsStateWithLifecycle(user.info)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserBanner(user: User): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -145,6 +152,7 @@ fun observeUserBanner(user: User): State<String?> {
     return flow.collectAsStateWithLifecycle(user.info?.banner)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserPicture(user: User): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -163,6 +171,7 @@ fun observeUserPicture(user: User): State<String?> {
     return flow.collectAsStateWithLifecycle(user.info?.picture)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeUserShortName(user: User): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -193,6 +202,7 @@ fun observeUserFollows(user: User): State<UserState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserFollowCount(user: User): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -214,6 +224,7 @@ fun observeUserFollowCount(user: User): State<Int> {
     return flow.collectAsStateWithLifecycle(0)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserTagFollows(user: User): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -247,6 +258,7 @@ fun observeUserBookmarks(user: User): State<UserState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserBookmarkCount(user: User): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -280,6 +292,7 @@ fun observeUserFollowers(user: User): State<UserState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserFollowerCount(user: User): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -301,6 +314,7 @@ fun observeUserFollowerCount(user: User): State<Int> {
     return flow.collectAsStateWithLifecycle(0)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowing(
     user1: User,
@@ -325,6 +339,7 @@ fun observeUserIsFollowing(
     return flow.collectAsStateWithLifecycle(user1.isFollowing(user2))
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingHashtag(
     user: User,
@@ -349,6 +364,7 @@ fun observeUserIsFollowingHashtag(
     return flow.collectAsStateWithLifecycle(user.isFollowingHashtag(hashtag))
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingGeohash(
     user: User,
@@ -373,6 +389,7 @@ fun observeUserIsFollowingGeohash(
     return flow.collectAsStateWithLifecycle(user.isFollowingGeohash(geohash))
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingChannel(
     user: User,
@@ -409,6 +426,7 @@ fun observeUserZaps(user: User): State<UserState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserZapAmount(user: User): State<BigDecimal> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -442,6 +460,7 @@ fun observeUserReports(user: User): State<UserState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserReportCount(user: User): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -464,6 +483,7 @@ fun observeUserReportCount(user: User): State<Int> {
     return flow.collectAsStateWithLifecycle(0)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserStatuses(user: User): State<ImmutableList<AddressableNote>> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -486,6 +506,7 @@ fun observeUserStatuses(user: User): State<ImmutableList<AddressableNote>> {
     return flow.collectAsStateWithLifecycle(persistentListOf())
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserRelayIntoList(
     user: User,
@@ -513,6 +534,7 @@ fun observeUserRelayIntoList(
     return flow.collectAsStateWithLifecycle(false)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserRoomSubject(
     user: User,
@@ -543,6 +565,7 @@ data class RelayUsage(
     val userRelayList: List<String> = emptyList(),
 )
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserRelaysUsing(user: User): State<RelayUsage> {
     // Subscribe in the relay for changes in the metadata of this user.

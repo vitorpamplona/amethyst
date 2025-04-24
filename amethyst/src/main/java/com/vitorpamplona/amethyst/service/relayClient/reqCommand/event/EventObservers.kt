@@ -29,6 +29,8 @@ import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
@@ -47,6 +49,8 @@ fun observeNote(note: Note): State<NoteState> {
         .collectAsStateWithLifecycle()
 }
 
+@Suppress("UNCHECKED_CAST")
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun <T : Event> observeNoteEvent(note: Note): State<T?> {
     // Subscribe in the relay for changes in this note.
@@ -64,6 +68,7 @@ fun <T : Event> observeNoteEvent(note: Note): State<T?> {
     return flow.collectAsStateWithLifecycle(note.event as? T?)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun <T> observeNoteAndMap(
     note: Note,
@@ -86,6 +91,8 @@ fun <T> observeNoteAndMap(
     return flow.collectAsStateWithLifecycle(map(note))
 }
 
+@Suppress("UNCHECKED_CAST")
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun <T, U> observeNoteEventAndMap(
     note: Note,
@@ -109,6 +116,7 @@ fun <T, U> observeNoteEventAndMap(
     return flow.collectAsStateWithLifecycle((note.event as? T)?.let { map(it) })
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeNoteHasEvent(note: Note): State<Boolean> {
     // Subscribe in the relay for changes in this note.
@@ -139,6 +147,7 @@ fun observeNoteReplies(note: Note): State<NoteState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeNoteReplyCount(note: Note): State<Int> {
     // Subscribe in the relay for changes in this note.
@@ -170,6 +179,7 @@ fun observeNoteReactions(note: Note): State<NoteState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeNoteReactionCount(note: Note): State<Int> {
     // Subscribe in the relay for changes in this note.
@@ -215,6 +225,7 @@ fun observeNoteReposts(note: Note): State<NoteState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeNoteRepostsBy(
     note: Note,
@@ -237,6 +248,7 @@ fun observeNoteRepostsBy(
     return flow.collectAsStateWithLifecycle(note.isBoostedBy(user))
 }
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeNoteRepostCount(note: Note): State<Int> {
     // Subscribe in the relay for changes in this note.
