@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.AddReaction
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import coil3.compose.AsyncImagePainter.State.Empty.painter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -392,7 +394,7 @@ fun CancelIcon() {
 @Composable
 fun CloseIcon() {
     Icon(
-        painter = painterResource(id = R.drawable.ic_close),
+        imageVector = Icons.Outlined.Close,
         contentDescription = stringRes(id = R.string.cancel),
         modifier = Size20Modifier,
     )

@@ -44,9 +44,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -109,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -157,6 +166,8 @@ fun DrawerContent(
                 thickness = DividerThickness,
                 modifier = Modifier.padding(top = 20.dp),
             )
+
+            Spacer(modifier = StdHorzSpacer)
 
             ListContent(
                 modifier = Modifier.fillMaxWidth(),
@@ -425,7 +436,7 @@ fun ListContent(
     Column(modifier) {
         NavigationRow(
             title = R.string.profile,
-            icon = R.drawable.ic_profile,
+            icon = Icons.Default.AccountCircle,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
             route = remember { Route.Profile(accountViewModel.userProfile().pubkeyHex) },
@@ -433,7 +444,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.bookmarks,
-            icon = R.drawable.ic_bookmarks,
+            icon = Icons.Outlined.BookmarkBorder,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Bookmarks,
@@ -441,7 +452,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.drafts,
-            icon = R.drawable.ic_topics,
+            icon = Icons.Outlined.Drafts,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Drafts,
@@ -467,7 +478,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.security_filters,
-            icon = R.drawable.ic_security,
+            icon = Icons.Outlined.Security,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.SecurityFilters,
@@ -486,7 +497,7 @@ fun ListContent(
         accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
                 title = R.string.backup_keys,
-                icon = R.drawable.ic_key,
+                icon = Icons.Outlined.Key,
                 tint = MaterialTheme.colorScheme.onBackground,
                 onClick = {
                     nav.closeDrawer()
@@ -497,7 +508,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.preferences,
-            icon = R.drawable.ic_settings,
+            icon = Icons.Outlined.Settings,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Settings,
@@ -575,6 +586,25 @@ private fun RenderRelayStatus(relayPool: RelayPoolStatus) {
 fun NavigationRow(
     title: Int,
     icon: Int,
+    tint: Color,
+    nav: INav,
+    route: Route,
+) {
+    IconRow(
+        title,
+        icon,
+        tint,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(route)
+        },
+    )
+}
+
+@Composable
+fun NavigationRow(
+    title: Int,
+    icon: ImageVector,
     tint: Color,
     nav: INav,
     route: Route,
