@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect
 
-import android.net.Uri
+import androidx.core.net.toUri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
@@ -32,7 +32,7 @@ class Nip47WalletConnect {
         fun parse(uri: String): Nip47URI {
             // nostrwalletconnect://b889ff5b1513b641e2a139f661a661364979c5beee91842f8f0ef42ab558e9d4?relay=wss%3A%2F%2Frelay.damus.io&metadata=%7B%22name%22%3A%22Example%22%7D
 
-            val url = Uri.parse(uri)
+            val url = uri.toUri()
 
             if (url.scheme != "nostrwalletconnect" && url.scheme != "nostr+walletconnect") {
                 throw IllegalArgumentException("Not a Wallet Connect QR Code")
