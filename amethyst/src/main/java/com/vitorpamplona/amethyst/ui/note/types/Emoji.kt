@@ -183,9 +183,9 @@ private fun EmojiListOptions(
 
             CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions", accountViewModel = accountViewModel) {
                 if (it != true) {
-                    AddButton { accountViewModel.addEmojiPack(usersEmojiList, emojiPackNote) }
+                    AddButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.addEmojiPack(usersEmojiList, emojiPackNote) }
                 } else {
-                    RemoveButton { accountViewModel.removeEmojiPack(usersEmojiList, emojiPackNote) }
+                    RemoveButton(modifier = Modifier.padding(start = 3.dp)) { accountViewModel.removeEmojiPack(usersEmojiList, emojiPackNote) }
                 }
             }
         }
