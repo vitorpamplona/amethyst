@@ -260,7 +260,7 @@
     <string name="poll_zap_value_min">Minimum Zap</string>
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_consensus_threshold_percent">(0-100)%</string>
     <string name="poll_closing_time">Tutup setelah</string>
     <string name="poll_closing_time_days">hari</string>
     <string name="poll_unable_to_vote">Tidak dapat memilih</string>

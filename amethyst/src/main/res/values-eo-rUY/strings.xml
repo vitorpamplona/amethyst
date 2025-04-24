@@ -259,7 +259,7 @@
     <string name="poll_zap_value_min">Minimumo de Zapoj</string>
     <string name="poll_zap_value_max">Maksimumo de Zapoj</string>
     <string name="poll_consensus_threshold">Interkonsento</string>
-    <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_consensus_threshold_percent">(0-100)%</string>
     <string name="poll_closing_time">Fermi post</string>
     <string name="poll_closing_time_days">tagoj</string>
     <string name="poll_zap_amount">Kvanto de zapoj</string>
