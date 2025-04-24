@@ -542,7 +542,9 @@ fun AmethystTheme(
             insets.isAppearanceLightNavigationBars = !darkTheme
             insets.isAppearanceLightStatusBars = !darkTheme
 
+            @Suppress("DEPRECATION")
             window.statusBarColor = colors.transparentBackground.toArgb()
+            @Suppress("DEPRECATION")
             window.navigationBarColor = colors.transparentBackground.toArgb()
 
             view.setBackgroundColor(colors.background.toArgb())
