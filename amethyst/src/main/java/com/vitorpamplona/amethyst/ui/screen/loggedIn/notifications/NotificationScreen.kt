@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import android.Manifest
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -105,6 +106,7 @@ fun NotificationScreen(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: SharedPreferencesViewModel): PermissionState {
@@ -114,14 +116,12 @@ fun checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: Sh
         )
 
     if (!sharedPreferencesViewModel.sharedPrefs.dontAskForNotificationPermissions) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!notificationPermissionState.status.isGranted) {
-                sharedPreferencesViewModel.dontAskForNotificationPermissions()
+        if (!notificationPermissionState.status.isGranted) {
+            sharedPreferencesViewModel.dontAskForNotificationPermissions()
 
-                // This will pause the APP, including the connection with relays.
-                LaunchedEffect(notificationPermissionState) {
-                    notificationPermissionState.launchPermissionRequest()
-                }
+            // This will pause the APP, including the connection with relays.
+            LaunchedEffect(notificationPermissionState) {
+                notificationPermissionState.launchPermissionRequest()
             }
         }
     }
