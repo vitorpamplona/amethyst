@@ -377,9 +377,7 @@ private fun DiscoverFeedLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 ChannelCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,
@@ -415,9 +413,7 @@ private fun DiscoverFeedColumnsLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            val defaultModifier = remember { Modifier.fillMaxWidth().animateItemPlacement() }
-
-            Row(defaultModifier) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 ChannelCardCompose(
                     baseNote = item,
                     routeForLastRead = routeForLastRead,

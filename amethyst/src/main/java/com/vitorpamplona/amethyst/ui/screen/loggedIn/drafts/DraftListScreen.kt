@@ -199,16 +199,9 @@ private fun DraftFeedLoaded(
             }
         }
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .animateItemPlacement(),
-            ) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 SwipeToDeleteContainer(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .animateContentSize(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
                     onStartToEnd = { accountViewModel.delete(item) },
                 ) {
                     NoteCompose(

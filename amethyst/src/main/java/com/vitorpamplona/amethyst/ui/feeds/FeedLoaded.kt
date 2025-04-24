@@ -56,7 +56,7 @@ fun FeedLoaded(
         state = listState,
     ) {
         itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 NoteCompose(
                     item,
                     modifier = Modifier.fillMaxWidth(),

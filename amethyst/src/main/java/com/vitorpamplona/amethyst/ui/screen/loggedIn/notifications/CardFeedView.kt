@@ -176,7 +176,7 @@ private fun FeedLoaded(
             key = { _, item -> item.id() },
             contentType = { _, item -> item.javaClass.simpleName },
         ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItemPlacement()) {
+            Row(Modifier.fillMaxWidth().animateItem()) {
                 logTime(
                     debugMessage = { "CardFeedView $item" },
                 ) {
