@@ -70,7 +70,7 @@ fun AnimatedSaveButton(
     }
 }
 
-@kotlin.OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
     Box(modifier = PinBottomIconSize) {

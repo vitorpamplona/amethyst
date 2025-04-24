@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -306,7 +307,7 @@ fun DisplayStatusInner(
             onClick = { runCatching { uri.openUri(url.trim()) } },
         ) {
             Icon(
-                imageVector = Icons.Default.OpenInNew,
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 null,
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -326,7 +327,7 @@ fun DisplayStatusInner(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -348,7 +349,7 @@ fun DisplayStatusInner(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,

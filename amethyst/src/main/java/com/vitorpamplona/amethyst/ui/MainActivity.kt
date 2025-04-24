@@ -100,8 +100,12 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         Log.d("ActivityLifecycle", "MainActivity.onPause $this")
 
-        GlobalScope.launch(Dispatchers.IO) { LanguageTranslatorService.clear() }
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch(Dispatchers.IO) {
+            LanguageTranslatorService.clear()
+        }
 
+        @OptIn(DelicateCoroutinesApi::class)
         GlobalScope.launch(Dispatchers.IO) {
             debugState(this@MainActivity)
             Amethyst.instance.sources.printCounters()
@@ -114,6 +118,7 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
 
         // Graph doesn't completely clear.
+        // @OptIn(DelicateCoroutinesApi::class)
         // GlobalScope.launch(Dispatchers.Default) {
         //    serviceManager.trimMemory()
         // }

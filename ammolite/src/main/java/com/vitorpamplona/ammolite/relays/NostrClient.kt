@@ -225,6 +225,7 @@ class NostrClient(
         additionalListener?.let { subscribe(it) }
 
         val job =
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 if (relayList != null) {
                     send(signedEvent, relayList)

@@ -3745,32 +3745,38 @@ class Account(
         settings.backupContactList?.let {
             Log.d("AccountRegisterObservers", "Loading saved contacts ${it.toJson()}")
 
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it) }
         }
 
         settings.backupUserMetadata?.let {
             Log.d("AccountRegisterObservers", "Loading saved user metadata ${it.toJson()}")
 
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it, null) }
         }
 
         settings.backupDMRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
         settings.backupNIP65RelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved nip65 relay list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
         settings.backupSearchRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
         settings.backupPrivateHomeRelayList?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved private home relay list ${event.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
                     LocalCache.verifyAndConsume(event, null)
@@ -3780,6 +3786,7 @@ class Account(
 
         settings.backupAppSpecificData?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 LocalCache.verifyAndConsume(event, null)
                 signer.decrypt(event.content, event.pubKey) { decrypted ->
@@ -3798,6 +3805,7 @@ class Account(
 
         settings.backupMuteList?.let {
             Log.d("AccountRegisterObservers", "Loading saved mute list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
