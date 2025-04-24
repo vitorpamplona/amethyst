@@ -62,9 +62,16 @@ class SinceAuthorPerRelayFilter(
             if (isNotEmpty()) {
                 val jsonObjectPerRelayAuthors = factory.objectNode()
                 entries.forEach { relayAuthorPairs ->
-                    jsonObjectPerRelayAuthors.put(relayAuthorPairs.key, factory.arrayNode(relayAuthorPairs.value.size).apply { relayAuthorPairs.value.forEach { add(it) } })
+                    jsonObjectPerRelayAuthors.replace(
+                        relayAuthorPairs.key,
+                        factory.arrayNode(relayAuthorPairs.value.size).apply {
+                            relayAuthorPairs.value.forEach {
+                                add(it)
+                            }
+                        },
+                    )
                 }
-                obj.put("authors", jsonObjectPerRelayAuthors)
+                obj.replace("authors", jsonObjectPerRelayAuthors)
             }
         }
 
@@ -74,7 +81,7 @@ class SinceAuthorPerRelayFilter(
                 entries.forEach { sincePairs ->
                     jsonObjectSince.put(sincePairs.key, "${sincePairs.value}")
                 }
-                obj.put("since", jsonObjectSince)
+                obj.replace("since", jsonObjectSince)
             }
         }
         return EventMapper.mapper.writeValueAsString(obj)
