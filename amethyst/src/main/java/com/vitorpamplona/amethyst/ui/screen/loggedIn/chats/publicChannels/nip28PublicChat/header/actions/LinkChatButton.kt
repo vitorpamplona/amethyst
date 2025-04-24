@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
@@ -58,7 +57,7 @@ fun LinkChatButton(
             val intent = Intent(Intent.ACTION_VIEW, channel.toNostrUri().toUri())
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-            ContextCompat.startActivity(context, intent, null)
+            context.startActivity(intent)
 
             val sendIntent =
                 Intent().apply {
@@ -74,7 +73,7 @@ fun LinkChatButton(
                     stringRes(context, R.string.quick_action_copy_note_id),
                 )
 
-            ContextCompat.startActivity(context, shareIntent, null)
+            context.startActivity(shareIntent)
         },
         contentPadding = ZeroPadding,
     ) {

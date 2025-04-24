@@ -92,7 +92,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
@@ -272,7 +271,7 @@ fun ShareReaction(
                     sendIntent,
                     stringRes(context, R.string.quick_action_share),
                 )
-            ContextCompat.startActivity(context, shareIntent, null)
+            context.startActivity(shareIntent)
         },
     ) {
         ShareIcon(barChartModifier, grayTint)

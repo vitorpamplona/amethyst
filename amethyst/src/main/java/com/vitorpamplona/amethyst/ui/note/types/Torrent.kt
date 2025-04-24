@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,7 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -213,17 +212,20 @@ fun DisplayFileList(
 
             val context = LocalContext.current
 
-            IconButton(onClick = {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link()))
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            IconButton(
+                onClick = {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, link().toUri())
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-                    ContextCompat.startActivity(context, intent, null)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)
-                }
-            }, Modifier.size(Size30dp)) {
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        accountViewModel.toastManager.toast(R.string.torrent_failure, R.string.torrent_no_apps)
+                    }
+                },
+                Modifier.size(Size30dp),
+            ) {
                 DownloadForOfflineIcon(Size20dp, MaterialTheme.colorScheme.onBackground)
             }
         }

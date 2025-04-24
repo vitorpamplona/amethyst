@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -69,7 +68,7 @@ fun ShareChatButton(
                     stringRes(context, R.string.quick_action_share),
                 )
 
-            ContextCompat.startActivity(context, shareIntent, null)
+            context.startActivity(shareIntent)
         },
         contentPadding = ZeroPadding,
     ) {

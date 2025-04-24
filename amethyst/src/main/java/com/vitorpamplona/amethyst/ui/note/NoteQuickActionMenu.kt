@@ -79,7 +79,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -413,7 +412,7 @@ private fun RenderMainPopup(
                                     sendIntent,
                                     stringRes(context, R.string.quick_action_share),
                                 )
-                            ContextCompat.startActivity(context, shareIntent, null)
+                            context.startActivity(shareIntent)
                             onDismiss()
                         }
                     }
@@ -587,7 +586,7 @@ private fun RenderDeleteFromGalleryPopup(
                                     sendIntent,
                                     stringRes(context, R.string.quick_action_share),
                                 )
-                            ContextCompat.startActivity(context, shareIntent, null)
+                            context.startActivity(shareIntent)
                             onDismiss()
                         }
                     }
