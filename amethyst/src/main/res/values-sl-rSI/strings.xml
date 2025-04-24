@@ -106,7 +106,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="description">Opis</string>
     <string name="about_us">"O nas.. "</string>
     <string name="what_s_on_your_mind">Kaj imaš v mislih?</string>
-    <string name="write_a_message">Napiši sporočilo...</string>
+    <string name="write_a_message">Napiši sporočilo…</string>
     <string name="post">Pošlji</string>
     <string name="save">Shrani</string>
     <string name="create">Ustvari</string>
@@ -227,7 +227,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
         se lahko pridruži. So odlični za odprte skupnosti o specifičnih temah.
         Moderiranje je možno z brisanjem objav na njihovih relejih</string>
     <string name="public_chat_relays_title">Releji</string>
-    <string name="public_chat_relays_explainer">Vnesi 1-3 releje, ki gostijo to skupino.
+    <string name="public_chat_relays_explainer">Vnesi 1–3 releje, ki gostijo to skupino.
         Nostr odjemalci uporabljajo to nastavitev, da vedo, od kod prenesti tvoja sporočila in kam jih poslati.</string>
     <string name="posts_received">sprejete objave</string>
     <string name="remove">Odstrani</string>

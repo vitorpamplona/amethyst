@@ -88,7 +88,7 @@
     <string name="my_awesome_group">گروه باحال من</string>
     <string name="picture_url">آدرس تصویر</string>
     <string name="description">توصیف</string>
-    <string name="about_us">"درباره ما.. "</string>
+    <string name="about_us">"درباره ما…"</string>
     <string name="what_s_on_your_mind">به چی فکر میکنی؟</string>
     <string name="post">ارسال</string>
     <string name="save">ذخیره</string>
@@ -127,9 +127,9 @@
     <string name="video_saved_to_the_gallery">ویدئو در گالری گوشی ذخیره شد</string>
     <string name="failed_to_save_the_video">ویدئو ذخیره نشد</string>
     <string name="upload_image">بارگذاری تصویر</string>
-    <string name="uploading">...در حال بارگذاری</string>
+    <string name="uploading">…در حال بارگذاری</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">این کاربر آدرس لایتنینگ برای دریافت ساتوشی تنظیم نکرده است</string>
-    <string name="reply_here">"...اینجا پاسخ دهید "</string>
+    <string name="reply_here">"…اینجا پاسخ دهید "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">شناسه یادداشت را برای اشتراک گذاری در کلیپبورد ذخیره می کند </string>
     <string name="copy_channel_id_note_to_the_clipboard">ذخیره شناسه کانال در کلیپبورد</string>
     <string name="edits_the_channel_metadata">متادیتای کانال را ذخیره می کند</string>
@@ -289,10 +289,10 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[مسدود و پنهان کردن کاربر]]></string>
     <string name="report_dialog_report_btn">گزارش سواستفاده</string>
     <string name="report_dialog_reminder_public">تمام گزارش ها بطور عمومی دیده می شوند</string>
-    <string name="report_dialog_additional_reason_placeholder">در صورت تمایل توضیحاتی به گزارش خود بیفزایید...</string>
+    <string name="report_dialog_additional_reason_placeholder">در صورت تمایل توضیحاتی به گزارش خود بیفزایید…</string>
     <string name="report_dialog_additional_reason_label">توضیحات اضافه</string>
     <string name="report_dialog_select_reason_label">دلایل</string>
-    <string name="report_dialog_select_reason_placeholder">دلیلی انتخاب کنید...</string>
+    <string name="report_dialog_select_reason_placeholder">دلیلی انتخاب کنید…</string>
     <string name="report_dialog_post_report_btn">گزارش یادداشت</string>
     <string name="report_dialog_title">بلاک و گزارش</string>
     <string name="block_only">بلاک</string>
@@ -681,7 +681,7 @@
     <string name="callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user">فراخوانی URL از پاسخ %1$s یافت نشد</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup">خطا در تفسیر JSON از فراخوان صورتحساب آدرس لایتنینگ. تنظیمات لایتنینگ کاربر را بررسی کنید.</string>
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">خطا در تفسیر JSON از دریافت صورتحساب %1$s. تنظیمات لایتنینگ کاربر را بررسی کنید.</string>
-    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">مبلغ نادرست صورتحساب (%1$s ساتوشی). می بایست %3$s ساتوشی باشد.</string>
+    <string name="incorrect_invoice_amount_sats_from_it_should_have_been">مبلغ نادرست صورتحساب (%1$s ساتوشی)از %2$s. می بایست %3$s ساتوشی باشد.</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">نمی توان صورتحساب لایتنینگ را پیش از زپ زدن ارسال کرد. کیف پول لایتنینگی گیرنده خطای روبرو را داد: %1$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">صورت حساب لایتنینگ ساخته نشد. پیغام از %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json">نمی توان صورتحساب لایتنینگ را پیش از زپ زدن ارسال کرد. المنت pr در JSON بدست آمده یافت نشد.</string>
@@ -828,8 +828,8 @@
     <string name="public_notif_section_explainer">این نوع رله تمام پاسخ ها، نظرات، پسندها، و زپ های یادداشت های شما را دریافت می کند. این ها می توانند رله های پولی یا رایگان باشند. محدودیتی که گرداننده رله تعیین می کند ممکن است اعلان هایی را که دریافت می کنید محدود کند. این می تواند اثر خوب یا بد داشته باشد. مثلا اگر تحت حمله کامنت اسپم باشید، رله پولی می تواند این اسپم را فیلتر کند. بین ۱-۳ رله وارد کنید.</string>
     <string name="private_inbox_section">رله های صندوق دریافت پیام خصوصی</string>
     <string name="private_inbox_section_explainer">بین ۱-۳ رله به عنوان رله صندوق ورودی خصوصی وارد کنید. دیگران از این رله ها برای ارسال پیام خصوصی به شما استفاده خواهند کرد. رله های صندوق دریافت پیام خصوصی می بایست هر پیامی از هر کسی را بپذیرند، اما فقط بگذارند شما آن ها را بارگیری کنید. انتخاب های خوب شامل:
- - inbox.nostr.wine (پولی) 
-- auth.nostr1.com (رایگان) 
+ - inbox.nostr.wine (پولی)
+- auth.nostr1.com (رایگان)
 - you.nostr1.com (رله پولی یا شخصی)</string>
     <string name="private_outbox_section">رله های خصوصی خانه</string>
     <string name="private_outbox_section_explainer">بین ۱-۳ رله وارد کنید برای ذخیره رویدادهایی که هیچ کس دیگر نمی بیند ، به عنوان مثال پیش نویس های شما و یا تنظیمات اپلیکیشن. در حالت ایده آل، این رله ها یا محلی هستند یا پیش از بارگیری محتوای کاربر به احراز هویت نیاز دارند.</string>

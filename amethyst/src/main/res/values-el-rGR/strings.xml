@@ -70,7 +70,7 @@
     <string name="my_awesome_group">Η υπέροχη Ομάδα μου</string>
     <string name="picture_url">Διεύθυνση Εικόνας Url</string>
     <string name="description">Περιγραφή</string>
-    <string name="about_us">"Σχετικά με εμάς.. "</string>
+    <string name="about_us">"Σχετικά με εμάς…"</string>
     <string name="what_s_on_your_mind">Τι σκέφτεστε;</string>
     <string name="post">Δημοσίευση</string>
     <string name="save">Αποθήκευση</string>
@@ -101,7 +101,7 @@
     <string name="upload_image">Μεταφόρτωση εικόνας</string>
     <string name="uploading">Μεταφόρτωση…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Ο χρήστης δεν έχει ορίσει διεύθυνση LN για να λαμβάνει sats</string>
-    <string name="reply_here">"απαντήστε εδώ.. "</string>
+    <string name="reply_here">"απαντήστε εδώ…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Αντιγραφή του ID της δημοσίευσης στο πρόχειρο για κοινή χρήση στο Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Αντιγραφή του ID του Καναλιού (της δημοσίευσης) στο πρόχειρο</string>
     <string name="edits_the_channel_metadata">Επεξεργασία των Μεταδεδομένων των Καναλιού</string>
@@ -133,7 +133,7 @@
     <string name="npub_hex_username">"\"Δημόσιο Κλειδί\" (npub), Όνομα Χρήστη, Κείμενο"</string>
     <string name="clear">Εκκαθάριση</string>
     <string name="app_logo">Λογότυπο Εφαρμογής</string>
-    <string name="nsec_npub_hex_private_key">\"Μυστικό Κλειδί\" (nsec).. ή \"Δημόσιο Κλειδί\" (npub)..</string>
+    <string name="nsec_npub_hex_private_key">\"Μυστικό Κλειδί\" (nsec)…ή \"Δημόσιο Κλειδί\" (npub)..</string>
     <string name="show_password">Εμφάνιση Κωδικού</string>
     <string name="hide_password">Απόκρυψη Κωδικού</string>
     <string name="invalid_key">Μη έγκυρο κλειδί</string>

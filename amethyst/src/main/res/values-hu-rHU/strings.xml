@@ -219,7 +219,7 @@
         részt vehet bennük. Ezek kiválóan alkalmasak bizonyos témák köré szerveződő nyílt közösségek számára.
         A moderálás az átjátszókon lévő hozzászólások törlésével szabályozható</string>
     <string name="public_chat_relays_title">Átjátszók</string>
-    <string name="public_chat_relays_explainer">Adjon hozzá 1-3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
+    <string name="public_chat_relays_explainer">Adjon hozzá 1–3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
         A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
     <string name="posts_received">fogadott bejegyzések</string>
     <string name="remove">Eltávolítás</string>

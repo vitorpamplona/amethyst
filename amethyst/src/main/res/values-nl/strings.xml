@@ -96,7 +96,7 @@
     <string name="my_awesome_group">Mijn geweldige groep</string>
     <string name="picture_url">Afbeelding URL</string>
     <string name="description">Omschrijving</string>
-    <string name="about_us">"Over ons.. "</string>
+    <string name="about_us">"Over ons…"</string>
     <string name="what_s_on_your_mind">Waar denk je aan?</string>
     <string name="post">Verzenden</string>
     <string name="save">Opslaan</string>
@@ -300,7 +300,7 @@
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokkeer & verberg gebruiker]]></string>
     <string name="report_dialog_report_btn">Misbruik melden</string>
     <string name="report_dialog_reminder_public">Alle geplaatste rapporteringen zijn openbaar.</string>
-    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering...</string>
+    <string name="report_dialog_additional_reason_placeholder">Geef optioneel extra context over uw rapportering…</string>
     <string name="report_dialog_additional_reason_label">Extra context</string>
     <string name="report_dialog_select_reason_label">Reden</string>
     <string name="report_dialog_select_reason_placeholder">Selecteer een reden…</string>
@@ -333,7 +333,7 @@
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
-    <string name="poll_consensus_threshold_percent">(0-100)%</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Sluit na</string>
     <string name="poll_closing_time_days">dagen</string>
     <string name="poll_unable_to_vote">Kan niet stemmen</string>
@@ -863,7 +863,7 @@
     <string name="edit_post">Bericht wijzigen</string>
     <string name="proposal_to_edit">Voorstel om een bericht te verbeteren</string>
     <string name="message_to_author">Samenvatting van wijzigingen</string>
-    <string name="message_to_author_placeholder">Snelle oplossingen...</string>
+    <string name="message_to_author_placeholder">Snelle oplossingen…</string>
     <string name="accept_the_suggestion">Accepteer de suggestie</string>
     <string name="accessibility_download_for_offline">Downloaden</string>
     <string name="accessibility_lyrics_on">Songteksten aan</string>

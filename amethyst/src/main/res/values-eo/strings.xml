@@ -69,7 +69,7 @@
     <string name="my_awesome_group">Mia Mojosa Grupo</string>
     <string name="picture_url">Bilda URL</string>
     <string name="description">Priskribo</string>
-    <string name="about_us">"Pri ni... "</string>
+    <string name="about_us">"Pri ni…"</string>
     <string name="what_s_on_your_mind">Kion vi pensas?</string>
     <string name="post">Afiŝi</string>
     <string name="save">Konservi</string>
@@ -101,7 +101,7 @@
     <string name="upload_image">Alŝuti Bildon</string>
     <string name="uploading">Alŝutante…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uzanto ne havas lightning-adreson por ricevi satojn</string>
-    <string name="reply_here">"respondi ĉi tie... "</string>
+    <string name="reply_here">"respondi ĉi tie… "</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopias la ID de Noto al la tondujo por kunhavigi</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopii ID de Kanalo (Noto) al la tondujo</string>
     <string name="edits_the_channel_metadata">Redaktas la Metadatumojn de Kanalo</string>
@@ -165,8 +165,8 @@
     <string name="translations_translated_from">tradukita el</string>
     <string name="translations_to">al</string>
     <string name="translations_show_in_lang_first">Montri en %1$s unua</string>
-    <string name="translations_always_translate_to_lang">Ĉiam traduki al</string>
-    <string name="translations_never_translate_from_lang">Neniam traduki el </string>
+    <string name="translations_always_translate_to_lang">Ĉiam traduki al %1$s</string>
+    <string name="translations_never_translate_from_lang">Neniam traduki el %1$s</string>
     <string name="nip_05">Adreso de Nostr</string>
     <string name="never">neniam</string>
     <string name="now">nun</string>
@@ -259,7 +259,7 @@
     <string name="poll_zap_value_min">Minimumo de Zapoj</string>
     <string name="poll_zap_value_max">Maksimumo de Zapoj</string>
     <string name="poll_consensus_threshold">Interkonsento</string>
-    <string name="poll_consensus_threshold_percent">(0-100)%</string>
+    <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_closing_time">Fermi post</string>
     <string name="poll_closing_time_days">tagoj</string>
     <string name="poll_zap_amount">Kvanto de zapoj</string>
