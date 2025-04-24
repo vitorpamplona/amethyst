@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import java.util.Locale
 
 // This allows multiple screen to be listening to tags, even the same tag
 class HashtagQueryState(
@@ -79,7 +80,7 @@ class HashtagFilterAssembler(
                         it.hashtag,
                         it.hashtag.lowercase(),
                         it.hashtag.uppercase(),
-                        it.hashtag.capitalize(),
+                        it.hashtag.capitalize(Locale.getDefault()),
                     )
                 }.flatten()
 

@@ -39,6 +39,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav", "image/avif")
 val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
@@ -102,7 +103,7 @@ class VideoFilterAssembler(
 
         val hashtags =
             hashToLoad
-                .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize()) }
+                .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize(Locale.getDefault())) }
                 .flatten()
 
         return listOf(

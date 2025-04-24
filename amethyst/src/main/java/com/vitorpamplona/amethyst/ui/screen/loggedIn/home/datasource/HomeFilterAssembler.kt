@@ -52,6 +52,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 // This allows multiple screen to be listening to tags, even the same tag
 class HomeQueryState(
@@ -176,7 +177,7 @@ class HomeFilterAssembler(
                                             it,
                                             it.lowercase(),
                                             it.uppercase(),
-                                            it.capitalize(),
+                                            it.capitalize(Locale.getDefault()),
                                         )
                                     }.flatten(),
                         ),
