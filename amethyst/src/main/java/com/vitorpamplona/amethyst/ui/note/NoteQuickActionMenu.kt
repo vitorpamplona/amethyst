@@ -59,7 +59,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,7 +83,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -190,7 +188,6 @@ fun NoteQuickActionMenu(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val showSelectTextDialog = remember { mutableStateOf(false) }
     val showDeleteAlertDialog = remember { mutableStateOf(false) }
     val showBlockAlertDialog = remember { mutableStateOf(false) }
     val showReportDialog = remember { mutableStateOf(false) }
@@ -204,19 +201,6 @@ fun NoteQuickActionMenu(
         showReportDialog,
         onWantsToEditDraft,
     )
-
-    if (showSelectTextDialog.value) {
-        val decryptedNote = remember { mutableStateOf<String?>(null) }
-
-        LaunchedEffect(key1 = Unit) { accountViewModel.decrypt(note) { decryptedNote.value = it } }
-
-        decryptedNote.value?.let {
-            SelectTextDialog(it) {
-                showSelectTextDialog.value = false
-                decryptedNote.value = null
-            }
-        }
-    }
 
     if (showDeleteAlertDialog.value) {
         DeleteAlertDialog(note, accountViewModel) {
