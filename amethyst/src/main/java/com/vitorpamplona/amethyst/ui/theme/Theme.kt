@@ -172,20 +172,6 @@ val LightReplyBorderModifier =
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
-val DarkVideoBorderModifier =
-    Modifier
-        .padding(top = 5.dp)
-        .fillMaxWidth()
-        .clip(shape = RectangleShape)
-        .border(1.dp, DarkSubtleBorder, RectangleShape)
-
-val LightVideoBorderModifier =
-    Modifier
-        .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-        .fillMaxWidth()
-        .clip(shape = RectangleShape)
-        .border(1.dp, LightSubtleBorder, RectangleShape)
-
 val DarkInnerPostBorderModifier =
     Modifier
         .padding(vertical = 5.dp)

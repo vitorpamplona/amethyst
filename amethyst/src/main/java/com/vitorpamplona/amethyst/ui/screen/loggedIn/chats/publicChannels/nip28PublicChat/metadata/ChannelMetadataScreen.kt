@@ -71,6 +71,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInf
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -208,7 +210,7 @@ private fun ChannelMetadataScaffold(
                 SettingsCategory(
                     stringRes(R.string.public_chat_title),
                     stringRes(R.string.public_chat_explainer),
-                    Modifier.padding(bottom = 8.dp),
+                    SettingsCategoryFirstModifier,
                 )
 
                 ChannelName(postViewModel)
@@ -224,6 +226,7 @@ private fun ChannelMetadataScaffold(
                 SettingsCategory(
                     stringRes(R.string.public_chat_relays_title),
                     stringRes(R.string.public_chat_relays_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
 

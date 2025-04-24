@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.proxyPort.ProxyPortFlow
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
@@ -154,21 +153,6 @@ class AccountViewModel(
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
 
     val newNotesPreProcessor = PrecacheNewNotesProcessor(account, LocalCache)
-
-    val proxyPortLogic =
-        ProxyPortFlow(
-            account.settings.torSettings.torType,
-            account.settings.torSettings.externalSocksPort,
-            Amethyst.instance.torManager.status,
-        ).status.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(30000),
-            ProxyPortFlow.computePort(
-                account.settings.torSettings.torType.value,
-                account.settings.torSettings.externalSocksPort.value,
-                Amethyst.instance.torManager.status.value,
-            ),
-        )
 
     var firstRoute: Route? = null
 
