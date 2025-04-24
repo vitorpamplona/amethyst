@@ -35,6 +35,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -232,7 +233,7 @@ class EditState {
     private var modificationToShowIndex: Int = -1
 
     val modificationToShow: MutableState<Note?> = mutableStateOf(null)
-    val showingVersion: MutableState<Int> = mutableStateOf(0)
+    val showingVersion: MutableState<Int> = mutableIntStateOf(0)
 
     fun hasModificationsToShow(): Boolean = modificationsList.isNotEmpty()
 

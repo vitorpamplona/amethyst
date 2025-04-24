@@ -51,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -513,7 +514,7 @@ fun ZapVote(
         )
     }
 
-    var zappingProgress by remember { mutableStateOf(0f) }
+    var zappingProgress by remember { mutableFloatStateOf(0f) }
     var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
     val context = LocalContext.current
@@ -658,7 +659,7 @@ fun ZapVote(
             } else {
                 Spacer(Modifier.width(3.dp))
                 CircularProgressIndicator(
-                    progress = zappingProgress,
+                    progress = { zappingProgress },
                     modifier = Modifier.size(14.dp),
                     strokeWidth = 2.dp,
                 )

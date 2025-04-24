@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -90,7 +91,7 @@ fun AudioWaveformReadOnly(
     val spikeTotalWidthState =
         remember(spikeWidth, spikePadding) { spikeWidthState + spikePaddingState }
     var canvasSize by remember { mutableStateOf(Size(0f, 0f)) }
-    var spikes by remember { mutableStateOf(0F) }
+    var spikes by remember { mutableFloatStateOf(0F) }
     val spikesAmplitudes =
         remember(amplitudes, spikes, amplitudeType) {
             amplitudes.toDrawableAmplitudes(

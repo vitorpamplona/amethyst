@@ -45,6 +45,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -89,7 +90,7 @@ fun ReportNoteDialog(
 
     val reasonOptions = remember { reportTypes.map { TitleExplainer(it.second) }.toImmutableList() }
     var additionalReason by remember { mutableStateOf("") }
-    var selectedReason by remember { mutableStateOf(-1) }
+    var selectedReason by remember { mutableIntStateOf(-1) }
 
     Dialog(
         onDismissRequest = onDismiss,

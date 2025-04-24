@@ -24,6 +24,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.window.layout.DisplayFeature
@@ -49,7 +50,7 @@ class SharedSettingsState {
     var gallerySet by mutableStateOf(ProfileGalleryType.CLASSIC)
 
     var isOnMobileOrMeteredConnection by mutableStateOf(false)
-    var currentNetworkId by mutableStateOf(0L)
+    var currentNetworkId by mutableLongStateOf(0L)
 
     var windowSizeClass = mutableStateOf<WindowSizeClass?>(null)
     var displayFeatures = mutableStateOf<List<DisplayFeature>>(emptyList())

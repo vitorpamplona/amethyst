@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -125,7 +126,7 @@ fun InvoiceRequest(
         HorizontalDivider(thickness = DividerThickness)
 
         var message by remember { mutableStateOf("") }
-        var amount by remember { mutableStateOf(1000L) }
+        var amount by remember { mutableLongStateOf(1000L) }
 
         OutlinedTextField(
             label = { Text(text = stringRes(R.string.note_to_receiver)) },
