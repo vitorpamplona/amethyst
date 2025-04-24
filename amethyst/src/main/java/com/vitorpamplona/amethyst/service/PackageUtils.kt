@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 
 object PackageUtils {
+    @SuppressLint("QueryPermissionsNeeded")
     private fun isPackageInstalled(
         context: Context,
         target: String,
@@ -39,7 +41,7 @@ object PackageUtils {
         val intent =
             Intent().apply {
                 action = Intent.ACTION_VIEW
-                data = Uri.parse("nostrsigner:")
+                data = "nostrsigner:".toUri()
             }
         val infos = context.packageManager.queryIntentActivities(intent, 0)
         return infos.size > 0
