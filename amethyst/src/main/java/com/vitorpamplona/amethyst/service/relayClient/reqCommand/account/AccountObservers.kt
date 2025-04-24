@@ -18,56 +18,45 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.ChannelState
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.User
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.map
 
 @Composable
-fun observeChannel(baseChannel: Channel): State<ChannelState?> {
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
-
-    return baseChannel.flow.stateFlow.collectAsStateWithLifecycle()
-}
-
-@Composable
-fun observeChannelPicture(baseChannel: Channel): State<String?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
-
+fun observeAccountIsHiddenWord(
+    account: Account,
+    word: String,
+): State<Boolean> {
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(baseChannel) {
-            baseChannel
-                .flow.stateFlow
-                .mapLatest { it.channel.profilePicture() }
+        remember(account, word) {
+            account.flowHiddenUsers
+                .map { word in it.hiddenWords }
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(baseChannel.profilePicture())
+    return flow.collectAsStateWithLifecycle(false)
 }
 
 @Composable
-fun observeChannelInfo(baseChannel: LiveActivitiesChannel): State<LiveActivitiesEvent?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
-
+fun observeAccountIsHiddenUser(
+    account: Account,
+    user: User,
+): State<Boolean> {
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(baseChannel) {
-            baseChannel
-                .flow.stateFlow
-                .mapLatest { (it.channel as? LiveActivitiesChannel)?.info }
+        remember(account, user) {
+            account.flowHiddenUsers
+                .map { it.hiddenUsers.contains(user.pubkeyHex) || it.spammers.contains(user.pubkeyHex) }
                 .distinctUntilChanged()
         }
 
-    return flow.collectAsStateWithLifecycle(baseChannel.info)
+    return flow.collectAsStateWithLifecycle(account.isHidden(user))
 }

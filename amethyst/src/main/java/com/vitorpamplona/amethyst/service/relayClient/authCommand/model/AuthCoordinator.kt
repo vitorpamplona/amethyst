@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.datasources.RelayAuthenticator
-import kotlin.collections.forEach
 
 class ScreenAuthAccount(
     val account: Account,

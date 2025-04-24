@@ -93,8 +93,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
@@ -403,28 +401,6 @@ private fun WatchReactionsZapsBoostsAndDisplayIfExists(
     if (hasReactions) {
         content()
     }
-}
-
-fun <T, K, R> LiveData<T>.combineWith(
-    liveData1: LiveData<K>,
-    block: (T?, K?) -> R,
-): LiveData<R> {
-    val result = MediatorLiveData<R>()
-    result.addSource(this) { result.value = block(this.value, liveData1.value) }
-    result.addSource(liveData1) { result.value = block(this.value, liveData1.value) }
-    return result
-}
-
-fun <T, K, P, R> LiveData<T>.combineWith(
-    liveData1: LiveData<K>,
-    liveData2: LiveData<P>,
-    block: (T?, K?, P?) -> R,
-): LiveData<R> {
-    val result = MediatorLiveData<R>()
-    result.addSource(this) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    result.addSource(liveData1) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    result.addSource(liveData2) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    return result
 }
 
 @Composable

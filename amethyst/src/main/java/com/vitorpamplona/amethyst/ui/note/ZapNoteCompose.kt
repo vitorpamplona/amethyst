@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,15 +42,16 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.WatchIsHiddenUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapReqResponse
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -161,12 +161,11 @@ fun UserActionOptions(
     baseAuthor: User,
     accountViewModel: AccountViewModel,
 ) {
-    WatchIsHiddenUser(baseAuthor, accountViewModel) { isHidden ->
-        if (isHidden) {
-            ShowUserButton { accountViewModel.show(baseAuthor) }
-        } else {
-            ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
-        }
+    val isHidden by observeAccountIsHiddenUser(accountViewModel.account, baseAuthor)
+    if (isHidden) {
+        ShowUserButton { accountViewModel.show(baseAuthor) }
+    } else {
+        ShowFollowingOrUnfollowingButton(baseAuthor, accountViewModel)
     }
 }
 
@@ -175,24 +174,9 @@ fun ShowFollowingOrUnfollowingButton(
     baseAuthor: User,
     accountViewModel: AccountViewModel,
 ) {
-    var isFollowing by remember { mutableStateOf(false) }
-    val accountFollowsState by accountViewModel.account
-        .userProfile()
-        .live()
-        .follows
-        .observeAsState()
+    var isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor)
 
-    LaunchedEffect(key1 = accountFollowsState) {
-        launch(Dispatchers.Default) {
-            val newShowFollowingMark = accountFollowsState?.user?.isFollowing(baseAuthor) == true
-
-            if (newShowFollowingMark != isFollowing) {
-                isFollowing = newShowFollowingMark
-            }
-        }
-    }
-
-    if (isFollowing) {
+    if (isFollowing.value) {
         UnfollowButton {
             if (!accountViewModel.isWriteable()) {
                 accountViewModel.toastManager.toast(

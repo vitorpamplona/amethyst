@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
-import android.R.attr.maxLines
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

@@ -938,7 +938,7 @@ object LocalCache : ILocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
 
-            author.liveSet?.statuses?.invalidateData()
+            author.flowSet?.statuses?.invalidateData()
 
             refreshObservers(note)
         }
@@ -963,7 +963,7 @@ object LocalCache : ILocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
-            version.liveSet?.ots?.invalidateData()
+            version.flowSet?.ots?.invalidateData()
         }
 
         refreshObservers(version)
@@ -1245,7 +1245,6 @@ object LocalCache : ILocalCache {
         }
 
         deleteNote.clearFlow()
-        deleteNote.clearLive()
 
         notes.remove(deleteNote.idHex)
     }
@@ -1259,7 +1258,6 @@ object LocalCache : ILocalCache {
                     deleteWraps(noteEvent)
                 }
                 it.clearFlow()
-                it.clearLive()
             }
 
             notes.remove(it.id)
@@ -1379,7 +1377,7 @@ object LocalCache : ILocalCache {
 
             mentions.forEach {
                 // doesn't add to reports, but triggers recounts
-                it.liveSet?.reports?.invalidateData()
+                it.flowSet?.reports?.invalidateData()
             }
         }
 
@@ -1625,7 +1623,7 @@ object LocalCache : ILocalCache {
             checkGetOrCreateNote(it.eventId)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
                 // must update list of Notes to quickly update the user.
-                editedNote.liveSet?.edits?.invalidateData()
+                editedNote.flowSet?.edits?.invalidateData()
             }
         }
 
@@ -2056,10 +2054,6 @@ object LocalCache : ILocalCache {
     }
 
     fun cleanObservers() {
-        notes.forEach { _, it -> it.clearLive() }
-        addressables.forEach { _, it -> it.clearLive() }
-        users.forEach { _, it -> it.clearLive() }
-
         notes.forEach { _, it -> it.clearFlow() }
         addressables.forEach { _, it -> it.clearFlow() }
         users.forEach { _, it -> it.clearFlow() }
@@ -2213,8 +2207,8 @@ object LocalCache : ILocalCache {
                         note.event is ReportEvent ||
                         note.event is GenericRepostEvent
                 ) &&
-                    note.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
-                    note.liveSet?.isInUse() != true &&
+                    note.replyTo?.any { it.flowSet?.isInUse() == true } != true &&
+                    note.flowSet?.isInUse() != true &&
                     // don't delete if observing.
                     note.author?.pubkeyHex !in
                     accounts &&
@@ -2278,7 +2272,6 @@ object LocalCache : ILocalCache {
         }
 
         note.clearFlow()
-        note.clearLive()
 
         notes.remove(note.idHex)
     }
@@ -2313,12 +2306,10 @@ object LocalCache : ILocalCache {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =
-            account.liveHiddenUsers.value
-                ?.hiddenUsers
-                ?.map { userHex ->
+            account.flowHiddenUsers.value.hiddenUsers
+                .map { userHex ->
                     (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-                }?.flatten()
-                ?: emptyList()
+                }.flatten()
 
         toBeRemoved.forEach {
             removeFromCache(it)
@@ -2337,7 +2328,7 @@ object LocalCache : ILocalCache {
         users.forEach { _, user ->
             if (
                 user.pubkeyHex !in loggedIn &&
-                (user.liveSet == null || user.liveSet?.isInUse() == false) &&
+                (user.flowSet == null || user.flowSet?.isInUse() == false) &&
                 user.latestContactList != null
             ) {
                 user.latestContactList = null

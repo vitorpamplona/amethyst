@@ -30,7 +30,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,6 +41,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarks
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollows
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -59,6 +60,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MoreOptionsButton(
@@ -380,22 +382,12 @@ fun WatchBookmarksFollowsAndAccount(
     accountViewModel: AccountViewModel,
     onNew: (DropDownParams) -> Unit,
 ) {
-    val followState by accountViewModel
-        .userProfile()
-        .live()
-        .follows
-        .observeAsState()
-    val bookmarkState by accountViewModel
-        .userProfile()
-        .live()
-        .bookmarks
-        .observeAsState()
-    val showSensitiveContent by accountViewModel
-        .showSensitiveContent()
-        .collectAsStateWithLifecycle()
+    val followState by observeUserFollows(accountViewModel.userProfile())
+    val bookmarkState by observeUserBookmarks(accountViewModel.userProfile())
+    val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             accountViewModel.isInPrivateBookmarks(note) {
                 val newState =
                     DropDownParams(

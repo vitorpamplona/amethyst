@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
@@ -125,7 +124,7 @@ class User(
         if (event.id == latestBookmarkList?.id) return
 
         latestBookmarkList = event
-        liveSet?.bookmarks?.invalidateData()
+        flowSet?.bookmarks?.invalidateData()
     }
 
     fun clearEOSE() {
@@ -139,7 +138,6 @@ class User(
         latestContactList = event
 
         // Update following of the current user
-        liveSet?.follows?.invalidateData()
         flowSet?.follows?.invalidateData()
 
         // Update Followers of the past user list
@@ -147,19 +145,18 @@ class User(
         (oldContactListEvent)?.unverifiedFollowKeySet()?.forEach {
             LocalCache
                 .getUserIfExists(it)
-                ?.liveSet
+                ?.flowSet
                 ?.followers
                 ?.invalidateData()
         }
         (latestContactList)?.unverifiedFollowKeySet()?.forEach {
             LocalCache
                 .getUserIfExists(it)
-                ?.liveSet
+                ?.flowSet
                 ?.followers
                 ?.invalidateData()
         }
 
-        liveSet?.relays?.invalidateData()
         flowSet?.relays?.invalidateData()
     }
 
@@ -169,10 +166,10 @@ class User(
         val reportsBy = reports[author]
         if (reportsBy == null) {
             reports = reports + Pair(author, setOf(note))
-            liveSet?.reports?.invalidateData()
+            flowSet?.reports?.invalidateData()
         } else if (!reportsBy.contains(note)) {
             reports = reports + Pair(author, reportsBy + note)
-            liveSet?.reports?.invalidateData()
+            flowSet?.reports?.invalidateData()
         }
     }
 
@@ -182,7 +179,7 @@ class User(
         if (reports[author]?.contains(deleteNote) == true) {
             reports[author]?.let {
                 reports = reports + Pair(author, it.minus(deleteNote))
-                liveSet?.reports?.invalidateData()
+                flowSet?.reports?.invalidateData()
             }
         }
     }
@@ -193,17 +190,17 @@ class User(
     ) {
         if (zaps[zapRequest] == null) {
             zaps = zaps + Pair(zapRequest, zap)
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
     fun removeZap(zapRequestOrZapEvent: Note) {
         if (zaps.containsKey(zapRequestOrZapEvent)) {
             zaps = zaps.minus(zapRequestOrZapEvent)
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(zapRequestOrZapEvent)) {
             zaps = zaps.filter { it.value != zapRequestOrZapEvent }
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
@@ -256,7 +253,7 @@ class User(
         val privateChatroom = getOrCreatePrivateChatroom(room)
         if (msg !in privateChatroom.roomMessages) {
             privateChatroom.addMessageSync(msg)
-            liveSet?.messages?.invalidateData()
+            flowSet?.messages?.invalidateData()
         }
     }
 
@@ -267,7 +264,7 @@ class User(
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg !in privateChatroom.roomMessages) {
             privateChatroom.addMessageSync(msg)
-            liveSet?.messages?.invalidateData()
+            flowSet?.messages?.invalidateData()
         }
     }
 
@@ -284,7 +281,7 @@ class User(
         val privateChatroom = getOrCreatePrivateChatroom(user)
         if (msg in privateChatroom.roomMessages) {
             privateChatroom.removeMessageSync(msg)
-            liveSet?.messages?.invalidateData()
+            flowSet?.messages?.invalidateData()
         }
     }
 
@@ -296,7 +293,7 @@ class User(
         val privateChatroom = getOrCreatePrivateChatroom(room)
         if (msg in privateChatroom.roomMessages) {
             privateChatroom.removeMessageSync(msg)
-            liveSet?.messages?.invalidateData()
+            flowSet?.messages?.invalidateData()
         }
     }
 
@@ -314,7 +311,7 @@ class User(
             here.counter++
         }
 
-        liveSet?.relayInfo?.invalidateData()
+        flowSet?.relayInfo?.invalidateData()
     }
 
     fun updateUserInfo(
@@ -334,7 +331,6 @@ class User(
         }
 
         flowSet?.metadata?.invalidateData()
-        liveSet?.metadata?.invalidateData()
     }
 
     fun isFollowing(user: User): Boolean = latestContactList?.isTaggedUser(user.pubkeyHex) ?: false
@@ -398,35 +394,7 @@ class User(
 
     fun anyNameStartsWith(username: String): Boolean = info?.anyNameStartsWith(username) ?: false
 
-    var liveSet: UserLiveSet? = null
     var flowSet: UserFlowSet? = null
-
-    fun live(): UserLiveSet {
-        if (liveSet == null) {
-            createOrDestroyLiveSync(true)
-        }
-        return liveSet!!
-    }
-
-    fun clearLive() {
-        if (liveSet != null && liveSet?.isInUse() == false) {
-            createOrDestroyLiveSync(false)
-        }
-    }
-
-    @Synchronized
-    fun createOrDestroyLiveSync(create: Boolean) {
-        if (create) {
-            if (liveSet == null) {
-                liveSet = UserLiveSet(this)
-            }
-        } else {
-            if (liveSet != null && liveSet?.isInUse() == false) {
-                liveSet?.destroy()
-                liveSet = null
-            }
-        }
-    }
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {
@@ -464,43 +432,21 @@ class UserFlowSet(
     val metadata = UserBundledRefresherFlow(u)
     val follows = UserBundledRefresherFlow(u)
     val relays = UserBundledRefresherFlow(u)
-
-    fun isInUse(): Boolean =
-        metadata.stateFlow.subscriptionCount.value > 0 ||
-            relays.stateFlow.subscriptionCount.value > 0 ||
-            follows.stateFlow.subscriptionCount.value > 0
-
-    fun destroy() {
-        metadata.destroy()
-        relays.destroy()
-        follows.destroy()
-    }
-}
-
-@Stable
-class UserLiveSet(
-    u: User,
-) {
-    val metadata = UserBundledRefresherLiveData(u)
-
-    // UI Observers line up here.
-    val follows = UserBundledRefresherLiveData(u)
-    val followers = UserBundledRefresherLiveData(u)
-    val reports = UserBundledRefresherLiveData(u)
-    val messages = UserBundledRefresherLiveData(u)
-    val relays = UserBundledRefresherLiveData(u)
-    val relayInfo = UserBundledRefresherLiveData(u)
-    val zaps = UserBundledRefresherLiveData(u)
-    val bookmarks = UserBundledRefresherLiveData(u)
-    val statuses = UserBundledRefresherLiveData(u)
+    val followers = UserBundledRefresherFlow(u)
+    val reports = UserBundledRefresherFlow(u)
+    val messages = UserBundledRefresherFlow(u)
+    val relayInfo = UserBundledRefresherFlow(u)
+    val zaps = UserBundledRefresherFlow(u)
+    val bookmarks = UserBundledRefresherFlow(u)
+    val statuses = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
         metadata.hasObservers() ||
+            relays.hasObservers() ||
             follows.hasObservers() ||
             followers.hasObservers() ||
             reports.hasObservers() ||
             messages.hasObservers() ||
-            relays.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
             bookmarks.hasObservers() ||
@@ -508,11 +454,11 @@ class UserLiveSet(
 
     fun destroy() {
         metadata.destroy()
+        relays.destroy()
         follows.destroy()
         followers.destroy()
         reports.destroy()
         messages.destroy()
-        relays.destroy()
         relayInfo.destroy()
         zaps.destroy()
         bookmarks.destroy()
@@ -526,27 +472,6 @@ data class RelayInfo(
     var lastEvent: Long,
     var counter: Long,
 )
-
-class UserBundledRefresherLiveData(
-    val user: User,
-) : LiveData<UserState>(UserState(user)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
-
-    fun destroy() {
-        bundler.cancel()
-    }
-
-    fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            postValue(UserState(user))
-        }
-    }
-}
 
 @Stable
 class UserBundledRefresherFlow(
@@ -569,8 +494,11 @@ class UserBundledRefresherFlow(
             stateFlow.emit(UserState(user))
         }
     }
+
+    fun hasObservers() = stateFlow.subscriptionCount.value > 0
 }
 
-@Immutable class UserState(
+@Immutable
+class UserState(
     val user: User,
 )

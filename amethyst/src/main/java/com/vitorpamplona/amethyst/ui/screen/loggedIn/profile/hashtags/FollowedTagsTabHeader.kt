@@ -22,23 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserTagFollows
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun FollowedTagsTabHeader(baseUser: User) {
-    val userState by baseUser.live().follows.observeAsState()
-
-    val usertags by remember(baseUser) {
-        derivedStateOf {
-            userState?.user?.latestContactList?.countFollowTags() ?: 0
-        }
-    }
+    val usertags by observeUserTagFollows(baseUser)
 
     Text(text = "$usertags ${stringRes(R.string.followed_tags)}")
 }

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import android.content.ContentProviderOperation.newCall
 import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation

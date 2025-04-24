@@ -30,9 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
@@ -279,21 +278,7 @@ private fun RelayOptionsAction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userStateRelayInfo by accountViewModel.account
-        .userProfile()
-        .live()
-        .relayInfo
-        .observeAsState()
-    val isCurrentlyOnTheUsersList by
-        remember(userStateRelayInfo) {
-            derivedStateOf {
-                userStateRelayInfo
-                    ?.user
-                    ?.latestContactList
-                    ?.relays()
-                    ?.none { it.key == relay } == true
-            }
-        }
+    val isCurrentlyOnTheUsersList by observeUserRelayIntoList(accountViewModel.userProfile(), relay)
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
-import coil3.util.CoilUtils.result
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision

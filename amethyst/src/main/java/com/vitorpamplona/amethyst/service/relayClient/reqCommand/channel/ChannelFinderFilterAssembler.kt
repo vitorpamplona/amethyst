@@ -31,8 +31,6 @@ import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import kotlin.collections.filter
-import kotlin.collections.mapNotNull
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChannelFinderQueryState(

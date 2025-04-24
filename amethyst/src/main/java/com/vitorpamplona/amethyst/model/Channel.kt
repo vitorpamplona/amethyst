@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.commons.data.LargeCache
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
@@ -43,6 +41,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
 class PublicChatChannel(
@@ -93,7 +92,7 @@ class PublicChatChannel(
         return info.picture ?: super.profilePicture()
     }
 
-    override fun anyNameStartsWith(prefix: String): Boolean = listOfNotNull(info.name, info.about).filter { it.contains(prefix, true) }.isNotEmpty()
+    override fun anyNameStartsWith(prefix: String): Boolean = listOfNotNull(info.name, info.about).any { it.contains(prefix, true) }
 }
 
 @Stable
@@ -182,7 +181,7 @@ abstract class Channel(
         this.creator = creator
         this.updatedMetadataAt = updatedAt
 
-        live.invalidateData()
+        flow.invalidateData()
     }
 
     @Synchronized
@@ -227,7 +226,7 @@ abstract class Channel(
     abstract fun anyNameStartsWith(prefix: String): Boolean
 
     // Observers line up here.
-    val live: ChannelLiveData = ChannelLiveData(this)
+    val flow: ChannelFlow = ChannelFlow(this)
 
     fun pruneOldMessages(): Set<Note> {
         val important =
@@ -257,22 +256,24 @@ abstract class Channel(
     }
 }
 
-class ChannelLiveData(
+class ChannelFlow(
     val channel: Channel,
-) : LiveData<ChannelState>(ChannelState(channel)) {
+) {
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(300, Dispatchers.IO)
+    val stateFlow = MutableStateFlow(ChannelState(channel))
 
     fun invalidateData() {
-        checkNotInMainThread()
-
         bundler.invalidate {
-            checkNotInMainThread()
-            if (hasActiveObservers()) {
-                postValue(ChannelState(channel))
-            }
+            stateFlow.emit(ChannelState(channel))
         }
     }
+
+    fun destroy() {
+        bundler.cancel()
+    }
+
+    fun hasObservers() = stateFlow.subscriptionCount.value > 0
 }
 
 class ChannelState(

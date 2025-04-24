@@ -223,11 +223,9 @@ class UpdateZapAmountViewModel : ViewModel() {
 
     fun updateNIP47(uri: String) {
         val contact = Nip47WalletConnect.parse(uri)
-        if (contact != null) {
-            walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
-            walletConnectRelay = TextFieldValue(contact.relayUri ?: "")
-            walletConnectSecret = TextFieldValue(contact.secret ?: "")
-        }
+        walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
+        walletConnectRelay = TextFieldValue(contact.relayUri)
+        walletConnectSecret = TextFieldValue(contact.secret ?: "")
     }
 }
 

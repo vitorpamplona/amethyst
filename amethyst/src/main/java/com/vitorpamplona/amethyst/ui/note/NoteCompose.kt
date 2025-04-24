@@ -38,7 +38,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -50,9 +49,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.logTime
@@ -60,7 +56,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -137,7 +133,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -1195,24 +1190,16 @@ private fun ChannelNotePicture(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
 ) {
-    ChannelFinderFilterAssemblerSubscription(baseChannel, Amethyst.instance.sources.channelFinder)
+    val model by observeChannelPicture(baseChannel)
 
-    val model by
-        baseChannel.live
-            .map { it.channel.profilePicture() }
-            .distinctUntilChanged()
-            .observeAsState()
-
-    Box(Size30Modifier) {
-        RobohashFallbackAsyncImage(
-            robot = baseChannel.idHex,
-            model = model,
-            contentDescription = stringRes(R.string.group_picture),
-            modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
-            loadProfilePicture = loadProfilePicture,
-            loadRobohash = loadRobohash,
-        )
-    }
+    RobohashFallbackAsyncImage(
+        robot = baseChannel.idHex,
+        model = model,
+        contentDescription = stringRes(R.string.group_picture),
+        modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
+        loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
+    )
 }
 
 @Composable

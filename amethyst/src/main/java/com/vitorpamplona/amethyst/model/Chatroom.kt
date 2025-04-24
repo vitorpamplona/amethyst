@@ -87,7 +87,7 @@ class Chatroom {
             } else {
                 // Old messages, keep the last one.
                 sorted.take(1).toSet()
-            } + sorted.filter { it.liveSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent }
+            } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent }
 
         val toRemove = roomMessages.minus(toKeep)
         roomMessages = toKeep

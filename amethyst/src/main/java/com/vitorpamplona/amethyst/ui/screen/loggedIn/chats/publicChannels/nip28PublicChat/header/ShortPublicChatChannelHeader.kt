@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -129,9 +130,18 @@ fun ShortChannelActionOptions(
         }
     }
 
-    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
-        if (!isFollowing) {
-            JoinChatButton(channel, accountViewModel, nav)
-        }
+    JoinChatButtonIfNotAlreadyJoined(channel, accountViewModel, nav)
+}
+
+@Composable
+fun JoinChatButtonIfNotAlreadyJoined(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.userProfile(), channel)
+
+    if (!isFollowing) {
+        JoinChatButton(channel, accountViewModel, nav)
     }
 }

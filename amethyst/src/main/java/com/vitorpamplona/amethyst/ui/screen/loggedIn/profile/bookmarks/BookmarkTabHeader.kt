@@ -22,33 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarkCount
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun BookmarkTabHeader(baseUser: User) {
-    val userState by baseUser.live().bookmarks.observeAsState()
-
-    var userBookmarks by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newBookmarks = userState?.user?.latestBookmarkList?.countBookmarks() ?: 0
-
-            if (newBookmarks != userBookmarks) {
-                userBookmarks = newBookmarks
-            }
-        }
-    }
+    val userBookmarks by observeUserBookmarkCount(baseUser)
 
     Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
 }

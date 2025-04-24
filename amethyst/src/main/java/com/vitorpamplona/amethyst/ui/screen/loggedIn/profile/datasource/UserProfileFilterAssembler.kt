@@ -52,7 +52,6 @@ import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
-import kotlin.collections.flatten
 
 // This allows multiple screen to be listening to tags, even the same tag
 class UserProfileQueryState(

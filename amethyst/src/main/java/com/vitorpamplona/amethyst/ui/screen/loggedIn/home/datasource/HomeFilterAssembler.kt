@@ -52,7 +52,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlin.collections.flatten
 
 // This allows multiple screen to be listening to tags, even the same tag
 class HomeQueryState(

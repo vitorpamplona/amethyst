@@ -212,9 +212,7 @@ fun LongCommunityHeader(
 
         if (participants != null) {
             accountViewModel.loadParticipants(participants) { newParticipantUsers ->
-                if (
-                    newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
-                ) {
+                if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
                     participantUsers = newParticipantUsers
                 }
             }

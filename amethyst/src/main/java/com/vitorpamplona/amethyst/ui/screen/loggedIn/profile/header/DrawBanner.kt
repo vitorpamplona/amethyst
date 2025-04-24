@@ -53,10 +53,19 @@ fun DrawBanner(
 ) {
     val banner by observeUserBanner(baseUser)
 
-    val clipboardManager = LocalClipboardManager.current
-    var zoomImageDialogOpen by remember { mutableStateOf(false) }
+    DrawBanner(banner, accountViewModel)
+}
 
-    if (banner.isNotBlank()) {
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DrawBanner(
+    banner: String?,
+    accountViewModel: AccountViewModel,
+) {
+    if (!banner.isNullOrBlank()) {
+        val clipboardManager = LocalClipboardManager.current
+        var zoomImageDialogOpen by remember { mutableStateOf(false) }
+
         AsyncImage(
             model = banner,
             contentDescription = stringRes(id = R.string.profile_image),

@@ -30,12 +30,10 @@ import com.vitorpamplona.amethyst.service.relayClient.searchCommand.MutableQuery
 fun <T> KeyDataSourceSubscription(
     state: T,
     dataSource: QueryBasedSubscriptionOrchestrator<T>,
-) {
-    DisposableEffect(state) {
-        dataSource.subscribe(state)
-        onDispose {
-            dataSource.unsubscribe(state)
-        }
+) = DisposableEffect(state) {
+    dataSource.subscribe(state)
+    onDispose {
+        dataSource.unsubscribe(state)
     }
 }
 
@@ -43,11 +41,9 @@ fun <T> KeyDataSourceSubscription(
 fun <T : MutableQueryState> KeyDataSourceSubscription(
     state: T,
     dataSource: MutableQueryBasedSubscriptionOrchestrator<T>,
-) {
-    DisposableEffect(state) {
-        dataSource.subscribe(state)
-        onDispose {
-            dataSource.unsubscribe(state)
-        }
+) = DisposableEffect(state) {
+    dataSource.subscribe(state)
+    onDispose {
+        dataSource.unsubscribe(state)
     }
 }

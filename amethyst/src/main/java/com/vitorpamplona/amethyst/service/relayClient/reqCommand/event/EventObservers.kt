@@ -22,22 +22,30 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.note.combineWith
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.sample
 
 @Composable
-fun observeNote(note: Note): State<NoteState?> {
+fun observeNote(note: Note): State<NoteState> {
     // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().metadata.observeAsState()
+    return note
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -46,11 +54,15 @@ fun <T : Event> observeNoteEvent(note: Note): State<T?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .metadata
-        .map { it.note.event as? T? }
-        .observeAsState(note.event as? T?)
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.note.event as? T? }
+        }
+
+    return flow.collectAsStateWithLifecycle(note.event as? T?)
 }
 
 @Composable
@@ -61,13 +73,18 @@ fun <T> observeNoteAndMap(
     // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(note)
 
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { map(it.note) }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .metadata
-        .map { map(it.note) }
-        .distinctUntilChanged()
-        .observeAsState(map(note))
+    return flow.collectAsStateWithLifecycle(map(note))
 }
 
 @Composable
@@ -79,14 +96,18 @@ fun <T, U> observeNoteEventAndMap(
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .metadata
-        .map { (it.note.event as? T)?.let { map(it) } }
-        .distinctUntilChanged()
-        .observeAsState(
-            (note.event as? T)?.let { map(it) },
-        )
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { (it.note.event as? T)?.let { map(it) } }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return flow.collectAsStateWithLifecycle((note.event as? T)?.let { map(it) })
 }
 
 @Composable
@@ -95,12 +116,16 @@ fun observeNoteHasEvent(note: Note): State<Boolean> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .metadata
-        .map { it.note.event != null }
-        .distinctUntilChanged()
-        .observeAsState(note.event != null)
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.note.event != null }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(note.event != null)
 }
 
 @Composable
@@ -109,7 +134,10 @@ fun observeNoteReplies(note: Note): State<NoteState?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().replies.observeAsState()
+    return note
+        .flow()
+        .replies.stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -118,12 +146,17 @@ fun observeNoteReplyCount(note: Note): State<Int> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .replies
-        .map { it.note.reactions.size }
-        .distinctUntilChanged()
-        .observeAsState(note.reactions.size)
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .reactions.stateFlow
+                .mapLatest { it.note.replies.size }
+                .sample(1000)
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(note.replies.size)
 }
 
 @Composable
@@ -132,7 +165,10 @@ fun observeNoteReactions(note: Note): State<NoteState?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().reactions.observeAsState()
+    return note
+        .flow()
+        .reactions.stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -141,15 +177,19 @@ fun observeNoteReactionCount(note: Note): State<Int> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .reactions
-        .map {
-            var total = 0
-            it.note.reactions.forEach { total += it.value.size }
-            total
-        }.distinctUntilChanged()
-        .observeAsState(0)
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .reactions.stateFlow
+                .mapLatest { it.note.countReactions() }
+                .sample(1000)
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return flow.collectAsStateWithLifecycle(note.countReactions())
 }
 
 @Composable
@@ -158,7 +198,10 @@ fun observeNoteZaps(note: Note): State<NoteState?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().zaps.observeAsState()
+    return note
+        .flow()
+        .zaps.stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -167,7 +210,10 @@ fun observeNoteReposts(note: Note): State<NoteState?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().boosts.observeAsState()
+    return note
+        .flow()
+        .boosts.stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -179,12 +225,17 @@ fun observeNoteRepostsBy(
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .boosts
-        .map { it.note.isBoostedBy(user) }
-        .distinctUntilChanged()
-        .observeAsState(note.isBoostedBy(user))
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .boosts.stateFlow
+                .mapLatest { it.note.isBoostedBy(user) }
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(note.isBoostedBy(user))
 }
 
 @Composable
@@ -193,12 +244,17 @@ fun observeNoteRepostCount(note: Note): State<Int> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .boosts
-        .map { it.note.boosts.size }
-        .distinctUntilChanged()
-        .observeAsState(note.boosts.size)
+    val flow =
+        remember(note) {
+            note
+                .flow()
+                .boosts.stateFlow
+                .sample(1000)
+                .mapLatest { note.boosts.size }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(note.boosts.size)
 }
 
 @Composable
@@ -207,17 +263,18 @@ fun observeNoteReferences(note: Note): State<Boolean> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note
-        .live()
-        .zaps
-        .combineWith(note.live().boosts, note.live().reactions) { zapState, boostState, reactionState ->
-            zapState?.note?.zaps?.isNotEmpty() == true ||
-                boostState?.note?.boosts?.isNotEmpty() == true ||
-                reactionState?.note?.reactions?.isNotEmpty() == true
-        }.distinctUntilChanged()
-        .observeAsState(
-            note.zaps.isNotEmpty() || note.boosts.isNotEmpty() || note.reactions.isNotEmpty(),
-        )
+    val flow =
+        remember(note) {
+            combine(
+                note.flow().zaps.stateFlow,
+                note.flow().boosts.stateFlow,
+                note.flow().reactions.stateFlow,
+            ) { zapState, boostState, reactionState ->
+                zapState.note.hasZapsBoostsOrReactions()
+            }.distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(note.hasZapsBoostsOrReactions())
 }
 
 @Composable
@@ -226,7 +283,11 @@ fun observeNoteOts(note: Note): State<NoteState?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().ots.observeAsState()
+    return note
+        .flow()
+        .ots
+        .stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -235,5 +296,9 @@ fun observeNoteEdits(note: Note): State<NoteState?> {
     EventFinderFilterAssemblerSubscription(note)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return note.live().edits.observeAsState()
+    return note
+        .flow()
+        .edits
+        .stateFlow
+        .collectAsStateWithLifecycle()
 }

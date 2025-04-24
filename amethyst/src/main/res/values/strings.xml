@@ -77,6 +77,9 @@
     <string name="error_parsing_error_message">Error parsing error message</string>
     <string name="following">" Following"</string>
     <string name="followers">" Followers"</string>
+    <string name="number_following">"%1$s Following"</string>
+    <string name="number_followers">"%1$s Followers"</string>
+
     <string name="profile">Profile</string>
     <string name="security_filters">Security Filters</string>
     <string name="log_out">Logout</string>
@@ -163,6 +166,7 @@
     <string name="gallery">Gallery</string>
     <string name="follows">"Follows"</string>
     <string name="reports">"Reports"</string>
+    <string name="number_reports">"%1$s Reports"</string>
     <string name="more_options">More Options</string>
     <string name="relays">" Relays"</string>
     <string name="website">Website</string>

@@ -72,8 +72,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Notes: " +
-            LocalCache.notes.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.notes.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.notes.filter { _, it -> it.event != null }.size +
@@ -83,8 +81,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Addressables: " +
-            LocalCache.addressables.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.addressables.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.addressables.filter { _, it -> it.event != null }.size +
@@ -94,8 +90,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Users: " +
-            LocalCache.users.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.users.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
@@ -169,3 +163,21 @@ inline fun <T> logTime(
     } else {
         block()
     }
+
+inline fun debug(
+    tag: String,
+    debugMessage: String,
+) {
+    if (isDebug) {
+        Log.d(tag, debugMessage)
+    }
+}
+
+inline fun debug(
+    tag: String,
+    debugMessage: () -> String,
+) {
+    if (isDebug) {
+        Log.d(tag, debugMessage())
+    }
+}

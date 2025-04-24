@@ -22,22 +22,9 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Card
-import com.vitorpamplona.quartz.nip01Core.core.Event
 
 val DefaultFeedOrder: Comparator<Note> =
-    compareByDescending<Note>
-        {
-            val noteEvent = it.event
-            if (noteEvent == null) {
-                null
-            } else {
-                if (noteEvent is Event) {
-                    noteEvent.createdAt
-                } else {
-                    null
-                }
-            }
-        }.thenBy { it.idHex }
+    compareByDescending<Note> { it.event?.createdAt }.thenBy { it.idHex }
 
 val DefaultFeedOrderCard: Comparator<Card> =
     compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }

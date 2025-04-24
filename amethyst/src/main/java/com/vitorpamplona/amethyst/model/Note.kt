@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
 import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
@@ -228,29 +227,36 @@ open class Note(
             this.author = author
             this.replyTo = replyTo
 
-            liveSet?.metadata?.invalidateData()
             flowSet?.metadata?.invalidateData()
         }
+    }
+
+    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty()
+
+    fun countReactions(): Int {
+        var total = 0
+        reactions.forEach { total += it.value.size }
+        return total
     }
 
     fun addReply(note: Note) {
         if (note !in replies) {
             replies = replies + note
-            liveSet?.replies?.invalidateData()
+            flowSet?.replies?.invalidateData()
         }
     }
 
     fun removeReply(note: Note) {
         if (note in replies) {
             replies = replies - note
-            liveSet?.replies?.invalidateData()
+            flowSet?.replies?.invalidateData()
         }
     }
 
     fun removeBoost(note: Note) {
         if (note in boosts) {
             boosts = boosts - note
-            liveSet?.boosts?.invalidateData()
+            flowSet?.boosts?.invalidateData()
         }
     }
 
@@ -281,13 +287,11 @@ open class Note(
         relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         lastReactionsDownloadTime = emptyMap()
 
-        if (repliesChanged) liveSet?.replies?.invalidateData()
-        if (reactionsChanged) liveSet?.reactions?.invalidateData()
-        if (boostsChanged) liveSet?.boosts?.invalidateData()
-        if (reportsChanged) {
-            flowSet?.reports?.invalidateData()
-        }
-        if (zapsChanged) liveSet?.zaps?.invalidateData()
+        if (repliesChanged) flowSet?.replies?.invalidateData()
+        if (reactionsChanged) flowSet?.reactions?.invalidateData()
+        if (boostsChanged) flowSet?.boosts?.invalidateData()
+        if (reportsChanged) flowSet?.reports?.invalidateData()
+        if (zapsChanged) flowSet?.zaps?.invalidateData()
 
         return toBeRemoved
     }
@@ -306,7 +310,7 @@ open class Note(
                         reactions = reactions + Pair(reaction, newList)
                     }
 
-                    liveSet?.reactions?.invalidateData()
+                    flowSet?.reactions?.invalidateData()
                 }
             }
         }
@@ -327,28 +331,28 @@ open class Note(
         if (zaps[note] != null) {
             zaps = zaps.minus(note)
             updateZapTotal()
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         } else if (zaps.containsValue(note)) {
             zaps = zaps.filterValues { it != note }
             updateZapTotal()
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
     fun removeZapPayment(note: Note) {
         if (zapPayments.containsKey(note)) {
             zapPayments = zapPayments.minus(note)
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         } else if (zapPayments.containsValue(note)) {
             zapPayments = zapPayments.filterValues { it != note }
-            liveSet?.zaps?.invalidateData()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
     fun addBoost(note: Note) {
         if (note !in boosts) {
             boosts = boosts + note
-            liveSet?.boosts?.invalidateData()
+            flowSet?.boosts?.invalidateData()
         }
     }
 
@@ -375,7 +379,7 @@ open class Note(
             val inserted = innerAddZap(zapRequest, zap)
             if (inserted) {
                 updateZapTotal()
-                liveSet?.zaps?.invalidateData()
+                flowSet?.zaps?.invalidateData()
             }
         }
     }
@@ -401,7 +405,7 @@ open class Note(
         if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {
-                liveSet?.zaps?.invalidateData()
+                flowSet?.zaps?.invalidateData()
             }
         }
     }
@@ -413,10 +417,10 @@ open class Note(
         val listOfAuthors = reactions[reaction]
         if (listOfAuthors == null) {
             reactions = reactions + Pair(reaction, listOf(note))
-            liveSet?.reactions?.invalidateData()
+            flowSet?.reactions?.invalidateData()
         } else if (!listOfAuthors.contains(note)) {
             reactions = reactions + Pair(reaction, listOfAuthors + note)
-            liveSet?.reactions?.invalidateData()
+            flowSet?.reactions?.invalidateData()
         }
     }
 
@@ -866,35 +870,7 @@ open class Note(
         return false
     }
 
-    var liveSet: NoteLiveSet? = null
     var flowSet: NoteFlowSet? = null
-
-    @Synchronized
-    fun createOrDestroyLiveSync(create: Boolean) {
-        if (create) {
-            if (liveSet == null) {
-                liveSet = NoteLiveSet(this)
-            }
-        } else {
-            if (liveSet != null && liveSet?.isInUse() == false) {
-                liveSet?.destroy()
-                liveSet = null
-            }
-        }
-    }
-
-    fun live(): NoteLiveSet {
-        if (liveSet == null) {
-            createOrDestroyLiveSync(true)
-        }
-        return liveSet!!
-    }
-
-    fun clearLive() {
-        if (liveSet != null && liveSet?.isInUse() == false) {
-            createOrDestroyLiveSync(false)
-        }
-    }
 
     @Synchronized
     fun createOrDestroyFlowSync(create: Boolean) {
@@ -970,6 +946,12 @@ class NoteFlowSet(
     val metadata = NoteBundledRefresherFlow(u)
     val reports = NoteBundledRefresherFlow(u)
     val relays = NoteBundledRefresherFlow(u)
+    val reactions = NoteBundledRefresherFlow(u)
+    val boosts = NoteBundledRefresherFlow(u)
+    val replies = NoteBundledRefresherFlow(u)
+    val zaps = NoteBundledRefresherFlow(u)
+    val ots = NoteBundledRefresherFlow(u)
+    val edits = NoteBundledRefresherFlow(u)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun author() =
@@ -981,32 +963,10 @@ class NoteFlowSet(
         }
 
     fun isInUse(): Boolean =
-        metadata.stateFlow.subscriptionCount.value > 0 ||
-            reports.stateFlow.subscriptionCount.value > 0 ||
-            relays.stateFlow.subscriptionCount.value > 0
-
-    fun destroy() {
-        metadata.destroy()
-        reports.destroy()
-        relays.destroy()
-    }
-}
-
-@Stable
-class NoteLiveSet(
-    u: Note,
-) {
-    // Observers line up here.
-    val metadata = NoteBundledRefresherLiveData(u)
-    val reactions = NoteBundledRefresherLiveData(u)
-    val boosts = NoteBundledRefresherLiveData(u)
-    val replies = NoteBundledRefresherLiveData(u)
-    val zaps = NoteBundledRefresherLiveData(u)
-    val ots = NoteBundledRefresherLiveData(u)
-    val edits = NoteBundledRefresherLiveData(u)
-
-    fun isInUse(): Boolean =
         metadata.hasObservers() ||
+            reports.hasObservers() ||
+            relays.hasObservers() ||
+            metadata.hasObservers() ||
             reactions.hasObservers() ||
             boosts.hasObservers() ||
             replies.hasObservers() ||
@@ -1016,6 +976,8 @@ class NoteLiveSet(
 
     fun destroy() {
         metadata.destroy()
+        reports.destroy()
+        relays.destroy()
         reactions.destroy()
         boosts.destroy()
         replies.destroy()
@@ -1039,38 +1001,15 @@ class NoteBundledRefresherFlow(
     }
 
     fun invalidateData() {
-        checkNotInMainThread()
-
         bundler.invalidate {
-            checkNotInMainThread()
-
             stateFlow.emit(NoteState(note))
         }
     }
+
+    fun hasObservers() = stateFlow.subscriptionCount.value > 0
 }
 
-@Stable
-class NoteBundledRefresherLiveData(
-    val note: Note,
-) : LiveData<NoteState>(NoteState(note)) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
-
-    fun destroy() {
-        bundler.cancel()
-    }
-
-    fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            postValue(NoteState(note))
-        }
-    }
-}
-
-@Immutable class NoteState(
+@Immutable
+class NoteState(
     val note: Note,
 )

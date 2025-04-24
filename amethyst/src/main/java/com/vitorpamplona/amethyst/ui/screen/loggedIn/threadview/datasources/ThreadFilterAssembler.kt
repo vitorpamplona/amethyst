@@ -28,8 +28,6 @@ import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import kotlin.collections.flatten
-import kotlin.collections.ifEmpty
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ThreadQueryState(

@@ -67,7 +67,6 @@ import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.collections.flatten
 
 @Stable
 class SearchQueryState(

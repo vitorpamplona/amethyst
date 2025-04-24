@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
-import androidx.lifecycle.AtomicReference
+import java.util.concurrent.atomic.AtomicReference
 
 class ListWithUniqueSetCache<T, U>(
     val key: (T) -> U,

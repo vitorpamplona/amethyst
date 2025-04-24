@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand
 
-import android.util.Log
-import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.datasources.SubscriptionOrchestrator
 import kotlinx.coroutines.CoroutineScope
@@ -64,10 +62,6 @@ abstract class MutableQueryBasedSubscriptionOrchestrator<T : MutableQueryState>(
         }
 
         invalidateFilters()
-
-        if (isDebug) {
-            Log.d(this::class.simpleName, "Watch $query (${queries.size} queries)")
-        }
     }
 
     // This is called by main. Keep it really fast.
@@ -81,10 +75,6 @@ abstract class MutableQueryBasedSubscriptionOrchestrator<T : MutableQueryState>(
 
         if (queries.isEmpty()) {
             stop()
-        }
-
-        if (isDebug) {
-            Log.d(this::class.simpleName, "Unwatch $query (${queries.size} queries)")
         }
     }
 

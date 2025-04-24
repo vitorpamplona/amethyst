@@ -23,10 +23,6 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fonfon.kgeohash.GeoHash
 import com.vitorpamplona.amethyst.Amethyst
@@ -192,6 +188,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -584,7 +581,6 @@ class Account(
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowList> =
         userProfile().flow().follows.stateFlow.transformLatest {
-            checkNotInMainThread()
             emit(buildFollowLists(it.user.latestContactList))
         }
 
@@ -1090,24 +1086,25 @@ class Account(
             )
     }
 
-    val liveHiddenUsers = flowHiddenUsers.asLiveData()
-
-    val decryptBookmarks: LiveData<BookmarkListEvent?> by lazy {
-        userProfile().live().bookmarks.switchMap { userState ->
-            liveData(Dispatchers.IO) {
+    val decryptBookmarks: Flow<BookmarkListEvent?> by lazy {
+        userProfile()
+            .flow()
+            .bookmarks.stateFlow
+            .map { userState ->
                 if (userState.user.latestBookmarkList == null) {
-                    emit(null)
+                    null
                 } else {
-                    emit(
+                    val result =
                         tryAndWait { continuation ->
                             userState.user.latestBookmarkList?.privateTags(signer) {
                                 continuation.resume(userState.user.latestBookmarkList)
                             }
-                        },
-                    )
+                        }
+
+                    result
                 }
-            }
-        }
+            }.debounce(1000)
+            .flowOn(Dispatchers.Default)
     }
 
     class EmojiMedia(

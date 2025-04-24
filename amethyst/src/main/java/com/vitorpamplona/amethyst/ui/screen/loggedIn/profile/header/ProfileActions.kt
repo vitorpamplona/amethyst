@@ -25,10 +25,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ShowUserButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.WatchIsHiddenUser
 
 @Composable
 fun ProfileActions(
@@ -43,11 +43,11 @@ fun ProfileActions(
         EditButton(nav)
     }
 
-    WatchIsHiddenUser(baseUser, accountViewModel) { isHidden ->
-        if (isHidden) {
-            ShowUserButton { accountViewModel.showUser(baseUser.pubkeyHex) }
-        } else {
-            DisplayFollowUnfollowButton(baseUser, accountViewModel)
-        }
+    val isHidden by observeAccountIsHiddenUser(accountViewModel.account, baseUser)
+
+    if (isHidden) {
+        ShowUserButton { accountViewModel.showUser(baseUser.pubkeyHex) }
+    } else {
+        DisplayFollowUnfollowButton(baseUser, accountViewModel)
     }
 }

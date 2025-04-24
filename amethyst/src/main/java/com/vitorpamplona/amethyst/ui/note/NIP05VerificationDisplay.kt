@@ -54,11 +54,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNip05
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
@@ -136,23 +136,21 @@ fun ObserveDisplayNip05Status(
     nav: INav,
 ) {
     val nip05 by observeUserNip05(baseUser)
+    val statuses by observeUserStatuses(baseUser)
 
-    LoadStatuses(baseUser, accountViewModel) { statuses ->
-        CrossfadeIfEnabled(
-            targetState = nip05,
-            modifier = columnModifier,
-            label = "ObserveDisplayNip05StatusCrossfade",
-            accountViewModel = accountViewModel,
-        ) {
-            VerifyAndDisplayNIP05OrStatusLine(
-                it,
-                statuses,
-                baseUser,
-                columnModifier,
-                accountViewModel,
-                nav,
-            )
-        }
+    CrossfadeIfEnabled(
+        targetState = nip05,
+        modifier = columnModifier,
+        accountViewModel = accountViewModel,
+    ) {
+        VerifyAndDisplayNIP05OrStatusLine(
+            it,
+            statuses,
+            baseUser,
+            columnModifier,
+            accountViewModel,
+            nav,
+        )
     }
 }
 

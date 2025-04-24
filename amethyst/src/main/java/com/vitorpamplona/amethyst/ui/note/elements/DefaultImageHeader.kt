@@ -50,7 +50,7 @@ fun DefaultImageHeader(
 ) {
     WatchAuthor(baseNote = note) {
         Box {
-            BannerImage(it)
+            BannerImage(it, Modifier.fillMaxWidth().heightIn(max = 200.dp))
 
             Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
                 BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
@@ -62,11 +62,19 @@ fun DefaultImageHeader(
 @Composable
 fun BannerImage(
     author: User,
-    imageModifier: Modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+    modifier: Modifier = Modifier,
 ) {
     val banner by observeUserBanner(author)
 
-    if (banner.isNotBlank()) {
+    BannerImage(banner, modifier)
+}
+
+@Composable
+fun BannerImage(
+    banner: String?,
+    modifier: Modifier = Modifier,
+) {
+    if (!banner.isNullOrBlank()) {
         AsyncImage(
             model = banner,
             contentDescription =
@@ -75,7 +83,7 @@ fun BannerImage(
                     banner,
                 ),
             contentScale = ContentScale.Crop,
-            modifier = imageModifier,
+            modifier = modifier,
             placeholder = painterResource(R.drawable.profile_banner),
         )
     } else {
@@ -83,7 +91,7 @@ fun BannerImage(
             painter = painterResource(R.drawable.profile_banner),
             contentDescription = stringRes(R.string.profile_banner),
             contentScale = ContentScale.Crop,
-            modifier = imageModifier,
+            modifier = modifier,
         )
     }
 }

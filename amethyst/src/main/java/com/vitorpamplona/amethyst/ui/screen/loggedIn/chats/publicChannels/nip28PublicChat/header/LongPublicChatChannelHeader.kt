@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -41,12 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -67,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 
 @Composable
 fun LongPublicChatChannelHeader(
@@ -181,44 +178,42 @@ fun LongChannelActionOptions(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isMe by
-        remember(accountViewModel) {
-            derivedStateOf { channel.creator == accountViewModel.account.userProfile() }
-        }
-
     OpenChatButton(channel, accountViewModel, nav)
 
     LinkChatButton(channel, accountViewModel, nav)
 
     ShareChatButton(channel, accountViewModel, nav)
 
+    EditButtonIfIamCreator(channel, accountViewModel, nav)
+
+    LeaveButtonIfFollowing(channel, accountViewModel, nav)
+}
+
+@Composable
+fun EditButtonIfIamCreator(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val isMe by
+        remember(accountViewModel) {
+            derivedStateOf { channel.creator == accountViewModel.account.userProfile() }
+        }
+
     if (isMe) {
         EditButton(channel, accountViewModel, nav)
-    }
-
-    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
-        if (isFollowing) {
-            LeaveChatButton(channel, accountViewModel, nav)
-        }
     }
 }
 
 @Composable
-fun WatchChannelFollows(
+fun LeaveButtonIfFollowing(
     channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
-    content: @Composable (Boolean) -> Unit,
+    nav: INav,
 ) {
-    val isFollowing by
-        accountViewModel
-            .userProfile()
-            .live()
-            .follows
-            .map { it.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false }
-            .distinctUntilChanged()
-            .observeAsState(
-                accountViewModel.userProfile().latestContactList?.isTaggedEvent(channel.idHex) ?: false,
-            )
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.userProfile(), channel)
 
-    content(isFollowing)
+    if (isFollowing) {
+        LeaveChatButton(channel, accountViewModel, nav)
+    }
 }

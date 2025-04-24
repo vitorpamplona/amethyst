@@ -22,12 +22,26 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.sample
+import java.math.BigDecimal
 
 @Composable
 fun observeUser(user: User): State<UserState?> {
@@ -35,7 +49,10 @@ fun observeUser(user: User): State<UserState?> {
     UserFinderFilterAssemblerSubscription(user)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user.live().metadata.observeAsState()
+    return user
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
 }
 
 @Composable
@@ -43,13 +60,17 @@ fun observeUserName(user: User): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user)
 
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.toBestDisplayName() }
+                .distinctUntilChanged()
+        }
+
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .live()
-        .metadata
-        .map { it.user.toBestDisplayName() }
-        .distinctUntilChanged()
-        .observeAsState(user.toBestDisplayName())
+    return flow.collectAsStateWithLifecycle(user.toBestDisplayName())
 }
 
 @Composable
@@ -57,13 +78,17 @@ fun observeUserNip05(user: User): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user)
 
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.info?.nip05 }
+                .distinctUntilChanged()
+        }
+
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .live()
-        .metadata
-        .map { it.user.info?.nip05 }
-        .distinctUntilChanged()
-        .observeAsState(user.info?.nip05)
+    return flow.collectAsStateWithLifecycle(user.info?.nip05)
 }
 
 @Composable
@@ -72,12 +97,16 @@ fun observeUserAboutMe(user: User): State<String> {
     UserFinderFilterAssemblerSubscription(user)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .live()
-        .metadata
-        .map { it.user.info?.about ?: "" }
-        .distinctUntilChanged()
-        .observeAsState(user.info?.about ?: "")
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.info?.about ?: "" }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(user.info?.about ?: "")
 }
 
 @Composable
@@ -86,26 +115,34 @@ fun observeUserInfo(user: User): State<UserMetadata?> {
     UserFinderFilterAssemblerSubscription(user)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .live()
-        .metadata
-        .map { it.user.info }
-        .distinctUntilChanged()
-        .observeAsState(user.info)
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.info }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(user.info)
 }
 
 @Composable
-fun observeUserBanner(user: User): State<String> {
+fun observeUserBanner(user: User): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .live()
-        .metadata
-        .map { it.user.info?.banner ?: "" }
-        .distinctUntilChanged()
-        .observeAsState(user.info?.banner ?: "")
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.info?.banner }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(user.info?.banner)
 }
 
 @Composable
@@ -114,12 +151,16 @@ fun observeUserPicture(user: User): State<String?> {
     UserFinderFilterAssemblerSubscription(user)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .live()
-        .metadata
-        .map { it.user.info?.picture }
-        .distinctUntilChanged()
-        .observeAsState(user.info?.picture)
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.info?.picture }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(user.info?.picture)
 }
 
 @Composable
@@ -128,10 +169,400 @@ fun observeUserShortName(user: User): State<String> {
     UserFinderFilterAssemblerSubscription(user)
 
     // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .metadata.stateFlow
+                .mapLatest { it.user.toBestShortFirstName() }
+                .distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(user.toBestShortFirstName())
+}
+
+@Composable
+fun observeUserFollows(user: User): State<UserState?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
     return user
-        .live()
-        .metadata
-        .map { it.user.toBestShortFirstName() }
-        .distinctUntilChanged()
-        .observeAsState(user.toBestShortFirstName())
+        .flow()
+        .follows.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeUserFollowCount(user: User): State<Int> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .followers.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.transientFollowCount() ?: 0
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@Composable
+fun observeUserTagFollows(user: User): State<Int> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .follows.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.latestContactList?.countFollowTags() ?: 0
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@Composable
+fun observeUserBookmarks(user: User): State<UserState?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return user
+        .flow()
+        .bookmarks.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeUserBookmarkCount(user: User): State<Int> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .followers.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.latestBookmarkList?.countBookmarks() ?: 0
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@Composable
+fun observeUserFollowers(user: User): State<UserState?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return user
+        .flow()
+        .followers.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeUserFollowerCount(user: User): State<Int> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .followers.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.transientFollowerCount()
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@Composable
+fun observeUserIsFollowing(
+    user1: User,
+    user2: User,
+): State<Boolean> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user1)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user1) {
+            user1
+                .flow()
+                .follows.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.isFollowing(user2)
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(user1.isFollowing(user2))
+}
+
+@Composable
+fun observeUserIsFollowingHashtag(
+    user: User,
+    hashtag: String,
+): State<Boolean> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .follows.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.isFollowingHashtag(hashtag)
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(user.isFollowingHashtag(hashtag))
+}
+
+@Composable
+fun observeUserIsFollowingGeohash(
+    user: User,
+    geohash: String,
+): State<Boolean> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .follows.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.isFollowingGeohash(geohash)
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(user.isFollowingGeohash(geohash))
+}
+
+@Composable
+fun observeUserIsFollowingChannel(
+    user: User,
+    channel: Channel,
+): State<Boolean> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .follows.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(user.latestContactList?.isTaggedEvent(channel.idHex) ?: false)
+}
+
+@Composable
+fun observeUserZaps(user: User): State<UserState?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return user
+        .flow()
+        .zaps.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeUserZapAmount(user: User): State<BigDecimal> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .zaps.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.zappedAmount()
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(BigDecimal.ZERO)
+}
+
+@Composable
+fun observeUserReports(user: User): State<UserState?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return user
+        .flow()
+        .reports.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeUserReportCount(user: User): State<Int> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .reports
+                .stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.reports.values
+                        .sumOf { it.size }
+                }.distinctUntilChanged()
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@Composable
+fun observeUserStatuses(user: User): State<ImmutableList<AddressableNote>> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .statuses
+                .stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    LocalCache.findStatusesForUser(userState.user)
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(persistentListOf())
+}
+
+@Composable
+fun observeUserRelayIntoList(
+    user: User,
+    relayUrl: String,
+): State<Boolean> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .relayInfo
+                .stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.latestContactList
+                        ?.relays()
+                        ?.none { it.key == relayUrl } == true
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(false)
+}
+
+@Composable
+fun observeUserRoomSubject(
+    user: User,
+    room: ChatroomKey,
+): State<String?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .messages
+                .stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.privateChatrooms[room]?.subject
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(user.privateChatrooms[room]?.subject)
+}
+
+data class RelayUsage(
+    val relays: List<String> = emptyList(),
+    val userRelayList: List<String> = emptyList(),
+)
+
+@Composable
+fun observeUserRelaysUsing(user: User): State<RelayUsage> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            combine(user.flow().relays.stateFlow, user.flow().relayInfo.stateFlow) { relays, relayInfo ->
+                val userRelaysBeingUsed = relays.user.relaysBeingUsed.map { it.key }
+                val currentUserRelays =
+                    relayInfo.user.latestContactList
+                        ?.relays()
+                        ?.map { RelayUrlFormatter.normalize(it.key) } ?: emptyList()
+
+                RelayUsage(userRelaysBeingUsed, currentUserRelays)
+            }.sample(1000)
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(RelayUsage())
 }

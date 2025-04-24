@@ -33,10 +33,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -67,7 +67,7 @@ fun BookmarkListScreen(
             factory = BookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val userState by accountViewModel.account.decryptBookmarks.observeAsState()
+    val userState by accountViewModel.account.decryptBookmarks.collectAsStateWithLifecycle(null)
 
     LaunchedEffect(userState) {
         publicFeedViewModel.invalidateData()

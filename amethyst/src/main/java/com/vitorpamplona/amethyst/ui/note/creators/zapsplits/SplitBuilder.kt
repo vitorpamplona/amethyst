@@ -23,12 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlin.collections.all
-import kotlin.collections.getOrNull
-import kotlin.collections.lastIndex
-import kotlin.compareTo
 import kotlin.math.abs
-import kotlin.text.toDouble
 
 class SplitBuilder<T> {
     var items: List<SplitItem<T>> by mutableStateOf(emptyList())

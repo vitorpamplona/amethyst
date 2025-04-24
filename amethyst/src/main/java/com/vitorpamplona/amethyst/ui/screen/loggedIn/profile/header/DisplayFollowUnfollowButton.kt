@@ -22,11 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
@@ -36,22 +34,8 @@ fun DisplayFollowUnfollowButton(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val isLoggedInFollowingUser by
-        accountViewModel.account
-            .userProfile()
-            .live()
-            .follows
-            .map { it.user.isFollowing(baseUser) }
-            .distinctUntilChanged()
-            .observeAsState(initial = accountViewModel.account.isFollowing(baseUser))
-
-    val isUserFollowingLoggedIn by
-        baseUser
-            .live()
-            .follows
-            .map { it.user.isFollowing(accountViewModel.account.userProfile()) }
-            .distinctUntilChanged()
-            .observeAsState(initial = baseUser.isFollowing(accountViewModel.account.userProfile()))
+    val isLoggedInFollowingUser by observeUserIsFollowing(accountViewModel.account.userProfile(), baseUser)
+    val isUserFollowingLoggedIn by observeUserIsFollowing(baseUser, accountViewModel.account.userProfile())
 
     if (isLoggedInFollowingUser) {
         UnfollowButton {

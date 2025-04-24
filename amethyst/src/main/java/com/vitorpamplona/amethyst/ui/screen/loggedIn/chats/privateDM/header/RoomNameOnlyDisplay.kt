@@ -24,14 +24,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRoomSubject
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserShortName
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -49,14 +47,7 @@ fun RoomNameOnlyDisplay(
     fontWeight: FontWeight = FontWeight.Bold,
     accountViewModel: AccountViewModel,
 ) {
-    val roomSubject by
-        accountViewModel
-            .userProfile()
-            .live()
-            .messages
-            .map { it.user.privateChatrooms[room]?.subject }
-            .distinctUntilChanged()
-            .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
+    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room)
 
     CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
@@ -107,16 +98,9 @@ fun RoomNameDisplay(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val roomSubject by
-        accountViewModel
-            .userProfile()
-            .live()
-            .messages
-            .map { it.user.privateChatrooms[room]?.subject }
-            .distinctUntilChanged()
-            .observeAsState(accountViewModel.userProfile().privateChatrooms[room]?.subject)
+    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room)
 
-    CrossfadeIfEnabled(targetState = roomSubject, modifier, label = "RoomNameDisplay", accountViewModel = accountViewModel) {
+    CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
             if (room.users.size > 1) {
                 DisplayRoomSubject(it)

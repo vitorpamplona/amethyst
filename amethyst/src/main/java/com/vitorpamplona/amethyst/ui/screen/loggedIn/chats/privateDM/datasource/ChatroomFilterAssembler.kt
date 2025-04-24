@@ -60,24 +60,20 @@ class ChatroomFilterAssembler(
         )
 
     fun createMessagesFromMeFilter(key: ChatroomQueryState): TypedFilter? =
-        if (key.room != null) {
-            TypedFilter(
-                types = setOf(FeedType.PRIVATE_DMS),
-                filter =
-                    SincePerRelayFilter(
-                        kinds = listOf(PrivateDmEvent.KIND),
-                        authors = listOf(key.account.userProfile().pubkeyHex),
-                        tags = mapOf("p" to key.room.users.map { it }),
-                        since =
-                            latestEOSEs.users[key.account.userProfile()]
-                                ?.followList
-                                ?.get(key.room.hashCode().toString())
-                                ?.relayList,
-                    ),
-            )
-        } else {
-            null
-        }
+        TypedFilter(
+            types = setOf(FeedType.PRIVATE_DMS),
+            filter =
+                SincePerRelayFilter(
+                    kinds = listOf(PrivateDmEvent.KIND),
+                    authors = listOf(key.account.userProfile().pubkeyHex),
+                    tags = mapOf("p" to key.room.users.map { it }),
+                    since =
+                        latestEOSEs.users[key.account.userProfile()]
+                            ?.followList
+                            ?.get(key.room.hashCode().toString())
+                            ?.relayList,
+                ),
+        )
 
     fun clearEOSEs(account: Account) {
         latestEOSEs.removeDataFor(account.userProfile())

@@ -24,14 +24,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -123,15 +121,7 @@ fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel,
 ) {
-    val userState by accountViewModel
-        .userProfile()
-        .live()
-        .follows
-        .observeAsState()
-    val isFollowingTag by
-        remember(userState, tag) {
-            derivedStateOf { userState?.user?.isFollowingGeohash(tag) ?: false }
-        }
+    val isFollowingTag by observeUserIsFollowingGeohash(accountViewModel.userProfile(), tag)
 
     if (isFollowingTag) {
         UnfollowButton {

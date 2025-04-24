@@ -46,7 +46,6 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
-import kotlin.collections.mapNotNullTo
 
 // This allows multiple screen to be listening to tags, even the same tag
 class EventFinderQueryState(

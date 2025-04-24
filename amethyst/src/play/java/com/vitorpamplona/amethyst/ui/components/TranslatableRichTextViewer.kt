@@ -354,9 +354,6 @@ fun TranslateAndWatchLanguageChanges(
     accountViewModel: AccountViewModel,
     onTranslated: (TranslationConfig) -> Unit,
 ) {
-    // Don't automatically update translations.
-    // val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-
     LaunchedEffect(Unit) {
         // This takes some time. Launches as a Composition scope to make sure this gets cancel if this
         // item gets out of view.

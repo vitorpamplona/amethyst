@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,11 +57,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -400,7 +399,10 @@ private fun RenderScreen(
             modifier = tabRowModifier,
             divider = { HorizontalDivider(thickness = DividerThickness) },
         ) {
-            CreateAndRenderTabs(baseUser, pagerState)
+            CreateAndRenderTabs(
+                baseUser,
+                pagerState,
+            )
         }
         HorizontalPager(
             state = pagerState,
@@ -470,11 +472,7 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
     repliesViewModel: UserProfileConversationsFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val isHidden by
-        accountViewModel.account.liveHiddenUsers
-            .map {
-                it.hiddenUsers.contains(baseUser.pubkeyHex) || it.spammers.contains(baseUser.pubkeyHex)
-            }.observeAsState(accountViewModel.account.isHidden(baseUser))
+    val isHidden by observeAccountIsHiddenUser(accountViewModel.account, baseUser)
 
     LaunchedEffect(key1 = isHidden) {
         threadsViewModel.invalidateData()

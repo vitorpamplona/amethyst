@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
-import android.util.Log
-import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.datasources.SubscriptionOrchestrator
 import java.util.concurrent.ConcurrentHashMap
@@ -48,10 +46,6 @@ abstract class QueryBasedSubscriptionOrchestrator<T>(
         }
 
         invalidateFilters()
-
-        if (isDebug) {
-            Log.d(this::class.simpleName, "Watch $query (${queries.size} queries)")
-        }
     }
 
     // This is called by main. Keep it really fast.
@@ -64,10 +58,6 @@ abstract class QueryBasedSubscriptionOrchestrator<T>(
 
         if (queries.isEmpty()) {
             stop()
-        }
-
-        if (isDebug) {
-            Log.d(this::class.simpleName, "Unwatch $query (${queries.size} queries)")
         }
     }
 
