@@ -181,7 +181,10 @@ fun LongLiveActivityChannelHeader(
         ) {
             it.first.role?.let { it1 ->
                 Text(
-                    text = it1.capitalize(Locale.ROOT),
+                    text =
+                        it1.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                        },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(55.dp),

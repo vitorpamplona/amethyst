@@ -258,7 +258,9 @@ fun RenderEyeGlassesPrescription(
         }
         visionPrescription.status?.let {
             Text(
-                text = "Status: ${it.capitalize(Locale.getDefault())}",
+                text = "Status: ${it.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                }}",
                 modifier = Modifier.padding(4.dp).fillMaxWidth(),
             )
         }
@@ -359,7 +361,10 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = data.eye?.capitalize(Locale.getDefault()) ?: "Unknown",
+            text =
+                data.eye?.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                } ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
@@ -515,7 +520,10 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = data.eye?.capitalize(Locale.getDefault()) ?: "Unknown",
+            text =
+                data.eye?.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                } ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)

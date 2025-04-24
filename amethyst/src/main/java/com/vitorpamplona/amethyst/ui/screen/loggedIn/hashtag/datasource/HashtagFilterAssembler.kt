@@ -80,7 +80,9 @@ class HashtagFilterAssembler(
                         it.hashtag,
                         it.hashtag.lowercase(),
                         it.hashtag.uppercase(),
-                        it.hashtag.capitalize(Locale.getDefault()),
+                        it.hashtag.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                        },
                     )
                 }.flatten()
 
