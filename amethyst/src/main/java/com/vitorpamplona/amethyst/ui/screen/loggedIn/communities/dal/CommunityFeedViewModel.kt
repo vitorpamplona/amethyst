@@ -34,6 +34,7 @@ class CommunityFeedViewModel(
         val note: AddressableNote,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrCommunityFeedViewModel : ViewModel> create(modelClass: Class<NostrCommunityFeedViewModel>): NostrCommunityFeedViewModel = CommunityFeedViewModel(note, account) as NostrCommunityFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = CommunityFeedViewModel(note, account) as T
     }
 }

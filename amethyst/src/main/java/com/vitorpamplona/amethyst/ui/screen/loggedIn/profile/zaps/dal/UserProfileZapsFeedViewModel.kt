@@ -31,6 +31,7 @@ class UserProfileZapsFeedViewModel(
     class Factory(
         val user: User,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileZapsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileZapsFeedViewModel>): NostrUserProfileZapsFeedViewModel = UserProfileZapsFeedViewModel(user) as NostrUserProfileZapsFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileZapsFeedViewModel(user) as T
     }
 }

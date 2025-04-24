@@ -37,6 +37,7 @@ class NIP90ContentDiscoveryFeedViewModel(
         val dvmKey: String,
         val requestId: String,
     ) : ViewModelProvider.Factory {
-        override fun <NostrNIP90ContentDiscoveryFeedViewModel : ViewModel> create(modelClass: Class<NostrNIP90ContentDiscoveryFeedViewModel>): NostrNIP90ContentDiscoveryFeedViewModel = NIP90ContentDiscoveryFeedViewModel(account, dvmKey, requestId) as NostrNIP90ContentDiscoveryFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = NIP90ContentDiscoveryFeedViewModel(account, dvmKey, requestId) as T
     }
 }

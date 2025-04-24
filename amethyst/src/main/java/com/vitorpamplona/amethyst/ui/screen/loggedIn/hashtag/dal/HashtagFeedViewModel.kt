@@ -39,6 +39,7 @@ class HashtagFeedViewModel(
         val hashtag: String,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrHashtagFeedViewModel : ViewModel> create(modelClass: Class<NostrHashtagFeedViewModel>): NostrHashtagFeedViewModel = HashtagFeedViewModel(hashtag, account) as NostrHashtagFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = HashtagFeedViewModel(hashtag, account) as T
     }
 }

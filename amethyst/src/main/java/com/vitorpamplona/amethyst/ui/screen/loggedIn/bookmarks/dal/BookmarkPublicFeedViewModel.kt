@@ -33,6 +33,7 @@ class BookmarkPublicFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrBookmarkPublicFeedViewModel : ViewModel> create(modelClass: Class<NostrBookmarkPublicFeedViewModel>): NostrBookmarkPublicFeedViewModel = BookmarkPublicFeedViewModel(account) as NostrBookmarkPublicFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = BookmarkPublicFeedViewModel(account) as T
     }
 }

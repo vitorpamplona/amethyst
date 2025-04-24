@@ -31,6 +31,7 @@ class SpammerAccountsFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrSpammerAccountsFeedViewModel : ViewModel> create(modelClass: Class<NostrSpammerAccountsFeedViewModel>): NostrSpammerAccountsFeedViewModel = SpammerAccountsFeedViewModel(account) as NostrSpammerAccountsFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SpammerAccountsFeedViewModel(account) as T
     }
 }

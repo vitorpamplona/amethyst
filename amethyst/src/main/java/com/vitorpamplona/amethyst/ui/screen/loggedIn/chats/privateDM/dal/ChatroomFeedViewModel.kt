@@ -34,6 +34,7 @@ class ChatroomFeedViewModel(
         val user: ChatroomKey,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrChatRoomFeedViewModel : ViewModel> create(modelClass: Class<NostrChatRoomFeedViewModel>): NostrChatRoomFeedViewModel = ChatroomFeedViewModel(user, account) as NostrChatRoomFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChatroomFeedViewModel(user, account) as T
     }
 }

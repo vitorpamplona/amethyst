@@ -33,6 +33,7 @@ class DraftEventsFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrDraftEventsFeedViewModel : ViewModel> create(modelClass: Class<NostrDraftEventsFeedViewModel>): NostrDraftEventsFeedViewModel = DraftEventsFeedViewModel(account) as NostrDraftEventsFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = DraftEventsFeedViewModel(account) as T
     }
 }

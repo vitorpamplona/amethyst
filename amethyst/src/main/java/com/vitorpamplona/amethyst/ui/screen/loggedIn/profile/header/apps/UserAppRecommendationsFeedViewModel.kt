@@ -31,8 +31,7 @@ class UserAppRecommendationsFeedViewModel(
     class Factory(
         val user: User,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserAppRecommendationsFeedViewModel : ViewModel> create(modelClass: Class<NostrUserAppRecommendationsFeedViewModel>): NostrUserAppRecommendationsFeedViewModel =
-            UserAppRecommendationsFeedViewModel(user)
-                as NostrUserAppRecommendationsFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserAppRecommendationsFeedViewModel(user) as T
     }
 }

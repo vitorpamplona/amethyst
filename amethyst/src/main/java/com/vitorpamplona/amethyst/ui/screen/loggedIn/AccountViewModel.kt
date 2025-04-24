@@ -1328,7 +1328,8 @@ class AccountViewModel(
         val accountSettings: AccountSettings,
         val settings: SharedSettingsState,
     ) : ViewModelProvider.Factory {
-        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel = AccountViewModel(accountSettings, settings) as AccountViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings) as T
     }
 
     private var collectorJob: Job? = null

@@ -39,6 +39,7 @@ class GeoHashFeedViewModel(
         val geohash: String,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrGeoHashFeedViewModel : ViewModel> create(modelClass: Class<NostrGeoHashFeedViewModel>): NostrGeoHashFeedViewModel = GeoHashFeedViewModel(geohash, account) as NostrGeoHashFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = GeoHashFeedViewModel(geohash, account) as T
     }
 }

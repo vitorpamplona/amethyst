@@ -34,8 +34,7 @@ class UserProfileMutualFeedViewModel(
         val user: User,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileMutualFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileMutualFeedViewModel>): NostrUserProfileMutualFeedViewModel =
-            UserProfileMutualFeedViewModel(user, account)
-                as NostrUserProfileMutualFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileMutualFeedViewModel(user, account) as T
     }
 }

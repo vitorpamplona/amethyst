@@ -131,6 +131,7 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <SearchBarViewModel : ViewModel> create(modelClass: Class<SearchBarViewModel>): SearchBarViewModel = SearchBarViewModel(account) as SearchBarViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account) as T
     }
 }

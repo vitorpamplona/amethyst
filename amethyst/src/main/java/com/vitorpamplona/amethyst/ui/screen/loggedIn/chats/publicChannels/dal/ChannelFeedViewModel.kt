@@ -34,6 +34,7 @@ class ChannelFeedViewModel(
         val channel: Channel,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrChannelFeedViewModel : ViewModel> create(modelClass: Class<NostrChannelFeedViewModel>): NostrChannelFeedViewModel = ChannelFeedViewModel(channel, account) as NostrChannelFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChannelFeedViewModel(channel, account) as T
     }
 }

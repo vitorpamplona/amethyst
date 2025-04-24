@@ -34,8 +34,7 @@ class UserProfileBookmarksFeedViewModel(
         val user: User,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileBookmarksFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileBookmarksFeedViewModel>): NostrUserProfileBookmarksFeedViewModel =
-            UserProfileBookmarksFeedViewModel(user, account)
-                as NostrUserProfileBookmarksFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileBookmarksFeedViewModel(user, account) as T
     }
 }

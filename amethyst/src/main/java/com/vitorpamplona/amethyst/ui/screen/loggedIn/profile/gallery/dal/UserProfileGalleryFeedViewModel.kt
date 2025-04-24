@@ -34,8 +34,7 @@ class UserProfileGalleryFeedViewModel(
         val user: User,
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileGalleryFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileGalleryFeedViewModel>): NostrUserProfileGalleryFeedViewModel =
-            UserProfileGalleryFeedViewModel(user, account)
-                as NostrUserProfileGalleryFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileGalleryFeedViewModel(user, account) as T
     }
 }

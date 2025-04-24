@@ -31,6 +31,7 @@ class UserProfileReportFeedViewModel(
     class Factory(
         val user: User,
     ) : ViewModelProvider.Factory {
-        override fun <NostrUserProfileReportFeedViewModel : ViewModel> create(modelClass: Class<NostrUserProfileReportFeedViewModel>): NostrUserProfileReportFeedViewModel = UserProfileReportFeedViewModel(user) as NostrUserProfileReportFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileReportFeedViewModel(user) as T
     }
 }

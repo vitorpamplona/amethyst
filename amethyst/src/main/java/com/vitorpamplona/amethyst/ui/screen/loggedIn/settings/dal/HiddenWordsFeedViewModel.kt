@@ -33,6 +33,7 @@ class HiddenWordsFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <NostrHiddenWordsFeedViewModel : ViewModel> create(modelClass: Class<NostrHiddenWordsFeedViewModel>): NostrHiddenWordsFeedViewModel = HiddenWordsFeedViewModel(account) as NostrHiddenWordsFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = HiddenWordsFeedViewModel(account) as T
     }
 }

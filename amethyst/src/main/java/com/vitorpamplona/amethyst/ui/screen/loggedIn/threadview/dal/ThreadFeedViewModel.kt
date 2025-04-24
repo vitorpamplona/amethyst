@@ -32,6 +32,7 @@ class ThreadFeedViewModel(
         val account: Account,
         val noteId: String,
     ) : ViewModelProvider.Factory {
-        override fun <NostrThreadFeedViewModel : ViewModel> create(modelClass: Class<NostrThreadFeedViewModel>): NostrThreadFeedViewModel = ThreadFeedViewModel(account, noteId) as NostrThreadFeedViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = ThreadFeedViewModel(account, noteId) as T
     }
 }
