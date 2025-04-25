@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
+import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrlFillWidth
 import com.vitorpamplona.amethyst.ui.note.creators.products.AddClassifiedsButton
 import com.vitorpamplona.amethyst.ui.note.creators.products.SellProduct
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
@@ -576,11 +577,17 @@ fun DisplayPreviews(
 
     if (urlPreviews.isNotEmpty()) {
         Row(modifier = Modifier.padding(vertical = Size5dp)) {
-            LazyRow(modifier = Modifier.height(100.dp)) {
-                items(urlPreviews) {
-                    Box(modifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)) {
-                        PreviewUrl(it, accountViewModel, nav)
+            if (urlPreviews.size > 1) {
+                LazyRow(modifier = Modifier.height(100.dp)) {
+                    items(urlPreviews) {
+                        Box(modifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)) {
+                            PreviewUrl(it, accountViewModel, nav)
+                        }
                     }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)) {
+                    PreviewUrlFillWidth(urlPreviews[0], accountViewModel, nav)
                 }
             }
         }

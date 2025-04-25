@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +46,10 @@ import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
+import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -90,6 +94,49 @@ fun PreviewUrl(
         )
     } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
         MyLoadUrlPreviewDirect("https://$myUrlPreview", myUrlPreview, accountViewModel)
+    }
+}
+
+@Composable
+fun PreviewUrlFillWidth(
+    myUrlPreview: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (RichTextParser.isValidURL(myUrlPreview)) {
+        if (RichTextParser.isImageUrl(myUrlPreview)) {
+            AsyncImage(
+                model = myUrlPreview,
+                contentDescription = myUrlPreview,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+            )
+        } else if (RichTextParser.isVideoUrl(myUrlPreview)) {
+            VideoView(
+                myUrlPreview,
+                mimeType = null,
+                roundedCorner = false,
+                gallery = false,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        } else {
+            MyLoadUrlPreviewDirectFillWidth(myUrlPreview, myUrlPreview, accountViewModel)
+        }
+    } else if (RichTextParser.startsWithNIP19Scheme(myUrlPreview)) {
+        val bgColor = MaterialTheme.colorScheme.background
+        val backgroundColor = remember { mutableStateOf(bgColor) }
+
+        BechLinkPreview(
+            word = myUrlPreview,
+            canPreview = true,
+            quotesLeft = 1,
+            backgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    } else if (RichTextParser.isUrlWithoutScheme(myUrlPreview)) {
+        MyLoadUrlPreviewDirectFillWidth("https://$myUrlPreview", myUrlPreview, accountViewModel)
     }
 }
 
@@ -192,6 +239,62 @@ private fun MyLoadUrlPreviewDirect(
                 Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.aspectRatio(1f)) {
                     ClickableUrl(urlText, url)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MyLoadUrlPreviewDirectFillWidth(
+    url: String,
+    urlText: String,
+    accountViewModel: AccountViewModel,
+) {
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val urlPreviewState by
+        produceState(
+            initialValue = UrlCachedPreviewer.cache.get(url) ?: UrlPreviewState.Loading,
+            key1 = url,
+        ) {
+            if (value == UrlPreviewState.Loading) {
+                accountViewModel.urlPreview(url) { value = it }
+            }
+        }
+
+    CrossfadeIfEnabled(
+        targetState = urlPreviewState,
+        label = "UrlPreview",
+        accountViewModel = accountViewModel,
+    ) { state ->
+        when (state) {
+            is UrlPreviewState.Loaded -> {
+                if (state.previewInfo.mimeType.type == "image") {
+                    AsyncImage(
+                        model = state.previewInfo.url,
+                        contentDescription = null,
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else if (state.previewInfo.mimeType.type == "video") {
+                    VideoView(
+                        state.previewInfo.url,
+                        mimeType = state.previewInfo.mimeType.toString(),
+                        roundedCorner = false,
+                        gallery = false,
+                        contentScale = ContentScale.FillWidth,
+                        accountViewModel = accountViewModel,
+                    )
+                } else {
+                    UrlPreviewCard(url, previewInfo = state.previewInfo)
+                }
+            }
+            is UrlPreviewState.Loading -> {
+                WaitAndDisplay {
+                    DisplayUrlWithLoadingSymbol(url)
+                }
+            }
+            else -> {
+                ClickableUrl(urlText, url)
             }
         }
     }

@@ -42,10 +42,7 @@ class ServerInfoRetriever {
                 .url(parser.assembleUrl(baseUrl))
                 .build()
 
-        println("AABBCC $baseUrl Request ${parser.assembleUrl(baseUrl)}")
-
         okHttpClient(baseUrl).newCall(request).execute().use { response ->
-            println("AABBCC $baseUrl Response")
             checkNotInMainThread()
             response.use {
                 val body = it.body.string()

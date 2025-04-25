@@ -73,6 +73,11 @@ fun LoadUrlPreviewDirect(
             is UrlPreviewState.Loaded -> {
                 RenderLoaded(state, url, callbackUri, accountViewModel)
             }
+            is UrlPreviewState.Loading -> {
+                WaitAndDisplay {
+                    DisplayUrlWithLoadingSymbol(url)
+                }
+            }
             else -> {
                 ClickableUrl(urlText, url)
             }

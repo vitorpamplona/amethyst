@@ -611,6 +611,38 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
 }
 
 @Composable
+fun DisplayUrlWithLoadingSymbol(url: String) {
+    val uri = LocalUriHandler.current
+
+    val primary = MaterialTheme.colorScheme.primary
+    val annotatedTermsString =
+        remember {
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = primary)) {
+                    pushStringAnnotation("routeToImage", "")
+                    append("$url ")
+                    pop()
+                }
+            }
+        }
+
+    val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
+
+    Row(
+        modifier = Modifier.width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier = pressIndicator.weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineLoadingIcon()
+    }
+}
+
+@Composable
 private fun InlineLoadingIcon() = LoadingAnimation()
 
 @Composable
