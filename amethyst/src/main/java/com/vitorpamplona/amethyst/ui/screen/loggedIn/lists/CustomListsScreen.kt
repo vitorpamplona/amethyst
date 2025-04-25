@@ -38,6 +38,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +51,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,12 +70,14 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
@@ -148,7 +155,7 @@ fun CustomListsScreen(
     nav: INav,
 ) {
 //    val setsState by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
-    val pagerState = rememberPagerState { 2 }
+    val pagerState = rememberPagerState { 3 }
     val coroutineScope = rememberCoroutineScope()
 
     DisappearingScaffold(
@@ -166,15 +173,23 @@ fun CustomListsScreen(
                     Tab(
                         selected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                        text = { Text(text = "Follow Sets") },
+                        text = { Text(text = "Follow Sets", overflow = TextOverflow.Ellipsis, maxLines = 1) },
                     )
                     Tab(
                         selected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                        text = { Text(text = "Labeled Bookmarks") },
+                        text = { Text(text = "Labeled Bookmarks", overflow = TextOverflow.Ellipsis, maxLines = 1) },
+                    )
+                    Tab(
+                        selected = pagerState.currentPage == 2,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
+                        text = { Text(text = "General Bookmarks", overflow = TextOverflow.Ellipsis, maxLines = 1) },
                     )
                 }
             }
+        },
+        floatingButton = {
+            // TODO: Add buttons for list creation and/or removal.
         },
     ) {
         Column(
@@ -192,6 +207,7 @@ fun CustomListsScreen(
                         )
 
                     1 -> LabeledBookmarksFeedView()
+                    2 -> GeneralBookmarksFeedView()
                 }
             }
         }
@@ -234,6 +250,18 @@ fun FollowSetFeedView(
 
 @Composable
 fun LabeledBookmarksFeedView() {
+    Column(
+        Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(text = "Not implemented yet.")
+        Spacer(modifier = StdVertSpacer)
+    }
+}
+
+@Composable
+fun GeneralBookmarksFeedView() {
     Column(
         Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -288,7 +316,7 @@ fun CustomListItem(
                     color = Color.Gray,
                     shape = RoundedCornerShape(percent = 20),
                 ).padding(all = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        // verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = modifier.weight(1f),
@@ -323,33 +351,95 @@ fun CustomListItem(
             )
         }
 
-        followSet.visibility.let {
-            val text by derivedStateOf {
-                when (it) {
-                    ListVisibility.Public -> "Public"
-                    ListVisibility.Private -> "Private"
-                    ListVisibility.Mixed -> "Mixed"
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.End,
+        ) {
+            followSet.visibility.let {
+                val text by derivedStateOf {
+                    when (it) {
+                        ListVisibility.Public -> "Public"
+                        ListVisibility.Private -> "Private"
+                        ListVisibility.Mixed -> "Mixed"
+                    }
+                }
+                Column(
+                    modifier = modifier.padding(top = 15.dp),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        painter =
+                            painterResource(
+                                when (it) {
+                                    ListVisibility.Public -> R.drawable.ic_public
+                                    ListVisibility.Private -> R.drawable.lock
+                                    ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
+                                },
+                            ),
+                        contentDescription = "Icon for $text List",
+                    )
+                    Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
                 }
             }
+
             Column(
-                // modifier = modifier.weight(1f),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.End,
             ) {
-                Icon(
-                    painter =
-                        painterResource(
-                            when (it) {
-                                ListVisibility.Public -> R.drawable.ic_public
-                                ListVisibility.Private -> R.drawable.incognito
-                                ListVisibility.Mixed -> R.drawable.format_list_bulleted_type
-                            },
-                        ),
-                    contentDescription = "Icon for $text List",
-                )
-                Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
+                ListOptionsButton(followSetName = followSet.title)
             }
         }
+    }
+}
+
+@Composable
+fun ListOptionsButton(
+    modifier: Modifier = Modifier,
+    followSetName: String,
+) {
+    val isMenuOpen = remember { mutableStateOf(false) }
+
+    ClickableBox(
+        onClick = { isMenuOpen.value = true },
+    ) {
+        VerticalDotsIcon()
+
+        ListOptionsMenu(
+            listName = followSetName,
+            isExpanded = isMenuOpen.value,
+            onDismiss = { isMenuOpen.value = false },
+        )
+    }
+}
+
+@Composable
+fun ListOptionsMenu(
+    modifier: Modifier = Modifier,
+    isExpanded: Boolean,
+    listName: String,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = isExpanded,
+        onDismissRequest = onDismiss,
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(text = "Delete")
+            },
+            onClick = {
+                println("The list named $listName has been selected for deletion.")
+            },
+        )
+        DropdownMenuItem(
+            text = {
+                Text(text = "Rename list")
+            },
+            onClick = {
+                println("The list $listName should be renamed...")
+            },
+        )
     }
 }
 
