@@ -1777,7 +1777,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event.copyNoContent(), author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers(note)
     }
@@ -1797,7 +1797,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event.copyNoContent(), author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers(note)
     }
