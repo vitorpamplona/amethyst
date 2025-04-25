@@ -181,6 +181,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1086,6 +1087,7 @@ class Account(
             )
     }
 
+    @OptIn(FlowPreview::class)
     val decryptBookmarks: Flow<BookmarkListEvent?> by lazy {
         userProfile()
             .flow()

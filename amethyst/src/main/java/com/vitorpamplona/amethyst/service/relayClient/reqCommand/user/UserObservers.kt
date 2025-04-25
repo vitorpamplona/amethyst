@@ -565,7 +565,7 @@ data class RelayUsage(
     val userRelayList: List<String> = emptyList(),
 )
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(FlowPreview::class)
 @Composable
 fun observeUserRelaysUsing(user: User): State<RelayUsage> {
     // Subscribe in the relay for changes in the metadata of this user.

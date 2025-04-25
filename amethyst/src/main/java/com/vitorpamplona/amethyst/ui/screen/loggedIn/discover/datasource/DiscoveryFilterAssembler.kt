@@ -114,7 +114,9 @@ class DiscoveryFilterAssembler(
                                                     it,
                                                     it.lowercase(),
                                                     it.uppercase(),
-                                                    it.capitalize(Locale.getDefault()),
+                                                    it.replaceFirstChar {
+                                                        if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                                                    },
                                                 )
                                             }.flatten(),
                                 ),
@@ -277,7 +279,9 @@ class DiscoveryFilterAssembler(
                                             it,
                                             it.lowercase(),
                                             it.uppercase(),
-                                            it.capitalize(Locale.getDefault()),
+                                            it.replaceFirstChar {
+                                                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                                            },
                                         )
                                     }.flatten(),
                         ),
@@ -338,7 +342,9 @@ class DiscoveryFilterAssembler(
                                             it,
                                             it.lowercase(),
                                             it.uppercase(),
-                                            it.capitalize(Locale.getDefault()),
+                                            it.replaceFirstChar {
+                                                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                                            },
                                         )
                                     }.flatten(),
                         ),
@@ -400,7 +406,9 @@ class DiscoveryFilterAssembler(
                                             it,
                                             it.lowercase(),
                                             it.uppercase(),
-                                            it.capitalize(Locale.getDefault()),
+                                            it.replaceFirstChar {
+                                                if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                                            },
                                         )
                                     }.flatten(),
                         ),

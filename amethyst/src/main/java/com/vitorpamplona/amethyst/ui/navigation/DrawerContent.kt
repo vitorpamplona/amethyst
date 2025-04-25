@@ -46,9 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
@@ -282,7 +280,7 @@ private fun EditStatusBoxes(
             statuses.forEach {
                 val noteStatus by observeNote(it)
 
-                StatusEditBar(noteStatus?.note?.event?.content, it.address, accountViewModel, nav)
+                StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
             }
         }
     }

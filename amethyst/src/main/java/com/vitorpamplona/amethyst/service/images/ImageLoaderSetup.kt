@@ -24,6 +24,7 @@ import android.app.Application
 import android.os.Build
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
 import coil3.disk.DiskCache
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
@@ -37,6 +38,7 @@ import okhttp3.Call
 
 class ImageLoaderSetup {
     companion object {
+        @OptIn(DelicateCoilApi::class)
         fun setup(
             app: Application,
             diskCache: DiskCache,

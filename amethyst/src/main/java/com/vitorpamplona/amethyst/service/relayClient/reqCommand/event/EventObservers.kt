@@ -50,7 +50,7 @@ fun observeNote(note: Note): State<NoteState> {
 }
 
 @Suppress("UNCHECKED_CAST")
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun <T : Event> observeNoteEvent(note: Note): State<T?> {
     // Subscribe in the relay for changes in this note.
@@ -68,7 +68,7 @@ fun <T : Event> observeNoteEvent(note: Note): State<T?> {
     return flow.collectAsStateWithLifecycle(note.event as? T?)
 }
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun <T> observeNoteAndMap(
     note: Note,
@@ -91,8 +91,8 @@ fun <T> observeNoteAndMap(
     return flow.collectAsStateWithLifecycle(map(note))
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("UNCHECKED_CAST")
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun <T, U> observeNoteEventAndMap(
     note: Note,
@@ -116,7 +116,7 @@ fun <T, U> observeNoteEventAndMap(
     return flow.collectAsStateWithLifecycle((note.event as? T)?.let { map(it) })
 }
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeNoteHasEvent(note: Note): State<Boolean> {
     // Subscribe in the relay for changes in this note.
@@ -225,7 +225,7 @@ fun observeNoteReposts(note: Note): State<NoteState?> {
         .collectAsStateWithLifecycle()
 }
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeNoteRepostsBy(
     note: Note,
