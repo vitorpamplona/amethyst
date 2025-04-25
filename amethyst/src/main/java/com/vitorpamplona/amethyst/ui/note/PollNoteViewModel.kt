@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,7 +43,7 @@ data class PollOption(
     val option: Int,
     val descriptor: String,
     var zappedValue: MutableState<BigDecimal> = mutableStateOf(BigDecimal.ZERO),
-    var tally: MutableState<Float> = mutableStateOf(0f),
+    var tally: MutableState<Float> = mutableFloatStateOf(0f),
     var consensusThreadhold: MutableState<Boolean> = mutableStateOf(false),
     var zappedByLoggedIn: MutableState<Boolean> = mutableStateOf(false),
 )

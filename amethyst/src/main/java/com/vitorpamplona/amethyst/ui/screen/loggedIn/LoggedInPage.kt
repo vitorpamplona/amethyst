@@ -40,8 +40,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinatorSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
@@ -73,18 +75,29 @@ fun LoggedInPage(
                 ),
         )
 
-    Log.d("ManageRelayServices", "LoggedInPage $accountViewModel")
-
     accountViewModel.firstRoute = route
 
-    ManageSpamFilters(accountViewModel)
+    // Adds this account to the authentication procedures for relays.
+    RelayAuthSubscription(accountViewModel)
+
+    // Loads account information from Relays.
+    AccountFilterAssemblerSubscription(accountViewModel)
+
+    // TODO: Is this needed?
+    RelaySubscriptionsCoordinatorSubscription()
+
+    // Updates local cache of the anti-spam filter choice of this user.
+    ObserveAntiSpamFilterSettings(accountViewModel)
 
     ManageRelayServices(accountViewModel, sharedPreferencesViewModel)
 
+    // Turns Embed Tor on if needed.
     ManageTorInstance(accountViewModel)
 
+    // Listens to Amber
     ListenToExternalSignerIfNeeded(accountViewModel)
 
+    // Register token with the Push Notification Provider.
     NotificationRegistration(accountViewModel)
 
     AppNavigation(
@@ -95,11 +108,11 @@ fun LoggedInPage(
 }
 
 @Composable
-fun ManageSpamFilters(accountViewModel: AccountViewModel) {
+fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
     val isSpamActive by accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers
         .collectAsStateWithLifecycle(true)
 
-    LocalCache.antiSpam.active = isSpamActive
+    Amethyst.instance.cache.antiSpam.active = isSpamActive
 }
 
 @Composable

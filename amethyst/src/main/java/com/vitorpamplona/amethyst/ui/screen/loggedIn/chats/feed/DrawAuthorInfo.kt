@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.FollowingIcon
@@ -55,7 +55,7 @@ private fun WatchAndDisplayUser(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by author.live().userMetadataInfo.observeAsState()
+    val userState by observeUserInfo(author)
 
     UserDisplayNameLayout(
         picture = {

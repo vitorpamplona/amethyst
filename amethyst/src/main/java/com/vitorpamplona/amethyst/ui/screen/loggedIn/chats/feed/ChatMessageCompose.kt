@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
+import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
@@ -97,25 +99,29 @@ fun ChatroomMessageCompose(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
-        WatchBlockAndReport(
-            note = baseNote,
-            showHiddenWarning = false,
-            modifier = Modifier.fillMaxWidth(),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        ) { canPreview ->
-            NormalChatNote(
-                baseNote,
-                routeForLastRead,
-                innerQuote,
-                canPreview,
-                parentBackgroundColor,
-                accountViewModel,
-                nav,
-                onWantsToReply,
-                onWantsToEditDraft,
-            )
+    logTime(
+        debugMessage = { "ChatroomMessageCompose " + externalLinkForNote(baseNote) },
+    ) {
+        WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+            WatchBlockAndReport(
+                note = baseNote,
+                showHiddenWarning = false,
+                modifier = Modifier.fillMaxWidth(),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            ) { canPreview ->
+                NormalChatNote(
+                    baseNote,
+                    routeForLastRead,
+                    innerQuote,
+                    canPreview,
+                    parentBackgroundColor,
+                    accountViewModel,
+                    nav,
+                    onWantsToReply,
+                    onWantsToEditDraft,
+                )
+            }
         }
     }
 }

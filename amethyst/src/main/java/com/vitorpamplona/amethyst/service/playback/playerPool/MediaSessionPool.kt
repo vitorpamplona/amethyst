@@ -35,6 +35,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -130,6 +131,7 @@ class MediaSessionPool(
     fun cleanupUnused() {
         if (lastCleanup < TimeUtils.oneMinuteAgo()) {
             lastCleanup = TimeUtils.now()
+            @kotlin.OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.Main) {
                 var counter = 0
                 val snap = cache.snapshot()
@@ -149,6 +151,7 @@ class MediaSessionPool(
     }
 
     fun destroy() {
+        @kotlin.OptIn(DelicateCoroutinesApi::class)
         GlobalScope.launch(Dispatchers.Main) {
             cache.evictAll()
             playingMap.forEach {

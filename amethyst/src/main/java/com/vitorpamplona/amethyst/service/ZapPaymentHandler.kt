@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
@@ -374,7 +373,7 @@ class ZapPaymentHandler(
                     stringRes(
                         context,
                         R.string.user_x_does_not_have_a_lightning_address_setup_to_receive_sats,
-                        user?.toBestDisplayName() ?: splitSetup.mainId(),
+                        toUser?.toBestDisplayName() ?: splitSetup.mainId(),
                     ),
                     null,
                 )

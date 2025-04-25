@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.RelayState
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -72,6 +73,7 @@ class RelayPool : Relay.Listener {
                 relay.connectAndRunAfterSync {
                     whenConnected(relay)
 
+                    @OptIn(DelicateCoroutinesApi::class)
                     GlobalScope.launch(Dispatchers.IO) {
                         delay(timeout) // waits for a reply
                         relay.disconnect()

@@ -51,9 +51,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
-import kotlin.collections.plus
 import kotlin.coroutines.cancellation.CancellationException
 
 class ChannelMetadataViewModel : ViewModel() {

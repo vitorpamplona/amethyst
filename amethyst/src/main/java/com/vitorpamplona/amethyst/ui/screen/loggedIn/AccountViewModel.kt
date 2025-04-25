@@ -35,10 +35,13 @@ import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
+import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -57,7 +60,6 @@ import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
-import com.vitorpamplona.amethyst.service.proxyPort.ProxyPortFlow
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
@@ -80,6 +82,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -94,6 +97,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -136,6 +140,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
@@ -147,20 +152,7 @@ class AccountViewModel(
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
 
-    val proxyPortLogic =
-        ProxyPortFlow(
-            account.settings.torSettings.torType,
-            account.settings.torSettings.externalSocksPort,
-            Amethyst.instance.torManager.status,
-        ).status.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(30000),
-            ProxyPortFlow.computePort(
-                account.settings.torSettings.torType.value,
-                account.settings.torSettings.externalSocksPort.value,
-                Amethyst.instance.torManager.status.value,
-            ),
-        )
+    val newNotesPreProcessor = PrecacheNewNotesProcessor(account, LocalCache)
 
     var firstRoute: Route? = null
 
@@ -799,6 +791,12 @@ class AccountViewModel(
         }
     }
 
+    fun precomputeNewEvents(notes: Set<Note>) {
+        viewModelScope.launch(Dispatchers.Default) {
+            newNotesPreProcessor.run(notes)
+        }
+    }
+
     fun delete(notes: List<Note>) {
         viewModelScope.launch(Dispatchers.IO) { account.delete(notes) }
     }
@@ -1314,7 +1312,8 @@ class AccountViewModel(
         val accountSettings: AccountSettings,
         val settings: SharedSettingsState,
     ) : ViewModelProvider.Factory {
-        override fun <AccountViewModel : ViewModel> create(modelClass: Class<AccountViewModel>): AccountViewModel = AccountViewModel(accountSettings, settings) as AccountViewModel
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings) as T
     }
 
     private var collectorJob: Job? = null
@@ -1327,12 +1326,17 @@ class AccountViewModel(
                 feedStates.init()
                 // awaits for init to finish before starting to capture new events.
                 LocalCache.live.newEventBundles.collect { newNotes ->
-                    Log.d(
-                        "Rendering Metrics",
-                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                    )
-                    feedStates.updateFeedsWith(newNotes)
-                    upgradeAttestations()
+                    if (isDebug) {
+                        Log.d(
+                            "Rendering Metrics",
+                            "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                        )
+                    }
+                    logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
+                        feedStates.updateFeedsWith(newNotes)
+                        upgradeAttestations()
+                        precomputeNewEvents(newNotes)
+                    }
                 }
             }
     }
@@ -1408,10 +1412,6 @@ class AccountViewModel(
                 R.string.login_with_a_private_key_to_be_able_to_boost_posts,
             )
         }
-    }
-
-    fun dismissPaymentRequest(request: Account.PaymentRequest) {
-        viewModelScope.launch(Dispatchers.IO) { account.dismissPaymentRequest(request) }
     }
 
     fun meltCashu(
@@ -1533,6 +1533,8 @@ class AccountViewModel(
     fun okHttpClientForDirty(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(url))
 
     fun okHttpClientForTrustedRelays(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
+
+    fun dataSources() = Amethyst.instance.sources
 
     suspend fun deleteDraft(draftTag: String) {
         account.deleteDraft(draftTag)
@@ -1679,6 +1681,18 @@ class AccountViewModel(
     suspend fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
 
     fun relayStatusFlow() = Amethyst.instance.client.relayStatusFlow()
+
+    fun allAccountsSync(): List<HexKey> =
+        runBlocking {
+            LocalPreferences.allSavedAccounts().mapNotNull {
+                try {
+                    it.npub.bechToBytes().toHexKey()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    null
+                }
+            }
+        }
 
     val draftNoteCache = CachedDraftNotes(this)
 

@@ -92,7 +92,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.getFragmentActivity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -223,11 +223,9 @@ class UpdateZapAmountViewModel : ViewModel() {
 
     fun updateNIP47(uri: String) {
         val contact = Nip47WalletConnect.parse(uri)
-        if (contact != null) {
-            walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
-            walletConnectRelay = TextFieldValue(contact.relayUri ?: "")
-            walletConnectSecret = TextFieldValue(contact.secret ?: "")
-        }
+        walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
+        walletConnectRelay = TextFieldValue(contact.relayUri)
+        walletConnectSecret = TextFieldValue(contact.secret ?: "")
     }
 }
 

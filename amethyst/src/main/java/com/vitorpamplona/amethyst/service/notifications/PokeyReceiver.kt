@@ -27,9 +27,7 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.provider.LiveFolders.INTENT
 import android.util.Log
-import androidx.core.content.ContextCompat.registerReceiver
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.launch

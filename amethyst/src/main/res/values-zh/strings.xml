@@ -225,10 +225,10 @@
 	</string>
     <string name="report_dialog_report_btn">违规报告</string>
     <string name="report_dialog_reminder_public">所有举报都将被公开可见</string>
-    <string name="report_dialog_additional_reason_placeholder">可选择提供关于您的举报的额外背景...</string>
+    <string name="report_dialog_additional_reason_placeholder">可选择提供关于您的举报的额外背景…</string>
     <string name="report_dialog_additional_reason_label">其他背景</string>
     <string name="report_dialog_select_reason_label">理由</string>
-    <string name="report_dialog_select_reason_placeholder">选择一个理由...</string>
+    <string name="report_dialog_select_reason_placeholder">选择一个理由…</string>
     <string name="report_dialog_post_report_btn">发布举报</string>
     <string name="report_dialog_title">阻止与举报</string>
     <string name="block_only">仅阻止</string>

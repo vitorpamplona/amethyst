@@ -65,7 +65,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -93,19 +92,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource.user
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReferences
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReposts
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -270,7 +271,7 @@ fun ShareReaction(
                     sendIntent,
                     stringRes(context, R.string.quick_action_share),
                 )
-            ContextCompat.startActivity(context, shareIntent, null)
+            context.startActivity(shareIntent)
         },
     ) {
         ShareIcon(barChartModifier, grayTint)
@@ -344,7 +345,7 @@ fun RenderZapRaiser(
     details: Boolean,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote)
 
     var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
 
@@ -394,41 +395,11 @@ private fun WatchReactionsZapsBoostsAndDisplayIfExists(
     baseNote: Note,
     content: @Composable () -> Unit,
 ) {
-    val hasReactions by
-        baseNote
-            .live()
-            .hasReactions
-            .observeAsState(
-                baseNote.zaps.isNotEmpty() ||
-                    baseNote.boosts.isNotEmpty() ||
-                    baseNote.reactions.isNotEmpty(),
-            )
+    val hasReactions by observeNoteReferences(baseNote)
 
     if (hasReactions) {
         content()
     }
-}
-
-fun <T, K, R> LiveData<T>.combineWith(
-    liveData1: LiveData<K>,
-    block: (T?, K?) -> R,
-): LiveData<R> {
-    val result = MediatorLiveData<R>()
-    result.addSource(this) { result.value = block(this.value, liveData1.value) }
-    result.addSource(liveData1) { result.value = block(this.value, liveData1.value) }
-    return result
-}
-
-fun <T, K, P, R> LiveData<T>.combineWith(
-    liveData1: LiveData<K>,
-    liveData2: LiveData<P>,
-    block: (T?, K?, P?) -> R,
-): LiveData<R> {
-    val result = MediatorLiveData<R>()
-    result.addSource(this) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    result.addSource(liveData1) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    result.addSource(liveData2) { result.value = block(this.value, liveData1.value, liveData2.value) }
-    return result
 }
 
 @Composable
@@ -463,15 +434,7 @@ private fun ReactionDetailGallery(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    val hasReactions by
-        baseNote
-            .live()
-            .hasReactions
-            .observeAsState(
-                baseNote.zaps.isNotEmpty() ||
-                    baseNote.boosts.isNotEmpty() ||
-                    baseNote.reactions.isNotEmpty(),
-            )
+    val hasReactions by observeNoteReferences(baseNote)
 
     if (hasReactions) {
         Row(
@@ -493,7 +456,7 @@ private fun WatchBoostsAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val boostsEvents by baseNote.live().boosts.observeAsState()
+    val boostsEvents by observeNoteReposts(baseNote)
 
     boostsEvents?.let {
         if (it.note.boosts.isNotEmpty()) {
@@ -512,7 +475,7 @@ private fun WatchReactionsAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
+    val reactionsState by observeNoteReactions(baseNote)
     val reactionEvents = reactionsState?.note?.reactions ?: return
 
     if (reactionEvents.isNotEmpty()) {
@@ -535,7 +498,7 @@ private fun WatchZapAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote)
 
     var zapEvents by
         remember(zapsState) {
@@ -692,7 +655,7 @@ fun ReplyCounter(
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val repliesState by baseNote.live().replyCount.observeAsState(baseNote.replies.size)
+    val repliesState by observeNoteReplyCount(baseNote)
 
     SlidingAnimationCount(repliesState, textColor, accountViewModel)
 }
@@ -827,16 +790,7 @@ fun ObserveBoostIcon(
     accountViewModel: AccountViewModel,
     inner: @Composable (Boolean) -> Unit,
 ) {
-    val hasBoosted by
-        remember(baseNote) {
-            baseNote
-                .live()
-                .boosts
-                .map { it.note.isBoostedBy(accountViewModel.userProfile()) }
-                .distinctUntilChanged()
-        }.observeAsState(
-            baseNote.isBoostedBy(accountViewModel.userProfile()),
-        )
+    val hasBoosted by observeNoteRepostsBy(baseNote, accountViewModel.userProfile())
 
     inner(hasBoosted)
 }
@@ -847,7 +801,7 @@ fun BoostText(
     grayTint: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val boostState by baseNote.live().boostCount.observeAsState(baseNote.boosts.size)
+    val boostState by observeNoteRepostCount(baseNote)
 
     SlidingAnimationCount(boostState, grayTint, accountViewModel)
 }
@@ -917,7 +871,7 @@ fun ObserveLikeIcon(
     accountViewModel: AccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
-    val reactionsState by baseNote.live().reactions.observeAsState()
+    val reactionsState by observeNoteReactions(baseNote)
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val reactionType by
@@ -974,7 +928,7 @@ fun ObserveLikeText(
     baseNote: Note,
     inner: @Composable (Int) -> Unit,
 ) {
-    val reactionCount by baseNote.live().reactionCount.observeAsState(0)
+    val reactionCount by observeNoteReactionCount(baseNote)
 
     inner(reactionCount)
 }
@@ -1142,13 +1096,14 @@ fun ZapReaction(
         if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
             Spacer(ModifierWidth3dp)
 
+            val animatedProgress by animateFloatAsState(
+                targetValue = zappingProgress,
+                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                label = "ZapIconIndicator",
+            )
+
             CircularProgressIndicator(
-                progress =
-                    animateFloatAsState(
-                        targetValue = zappingProgress,
-                        animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                        label = "ZapIconIndicator",
-                    ).value,
+                progress = { animatedProgress },
                 modifier = remember { Modifier.size(animationSize) },
                 strokeWidth = 2.dp,
             )
@@ -1227,7 +1182,7 @@ fun ObserveZapIcon(
     val wasZappedByLoggedInUser = remember { mutableStateOf(false) }
 
     if (!wasZappedByLoggedInUser.value) {
-        val zapsState by baseNote.live().zaps.observeAsState()
+        val zapsState by observeNoteZaps(baseNote)
 
         LaunchedEffect(key1 = zapsState) {
             if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
@@ -1249,7 +1204,7 @@ fun ObserveZapAmountText(
     accountViewModel: AccountViewModel,
     inner: @Composable (String) -> Unit,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote)
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
         @Suppress("ProduceStateDoesNotAssignValue")

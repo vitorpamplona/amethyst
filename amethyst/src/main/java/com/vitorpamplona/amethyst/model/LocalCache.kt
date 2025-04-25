@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.data.DeletionIndex
 import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource.account
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.Relay
@@ -171,7 +170,26 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
-object LocalCache {
+interface ILocalCache {
+    fun verifyAndConsume(
+        event: Event,
+        relay: Relay?,
+    )
+
+    fun justVerify(event: Event): Boolean
+
+    fun consume(
+        event: DraftEvent,
+        relay: Relay?,
+    )
+
+    fun markAsSeen(
+        string: String,
+        relay: Relay,
+    ) {}
+}
+
+object LocalCache : ILocalCache {
     val antiSpam = AntiSpamFilter()
 
     val users = LargeCache<HexKey, User>()
@@ -184,6 +202,8 @@ object LocalCache {
 
     val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>>(10)
     val observablesByKindAndAuthor = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindAndAuthor<Event>>>(10)
+
+    val onNewEvents = mutableListOf<(Note) -> Unit>()
 
     fun <T : Event> observeETag(
         kind: Int,
@@ -452,6 +472,7 @@ object LocalCache {
                     }
                 }
             }
+
             // Log.d("MT", "New User Metadata ${oldUser.pubkeyDisplayHex()} ${oldUser.toBestDisplayName()} from ${relay?.url}")
         } else {
             // Log.d("MT","Relay sent a previous Metadata Event ${oldUser.toBestDisplayName()}
@@ -917,7 +938,7 @@ object LocalCache {
         if (event.createdAt > (note.createdAt() ?: 0)) {
             note.loadEvent(event, author, emptyList())
 
-            author.liveSet?.innerStatuses?.invalidateData()
+            author.flowSet?.statuses?.invalidateData()
 
             refreshObservers(note)
         }
@@ -942,7 +963,7 @@ object LocalCache {
 
         if (version.event == null) {
             version.loadEvent(event, author, emptyList())
-            version.liveSet?.innerOts?.invalidateData()
+            version.flowSet?.ots?.invalidateData()
         }
 
         refreshObservers(version)
@@ -1224,7 +1245,6 @@ object LocalCache {
         }
 
         deleteNote.clearFlow()
-        deleteNote.clearLive()
 
         notes.remove(deleteNote.idHex)
     }
@@ -1238,7 +1258,6 @@ object LocalCache {
                     deleteWraps(noteEvent)
                 }
                 it.clearFlow()
-                it.clearLive()
             }
 
             notes.remove(it.id)
@@ -1358,7 +1377,7 @@ object LocalCache {
 
             mentions.forEach {
                 // doesn't add to reports, but triggers recounts
-                it.liveSet?.innerReports?.invalidateData()
+                it.flowSet?.reports?.invalidateData()
             }
         }
 
@@ -1604,7 +1623,7 @@ object LocalCache {
             checkGetOrCreateNote(it.eventId)?.let { editedNote ->
                 modificationCache.remove(editedNote.idHex)
                 // must update list of Notes to quickly update the user.
-                editedNote.liveSet?.innerModifications?.invalidateData()
+                editedNote.flowSet?.edits?.invalidateData()
             }
         }
 
@@ -1832,6 +1851,8 @@ object LocalCache {
         username: String,
         forAccount: Account?,
     ): List<User> {
+        if (username.isBlank()) return emptyList()
+
         checkNotInMainThread()
 
         val key = decodePublicKeyAsHexOrNull(username)
@@ -1883,6 +1904,8 @@ object LocalCache {
         forAccount: Account,
     ): List<Note> {
         checkNotInMainThread()
+
+        if (text.isBlank()) return emptyList()
 
         val key = decodeEventIdAsHexOrNull(text)
 
@@ -1947,6 +1970,8 @@ object LocalCache {
 
     fun findChannelsStartingWith(text: String): List<Channel> {
         checkNotInMainThread()
+
+        if (text.isBlank()) return emptyList()
 
         val key = decodeEventIdAsHexOrNull(text)
         if (key != null && getChannelIfExists(key) != null) {
@@ -2029,10 +2054,6 @@ object LocalCache {
     }
 
     fun cleanObservers() {
-        notes.forEach { _, it -> it.clearLive() }
-        addressables.forEach { _, it -> it.clearLive() }
-        users.forEach { _, it -> it.clearLive() }
-
         notes.forEach { _, it -> it.clearFlow() }
         addressables.forEach { _, it -> it.clearFlow() }
         users.forEach { _, it -> it.clearFlow() }
@@ -2054,11 +2075,9 @@ object LocalCache {
         }
     }
 
-    fun pruneOldAndHiddenMessages(account: Account) {
-        checkNotInMainThread()
-
+    fun pruneHiddenMessages(account: Account) {
         channels.forEach { _, channel ->
-            val toBeRemoved = channel.pruneOldAndHiddenMessages(account)
+            val toBeRemoved = channel.pruneHiddenMessages(account)
 
             val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -2072,7 +2091,31 @@ object LocalCache {
 
             if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
                 println(
-                    "PRUNE: ${toBeRemoved.size} messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
+                    "PRUNE: ${toBeRemoved.size} hidden messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
+                )
+            }
+        }
+    }
+
+    fun pruneOldMessages() {
+        checkNotInMainThread()
+
+        channels.forEach { _, channel ->
+            val toBeRemoved = channel.pruneOldMessages()
+
+            val childrenToBeRemoved = mutableListOf<Note>()
+
+            toBeRemoved.forEach {
+                removeFromCache(it)
+
+                childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            }
+
+            removeFromCache(childrenToBeRemoved)
+
+            if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
+                println(
+                    "PRUNE: ${toBeRemoved.size} old messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
                 )
             }
         }
@@ -2164,8 +2207,8 @@ object LocalCache {
                         note.event is ReportEvent ||
                         note.event is GenericRepostEvent
                 ) &&
-                    note.replyTo?.any { it.liveSet?.isInUse() == true } != true &&
-                    note.liveSet?.isInUse() != true &&
+                    note.replyTo?.any { it.flowSet?.isInUse() == true } != true &&
+                    note.flowSet?.isInUse() != true &&
                     // don't delete if observing.
                     note.author?.pubkeyHex !in
                     accounts &&
@@ -2229,7 +2272,6 @@ object LocalCache {
         }
 
         note.clearFlow()
-        note.clearLive()
 
         notes.remove(note.idHex)
     }
@@ -2258,18 +2300,16 @@ object LocalCache {
         }
     }
 
-    fun pruneHiddenMessages(account: Account) {
+    fun pruneHiddenEvents(account: Account) {
         checkNotInMainThread()
 
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =
-            account.liveHiddenUsers.value
-                ?.hiddenUsers
-                ?.map { userHex ->
+            account.flowHiddenUsers.value.hiddenUsers
+                .map { userHex ->
                     (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-                }?.flatten()
-                ?: emptyList()
+                }.flatten()
 
         toBeRemoved.forEach {
             removeFromCache(it)
@@ -2288,7 +2328,7 @@ object LocalCache {
         users.forEach { _, user ->
             if (
                 user.pubkeyHex !in loggedIn &&
-                (user.liveSet == null || user.liveSet?.isInUse() == false) &&
+                (user.flowSet == null || user.flowSet?.isInUse() == false) &&
                 user.latestContactList != null
             ) {
                 user.latestContactList = null
@@ -2299,15 +2339,32 @@ object LocalCache {
         println("PRUNE: $removingContactList contact lists")
     }
 
+    override fun markAsSeen(
+        eventId: String,
+        relay: Relay,
+    ) {
+        val note = getNoteIfExists(eventId)
+
+        note?.event?.let { noteEvent ->
+            if (noteEvent is AddressableEvent) {
+                getAddressableNoteIfExists(noteEvent.aTag().toTag())?.addRelay(relay)
+            }
+        }
+
+        note?.addRelay(relay)
+    }
+
     // Observers line up here.
     val live: LocalCacheFlow = LocalCacheFlow()
 
     private fun refreshObservers(newNote: Note) {
-        updateObservables(newNote.event as Event)
+        val event = newNote.event as Event
+        updateObservables(event)
+        onNewEvents.forEach { it(newNote) }
         live.invalidateData(newNote)
     }
 
-    fun verifyAndConsume(
+    override fun verifyAndConsume(
         event: Event,
         relay: Relay?,
     ) {
@@ -2316,7 +2373,7 @@ object LocalCache {
         }
     }
 
-    fun justVerify(event: Event): Boolean {
+    override fun justVerify(event: Event): Boolean {
         checkNotInMainThread()
 
         return if (!event.verify()) {
@@ -2332,7 +2389,7 @@ object LocalCache {
         }
     }
 
-    fun consume(
+    override fun consume(
         event: DraftEvent,
         relay: Relay?,
     ) {
@@ -2639,6 +2696,16 @@ object LocalCache {
             val note = notes.get(notificationEvent.id)
             note?.event != null
         }
+
+    fun copyRelaysFromTo(
+        from: Note,
+        to: Event,
+    ) {
+        val toNote = getOrCreateNote(to)
+        from.relays.forEach {
+            toNote.addRelayBrief(it)
+        }
+    }
 }
 
 @Stable

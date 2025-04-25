@@ -61,7 +61,7 @@ class SincePerRelayFilter(
                 entries.forEach { sincePairs ->
                     jsonObjectSince.put(sincePairs.key, "${sincePairs.value}")
                 }
-                obj.put("since", jsonObjectSince)
+                obj.replace("since", jsonObjectSince)
             }
         }
         return EventMapper.toJson(obj)

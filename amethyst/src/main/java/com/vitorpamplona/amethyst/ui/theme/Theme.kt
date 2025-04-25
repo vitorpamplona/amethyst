@@ -172,20 +172,6 @@ val LightReplyBorderModifier =
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
 
-val DarkVideoBorderModifier =
-    Modifier
-        .padding(top = 5.dp)
-        .fillMaxWidth()
-        .clip(shape = RectangleShape)
-        .border(1.dp, DarkSubtleBorder, RectangleShape)
-
-val LightVideoBorderModifier =
-    Modifier
-        .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
-        .fillMaxWidth()
-        .clip(shape = RectangleShape)
-        .border(1.dp, LightSubtleBorder, RectangleShape)
-
 val DarkInnerPostBorderModifier =
     Modifier
         .padding(vertical = 5.dp)
@@ -427,39 +413,51 @@ val ColorScheme.fundraiserProgressColor: Color
 val ColorScheme.markdownStyle: RichTextStyle
     get() = if (isLight) MarkDownStyleOnLight else MarkDownStyleOnDark
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.imageModifier: Modifier
     get() = if (isLight) LightImageModifier else DarkImageModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.videoGalleryModifier: Modifier
     get() = if (isLight) LightVideoModifier else DarkVideoModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.profile35dpModifier: Modifier
     get() = if (isLight) LightProfile35dpModifier else DarkProfile35dpModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.replyModifier: Modifier
     get() = if (isLight) LightReplyBorderModifier else DarkReplyBorderModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.innerPostModifier: Modifier
     get() = if (isLight) LightInnerPostBorderModifier else DarkInnerPostBorderModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.maxWidthWithBackground: Modifier
     get() = if (isLight) LightMaxWidthWithBackground else DarkMaxWidthWithBackground
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.channelNotePictureModifier: Modifier
     get() = if (isLight) LightChannelNotePictureModifier else DarkChannelNotePictureModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.userProfileBorderModifier: Modifier
     get() = if (isLight) LightProfilePictureBorder else DarkProfilePictureBorder
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.relayIconModifier: Modifier
     get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.largeRelayIconModifier: Modifier
     get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.selectedReactionBoxModifier: Modifier
     get() = if (isLight) LightSelectedReactionBoxModifier else DarkSelectedReactionBoxModifier
 
+@Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.largeProfilePictureModifier: Modifier
     get() = if (isLight) lightLargeProfilePictureModifier else darkLargeProfilePictureModifier
 
@@ -530,7 +528,9 @@ fun AmethystTheme(
             insets.isAppearanceLightNavigationBars = !darkTheme
             insets.isAppearanceLightStatusBars = !darkTheme
 
+            @Suppress("DEPRECATION")
             window.statusBarColor = colors.transparentBackground.toArgb()
+            @Suppress("DEPRECATION")
             window.navigationBarColor = colors.transparentBackground.toArgb()
 
             view.setBackgroundColor(colors.background.toArgb())

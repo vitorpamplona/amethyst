@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
@@ -223,19 +223,29 @@ fun ShortTorrentHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by baseNote.live().metadata.observeAsState()
-    val note = channelState?.note ?: return
-    val noteEvent = note.event as? TorrentEvent ?: return
+    val noteEvent by observeNoteEvent<TorrentEvent>(baseNote)
 
+    ShortTorrentHeader(
+        title = noteEvent?.title() ?: TorrentEvent.ALT_DESCRIPTION,
+        size = noteEvent?.totalSizeBytes()?.let { countToHumanReadableBytes(it) } ?: "--",
+        modifier.clickable { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun ShortTorrentHeader(
+    title: String,
+    size: String,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            modifier.clickable {
-                routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) }
-            },
+        modifier = modifier,
     ) {
-        Icons.Outlined.FileOpen
-
         Icon(
             imageVector = Icons.Outlined.FileOpen,
             contentDescription = stringRes(id = R.string.torrent_file),
@@ -243,17 +253,14 @@ fun ShortTorrentHeader(
         )
 
         Text(
-            text = remember(channelState) { noteEvent.title() ?: TorrentEvent.ALT_DESCRIPTION },
+            text = title,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f),
+            modifier = Modifier.padding(start = 10.dp).weight(1f),
         )
 
         Text(
-            text = remember(channelState) { countToHumanReadableBytes(noteEvent.totalSizeBytes()) },
+            text = size,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(end = 5.dp),

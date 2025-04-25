@@ -38,7 +38,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -50,14 +49,16 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -132,7 +133,6 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing10dp
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -219,33 +219,37 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchNoteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        modifier,
+    logTime(
+        debugMessage = { "NoteCompose " + externalLinkForNote(baseNote) },
     ) {
-        CheckHiddenFeedWatchBlockAndReport(
-            note = baseNote,
-            modifier = modifier,
-            ignoreAllBlocksAndReports = isHiddenFeed,
-            showHiddenWarning = isQuotedNote || isBoostedNote,
+        WatchNoteEvent(
+            baseNote = baseNote,
             accountViewModel = accountViewModel,
-            nav = nav,
-        ) { canPreview ->
-            AcceptableNote(
-                baseNote = baseNote,
+            modifier,
+        ) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
                 modifier = modifier,
-                routeForLastRead = routeForLastRead,
-                isBoostedNote = isBoostedNote,
-                isQuotedNote = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                quotesLeft = quotesLeft,
-                parentBackgroundColor = parentBackgroundColor,
+                ignoreAllBlocksAndReports = isHiddenFeed,
+                showHiddenWarning = isQuotedNote || isBoostedNote,
                 accountViewModel = accountViewModel,
                 nav = nav,
-            )
+            ) { canPreview ->
+                AcceptableNote(
+                    baseNote = baseNote,
+                    modifier = modifier,
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    quotesLeft = quotesLeft,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }
@@ -849,14 +853,14 @@ fun ObserveDraftEvent(
     accountViewModel: AccountViewModel,
     render: @Composable (Note) -> Unit,
 ) {
-    val noteState by note.live().metadata.observeAsState()
+    val noteEvent by observeNoteEvent<DraftEvent>(note)
 
-    val noteEvent = noteState?.note?.event as? DraftEvent ?: return
+    noteEvent?.let {
+        val innerNote by produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = it)
 
-    val innerNote = produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = noteEvent)
-
-    innerNote.value?.let {
-        render(it)
+        innerNote?.let {
+            render(it)
+        }
     }
 }
 
@@ -1109,7 +1113,7 @@ fun observeEdits(
             )
         }
 
-    val updatedNote by baseNote.live().innerModifications.observeAsState()
+    val updatedNote by observeNoteEdits(baseNote)
 
     LaunchedEffect(key1 = updatedNote) {
         updatedNote?.note?.let {
@@ -1186,22 +1190,16 @@ private fun ChannelNotePicture(
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
 ) {
-    val model by
-        baseChannel.live
-            .map { it.channel.profilePicture() }
-            .distinctUntilChanged()
-            .observeAsState()
+    val model by observeChannelPicture(baseChannel)
 
-    Box(Size30Modifier) {
-        RobohashFallbackAsyncImage(
-            robot = baseChannel.idHex,
-            model = model,
-            contentDescription = stringRes(R.string.group_picture),
-            modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
-            loadProfilePicture = loadProfilePicture,
-            loadRobohash = loadRobohash,
-        )
-    }
+    RobohashFallbackAsyncImage(
+        robot = baseChannel.idHex,
+        model = model,
+        contentDescription = stringRes(R.string.group_picture),
+        modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
+        loadProfilePicture = loadProfilePicture,
+        loadRobohash = loadRobohash,
+    )
 }
 
 @Composable

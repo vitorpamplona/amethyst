@@ -25,24 +25,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource.channel
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
-import com.vitorpamplona.amethyst.ui.screen.NostrChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ShowVideoStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
@@ -72,11 +68,11 @@ fun PrepareChannelViewModels(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val feedViewModel: NostrChannelFeedViewModel =
+    val feedViewModel: ChannelFeedViewModel =
         viewModel(
             key = baseChannel.idHex + "ChannelFeedViewModel",
             factory =
-                NostrChannelFeedViewModel.Factory(
+                ChannelFeedViewModel.Factory(
                     baseChannel,
                     accountViewModel.account,
                 ),
@@ -98,45 +94,13 @@ fun PrepareChannelViewModels(
 @Composable
 fun ChannelView(
     channel: Channel,
-    feedViewModel: NostrChannelFeedViewModel,
+    feedViewModel: ChannelFeedViewModel,
     newPostModel: ChannelNewMessageViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(accountViewModel) {
-        NostrChannelDataSource.loadMessagesBetween(accountViewModel.account, channel)
-        NostrChannelDataSource.start()
-        feedViewModel.invalidateData(true)
-
-        onDispose {
-            NostrChannelDataSource.clear()
-            NostrChannelDataSource.stop()
-        }
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Channel Start")
-                    NostrChannelDataSource.start()
-                    feedViewModel.invalidateData(true)
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Channel Stop")
-
-                    NostrChannelDataSource.clear()
-                    NostrChannelDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    ChannelFilterAssemblerSubscription(channel, accountViewModel.dataSources().channel, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         Column(

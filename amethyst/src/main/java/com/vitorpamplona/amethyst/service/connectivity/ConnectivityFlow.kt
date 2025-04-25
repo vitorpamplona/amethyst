@@ -25,7 +25,6 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.util.Log
-import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
@@ -49,7 +48,6 @@ class ConnectivityFlow(
                 object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
                         super.onAvailable(network)
-                        checkNotInMainThread()
                         Log.d("ConnectivityFlow", "onAvailable ${network.networkHandle}")
                         connectivityManager.getNetworkCapabilities(network)?.let {
                             trySend(ConnectivityStatus.Active(network.networkHandle, it.isMeteredOrMobileData()))
@@ -61,7 +59,6 @@ class ConnectivityFlow(
                         networkCapabilities: NetworkCapabilities,
                     ) {
                         super.onCapabilitiesChanged(network, networkCapabilities)
-                        checkNotInMainThread()
                         val isMobile = networkCapabilities.isMeteredOrMobileData()
                         Log.d("ConnectivityFlow", "onCapabilitiesChanged ${network.networkHandle} $isMobile")
                         trySend(ConnectivityStatus.Active(network.networkHandle, isMobile))
@@ -77,7 +74,6 @@ class ConnectivityFlow(
             }
 
             awaitClose {
-                checkNotInMainThread()
                 Log.d("ConnectivityFlow", "Stopping Connectivity Flow")
                 connectivityManager.unregisterNetworkCallback(networkCallback)
                 trySend(ConnectivityStatus.Off)

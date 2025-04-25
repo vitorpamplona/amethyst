@@ -44,9 +44,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,7 +66,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,12 +97,15 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowerCount
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -107,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -156,6 +167,8 @@ fun DrawerContent(
                 modifier = Modifier.padding(top = 20.dp),
             )
 
+            Spacer(modifier = StdHorzSpacer)
+
             ListContent(
                 modifier = Modifier.fillMaxWidth(),
                 openSheet,
@@ -181,7 +194,7 @@ fun ProfileContent(
     accountViewModel: AccountViewModel,
     onClickUser: () -> Unit,
 ) {
-    val userInfo by baseAccountUser.live().userMetadataInfo.observeAsState()
+    val userInfo by observeUserInfo(baseAccountUser)
 
     ProfileContentTemplate(
         profilePubHex = baseAccountUser.pubkeyHex,
@@ -268,9 +281,9 @@ private fun EditStatusBoxes(
             StatusEditBar(accountViewModel = accountViewModel, nav = nav)
         } else {
             statuses.forEach {
-                val originalStatus by it.live().content.observeAsState()
+                val noteStatus by observeNote(it)
 
-                StatusEditBar(originalStatus, it.address, accountViewModel, nav)
+                StatusEditBar(noteStatus?.note?.event?.content, it.address, accountViewModel, nav)
             }
         }
     }
@@ -379,18 +392,12 @@ private fun FollowingAndFollowerCounts(
     baseAccountUser: Account,
     onClick: () -> Unit,
 ) {
-    val followingCount = baseAccountUser.liveKind3Follows.collectAsStateWithLifecycle()
-    var followerCount by remember { mutableStateOf("--") }
-
-    WatchFollower(baseAccountUser = baseAccountUser) { newFollower ->
-        if (followerCount != newFollower) {
-            followerCount = newFollower
-        }
-    }
-
     Row(
         modifier = drawerSpacing.clickable(onClick = onClick),
     ) {
+        val followingCount = baseAccountUser.liveKind3Follows.collectAsStateWithLifecycle()
+        val followerCount by observeUserFollowerCount(baseAccountUser.userProfile())
+
         Text(
             text =
                 followingCount.value.authors.size
@@ -403,27 +410,11 @@ private fun FollowingAndFollowerCounts(
         Spacer(modifier = DoubleHorzSpacer)
 
         Text(
-            text = followerCount,
+            text = if (followerCount > 0) followerCount.toString() else "--",
             fontWeight = FontWeight.Bold,
         )
 
         Text(stringRes(R.string.followers))
-    }
-}
-
-@Composable
-fun WatchFollower(
-    baseAccountUser: Account,
-    onReady: (String) -> Unit,
-) {
-    val accountUserFollowersState by baseAccountUser
-        .userProfile()
-        .live()
-        .followers
-        .observeAsState()
-
-    LaunchedEffect(key1 = accountUserFollowersState) {
-        onReady(baseAccountUser.followerCount().toString())
     }
 }
 
@@ -445,7 +436,7 @@ fun ListContent(
     Column(modifier) {
         NavigationRow(
             title = R.string.profile,
-            icon = R.drawable.ic_profile,
+            icon = Icons.Default.AccountCircle,
             tint = MaterialTheme.colorScheme.primary,
             nav = nav,
             route = remember { Route.Profile(accountViewModel.userProfile().pubkeyHex) },
@@ -453,7 +444,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.bookmarks,
-            icon = R.drawable.ic_bookmarks,
+            icon = Icons.Outlined.BookmarkBorder,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Bookmarks,
@@ -461,7 +452,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.drafts,
-            icon = R.drawable.ic_topics,
+            icon = Icons.Outlined.Drafts,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Drafts,
@@ -487,7 +478,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.security_filters,
-            icon = R.drawable.ic_security,
+            icon = Icons.Outlined.Security,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.SecurityFilters,
@@ -506,7 +497,7 @@ fun ListContent(
         accountViewModel.account.settings.keyPair.privKey?.let {
             IconRow(
                 title = R.string.backup_keys,
-                icon = R.drawable.ic_key,
+                icon = Icons.Outlined.Key,
                 tint = MaterialTheme.colorScheme.onBackground,
                 onClick = {
                     nav.closeDrawer()
@@ -517,7 +508,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.preferences,
-            icon = R.drawable.ic_settings,
+            icon = Icons.Outlined.Settings,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Settings,
@@ -595,6 +586,25 @@ private fun RenderRelayStatus(relayPool: RelayPoolStatus) {
 fun NavigationRow(
     title: Int,
     icon: Int,
+    tint: Color,
+    nav: INav,
+    route: Route,
+) {
+    IconRow(
+        title,
+        icon,
+        tint,
+        onClick = {
+            nav.closeDrawer()
+            nav.nav(route)
+        },
+    )
+}
+
+@Composable
+fun NavigationRow(
+    title: Int,
+    icon: ImageVector,
     tint: Color,
     nav: INav,
     route: Route,

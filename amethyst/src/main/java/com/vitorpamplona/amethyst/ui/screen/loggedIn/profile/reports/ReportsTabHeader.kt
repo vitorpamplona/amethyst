@@ -22,33 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.UserProfileReportsFeedFilter
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReportCount
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun ReportsTabHeader(baseUser: User) {
-    val userState by baseUser.live().reports.observeAsState()
-    var userReports by remember { mutableIntStateOf(0) }
+    val reportCount by observeUserReportCount(baseUser)
 
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newSize = UserProfileReportsFeedFilter(baseUser).feed().size
-
-            if (newSize != userReports) {
-                userReports = newSize
-            }
-        }
+    if (reportCount > 0) {
+        Text(text = stringRes(R.string.number_reports, reportCount))
+    } else {
+        Text(text = stringRes(R.string.reports))
     }
-
-    Text(text = "$userReports ${stringRes(R.string.reports)}")
 }

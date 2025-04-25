@@ -201,9 +201,6 @@ dependencies {
     // Navigation
     implementation libs.androidx.navigation.compose
 
-    // Observe Live data as State
-    implementation libs.androidx.runtime.livedata
-
     // Material 3 Design
     implementation libs.androidx.material3
     implementation libs.androidx.material.icons
@@ -216,7 +213,6 @@ dependencies {
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.lifecycle.runtime.compose
     implementation libs.androidx.lifecycle.viewmodel.compose
-    implementation libs.androidx.lifecycle.livedata.ktx
 
     // Zoomable images
     implementation libs.zoomable

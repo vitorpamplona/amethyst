@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,11 +52,14 @@ import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNip05
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.note.LoadStatuses
 import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
 import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
 import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
@@ -133,24 +136,22 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nip05 by baseUser.live().nip05Changes.observeAsState(baseUser.nip05())
+    val nip05 by observeUserNip05(baseUser)
+    val statuses by observeUserStatuses(baseUser)
 
-    LoadStatuses(baseUser, accountViewModel) { statuses ->
-        CrossfadeIfEnabled(
-            targetState = nip05,
-            modifier = columnModifier,
-            label = "ObserveDisplayNip05StatusCrossfade",
-            accountViewModel = accountViewModel,
-        ) {
-            VerifyAndDisplayNIP05OrStatusLine(
-                it,
-                statuses,
-                baseUser,
-                columnModifier,
-                accountViewModel,
-                nav,
-            )
-        }
+    CrossfadeIfEnabled(
+        targetState = nip05,
+        modifier = columnModifier,
+        accountViewModel = accountViewModel,
+    ) {
+        VerifyAndDisplayNIP05OrStatusLine(
+            it,
+            statuses,
+            baseUser,
+            columnModifier,
+            accountViewModel,
+            nav,
+        )
     }
 }
 
@@ -204,10 +205,9 @@ fun ObserveRotateStatuses(
 
 @Composable
 fun ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses: ImmutableList<AddressableNote>) {
-    statuses
-        .map {
-            it.live().metadata.observeAsState()
-        }
+    statuses.map {
+        EventFinderFilterAssemblerSubscription(it)
+    }
 }
 
 @Composable
@@ -247,7 +247,7 @@ fun DisplayStatus(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by addressableNote.live().metadata.observeAsState()
+    val noteState by observeNote(addressableNote)
     val noteEvent = noteState?.note?.event as? StatusEvent ?: return
 
     DisplayStatus(noteEvent, accountViewModel, nav)
@@ -307,7 +307,7 @@ fun DisplayStatusInner(
             onClick = { runCatching { uri.openUri(url.trim()) } },
         ) {
             Icon(
-                imageVector = Icons.Default.OpenInNew,
+                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 null,
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -327,7 +327,7 @@ fun DisplayStatusInner(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,
@@ -349,7 +349,7 @@ fun DisplayStatusInner(
                     },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         null,
                         modifier = Size15Modifier,
                         tint = MaterialTheme.colorScheme.lessImportantLink,

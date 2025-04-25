@@ -96,9 +96,9 @@
     <string name="my_awesome_group">Má skvělá skupina</string>
     <string name="picture_url">URL obrázku</string>
     <string name="description">Popis</string>
-    <string name="about_us">"O nás.. "</string>
+    <string name="about_us">"O nás…"</string>
     <string name="what_s_on_your_mind">Co vás napadá?</string>
-    <string name="write_a_message">Napište zprávu...</string>
+    <string name="write_a_message">Napište zprávu…</string>
     <string name="post">Příspěvek</string>
     <string name="save">Uložit</string>
     <string name="create">Vytvořit</string>
@@ -139,7 +139,7 @@
     <string name="upload_image">Nahrát obrázek</string>
     <string name="uploading">Nahrávání…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel nemá nastavenou LN adresu pro přijímání sats</string>
-    <string name="reply_here">"Odpověď zde.. "</string>
+    <string name="reply_here">"Odpověď zde…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Zkopíruje ID poznámky do schránky pro sdílení</string>
     <string name="copy_channel_id_note_to_the_clipboard">Zkopírovat ID kanálu (poznámka) do schránky</string>
     <string name="edits_the_channel_metadata">Upravit metadata kanálu</string>
@@ -219,7 +219,7 @@
         se na nich může podílet. Jsou skvělé pro otevřené komunity kolem konkrétních témat.
         Moderaci lze ovládat smazáním příspěvků na relé</string>
     <string name="public_chat_relays_title">Rele</string>
-    <string name="public_chat_relays_explainer">Vložte mezi 1-3 relé, které hostí tuto skupinu.
+    <string name="public_chat_relays_explainer">Vložte mezi 1–3 relé, které hostí tuto skupinu.
         Klienti Nostr používají toto nastavení, aby věděli, kam stahovat zprávy a odesílat zprávy.</string>
     <string name="posts_received">příspěvků přijato</string>
     <string name="remove">Odebrat</string>

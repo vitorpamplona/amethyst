@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,12 +31,12 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -138,19 +137,9 @@ fun LoadStatuses(
     accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<AddressableNote>) -> Unit,
 ) {
-    var statuses: ImmutableList<AddressableNote> by remember { mutableStateOf(persistentListOf()) }
+    val userStatuses by observeUserStatuses(user)
 
-    val userStatus by user.live().statuses.observeAsState()
-
-    LaunchedEffect(key1 = userStatus) {
-        accountViewModel.findStatusesForUser(userStatus?.user ?: user) { newStatuses ->
-            if (!equalImmutableLists(statuses, newStatuses)) {
-                statuses = newStatuses
-            }
-        }
-    }
-
-    content(statuses)
+    content(userStatuses)
 }
 
 @Composable
@@ -162,7 +151,7 @@ fun LoadOts(
 ) {
     var earliestDate: GenericLoadable<Long> by remember { mutableStateOf(GenericLoadable.Loading()) }
 
-    val noteStatus by note.live().innerOts.observeAsState()
+    val noteStatus by observeNoteOts(note)
 
     LaunchedEffect(key1 = noteStatus) {
         accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->

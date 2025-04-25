@@ -29,7 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +39,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -62,38 +65,38 @@ fun RenderInteractiveStory(
     val address = baseNote.address() ?: return
 
     // keep updating the root event with new versions
-    val note = baseNote.live().metadata.observeAsState()
+    val note = observeNote(baseNote)
     val rootEvent = note.value?.note?.event as? InteractiveStoryBaseEvent ?: return
 
     // keep updating the reading state event with new versions
     val readingStateNote = accountViewModel.getInteractiveStoryReadingState(address.toValue())
-    val latestReadingNoteState = readingStateNote.live().metadata.observeAsState()
-    val readingState = latestReadingNoteState.value?.note?.event as? InteractiveStoryReadingStateEvent
+    val readingState by observeNoteEvent<InteractiveStoryReadingStateEvent>(readingStateNote)
 
     val currentScene = readingState?.currentScene()
 
     if (currentScene != null && currentScene != rootEvent.address()) {
         LoadAddressableNote(currentScene, accountViewModel) { currentSceneBaseNote ->
-            val currentScene = currentSceneBaseNote?.live()?.metadata?.observeAsState()
-            val currentSceneEvent = currentScene?.value?.note?.event as? InteractiveStoryBaseEvent
+            currentSceneBaseNote?.let {
+                val currentSceneEvent by observeNoteEvent<InteractiveStoryBaseEvent>(it)
 
-            if (currentSceneEvent != null) {
-                RenderInteractiveStory(
-                    section = currentSceneEvent,
-                    onSelect = {
-                        val event = it.event as? InteractiveStoryBaseEvent ?: return@RenderInteractiveStory
-                        accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, event)
-                    },
-                    onRestart = {
-                        accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, rootEvent)
-                    },
-                    makeItShort = makeItShort,
-                    canPreview = canPreview,
-                    quotesLeft = quotesLeft,
-                    backgroundColor = backgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                currentSceneEvent?.let {
+                    RenderInteractiveStory(
+                        section = it,
+                        onSelect = {
+                            val event = it.event as? InteractiveStoryBaseEvent ?: return@RenderInteractiveStory
+                            accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, event)
+                        },
+                        onRestart = {
+                            accountViewModel.updateInteractiveStoryReadingState(baseRootEvent, rootEvent)
+                        },
+                        makeItShort = makeItShort,
+                        canPreview = canPreview,
+                        quotesLeft = quotesLeft,
+                        backgroundColor = backgroundColor,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         }
     } else {
@@ -163,7 +166,7 @@ fun RenderInteractiveStory(
             options.forEach { opt ->
                 LoadAddressableNote(opt.address, accountViewModel) { note ->
                     if (note != null) {
-                        val optionState = note.live().metadata.observeAsState()
+                        EventFinderFilterAssemblerSubscription(note)
 
                         OutlinedButton(
                             onClick = { onSelect(note) },

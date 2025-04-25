@@ -59,7 +59,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,25 +78,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.components.SelectTextDialog
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.ReportNoteDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
-import com.vitorpamplona.quartz.nip19Bech32.toNAddr
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.coroutines.launch
@@ -192,7 +188,6 @@ fun NoteQuickActionMenu(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val showSelectTextDialog = remember { mutableStateOf(false) }
     val showDeleteAlertDialog = remember { mutableStateOf(false) }
     val showBlockAlertDialog = remember { mutableStateOf(false) }
     val showReportDialog = remember { mutableStateOf(false) }
@@ -206,19 +201,6 @@ fun NoteQuickActionMenu(
         showReportDialog,
         onWantsToEditDraft,
     )
-
-    if (showSelectTextDialog.value) {
-        val decryptedNote = remember { mutableStateOf<String?>(null) }
-
-        LaunchedEffect(key1 = Unit) { accountViewModel.decrypt(note) { decryptedNote.value = it } }
-
-        decryptedNote.value?.let {
-            SelectTextDialog(it) {
-                showSelectTextDialog.value = false
-                decryptedNote.value = null
-            }
-        }
-    }
 
     if (showDeleteAlertDialog.value) {
         DeleteAlertDialog(note, accountViewModel) {
@@ -414,7 +396,7 @@ private fun RenderMainPopup(
                                     sendIntent,
                                     stringRes(context, R.string.quick_action_share),
                                 )
-                            ContextCompat.startActivity(context, shareIntent, null)
+                            context.startActivity(shareIntent)
                             onDismiss()
                         }
                     }
@@ -427,169 +409,6 @@ private fun RenderMainPopup(
                             stringRes(R.string.quick_action_report),
                         ) {
                             showReportDialog.value = true
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RenderDeleteFromGalleryPopup(
-    accountViewModel: AccountViewModel,
-    note: Note,
-    showDeleteAlertDialog: MutableState<Boolean>,
-    onDismiss: () -> Unit,
-) {
-    val context = LocalContext.current
-    val primaryLight = lightenColor(MaterialTheme.colorScheme.primary, 0.1f)
-    val cardShape = RoundedCornerShape(5.dp)
-    val clipboardManager = LocalClipboardManager.current
-    val scope = rememberCoroutineScope()
-
-    val backgroundColor =
-        if (MaterialTheme.colorScheme.isLight) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.secondaryButtonBackground
-        }
-
-    val showToast = { stringRes: Int ->
-        scope.launch {
-            Toast
-                .makeText(
-                    context,
-                    stringRes(context, stringRes),
-                    Toast.LENGTH_SHORT,
-                ).show()
-        }
-    }
-
-    val isOwnNote = accountViewModel.isLoggedUser(note.author)
-    val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
-
-    Popup(onDismissRequest = onDismiss, alignment = Alignment.Center) {
-        Card(
-            modifier = Modifier.shadow(elevation = 6.dp, shape = cardShape),
-            shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Min)) {
-                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    NoteQuickActionItem(
-                        icon = Icons.Default.ContentCopy,
-                        label = stringRes(R.string.quick_action_copy_text),
-                    ) {
-                        accountViewModel.decrypt(note) {
-                            clipboardManager.setText(AnnotatedString(it))
-                            showToast(R.string.copied_note_text_to_clipboard)
-                        }
-
-                        onDismiss()
-                    }
-                    VerticalDivider(color = primaryLight)
-                    NoteQuickActionItem(
-                        Icons.Default.AlternateEmail,
-                        stringRes(R.string.quick_action_copy_user_id),
-                    ) {
-                        note.author?.let {
-                            scope.launch {
-                                clipboardManager.setText(AnnotatedString(it.toNostrUri()))
-                                showToast(R.string.copied_user_id_to_clipboard)
-                                onDismiss()
-                            }
-                        }
-                    }
-                    VerticalDivider(color = primaryLight)
-                    NoteQuickActionItem(
-                        Icons.Default.FormatQuote,
-                        stringRes(R.string.quick_action_copy_note_id),
-                    ) {
-                        scope.launch {
-                            clipboardManager.setText(AnnotatedString(note.toNostrUri()))
-                            showToast(R.string.copied_note_id_to_clipboard)
-                            onDismiss()
-                        }
-                    }
-                }
-                HorizontalDivider(
-                    color = primaryLight,
-                )
-                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    if (isOwnNote) {
-                        NoteQuickActionItem(
-                            Icons.Default.Delete,
-                            stringRes(R.string.quick_action_delete),
-                        ) {
-                            if (accountViewModel.account.settings.hideDeleteRequestDialog) {
-                                accountViewModel.delete(note)
-                                onDismiss()
-                            } else {
-                                showDeleteAlertDialog.value = true
-                            }
-                        }
-                    } else if (isFollowingUser) {
-                        NoteQuickActionItem(
-                            Icons.Default.PersonRemove,
-                            stringRes(R.string.quick_action_unfollow),
-                        ) {
-                            accountViewModel.unfollow(note.author!!)
-                            onDismiss()
-                        }
-                    } else {
-                        NoteQuickActionItem(
-                            Icons.Default.PersonAdd,
-                            stringRes(R.string.quick_action_follow),
-                        ) {
-                            accountViewModel.follow(note.author!!)
-                            onDismiss()
-                        }
-                    }
-
-                    VerticalDivider(color = primaryLight)
-                    NoteQuickActionItem(
-                        icon = ImageVector.vectorResource(id = R.drawable.relays),
-                        label = stringRes(R.string.broadcast),
-                    ) {
-                        accountViewModel.broadcast(note)
-                        // showSelectTextDialog = true
-                        onDismiss()
-                    }
-                    VerticalDivider(color = primaryLight)
-                    if (isOwnNote && note.isDraft()) {
-                        NoteQuickActionItem(
-                            Icons.Default.Edit,
-                            stringRes(R.string.edit_draft),
-                        ) {
-                            onDismiss()
-                        }
-                    } else {
-                        NoteQuickActionItem(
-                            icon = Icons.Default.Share,
-                            label = stringRes(R.string.quick_action_share),
-                        ) {
-                            val sendIntent =
-                                Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    type = "text/plain"
-                                    putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        externalLinkForNote(note),
-                                    )
-                                    putExtra(
-                                        Intent.EXTRA_TITLE,
-                                        stringRes(context, R.string.quick_action_share_browser_link),
-                                    )
-                                }
-
-                            val shareIntent =
-                                Intent.createChooser(
-                                    sendIntent,
-                                    stringRes(context, R.string.quick_action_share),
-                                )
-                            ContextCompat.startActivity(context, shareIntent, null)
-                            onDismiss()
                         }
                     }
                 }

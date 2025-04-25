@@ -22,14 +22,15 @@ package com.vitorpamplona.quartz.nip55AndroidSigner
 
 import android.content.ContentResolver
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import android.util.LruCache
+import androidx.core.net.toUri
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -63,7 +64,7 @@ class Result(
     @JsonProperty("id") val id: String?,
 ) {
     companion object {
-        val mapper =
+        val mapper: ObjectMapper =
             jacksonObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .registerModule(
@@ -210,7 +211,7 @@ class ExternalSignerLauncher(
         id: String,
         onReady: (String) -> Unit,
     ) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$data"))
+        val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$data".toUri())
         val signerType =
             when (type) {
                 SignerType.SIGN_EVENT -> "sign_event"
@@ -287,7 +288,7 @@ class ExternalSignerLauncher(
             contentResolver
                 ?.let { it() }
                 ?.query(
-                    Uri.parse("content://$signerPackageName.$signerType"),
+                    "content://$signerPackageName.$signerType".toUri(),
                     localData,
                     "1",
                     null,
@@ -313,7 +314,7 @@ class ExternalSignerLauncher(
                     }
                 }
         } catch (e: Exception) {
-            Log.e("ExternalSignerLauncher", "Failed to query the Signer app in the background")
+            Log.e("ExternalSignerLauncher", "Failed to query the Signer app in the background", e)
             return kotlin.Result.success(null)
         }
 

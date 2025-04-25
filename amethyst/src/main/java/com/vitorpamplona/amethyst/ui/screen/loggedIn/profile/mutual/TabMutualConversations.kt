@@ -27,10 +27,11 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 
 @Composable
 fun TabMutualConversations(
-    feedViewModel: NostrUserProfileMutualFeedViewModel,
+    feedViewModel: UserProfileMutualFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

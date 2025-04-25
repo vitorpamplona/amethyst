@@ -25,6 +25,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -33,9 +34,9 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -57,7 +58,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.time.measureTimedValue
 
 @Stable
 class CardFeedContentState(
@@ -363,8 +363,7 @@ class CardFeedContentState(
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
-            val (value, elapsed) = measureTimedValue { refreshSuspended() }
-            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+            logTime("${this.javaClass.simpleName} Card update") { refreshSuspended() }
         }
     }
 
@@ -373,12 +372,10 @@ class CardFeedContentState(
         bundler.invalidate(ignoreIfDoing) {
             // adds the time to perform the refresh into this delay
             // holding off new updates in case of heavy refresh routines.
-            val (value, elapsed) =
-                measureTimedValue {
-                    refreshSuspended()
-                    sendToTop()
-                }
-            Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+            logTime("${this.javaClass.simpleName} Card update") {
+                refreshSuspended()
+                sendToTop()
+            }
         }
     }
 
@@ -388,12 +385,10 @@ class CardFeedContentState(
             bundler.invalidate(false) {
                 // adds the time to perform the refresh into this delay
                 // holding off new updates in case of heavy refresh routines.
-                val (value, elapsed) =
-                    measureTimedValue {
-                        refreshSuspended()
-                        sendToTop()
-                    }
-                Log.d("Time", "${this.javaClass.simpleName} Card update $elapsed")
+                logTime("${this.javaClass.simpleName} Card update: checkKeysInvalidateDataAndSendToTop") {
+                    refreshSuspended()
+                    sendToTop()
+                }
             }
         }
     }
@@ -401,16 +396,11 @@ class CardFeedContentState(
     fun invalidateInsertData(newItems: Set<Note>) {
         bundlerInsert.invalidateList(newItems) {
             val newObjects = it.flatten().toSet()
-            val (value, elapsed) =
-                measureTimedValue {
-                    if (newObjects.isNotEmpty()) {
-                        refreshFromOldState(newObjects)
-                    }
+            logTime("${this.javaClass.simpleName} Card additive receiving ${newObjects.size} items into ${it.size} items") {
+                if (newObjects.isNotEmpty()) {
+                    refreshFromOldState(newObjects)
                 }
-            Log.d(
-                "Time",
-                "${this.javaClass.simpleName} Card additive update $elapsed. ${newObjects.size}",
-            )
+            }
         }
     }
 

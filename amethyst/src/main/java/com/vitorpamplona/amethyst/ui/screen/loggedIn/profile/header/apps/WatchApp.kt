@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -47,7 +47,7 @@ fun WatchApp(
     baseApp: Note,
     nav: INav,
 ) {
-    val appState by baseApp.live().metadata.observeAsState()
+    val appState by observeNote(baseApp)
 
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
     var appName by remember(baseApp) { mutableStateOf<String?>(null) }

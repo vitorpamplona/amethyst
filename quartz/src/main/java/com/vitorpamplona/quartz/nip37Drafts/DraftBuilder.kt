@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent.Companion.ALT_DESCRIPTION
-import com.vitorpamplona.quartz.nip37Drafts.DraftEvent.Companion.KIND
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class DraftBuilder {
@@ -41,8 +39,8 @@ class DraftBuilder {
         ) {
             signer.nip44Encrypt(draft.toJson(), signer.pubKey) { encryptedContent ->
                 val template =
-                    eventTemplate<DraftEvent>(KIND, encryptedContent, createdAt) {
-                        alt(ALT_DESCRIPTION)
+                    eventTemplate<DraftEvent>(DraftEvent.KIND, encryptedContent, createdAt) {
+                        alt(DraftEvent.ALT_DESCRIPTION)
                         dTag(dTag)
                         kind(draft.kind)
 

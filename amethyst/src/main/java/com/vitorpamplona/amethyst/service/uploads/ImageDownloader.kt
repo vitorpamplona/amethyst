@@ -42,7 +42,7 @@ class ImageDownloader {
             var imageData: Blob? = null
             var tentatives = 0
 
-            // Servers are usually not ready.. so tries to download it for 15 times/seconds.
+            // Servers are usually not ready, so tries to download it for 15 times/seconds.
             while (imageData == null && tentatives < 15) {
                 imageData =
                     try {

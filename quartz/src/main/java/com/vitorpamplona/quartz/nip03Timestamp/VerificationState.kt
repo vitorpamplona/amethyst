@@ -44,4 +44,7 @@ sealed class VerificationState {
         val errorMessage: String,
         val time: Long = TimeUtils.now(),
     ) : VerificationState()
+
+    @Immutable
+    object Verifying : VerificationState()
 }

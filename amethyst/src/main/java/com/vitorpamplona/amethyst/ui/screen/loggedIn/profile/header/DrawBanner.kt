@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,6 +40,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -51,13 +51,21 @@ fun DrawBanner(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val banner = remember(userState) { userState?.user?.info?.banner }
+    val banner by observeUserBanner(baseUser)
 
-    val clipboardManager = LocalClipboardManager.current
-    var zoomImageDialogOpen by remember { mutableStateOf(false) }
+    DrawBanner(banner, accountViewModel)
+}
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DrawBanner(
+    banner: String?,
+    accountViewModel: AccountViewModel,
+) {
     if (!banner.isNullOrBlank()) {
+        val clipboardManager = LocalClipboardManager.current
+        var zoomImageDialogOpen by remember { mutableStateOf(false) }
+
         AsyncImage(
             model = banner,
             contentDescription = stringRes(id = R.string.profile_image),

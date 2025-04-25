@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,6 +40,8 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
@@ -218,7 +219,7 @@ fun DisplayEntryForUser(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userMetadata by baseUser.live().userMetadataInfo.observeAsState()
+    val userMetadata by observeUserInfo(baseUser)
 
     CreateClickableTextWithEmoji(
         clickablePart = userMetadata?.bestName() ?: baseUser.pubkeyDisplayHex(),
@@ -236,7 +237,7 @@ fun DisplayEntryForNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by note.live().metadata.observeAsState()
+    val noteState by observeNote(note)
 
     val author = userBase ?: noteState?.note?.author
 

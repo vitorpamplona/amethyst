@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
@@ -184,7 +186,7 @@ fun AllMediaBody(
             SettingsCategory(
                 stringRes(R.string.media_servers_nip96_section),
                 stringRes(R.string.media_servers_nip96_explainer),
-                Modifier.padding(bottom = 8.dp),
+                SettingsCategoryFirstModifier,
             )
         }
 
@@ -205,6 +207,7 @@ fun AllMediaBody(
             SettingsCategory(
                 stringRes(R.string.media_servers_blossom_section),
                 stringRes(R.string.media_servers_blossom_explainer),
+                SettingsCategorySpacingModifier,
             )
         }
 
@@ -226,22 +229,22 @@ fun AllMediaBody(
                 SettingsCategoryWithButton(
                     title = stringRes(id = R.string.built_in_media_servers_title),
                     description = stringRes(id = R.string.built_in_servers_description),
-                    action = {
-                        OutlinedButton(
-                            onClick = {
-                                nip96ServersViewModel.addServerList(
-                                    it.mapNotNull { s -> if (s.type == ServerType.NIP96) s.baseUrl else null },
-                                )
+                    modifier = SettingsCategorySpacingModifier,
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            nip96ServersViewModel.addServerList(
+                                it.mapNotNull { s -> if (s.type == ServerType.NIP96) s.baseUrl else null },
+                            )
 
-                                blossomServersViewModel.addServerList(
-                                    it.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
-                                )
-                            },
-                        ) {
-                            Text(text = stringRes(id = R.string.use_default_servers))
-                        }
-                    },
-                )
+                            blossomServersViewModel.addServerList(
+                                it.mapNotNull { s -> if (s.type == ServerType.Blossom) s.baseUrl else null },
+                            )
+                        },
+                    ) {
+                        Text(text = stringRes(id = R.string.use_default_servers))
+                    }
+                }
             }
             itemsIndexed(
                 it,

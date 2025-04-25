@@ -22,31 +22,27 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import android.Manifest
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 
 @Composable
 fun NotificationScreen(
@@ -74,20 +70,6 @@ fun NotificationScreen(
     SelectNotificationProvider(sharedPreferencesViewModel)
 
     WatchAccountForNotifications(notifFeedContentState, accountViewModel)
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    NostrAccountDataSource.account = accountViewModel.account
-                    NostrAccountDataSource.invalidateFilters()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -124,6 +106,7 @@ fun NotificationScreen(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: SharedPreferencesViewModel): PermissionState {
@@ -133,14 +116,12 @@ fun checkifItNeedsToRequestNotificationPermission(sharedPreferencesViewModel: Sh
         )
 
     if (!sharedPreferencesViewModel.sharedPrefs.dontAskForNotificationPermissions) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!notificationPermissionState.status.isGranted) {
-                sharedPreferencesViewModel.dontAskForNotificationPermissions()
+        if (!notificationPermissionState.status.isGranted) {
+            sharedPreferencesViewModel.dontAskForNotificationPermissions()
 
-                // This will pause the APP, including the connection with relays.
-                LaunchedEffect(notificationPermissionState) {
-                    notificationPermissionState.launchPermissionRequest()
-                }
+            // This will pause the APP, including the connection with relays.
+            LaunchedEffect(notificationPermissionState) {
+                notificationPermissionState.launchPermissionRequest()
             }
         }
     }
@@ -157,8 +138,6 @@ fun WatchAccountForNotifications(
         accountViewModel.account.liveNotificationFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
-        NostrAccountDataSource.account = accountViewModel.account
-        NostrAccountDataSource.invalidateFilters()
         notifFeedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }

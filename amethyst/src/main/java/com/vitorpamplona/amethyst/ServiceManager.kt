@@ -25,35 +25,12 @@ import androidx.compose.runtime.Stable
 import coil3.annotation.DelicateCoilApi
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrCommunityDataSource
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
-import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
-import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrVideoDataSource
-import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 @Stable
 class ServiceManager(
@@ -66,8 +43,6 @@ class ServiceManager(
     private var account: Account? = null
 
     private var collectorJob: Job? = null
-
-    private val trimmingService = MemoryTrimmingService()
 
     private fun start(account: Account) {
         this.account = account
@@ -104,39 +79,6 @@ class ServiceManager(
                     }
                 }
 
-            // start services
-            NostrAccountDataSource.account = myAccount
-            NostrHomeDataSource.account = myAccount
-            NostrChatroomListDataSource.account = myAccount
-            NostrVideoDataSource.account = myAccount
-            NostrDiscoveryDataSource.account = myAccount
-
-            NostrAccountDataSource.otherAccounts =
-                runBlocking {
-                    LocalPreferences.allSavedAccounts().mapNotNull {
-                        try {
-                            it.npub.bechToBytes().toHexKey()
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            null
-                        }
-                    }
-                }
-
-            // Notification Elements
-            NostrHomeDataSource.start()
-            NostrAccountDataSource.start()
-            GlobalScope.launch(Dispatchers.IO) {
-                delay(3000)
-                NostrChatroomListDataSource.start()
-                NostrDiscoveryDataSource.start()
-                NostrVideoDataSource.start()
-            }
-
-            // More Info Data Sources
-            NostrSingleEventDataSource.start()
-            NostrSingleChannelDataSource.start()
-            NostrSingleUserDataSource.start()
             isStarted = true
         }
     }
@@ -147,34 +89,12 @@ class ServiceManager(
         collectorJob?.cancel()
         collectorJob = null
 
-        NostrAccountDataSource.stopSync()
-        NostrHomeDataSource.stopSync()
-        NostrChannelDataSource.stopSync()
-        NostrChatroomDataSource.stopSync()
-        NostrChatroomListDataSource.stopSync()
-        NostrDiscoveryDataSource.stopSync()
-
-        NostrCommunityDataSource.stopSync()
-        NostrHashtagDataSource.stopSync()
-        NostrGeohashDataSource.stopSync()
-        NostrSearchEventOrUserDataSource.stopSync()
-        NostrSingleChannelDataSource.stopSync()
-        NostrSingleEventDataSource.stopSync()
-        NostrSingleUserDataSource.stopSync()
-        NostrThreadDataSource.stopSync()
-        NostrUserProfileDataSource.stopSync()
-        NostrVideoDataSource.stopSync()
-
         client.reconnect(null)
         isStarted = false
     }
 
     fun cleanObservers() {
         LocalCache.cleanObservers()
-    }
-
-    suspend fun trimMemory() {
-        trimmingService.run(account)
     }
 
     // This method keeps the pause/start in a Syncronized block to

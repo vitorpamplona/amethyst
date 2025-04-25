@@ -2,6 +2,7 @@ package com.vitorpamplona.quartz.nip03Timestamp.ots;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Locale;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -181,7 +182,7 @@ public class Utils {
      * @return the string, with its first character converted to uppercase
      */
     public static String toUpperFirstLetter(String string) {
-        return string.substring(0, 1).toUpperCase() + string.substring(1).toLowerCase();
+        return string.substring(0, 1).toUpperCase(Locale.getDefault()) + string.substring(1).toLowerCase(Locale.getDefault());
     }
 
     // TODO: This is not the way to do logging. Fix later, possibly with slf4j annotation. Need to read up on the subject.

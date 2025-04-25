@@ -51,7 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.toasts.StringToastMsg
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
@@ -283,7 +284,7 @@ private fun WatchZapsAndUpdateTallies(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
 ) {
-    val zapsState by baseNote.live().zaps.observeAsState()
+    val zapsState by observeNoteZaps(baseNote)
 
     LaunchedEffect(key1 = zapsState) { pollViewModel.refreshTallies() }
 }
@@ -513,7 +514,7 @@ fun ZapVote(
         )
     }
 
-    var zappingProgress by remember { mutableStateOf(0f) }
+    var zappingProgress by remember { mutableFloatStateOf(0f) }
     var showErrorMessageDialog by remember { mutableStateOf<StringToastMsg?>(null) }
 
     val context = LocalContext.current
@@ -658,7 +659,7 @@ fun ZapVote(
             } else {
                 Spacer(Modifier.width(3.dp))
                 CircularProgressIndicator(
-                    progress = zappingProgress,
+                    progress = { zappingProgress },
                     modifier = Modifier.size(14.dp),
                     strokeWidth = 2.dp,
                 )

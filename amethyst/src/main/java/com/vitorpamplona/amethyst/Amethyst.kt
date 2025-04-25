@@ -26,7 +26,9 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
+import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -38,6 +40,10 @@ import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
+import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.ammolite.relays.NostrClient
@@ -53,6 +59,7 @@ import java.io.File
 class Amethyst : Application() {
     val appAgent = "Amethyst/${BuildConfig.VERSION_NAME}"
 
+    // Exists to avoid exceptions stopping the coroutine
     val exceptionHandler =
         CoroutineExceptionHandler { _, throwable ->
             Log.e("AmethystCoroutine", "Caught exception: ${throwable.message}", throwable)
@@ -60,7 +67,7 @@ class Amethyst : Application() {
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
-    // Key cache to download and decrypt encrypted files before caching them.
+    // Key cache service to download and decrypt encrypted files before caching them.
     val keyCache = EncryptionKeyCache()
 
     // App services that should be run as soon as there are subscribers to their flows
@@ -68,9 +75,10 @@ class Amethyst : Application() {
     val torManager = TorManager(this, applicationIOScope)
     val connManager = ConnectivityManager(this, applicationIOScope)
 
-    // Service that will run at all times.
+    // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
 
+    // creates okHttpClients based on the conditions of the connection and tor status
     val okHttpClients =
         DualHttpClientManager(
             userAgent = appAgent,
@@ -80,21 +88,52 @@ class Amethyst : Application() {
             scope = applicationIOScope,
         )
 
+    // Connects the NostrClient class with okHttp
     val factory =
         OkHttpWebSocket.BuilderFactory { _, useProxy ->
             okHttpClients.getHttpClient(useProxy)
         }
 
+    // Provides a relay pool
     val client: NostrClient = NostrClient(factory)
 
+    // Caches all events in Memory
+    val cache: LocalCache = LocalCache
+
+    // Verifies and inserts in the cache from all relays, all subscriptions
+    val cacheClientConnector = CacheClientConnector(client, cache)
+
+    // Show messages from the Relay and controls their dismissal
+    val notifyCoordinator = NotifyCoordinator(client)
+
+    // Authenticates with relays.
+    val authCoordinator = AuthCoordinator(client)
+
+    // Organizes cache clearing
+    val trimmingService = MemoryTrimmingService(cache)
+
+    // Coordinates all subscriptions for the Nostr Client
+    val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, applicationIOScope)
+
+    // Trash.
     val serviceManager = ServiceManager(client, applicationIOScope)
 
+    // saves the .content of NIP-95 blobs in disk to save memory
     val nip95cache: File by lazy { Nip95CacheFactory.new(this) }
+
+    // local video cache with disk + memory
     val videoCache: VideoCache by lazy { VideoCacheFactory.new(this) }
+
+    // image cache in disk for coil
     val diskCache: DiskCache by lazy { ImageCacheFactory.newDisk(this) }
+
+    // image cache in memory for coil
     val memoryCache: MemoryCache by lazy { ImageCacheFactory.newMemory(this) }
 
+    // Application-wide ots verification cache
     val otsVerifCache by lazy { VerificationStateCache() }
+
+    // Application-wide block height request cache
     val otsBlockHeightCache by lazy { OtsBlockHeightCache() }
 
     override fun onCreate() {
@@ -103,7 +142,7 @@ class Amethyst : Application() {
 
         instance = this
 
-        if (isDebug()) {
+        if (isDebug) {
             Logging.setup()
         }
 
@@ -124,10 +163,8 @@ class Amethyst : Application() {
 
     fun contentResolverFn(): ContentResolver = contentResolver
 
-    fun isDebug() = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
-
     fun setImageLoader(shouldUseTor: Boolean?) =
-        ImageLoaderSetup.setup(this, diskCache, memoryCache, isDebug()) {
+        ImageLoaderSetup.setup(this, diskCache, memoryCache) {
             shouldUseTor?.let { okHttpClients.getHttpClient(it) } ?: okHttpClients.getHttpClient(false)
         }
 
@@ -142,7 +179,7 @@ class Amethyst : Application() {
         super.onTrimMemory(level)
         Log.d("AmethystApp", "onTrimMemory $level")
         applicationIOScope.launch(Dispatchers.Default) {
-            serviceManager.trimMemory()
+            trimmingService.run(null, LocalPreferences.allSavedAccounts())
         }
     }
 

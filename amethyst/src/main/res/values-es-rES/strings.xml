@@ -96,9 +96,9 @@
     <string name="my_awesome_group">Mi grupo genial</string>
     <string name="picture_url">URL de imagen</string>
     <string name="description">Descripción</string>
-    <string name="about_us">"Sobre nosotros… "</string>
+    <string name="about_us">"Sobre nosotros…"</string>
     <string name="what_s_on_your_mind">¿Qué tienes en mente?</string>
-    <string name="write_a_message">Escribir un mensaje...</string>
+    <string name="write_a_message">Escribir un mensaje…</string>
     <string name="post">Publicar</string>
     <string name="save">Guardar</string>
     <string name="create">Crear</string>

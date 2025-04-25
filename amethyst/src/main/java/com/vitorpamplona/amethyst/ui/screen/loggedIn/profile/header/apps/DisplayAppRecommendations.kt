@@ -42,7 +42,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun DisplayAppRecommendations(
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

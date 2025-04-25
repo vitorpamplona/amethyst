@@ -96,7 +96,7 @@
     <string name="my_awesome_group">Meine tolle Gruppe</string>
     <string name="picture_url">Bild-URL</string>
     <string name="description">Beschreibung</string>
-    <string name="about_us">"Über uns.. "</string>
+    <string name="about_us">"Über uns…"</string>
     <string name="what_s_on_your_mind">Was beschäftigt dich?</string>
     <string name="post">Beitrag</string>
     <string name="save">Speichern</string>
@@ -140,7 +140,7 @@ erie gespeichert</string>
     <string name="upload_image">Bild hochladen</string>
     <string name="uploading">Hochladen…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
-    <string name="reply_here">"Hier antworten.. "</string>
+    <string name="reply_here">"Hier antworten…"</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Kopiert die Notiz-ID zum Teilen in die Zwischenablage</string>
     <string name="copy_channel_id_note_to_the_clipboard">Kopiere Kanal-ID (Notiz) in die Zwischenablage</string>
     <string name="edits_the_channel_metadata">Bearbeitet die Kanalmetadaten</string>
@@ -221,7 +221,7 @@ anz der Bedingungen ist erforderlich</string>
         kann daran teilnehmen. Sie eignen sich hervorragend für offene Gemeinschaften rund um bestimmte Themen.
         Moderation kann durch Löschen von Beiträgen auf den Relais gesteuert werden</string>
     <string name="public_chat_relays_title">Relais</string>
-    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1-3 Relais ein, die diese Gruppe beherbergen.
+    <string name="public_chat_relays_explainer">Fügen Sie zwischen 1–3 Relais ein, die diese Gruppe beherbergen.
         Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
     <string name="posts_received">empfangene Beiträge</string>
     <string name="remove">Entfernen</string>
@@ -351,7 +351,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
     <string name="poll_zap_amount">Zap-Betrag</string>
     <string name="one_vote_per_user_on_atomic_votes">Es ist nur eine Stimme pro Benutzer für diesen Umfragetyp erlaubt</string>
-    <string name="looking_for_event">"Veranstaltung suchen"</string>
+    <string name="looking_for_event">"Veranstaltung suchen %1$s"</string>
     <string name="custom_zaps_add_a_message">Füge eine öffentliche Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_private">Füge eine private Nachricht hinzu</string>
     <string name="custom_zaps_add_a_message_nonzap">Füge eine Rechnungsnachricht hinzu</string>

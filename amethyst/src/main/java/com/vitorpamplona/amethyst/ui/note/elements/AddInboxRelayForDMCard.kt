@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -106,8 +106,7 @@ fun ObserveRelayListForDMs(
         accountViewModel,
     ) { relayList ->
         if (relayList != null) {
-            val relayListNoteState by relayList.live().metadata.observeAsState()
-            val relayListEvent = relayListNoteState?.note?.event as? ChatMessageRelayListEvent
+            val relayListEvent by observeNoteEvent<ChatMessageRelayListEvent>(relayList)
 
             inner(relayListEvent)
         }

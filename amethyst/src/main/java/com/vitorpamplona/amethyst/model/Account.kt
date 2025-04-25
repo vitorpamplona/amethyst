@@ -23,20 +23,16 @@ package com.vitorpamplona.amethyst.model
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.switchMap
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fonfon.kgeohash.GeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.service.NostrLnZapPaymentResponseDataSource
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentQueryState
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -192,6 +188,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -219,14 +216,6 @@ class Account(
     }
 
     var transientHiddenUsers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf())
-
-    data class PaymentRequest(
-        val relayUrl: String,
-        val description: String,
-    )
-
-    var transientPaymentRequestDismissals: Set<PaymentRequest> = emptySet()
-    val transientPaymentRequests: MutableStateFlow<Set<PaymentRequest>> = MutableStateFlow(emptySet())
 
     @Immutable
     class LiveFollowList(
@@ -592,7 +581,6 @@ class Account(
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowList> =
         userProfile().flow().follows.stateFlow.transformLatest {
-            checkNotInMainThread()
             emit(buildFollowLists(it.user.latestContactList))
         }
 
@@ -1098,24 +1086,25 @@ class Account(
             )
     }
 
-    val liveHiddenUsers = flowHiddenUsers.asLiveData()
-
-    val decryptBookmarks: LiveData<BookmarkListEvent?> by lazy {
-        userProfile().live().innerBookmarks.switchMap { userState ->
-            liveData(Dispatchers.IO) {
+    val decryptBookmarks: Flow<BookmarkListEvent?> by lazy {
+        userProfile()
+            .flow()
+            .bookmarks.stateFlow
+            .map { userState ->
                 if (userState.user.latestBookmarkList == null) {
-                    emit(null)
+                    null
                 } else {
-                    emit(
+                    val result =
                         tryAndWait { continuation ->
                             userState.user.latestBookmarkList?.privateTags(signer) {
                                 continuation.resume(userState.user.latestBookmarkList)
                             }
-                        },
-                    )
+                        }
+
+                    result
                 }
-            }
-        }
+            }.debounce(1000)
+            .flowOn(Dispatchers.Default)
     }
 
     class EmojiMedia(
@@ -1188,22 +1177,6 @@ class Account(
                 SharingStarted.Eagerly,
                 mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
             )
-    }
-
-    fun addPaymentRequestIfNew(paymentRequest: PaymentRequest) {
-        if (
-            !this.transientPaymentRequests.value.contains(paymentRequest) &&
-            !this.transientPaymentRequestDismissals.contains(paymentRequest)
-        ) {
-            this.transientPaymentRequests.value += paymentRequest
-        }
-    }
-
-    fun dismissPaymentRequest(request: PaymentRequest) {
-        if (this.transientPaymentRequests.value.contains(request)) {
-            this.transientPaymentRequests.value -= request
-            this.transientPaymentRequestDismissals += request
-        }
     }
 
     private var userProfileCache: User? = null
@@ -1564,14 +1537,15 @@ class Account(
                 nip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
 
             LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, signer) { event ->
-                val wcListener =
-                    NostrLnZapPaymentResponseDataSource(
+                val filter =
+                    NWCPaymentQueryState(
                         fromServiceHex = nip47.pubKeyHex,
                         toUserHex = event.pubKey,
                         replyingToHex = event.id,
-                        authSigner = signer,
                     )
-                wcListener.startSync()
+
+                Amethyst.instance.sources.nwc
+                    .subscribe(filter)
 
                 LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
 
@@ -1583,9 +1557,12 @@ class Account(
                             forceProxy = shouldUseTorForTrustedRelays(), // this is trusted.
                             read = true,
                             write = true,
-                            feedTypes = wcListener.feedTypes,
+                            feedTypes = setOf(FeedType.WALLET_CONNECT),
                         ),
-                    onDone = { wcListener.destroy() },
+                    onDone = {
+                        Amethyst.instance.sources.nwc
+                            .unsubscribe(filter)
+                    },
                 )
 
                 onSent()
@@ -3768,32 +3745,38 @@ class Account(
         settings.backupContactList?.let {
             Log.d("AccountRegisterObservers", "Loading saved contacts ${it.toJson()}")
 
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it) }
         }
 
         settings.backupUserMetadata?.let {
             Log.d("AccountRegisterObservers", "Loading saved user metadata ${it.toJson()}")
 
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it, null) }
         }
 
         settings.backupDMRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
         settings.backupNIP65RelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved nip65 relay list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
         settings.backupSearchRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
         settings.backupPrivateHomeRelayList?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved private home relay list ${event.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
                     LocalCache.verifyAndConsume(event, null)
@@ -3803,6 +3786,7 @@ class Account(
 
         settings.backupAppSpecificData?.let { event ->
             Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 LocalCache.verifyAndConsume(event, null)
                 signer.decrypt(event.content, event.pubKey) { decrypted ->
@@ -3821,6 +3805,7 @@ class Account(
 
         settings.backupMuteList?.let {
             Log.d("AccountRegisterObservers", "Loading saved mute list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 

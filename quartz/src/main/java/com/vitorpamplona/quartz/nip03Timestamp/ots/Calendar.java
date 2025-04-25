@@ -9,6 +9,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.http.Response;
 
 import java.net.URL;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -94,7 +95,7 @@ public class Calendar implements ICalendar {
             headers.put("User-Agent", "java-opentimestamps");
             headers.put("Content-Type", "application/x-www-form-urlencoded");
 
-            URL obj = new URL(url + "/timestamp/" + Utils.bytesToHex(commitment).toLowerCase());
+            URL obj = new URL(url + "/timestamp/" + Utils.bytesToHex(commitment).toLowerCase(Locale.ROOT));
             Request task = new Request(obj);
             task.setHeaders(headers);
             Response response = task.call();

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -388,10 +387,10 @@ fun payViaIntent(
     onError: (String) -> Unit,
 ) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("lightning:$invoice"))
+        val intent = Intent(Intent.ACTION_VIEW, "lightning:$invoice".toUri())
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-        ContextCompat.startActivity(context, intent, null)
+        context.startActivity(intent)
         onPaid()
     } catch (e: Exception) {
         if (e is CancellationException) throw e

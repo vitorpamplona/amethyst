@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.amethyst.service.lang.TranslationsCache
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -80,18 +81,7 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var translatedTextState by
-        remember(id) { mutableStateOf(TranslationConfig(content, null, null, false)) }
-
-    TranslateAndWatchLanguageChanges(content, accountViewModel) { result ->
-        if (
-            !translatedTextState.result.equals(result.result, true) ||
-            translatedTextState.sourceLang != result.sourceLang ||
-            translatedTextState.targetLang != result.targetLang
-        ) {
-            translatedTextState = result
-        }
-    }
+    var translatedTextState by translateAndWatchLanguageChanges(content, id, accountViewModel)
 
     CrossfadeIfEnabled(targetState = translatedTextState, accountViewModel = accountViewModel) {
         RenderText(
@@ -334,14 +324,36 @@ private fun TranslationMessage(
 }
 
 @Composable
+fun translateAndWatchLanguageChanges(
+    content: String,
+    id: String,
+    accountViewModel: AccountViewModel,
+): MutableState<TranslationConfig> {
+    var translatedTextState = remember(id) { mutableStateOf(TranslationsCache.get(content)) }
+
+    TranslateAndWatchLanguageChanges(
+        content,
+        accountViewModel,
+    ) { result ->
+        if (
+            !translatedTextState.value.result.equals(result.result, true) ||
+            translatedTextState.value.sourceLang != result.sourceLang ||
+            translatedTextState.value.targetLang != result.targetLang
+        ) {
+            TranslationsCache.set(content, result)
+            translatedTextState.value = result
+        }
+    }
+
+    return translatedTextState
+}
+
+@Composable
 fun TranslateAndWatchLanguageChanges(
     content: String,
     accountViewModel: AccountViewModel,
     onTranslated: (TranslationConfig) -> Unit,
 ) {
-    // Don't automatically update translations.
-    // val accountState by accountViewModel.accountLanguagesLiveData.observeAsState()
-
     LaunchedEffect(Unit) {
         // This takes some time. Launches as a Composition scope to make sure this gets cancel if this
         // item gets out of view.

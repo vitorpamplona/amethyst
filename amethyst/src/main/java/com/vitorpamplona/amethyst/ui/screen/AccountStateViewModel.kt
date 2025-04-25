@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
@@ -314,6 +315,7 @@ class AccountStateViewModel : ViewModel() {
 
             startUI(accountSettings)
 
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
                 accountSettings.backupUserMetadata?.let { Amethyst.instance.client.send(it) }

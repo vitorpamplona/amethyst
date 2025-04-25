@@ -27,24 +27,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.service.NostrCommunityDataSource
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.types.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityHeader
-import com.vitorpamplona.amethyst.ui.screen.NostrCommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal.CommunityFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
 
 @Composable
@@ -72,11 +68,11 @@ fun PrepareViewModelsCommunityScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followsFeedViewModel: NostrCommunityFeedViewModel =
+    val followsFeedViewModel: CommunityFeedViewModel =
         viewModel(
             key = note.idHex + "CommunityFeedViewModel",
             factory =
-                NostrCommunityFeedViewModel.Factory(
+                CommunityFeedViewModel.Factory(
                     note,
                     accountViewModel.account,
                 ),
@@ -88,34 +84,12 @@ fun PrepareViewModelsCommunityScreen(
 @Composable
 fun CommunityScreen(
     note: AddressableNote,
-    feedViewModel: NostrCommunityFeedViewModel,
+    feedViewModel: CommunityFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    NostrCommunityDataSource.loadCommunity(note)
-
-    LaunchedEffect(note) { feedViewModel.invalidateData() }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Community Start")
-                    NostrCommunityDataSource.start()
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Community Stop")
-                    NostrCommunityDataSource.loadCommunity(null)
-                    NostrCommunityDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    CommunityFilterAssemblerSubscription(note, accountViewModel.dataSources().community)
 
     DisappearingScaffold(
         isInvertedLayout = false,

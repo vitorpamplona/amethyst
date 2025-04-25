@@ -27,44 +27,15 @@ import android.os.Debug
 import android.util.Log
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.NostrAccountDataSource
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomDataSource
-import com.vitorpamplona.amethyst.service.NostrChatroomListDataSource
-import com.vitorpamplona.amethyst.service.NostrCommunityDataSource
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
-import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
-import com.vitorpamplona.amethyst.service.NostrHashtagDataSource
-import com.vitorpamplona.amethyst.service.NostrHomeDataSource
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleChannelDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleEventDataSource
-import com.vitorpamplona.amethyst.service.NostrSingleUserDataSource
-import com.vitorpamplona.amethyst.service.NostrThreadDataSource
-import com.vitorpamplona.amethyst.service.NostrUserProfileDataSource
-import com.vitorpamplona.amethyst.service.NostrVideoDataSource
+import kotlin.time.DurationUnit
+import kotlin.time.measureTimedValue
+
+val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
 fun debugState(context: Context) {
     Amethyst.instance.client
         .allSubscriptions()
         .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toDebugJson() }}") }
-
-    NostrAccountDataSource.printCounter()
-    NostrChannelDataSource.printCounter()
-    NostrChatroomDataSource.printCounter()
-    NostrChatroomListDataSource.printCounter()
-    NostrCommunityDataSource.printCounter()
-    NostrDiscoveryDataSource.printCounter()
-    NostrHashtagDataSource.printCounter()
-    NostrGeohashDataSource.printCounter()
-    NostrHomeDataSource.printCounter()
-    NostrSearchEventOrUserDataSource.printCounter()
-    NostrSingleChannelDataSource.printCounter()
-    NostrSingleEventDataSource.printCounter()
-    NostrSingleUserDataSource.printCounter()
-    NostrThreadDataSource.printCounter()
-    NostrUserProfileDataSource.printCounter()
-    NostrVideoDataSource.printCounter()
 
     val totalMemoryMb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
     val freeMemoryMb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
@@ -101,8 +72,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Notes: " +
-            LocalCache.notes.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.notes.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.notes.filter { _, it -> it.event != null }.size +
@@ -112,8 +81,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Addressables: " +
-            LocalCache.addressables.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.addressables.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.addressables.filter { _, it -> it.event != null }.size +
@@ -123,8 +90,6 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Users: " +
-            LocalCache.users.filter { _, it -> it.liveSet != null }.size +
-            " / " +
             LocalCache.users.filter { _, it -> it.flowSet != null }.size +
             " / " +
             LocalCache.users.filter { _, it -> it.latestMetadata != null }.size +
@@ -172,5 +137,47 @@ fun debugState(context: Context) {
     }
     qttAddressables.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
         Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables.get(kind)?.div((1024 * 1024))}MB ")
+    }
+}
+
+inline fun <T> logTime(
+    debugMessage: String,
+    block: () -> T,
+): T =
+    if (isDebug) {
+        val (result, elapsed) = measureTimedValue(block)
+        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+        result
+    } else {
+        block()
+    }
+
+inline fun <T> logTime(
+    debugMessage: (T) -> String,
+    block: () -> T,
+): T =
+    if (isDebug) {
+        val (result, elapsed) = measureTimedValue(block)
+        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
+        result
+    } else {
+        block()
+    }
+
+inline fun debug(
+    tag: String,
+    debugMessage: String,
+) {
+    if (isDebug) {
+        Log.d(tag, debugMessage)
+    }
+}
+
+inline fun debug(
+    tag: String,
+    debugMessage: () -> String,
+) {
+    if (isDebug) {
+        Log.d(tag, debugMessage())
     }
 }

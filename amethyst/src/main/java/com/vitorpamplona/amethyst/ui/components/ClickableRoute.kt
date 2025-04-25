@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +57,9 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
@@ -190,8 +192,7 @@ private fun DisplayNoteLink(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by it.live().metadata.observeAsState()
-
+    val noteState by observeNote(it)
     val note = remember(noteState) { noteState?.note } ?: return
 
     val channelHex = remember(noteState) { note.channelHex() }
@@ -214,7 +215,7 @@ private fun DisplayNoteLink(
         )
     } else if (channelHex != null) {
         LoadChannel(baseChannelHex = channelHex, accountViewModel) { baseChannel ->
-            val channelState by baseChannel.live.observeAsState()
+            val channelState by observeChannel(baseChannel)
             val channelDisplayName by
                 remember(channelState) {
                     derivedStateOf { channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote }
@@ -254,7 +255,7 @@ private fun DisplayAddress(
     }
 
     noteBase?.let {
-        val noteState by it.live().metadata.observeAsState()
+        val noteState by observeNote(it)
 
         val route = remember(noteState) { Route.Note(nip19.aTag()) }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
@@ -324,7 +325,7 @@ fun RenderUserAsClickableText(
     additionalChars: String?,
     nav: INav,
 ) {
-    val userState by baseUser.live().userMetadataInfo.observeAsState()
+    val userState by observeUserInfo(baseUser)
 
     CreateClickableTextWithEmoji(
         clickablePart = "@" + (userState?.bestName() ?: baseUser.pubkeyDisplayHex()),

@@ -77,7 +77,7 @@
     <string name="my_awesome_group">আমার অসাধারণ দল</string>
     <string name="picture_url">ছবির Url</string>
     <string name="description">বিবরণ</string>
-    <string name="about_us">"আমাদের সম্পর্কে.. "</string>
+    <string name="about_us">"আমাদের সম্পর্কে…"</string>
     <string name="what_s_on_your_mind">নিজের কোনো ভাবনা প্রকাশ করতে চান?</string>
     <string name="post">পেশ করুন</string>
     <string name="save">সংরক্ষণ করুন</string>
@@ -513,7 +513,7 @@
     <string name="push_server_none">কোনটি নয়</string>
     <string name="send_the_seller_a_message">বিক্রেতাকে একটি বার্তা পাঠান</string>
     <string name="hi_seller_is_this_still_available">হাই %1$s, এটা কি এখনও পাওয়া যায়?</string>
-    <string name="hi_there_is_this_still_available">হাই %1$s, এটা কি এখনও পাওয়া যায়?</string>
+    <string name="hi_there_is_this_still_available">হাই, এটা কি এখনও পাওয়া যায়?</string>
     <string name="classifieds">একটি পণ্য বিক্রি করুন</string>
     <string name="classifieds_title">শিরোনাম</string>
     <string name="classifieds_title_placeholder">iPhone 13</string>

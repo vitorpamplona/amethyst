@@ -20,40 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.NostrGeohashDataSource
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
+import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
-import com.vitorpamplona.amethyst.ui.screen.NostrGeoHashFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.dal.GeoHashFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource.GeoHashFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
 fun GeoHashScreen(
@@ -72,65 +59,31 @@ fun PrepareViewModelsGeoHashScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followsFeedViewModel: NostrGeoHashFeedViewModel =
+    val geohashViewModel: GeoHashFeedViewModel =
         viewModel(
             key = tag + "GeoHashFeedViewModel",
-            factory =
-                NostrGeoHashFeedViewModel.Factory(
-                    tag,
-                    accountViewModel.account,
-                ),
+            factory = GeoHashFeedViewModel.Factory(tag, accountViewModel.account),
         )
 
-    GeoHashScreen(tag, followsFeedViewModel, accountViewModel, nav)
+    GeoHashScreen(tag, geohashViewModel, accountViewModel, nav)
 }
 
 @Composable
 fun GeoHashScreen(
     tag: String,
-    feedViewModel: NostrGeoHashFeedViewModel,
+    feedViewModel: GeoHashFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    NostrGeohashDataSource.loadHashtag(tag)
-
-    DisposableEffect(tag) {
-        NostrGeohashDataSource.start()
-        feedViewModel.invalidateData()
-        onDispose {
-            NostrGeohashDataSource.loadHashtag(null)
-            NostrGeohashDataSource.stop()
-        }
-    }
-
-    DisposableEffect(lifeCycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    println("Hashtag Start")
-                    NostrGeohashDataSource.loadHashtag(tag)
-                    NostrGeohashDataSource.start()
-                    feedViewModel.invalidateData()
-                }
-                if (event == Lifecycle.Event.ON_PAUSE) {
-                    println("Hashtag Stop")
-                    NostrGeohashDataSource.loadHashtag(null)
-                    NostrGeohashDataSource.stop()
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifeCycleOwner.lifecycle.removeObserver(observer) }
-    }
+    WatchLifecycleAndUpdateModel(feedViewModel)
+    GeoHashFilterAssemblerSubscription(tag, accountViewModel.dataSources().geohashes)
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {
-                    DislayGeoTagHeader(tag, Modifier.weight(1f))
+                    DisplayGeoTagHeader(tag, Modifier.weight(1f))
                     GeoHashActionOptions(tag, accountViewModel)
                 },
                 popBack = nav::popBack,
@@ -150,34 +103,7 @@ fun GeoHashScreen(
 }
 
 @Composable
-fun GeoHashHeader(
-    tag: String,
-    modifier: Modifier = StdPadding,
-    account: AccountViewModel,
-    onClick: () -> Unit = {},
-) {
-    Column(
-        Modifier.fillMaxWidth().clickable { onClick() },
-    ) {
-        Column(modifier = modifier) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                DislayGeoTagHeader(tag, remember { Modifier.weight(1f) })
-
-                GeoHashActionOptions(tag, account)
-            }
-        }
-
-        HorizontalDivider(
-            thickness = DividerThickness,
-        )
-    }
-}
-
-@Composable
-fun DislayGeoTagHeader(
+fun DisplayGeoTagHeader(
     geohash: String,
     modifier: Modifier,
 ) {
@@ -195,15 +121,7 @@ fun GeoHashActionOptions(
     tag: String,
     accountViewModel: AccountViewModel,
 ) {
-    val userState by accountViewModel
-        .userProfile()
-        .live()
-        .follows
-        .observeAsState()
-    val isFollowingTag by
-        remember(userState, tag) {
-            derivedStateOf { userState?.user?.isFollowingGeohash(tag) ?: false }
-        }
+    val isFollowingTag by observeUserIsFollowingGeohash(accountViewModel.userProfile(), tag)
 
     if (isFollowingTag) {
         UnfollowButton {

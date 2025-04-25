@@ -46,7 +46,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,19 +62,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
-import com.vitorpamplona.amethyst.ui.screen.NostrHiddenAccountsFeedViewModel
-import com.vitorpamplona.amethyst.ui.screen.NostrSpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenAccountsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
@@ -91,19 +90,19 @@ fun SecurityFiltersScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val hiddenFeedViewModel: NostrHiddenAccountsFeedViewModel =
+    val hiddenFeedViewModel: HiddenAccountsFeedViewModel =
         viewModel(
-            factory = NostrHiddenAccountsFeedViewModel.Factory(accountViewModel.account),
+            factory = HiddenAccountsFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val hiddenWordsFeedViewModel: NostrHiddenWordsFeedViewModel =
+    val hiddenWordsFeedViewModel: HiddenWordsFeedViewModel =
         viewModel(
-            factory = NostrHiddenWordsFeedViewModel.Factory(accountViewModel.account),
+            factory = HiddenWordsFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val spammerFeedViewModel: NostrSpammerAccountsFeedViewModel =
+    val spammerFeedViewModel: SpammerAccountsFeedViewModel =
         viewModel(
-            factory = NostrSpammerAccountsFeedViewModel.Factory(accountViewModel.account),
+            factory = SpammerAccountsFeedViewModel.Factory(accountViewModel.account),
         )
 
     WatchAccountAndBlockList(accountViewModel = accountViewModel) {
@@ -124,9 +123,9 @@ fun SecurityFiltersScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SecurityFiltersScreen(
-    hiddenFeedViewModel: NostrHiddenAccountsFeedViewModel,
-    hiddenWordsViewModel: NostrHiddenWordsFeedViewModel,
-    spammerFeedViewModel: NostrSpammerAccountsFeedViewModel,
+    hiddenFeedViewModel: HiddenAccountsFeedViewModel,
+    hiddenWordsViewModel: HiddenWordsFeedViewModel,
+    spammerFeedViewModel: SpammerAccountsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -221,7 +220,7 @@ fun SecurityFiltersScreen(
 
 @Composable
 private fun HiddenWordsFeed(
-    hiddenWordsViewModel: NostrHiddenWordsFeedViewModel,
+    hiddenWordsViewModel: HiddenWordsFeedViewModel,
     accountViewModel: AccountViewModel,
 ) {
     RefresheableBox(hiddenWordsViewModel, false) {
@@ -322,11 +321,7 @@ fun MutedWordActionOptions(
     word: String,
     accountViewModel: AccountViewModel,
 ) {
-    val isMutedWord by
-        accountViewModel.account.liveHiddenUsers
-            .map { word in it.hiddenWords }
-            .distinctUntilChanged()
-            .observeAsState()
+    val isMutedWord by observeAccountIsHiddenWord(accountViewModel.account, word)
 
     if (isMutedWord == true) {
         ShowWordButton {

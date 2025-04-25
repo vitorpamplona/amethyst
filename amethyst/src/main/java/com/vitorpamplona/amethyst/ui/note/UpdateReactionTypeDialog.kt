@@ -55,7 +55,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,8 +71,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -81,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.firstFullChar
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEventAndMap
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
@@ -387,17 +385,9 @@ private fun EmojiSelector(
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by
-                usersEmojiList
-                    .live()
-                    .metadata
-                    .map { (it.note.event as? EmojiPackSelectionEvent)?.emojiPackIds()?.toImmutableList() }
-                    .distinctUntilChanged()
-                    .observeAsState(
-                        (usersEmojiList.event as? EmojiPackSelectionEvent)
-                            ?.emojiPackIds()
-                            ?.toImmutableList(),
-                    )
+            val collections by observeNoteEventAndMap(usersEmojiList) { event: EmojiPackSelectionEvent ->
+                event.emojiPackIds().toImmutableList()
+            }
 
             collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
         }

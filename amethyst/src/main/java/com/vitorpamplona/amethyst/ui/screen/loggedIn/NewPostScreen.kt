@@ -61,7 +61,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,7 +82,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -191,15 +190,6 @@ fun NewPostScreen(
                 val mediaType = context.contentResolver.getType(it)
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
             }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        NostrSearchEventOrUserDataSource.start()
-
-        onDispose {
-            NostrSearchEventOrUserDataSource.clear()
-            NostrSearchEventOrUserDataSource.stop()
         }
     }
 
@@ -615,28 +605,31 @@ fun Notifying(
             )
 
             mentions.forEachIndexed { idx, user ->
-                val innerUserState by user.live().metadata.observeAsState()
-                innerUserState?.user?.let { myUser ->
-                    val tags = myUser.info?.tags
-
-                    Button(
-                        shape = ButtonBorder,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.mediumImportanceLink,
-                            ),
-                        onClick = { onClick(myUser) },
-                    ) {
-                        CreateTextWithEmoji(
-                            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
-                            tags = tags,
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                Button(
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.mediumImportanceLink,
+                        ),
+                    onClick = { onClick(user) },
+                ) {
+                    DisplayUserNameWithDeleteMark(user)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DisplayUserNameWithDeleteMark(user: User) {
+    val innerUserState by observeUser(user)
+    innerUserState?.user?.let { myUser ->
+        CreateTextWithEmoji(
+            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
+            tags = myUser.info?.tags,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

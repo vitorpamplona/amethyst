@@ -314,3 +314,6 @@ val PostKeyboard =
         autoCorrectEnabled = true,
         capitalization = KeyboardCapitalization.Sentences,
     )
+
+val SettingsCategoryFirstModifier = Modifier.padding(bottom = 8.dp)
+val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.dp)

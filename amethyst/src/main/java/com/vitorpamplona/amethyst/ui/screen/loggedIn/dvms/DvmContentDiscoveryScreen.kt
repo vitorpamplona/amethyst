@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,18 +55,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DVMCard
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
@@ -79,11 +80,10 @@ import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.elements.customZapClick
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.screen.NostrNIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
@@ -194,7 +194,8 @@ fun ObserverContentDiscoveryResponse(
     nav: INav,
 ) {
     val noteAuthor = appDefinition.author ?: return
-    val updateFiltersFromRelays = dvmRequestId.live().metadata.observeAsState()
+
+    EventFinderFilterAssemblerSubscription(dvmRequestId)
 
     val resultFlow =
         remember(dvmRequestId) {
@@ -261,10 +262,10 @@ fun PrepareViewContentDiscoveryModels(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel =
+    val resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel =
         viewModel(
             key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
-            factory = NostrNIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmkey = dvm.pubkeyHex, requestid = dvmRequestId),
+            factory = NIP90ContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
         )
 
     LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
@@ -276,7 +277,7 @@ fun PrepareViewContentDiscoveryModels(
 
 @Composable
 fun RenderNostrNIP90ContentDiscoveryScreen(
-    resultFeedViewModel: NostrNIP90ContentDiscoveryFeedViewModel,
+    resultFeedViewModel: NIP90ContentDiscoveryFeedViewModel,
     onRefresh: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -447,8 +448,8 @@ fun ZapDVMButton(
             )
         }
 
-    // Makes sure the user is loaded to get his ln address
-    val userState = noteAuthor.live().metadata.observeAsState()
+    // Makes sure the user is loaded to get his ln address ahead of time.
+    UserFinderFilterAssemblerSubscription(noteAuthor)
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -530,13 +531,14 @@ fun ZapDVMButton(
             if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
                 Spacer(ModifierWidth3dp)
 
+                val animatedProgress by animateFloatAsState(
+                    targetValue = zappingProgress,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                    label = "ZapIconIndicator",
+                )
+
                 CircularProgressIndicator(
-                    progress =
-                        animateFloatAsState(
-                            targetValue = zappingProgress,
-                            animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                            label = "ZapIconIndicator",
-                        ).value,
+                    progress = { animatedProgress },
                     modifier = remember { Modifier.size(animationSize) },
                     strokeWidth = 2.dp,
                     color = grayTint,
@@ -640,25 +642,8 @@ fun convertAppMetadataToCard(metadata: AppMetadata?): DVMCard {
 
 @Composable
 fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
-    val noteEvent =
-        appDefinitionNote.event as? AppDefinitionEvent ?: return DVMCard(
-            name = "",
-            description = "",
-            cover = null,
-            amount = "",
-            personalized = false,
-        )
-
-    val card by
-        appDefinitionNote
-            .live()
-            .metadata
-            .map {
-                convertAppMetadataToCard((it.note.event as? AppDefinitionEvent)?.appMetaData())
-            }.distinctUntilChanged()
-            .observeAsState(
-                convertAppMetadataToCard(noteEvent.appMetaData()),
-            )
-
+    val card by observeNoteAndMap(appDefinitionNote) {
+        convertAppMetadataToCard((it.event as? AppDefinitionEvent)?.appMetaData())
+    }
     return card
 }

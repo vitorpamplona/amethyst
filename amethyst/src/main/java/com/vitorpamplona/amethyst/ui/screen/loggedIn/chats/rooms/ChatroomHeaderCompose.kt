@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
-import android.R.attr.description
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -35,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,11 +53,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.NostrChannelDataSource.channel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
+import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
@@ -91,14 +93,18 @@ fun ChatroomHeaderCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (baseNote.event != null) {
-        ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
-    } else {
-        val hasEvent by baseNote.live().hasEvent.observeAsState(baseNote.event != null)
-        if (hasEvent) {
+    logTime(
+        debugMessage = { "ChatroomHeaderCompose " + externalLinkForNote(baseNote) },
+    ) {
+        if (baseNote.event != null) {
             ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
         } else {
-            BlankNote()
+            val hasEvent by observeNoteHasEvent(baseNote)
+            if (hasEvent) {
+                ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
+            } else {
+                BlankNote()
+            }
         }
     }
 }
@@ -171,13 +177,8 @@ private fun ChannelRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val authorState by note.author!!
-        .live()
-        .metadata
-        .observeAsState()
-    val authorName = remember(note, authorState) { authorState?.user?.toBestDisplayName() }
-
-    val channelState by channel.live.observeAsState()
+    val authorName by observeUserName(note.author!!)
+    val channelState by observeChannel(channel)
 
     val channelPicture = channelState?.channel?.profilePicture() ?: channel.profilePicture()
     val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()

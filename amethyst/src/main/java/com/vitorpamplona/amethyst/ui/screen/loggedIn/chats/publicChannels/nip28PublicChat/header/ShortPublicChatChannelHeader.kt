@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -59,7 +60,7 @@ fun ShortPublicChatChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by baseChannel.live.observeAsState()
+    val channelState by observeChannel(baseChannel)
     val channel = channelState?.channel as? PublicChatChannel ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -129,9 +130,18 @@ fun ShortChannelActionOptions(
         }
     }
 
-    WatchChannelFollows(channel, accountViewModel) { isFollowing ->
-        if (!isFollowing) {
-            JoinChatButton(channel, accountViewModel, nav)
-        }
+    JoinChatButtonIfNotAlreadyJoined(channel, accountViewModel, nav)
+}
+
+@Composable
+fun JoinChatButtonIfNotAlreadyJoined(
+    channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.userProfile(), channel)
+
+    if (!isFollowing) {
+        JoinChatButton(channel, accountViewModel, nav)
     }
 }

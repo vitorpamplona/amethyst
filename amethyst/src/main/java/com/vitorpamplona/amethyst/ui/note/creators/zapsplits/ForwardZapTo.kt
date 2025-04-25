@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import java.util.Locale
 import kotlin.math.round
 
 @Composable
@@ -102,7 +103,7 @@ fun ForwardZapTo(
                 Column(modifier = Modifier.weight(1f)) {
                     UsernameDisplay(splitItem.key, accountViewModel = accountViewModel)
                     Text(
-                        text = String.format("%.0f%%", splitItem.percentage * 100),
+                        text = String.format(Locale.getDefault(), "%.0f%%", splitItem.percentage * 100),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Bold,

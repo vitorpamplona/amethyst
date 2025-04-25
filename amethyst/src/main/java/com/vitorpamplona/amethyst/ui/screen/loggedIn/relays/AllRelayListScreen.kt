@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
+import android.R.attr.action
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,6 +74,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
+import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.ammolite.relays.Constants
@@ -196,7 +199,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.public_home_section),
                     stringRes(R.string.public_home_section_explainer),
-                    Modifier.padding(bottom = 8.dp),
+                    SettingsCategoryFirstModifier,
                 )
             }
             renderNip65HomeItems(homeFeedState, nip65ViewModel, accountViewModel, newNav)
@@ -205,6 +208,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.public_notif_section),
                     stringRes(R.string.public_notif_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
             renderNip65NotifItems(notifFeedState, nip65ViewModel, accountViewModel, newNav)
@@ -213,6 +217,7 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     stringRes(R.string.private_inbox_section),
                     stringRes(R.string.private_inbox_section_explainer),
+                    SettingsCategorySpacingModifier,
                     action = {
                         ResetDMRelays(dmViewModel)
                     },
@@ -224,6 +229,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.private_outbox_section),
                     stringRes(R.string.private_outbox_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
             renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
@@ -232,10 +238,10 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     stringRes(R.string.search_section),
                     stringRes(R.string.search_section_explainer),
-                    action = {
-                        ResetSearchRelays(searchViewModel)
-                    },
-                )
+                    SettingsCategorySpacingModifier,
+                ) {
+                    ResetSearchRelays(searchViewModel)
+                }
             }
             renderSearchItems(searchFeedState, searchViewModel, accountViewModel, newNav)
 
@@ -243,6 +249,7 @@ fun MappedAllRelayListView(
                 SettingsCategory(
                     stringRes(R.string.local_section),
                     stringRes(R.string.local_section_explainer),
+                    SettingsCategorySpacingModifier,
                 )
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
@@ -251,10 +258,10 @@ fun MappedAllRelayListView(
                 SettingsCategoryWithButton(
                     stringRes(R.string.kind_3_section),
                     stringRes(R.string.kind_3_section_description),
-                    action = {
-                        ResetKind3Relays(kind3ViewModel)
-                    },
-                )
+                    SettingsCategorySpacingModifier,
+                ) {
+                    ResetKind3Relays(kind3ViewModel)
+                }
             }
             renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, newNav, relayToAdd)
 
@@ -263,6 +270,7 @@ fun MappedAllRelayListView(
                     SettingsCategory(
                         stringRes(R.string.kind_3_recommended_section),
                         stringRes(R.string.kind_3_recommended_section_description),
+                        SettingsCategorySpacingModifier,
                     )
                 }
                 renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, newNav)
@@ -320,7 +328,7 @@ fun ResetDMRelays(postViewModel: DMRelayListViewModel) {
 fun SettingsCategory(
     title: String,
     description: String? = null,
-    modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+    modifier: Modifier,
 ) {
     Column(modifier) {
         Text(
@@ -342,8 +350,8 @@ fun SettingsCategory(
 fun SettingsCategoryWithButton(
     title: String,
     description: String? = null,
+    modifier: Modifier,
     action: @Composable () -> Unit,
-    modifier: Modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
 ) {
     Row(modifier, horizontalArrangement = RowColSpacing) {
         Column(modifier = Modifier.weight(1f)) {

@@ -22,34 +22,22 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.follows
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowCount
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun FollowTabHeader(baseUser: User) {
-    val userState by baseUser.live().follows.observeAsState()
-    var followCount by remember { mutableStateOf("--") }
+    val followCount by observeUserFollowCount(baseUser)
 
-    val text = stringRes(R.string.follows)
-
-    LaunchedEffect(key1 = userState) {
-        launch(Dispatchers.IO) {
-            val newFollow = (userState?.user?.transientFollowCount()?.toString() ?: "--") + " " + text
-
-            if (followCount != newFollow) {
-                followCount = newFollow
-            }
+    val text =
+        if (followCount > 0) {
+            stringRes(R.string.number_following, followCount)
+        } else {
+            stringRes(R.string.number_following, "--")
         }
-    }
 
-    Text(text = followCount)
+    Text(text = text)
 }

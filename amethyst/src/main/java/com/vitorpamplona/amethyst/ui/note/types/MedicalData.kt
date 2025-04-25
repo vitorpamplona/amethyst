@@ -65,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.util.Locale
 import kotlin.math.abs
 
 @Preview
@@ -257,7 +258,7 @@ fun RenderEyeGlassesPrescription(
         }
         visionPrescription.status?.let {
             Text(
-                text = "Status: ${it.capitalize()}",
+                text = "Status: ${it.capitalize(Locale.getDefault())}",
                 modifier = Modifier.padding(4.dp).fillMaxWidth(),
             )
         }
@@ -358,7 +359,7 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = data.eye?.capitalize() ?: "Unknown",
+            text = data.eye?.capitalize(Locale.getDefault()) ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
@@ -514,7 +515,7 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = data.eye?.capitalize() ?: "Unknown",
+            text = data.eye?.capitalize(Locale.getDefault()) ?: "Unknown",
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)

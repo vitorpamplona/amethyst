@@ -32,6 +32,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import coil3.util.DebugLogger
+import com.vitorpamplona.amethyst.isDebug
 import okhttp3.Call
 
 class ImageLoaderSetup {
@@ -40,7 +41,6 @@ class ImageLoaderSetup {
             app: Application,
             diskCache: DiskCache,
             memoryCache: MemoryCache,
-            isDebug: Boolean,
             callFactory: () -> Call.Factory,
         ) {
             SingletonImageLoader.setUnsafe(

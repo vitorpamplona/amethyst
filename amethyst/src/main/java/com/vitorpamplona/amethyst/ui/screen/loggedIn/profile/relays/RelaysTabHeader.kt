@@ -23,26 +23,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelaysUsing
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun RelaysTabHeader(baseUser: User) {
-    val userState by baseUser.live().relays.observeAsState()
-    val userRelaysBeingUsed = remember(userState) { userState?.user?.relaysBeingUsed?.size ?: "--" }
+    val userState by observeUserRelaysUsing(baseUser)
 
-    val userStateRelayInfo by baseUser.live().relayInfo.observeAsState()
-    val userRelays =
-        remember(userStateRelayInfo) {
-            userStateRelayInfo
-                ?.user
-                ?.latestContactList
-                ?.relays()
-                ?.size ?: "--"
-        }
-
-    Text(text = "$userRelaysBeingUsed / $userRelays ${stringRes(R.string.relays)}")
+    Text(text = "${sizeAsString(userState.userRelayList.size)} / ${sizeAsString(userState.relays.size)} ${stringRes(R.string.relays)}")
 }
+
+private fun sizeAsString(count: Int) = if (count > 0) count.toString() else "--"

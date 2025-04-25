@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-import android.system.Os.close
 import android.util.Log
-import androidx.core.app.PendingIntentCompat.send
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilderFactory
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
@@ -37,26 +38,28 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * The Nostr Client manages multiple personae the user may switch between. Events are received and
- * published through multiple relays. Events are stored with their respective persona.
+ * The Nostr Client manages a relay pool
  */
 class NostrClient(
     private val websocketBuilder: WebsocketBuilderFactory,
+    private val listenerScope: CoroutineScope =
+        CoroutineScope(
+            Dispatchers.Default + SupervisorJob() +
+                CoroutineExceptionHandler { _, throwable ->
+                    Log.e("NostrClient", "Caught exception: ${throwable.message}", throwable)
+                },
+        ),
 ) : RelayPool.Listener {
     private val relayPool: RelayPool = RelayPool()
-    private val subscriptions: MutableSubscriptionManager = MutableSubscriptionManager()
-
+    private val activeSubscriptions: MutableSubscriptionManager = MutableSubscriptionManager()
     private var listeners = setOf<Listener>()
-    private var relays = emptyArray<Relay>()
 
-    fun buildRelay(it: RelaySetupInfoToConnect): Relay = Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes, websocketBuilder, subscriptions)
+    fun buildRelay(it: RelaySetupInfoToConnect): Relay = Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes, websocketBuilder, activeSubscriptions)
 
     fun getRelay(url: String): Relay? = relayPool.getRelay(url)
 
-    fun reconnect() {
-        // Reconnects all relays that may have disconnected
-        relayPool.requestAndWatch()
-    }
+    // Reconnects all relays that may have disconnected
+    fun reconnect() = relayPool.requestAndWatch()
 
     @Synchronized
     fun reconnect(
@@ -68,47 +71,42 @@ class NostrClient(
 
         if (onlyIfChanged) {
             if (!isSameRelaySetConfig(relays)) {
-                if (this.relays.isNotEmpty()) {
+                if (this.relayPool.availableRelays() > 0) {
                     relayPool.disconnect()
                     relayPool.unregister(this)
                     relayPool.unloadRelays()
                 }
 
                 if (relays != null) {
-                    val newRelays = relays.map(::buildRelay)
                     relayPool.register(this)
-                    relayPool.loadRelays(newRelays)
+                    relayPool.loadRelays(relays.map(::buildRelay))
                     relayPool.requestAndWatch()
-                    this.relays = newRelays.toTypedArray()
                 }
             } else {
                 // Reconnects all relays that may have disconnected
                 relayPool.requestAndWatch()
             }
         } else {
-            if (this.relays.isNotEmpty()) {
+            if (this.relayPool.availableRelays() > 0) {
                 relayPool.disconnect()
                 relayPool.unregister(this)
                 relayPool.unloadRelays()
             }
 
             if (relays != null) {
-                val newRelays = relays.map(::buildRelay)
                 relayPool.register(this)
-                relayPool.loadRelays(newRelays)
+                relayPool.loadRelays(relays.map(::buildRelay))
                 relayPool.requestAndWatch()
-                this.relays = newRelays.toTypedArray()
             }
         }
     }
 
     fun isSameRelaySetConfig(newRelayConfig: Array<RelaySetupInfoToConnect>?): Boolean {
-        if (relays.size != newRelayConfig?.size) return false
+        if (relayPool.availableRelays() != newRelayConfig?.size) return false
 
-        relays.forEach { oldRelayInfo ->
-            val newRelayInfo = newRelayConfig.find { it.url == oldRelayInfo.url } ?: return false
-
-            if (!oldRelayInfo.isSameRelayConfig(newRelayInfo)) return false
+        newRelayConfig.forEach {
+            val relay = relayPool.getRelay(it.url) ?: return false
+            if (!relay.isSameRelayConfig(it)) return false
         }
 
         return true
@@ -120,7 +118,7 @@ class NostrClient(
     ) {
         checkNotInMainThread()
 
-        subscriptions.add(subscriptionId, filters)
+        activeSubscriptions.add(subscriptionId, filters)
         relayPool.sendFilter(subscriptionId, filters)
     }
 
@@ -148,7 +146,7 @@ class NostrClient(
             },
         )
 
-        subscriptions.add(subscriptionId, filters)
+        activeSubscriptions.add(subscriptionId, filters)
         relayPool.sendFilter(subscriptionId, filters)
     }
 
@@ -227,6 +225,7 @@ class NostrClient(
         additionalListener?.let { subscribe(it) }
 
         val job =
+            @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 if (relayList != null) {
                     send(signedEvent, relayList)
@@ -255,7 +254,7 @@ class NostrClient(
     ) {
         checkNotInMainThread()
 
-        subscriptions.add(subscriptionId, filters)
+        activeSubscriptions.add(subscriptionId, filters)
         relayPool.connectAndSendFiltersIfDisconnected()
     }
 
@@ -311,10 +310,10 @@ class NostrClient(
 
     fun close(subscriptionId: String) {
         relayPool.close(subscriptionId)
-        subscriptions.remove(subscriptionId)
+        activeSubscriptions.remove(subscriptionId)
     }
 
-    fun isActive(subscriptionId: String): Boolean = subscriptions.isActive(subscriptionId)
+    fun isActive(subscriptionId: String): Boolean = activeSubscriptions.isActive(subscriptionId)
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onEvent(
@@ -325,7 +324,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.Default) {
+        listenerScope.launch {
             listeners.forEach { it.onEvent(event, subscriptionId, relay, afterEOSE) }
         }
     }
@@ -334,14 +333,18 @@ class NostrClient(
         relay: Relay,
         subscriptionId: String,
     ) {
-        listeners.forEach { it.onEOSE(relay, subscriptionId) }
+        listenerScope.launch {
+            listeners.forEach { it.onEOSE(relay, subscriptionId) }
+        }
     }
 
     override fun onRelayStateChange(
         type: RelayState,
         relay: Relay,
     ) {
-        listeners.forEach { it.onRelayStateChange(type, relay) }
+        listenerScope.launch {
+            listeners.forEach { it.onRelayStateChange(type, relay) }
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -353,7 +356,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.Default) {
+        listenerScope.launch {
             listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
         }
     }
@@ -365,7 +368,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.Default) { listeners.forEach { it.onAuth(relay, challenge) } }
+        listenerScope.launch { listeners.forEach { it.onAuth(relay, challenge) } }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -375,7 +378,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        GlobalScope.launch(Dispatchers.Default) {
+        listenerScope.launch {
             listeners.forEach { it.onNotify(relay, description) }
         }
     }
@@ -386,7 +389,7 @@ class NostrClient(
         msg: String,
         success: Boolean,
     ) {
-        GlobalScope.launch(Dispatchers.Default) {
+        listenerScope.launch {
             listeners.forEach { it.onSend(relay, msg, success) }
         }
     }
@@ -396,7 +399,7 @@ class NostrClient(
         relay: Relay,
         event: Event,
     ) {
-        GlobalScope.launch(Dispatchers.Default) {
+        listenerScope.launch {
             listeners.forEach { it.onBeforeSend(relay, event) }
         }
     }
@@ -407,7 +410,7 @@ class NostrClient(
         subscriptionId: String,
         relay: Relay,
     ) {
-        GlobalScope.launch(Dispatchers.Default) {
+        listenerScope.launch {
             listeners.forEach { it.onError(error, subscriptionId, relay) }
         }
     }
@@ -422,9 +425,9 @@ class NostrClient(
         listeners = listeners.minus(listener)
     }
 
-    fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions.allSubscriptions()
+    fun allSubscriptions(): Map<String, List<TypedFilter>> = activeSubscriptions.allSubscriptions()
 
-    fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions.getSubscriptionFilters(subId)
+    fun getSubscriptionFilters(subId: String): List<TypedFilter> = activeSubscriptions.getSubscriptionFilters(subId)
 
     fun connectedRelays() = relayPool.connectedRelays()
 

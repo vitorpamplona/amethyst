@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +51,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -119,19 +119,17 @@ fun LongCommunityHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent =
-        remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote)
 
     Row(
         lineModifier,
     ) {
         val rulesLabel = stringRes(id = R.string.rules)
         val summary =
-            remember(noteState) {
-                val subject = noteEvent.subject()?.ifEmpty { null }
-                val body = noteEvent.description()?.ifBlank { null }
-                val rules = noteEvent.rules()?.ifBlank { null }
+            remember(noteEvent) {
+                val subject = noteEvent?.subject()?.ifEmpty { null }
+                val body = noteEvent?.description()?.ifBlank { null }
+                val rules = noteEvent?.rules()?.ifBlank { null }
 
                 if (!subject.isNullOrBlank() && body?.split("\n")?.get(0)?.contains(subject) == false) {
                     if (rules == null) {
@@ -167,12 +165,14 @@ fun LongCommunityHeader(
                 )
             }
 
-            if (summary != null && noteEvent.hasHashtags()) {
-                DisplayUncitedHashtags(
-                    event = noteEvent,
-                    content = summary,
-                    nav = nav,
-                )
+            noteEvent?.let {
+                if (it.hasHashtags()) {
+                    DisplayUncitedHashtags(
+                        event = it,
+                        content = summary ?: "",
+                        nav = nav,
+                    )
+                }
             }
         }
 
@@ -207,14 +207,12 @@ fun LongCommunityHeader(
             )
         }
 
-    LaunchedEffect(key1 = noteState) {
-        val participants = (noteState?.note?.event as? CommunityDefinitionEvent)?.moderators()
+    LaunchedEffect(key1 = noteEvent) {
+        val participants = noteEvent?.moderators()
 
         if (participants != null) {
             accountViewModel.loadParticipants(participants) { newParticipantUsers ->
-                if (
-                    newParticipantUsers != null && !equalImmutableLists(newParticipantUsers, participantUsers)
-                ) {
+                if (!equalImmutableLists(newParticipantUsers, participantUsers)) {
                     participantUsers = newParticipantUsers
                 }
             }
@@ -263,12 +261,10 @@ fun ShortCommunityHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by baseNote.live().metadata.observeAsState()
-    val noteEvent =
-        remember(noteState) { noteState?.note?.event as? CommunityDefinitionEvent } ?: return
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        noteEvent.image()?.let {
+        noteEvent?.image()?.let {
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
                 model = it.imageUrl,
@@ -290,7 +286,7 @@ fun ShortCommunityHeader(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = remember(noteState) { noteEvent.dTag() },
+                    text = noteEvent?.name() ?: baseNote.dTag(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

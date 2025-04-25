@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.NostrUserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size100dp
@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.userProfileBorderModifier
 @Composable
 fun ProfileHeader(
     baseUser: User,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {

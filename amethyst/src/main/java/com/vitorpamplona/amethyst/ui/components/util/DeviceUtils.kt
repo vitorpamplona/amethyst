@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.window.core.layout.WindowSizeClass
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils.screenOrientationIsLocked
 
 object DeviceUtils {
     /**

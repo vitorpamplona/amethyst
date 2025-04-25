@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size23dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.serialization.Serializable
-import kotlin.String
 
 class BottomBarRoute(
     val route: Route,

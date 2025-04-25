@@ -33,7 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.DisplayNip05ProfileStatus
@@ -57,7 +57,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.DisplayAppRecommendations
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.NostrUserAppRecommendationsFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -76,14 +76,12 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 @Composable
 fun DrawAdditionalInfo(
     baseUser: User,
-    appRecommendations: NostrUserAppRecommendationsFeedViewModel,
+    appRecommendations: UserAppRecommendationsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by baseUser.live().metadata.observeAsState()
-    val user = remember(userState) { userState?.user } ?: return
-    val tags = userState?.user?.info?.tags
-
+    val userState by observeUser(baseUser)
+    val user = userState?.user ?: return
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -91,7 +89,7 @@ fun DrawAdditionalInfo(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 7.dp)) {
             CreateTextWithEmoji(
                 text = it,
-                tags = tags,
+                tags = user.info?.tags ?: EmptyTagList,
                 fontWeight = FontWeight.Bold,
                 fontSize = 25.sp,
             )

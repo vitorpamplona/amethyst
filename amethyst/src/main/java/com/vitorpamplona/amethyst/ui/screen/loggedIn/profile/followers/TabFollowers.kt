@@ -25,9 +25,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowers
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
@@ -52,7 +52,7 @@ private fun WatchFollowerChanges(
     baseUser: User,
     feedViewModel: UserFeedViewModel,
 ) {
-    val userState by baseUser.live().followers.observeAsState()
+    val userState by observeUserFollowers(baseUser)
 
     LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }

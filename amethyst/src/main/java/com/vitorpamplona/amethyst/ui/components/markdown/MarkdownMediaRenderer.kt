@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -39,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.HashtagIcon
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
@@ -227,7 +227,7 @@ class MarkdownMediaRenderer(
     ) {
         renderInvisible(richTextStringBuilder) {
             // Preloads note if not loaded yet.
-            baseNote.live().metadata.observeAsState()
+            EventFinderFilterAssemblerSubscription(baseNote)
         }
     }
 

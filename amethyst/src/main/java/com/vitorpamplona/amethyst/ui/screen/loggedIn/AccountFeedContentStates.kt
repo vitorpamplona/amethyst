@@ -23,21 +23,21 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.dal.ChatroomListKnownFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.ChatroomListNewFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverChatFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverCommunityFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverLiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverMarketplaceFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DiscoverNIP89FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeConversationsFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.HomeNewThreadFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.NotificationFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.screen.FollowListState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverChatFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverCommunityFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverLiveFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverMarketplaceFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverNIP89FeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 
 class AccountFeedContentStates(
     val accountViewModel: AccountViewModel,

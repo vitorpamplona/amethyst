@@ -28,13 +28,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -48,7 +48,7 @@ fun ShortLiveActivityChannelHeader(
     nav: INav,
     showFlag: Boolean,
 ) {
-    val channelState by baseChannel.live.observeAsState()
+    val channelState by observeChannel(baseChannel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {
