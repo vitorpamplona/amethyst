@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -49,6 +50,8 @@ class HighlightEvent(
     fun author() = firstTaggedUser()
 
     fun quote() = content
+
+    fun comment() = tags.firstNotNullOfOrNull(CommentTag::parse)
 
     fun context() = tags.firstNotNullOfOrNull(ContextTag::parse)
 

@@ -75,6 +75,7 @@ fun RenderHighlight(
     val noteEvent = note.event as? HighlightEvent ?: return
 
     DisplayHighlight(
+        comment = noteEvent.comment(),
         highlight = noteEvent.quote(),
         context = noteEvent.context(),
         authorHex = noteEvent.pubKey,
@@ -93,6 +94,7 @@ fun RenderHighlight(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DisplayHighlight(
+    comment: String?,
     highlight: String,
     context: String?,
     authorHex: String?,
@@ -106,6 +108,21 @@ fun DisplayHighlight(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    comment?.let {
+        TranslatableRichTextViewer(
+            content = it,
+            canPreview = canPreview && !makeItShort,
+            quotesLeft = quotesLeft,
+            modifier = Modifier.fillMaxWidth(),
+            tags = EmptyTagList,
+            backgroundColor = backgroundColor,
+            id = it,
+            callbackUri = null,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
     val quote =
         remember {
             highlight.split("\n").joinToString("\n") { "> *${it.removeSuffix(" ")}*" }
