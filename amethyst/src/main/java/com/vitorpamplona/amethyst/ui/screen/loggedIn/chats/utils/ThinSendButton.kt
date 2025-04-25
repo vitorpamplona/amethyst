@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -42,7 +42,7 @@ fun ThinSendButton(
         onClick = onClick,
     ) {
         Icon(
-            imageVector = Icons.Default.Send,
+            imageVector = Icons.AutoMirrored.Filled.Send,
             contentDescription = stringRes(id = R.string.accessibility_send),
             modifier = Size20Modifier,
         )

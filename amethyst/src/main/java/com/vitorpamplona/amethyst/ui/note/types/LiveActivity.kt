@@ -262,7 +262,10 @@ fun RenderLiveActivityEventInner(
             Spacer(StdHorzSpacer)
             it.first.role?.let {
                 Text(
-                    text = it.capitalize(Locale.ROOT),
+                    text =
+                        it.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                        },
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,
                 )
