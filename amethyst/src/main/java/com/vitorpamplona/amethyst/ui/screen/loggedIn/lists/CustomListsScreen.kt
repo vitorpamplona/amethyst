@@ -54,7 +54,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -315,46 +314,48 @@ fun CustomListItem(
                     width = Dp.Hairline,
                     color = Color.Gray,
                     shape = RoundedCornerShape(percent = 20),
-                ).padding(all = 12.dp),
-        // verticalAlignment = Alignment.CenterVertically,
+                ).padding(horizontal = 10.dp),
     ) {
-        Column(
-            modifier = modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
+        Row(
+            modifier =
+                modifier
+                    .padding(bottom = 12.dp)
+                    .weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text(followSet.title, fontWeight = FontWeight.Bold)
-                Spacer(modifier = StdHorzSpacer)
-                FilterChip(
-                    selected = true,
-                    onClick = {},
-                    label = {
-                        Text(text = "${followSet.profileList.size}")
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.People,
-                            contentDescription = null,
-                        )
-                    },
-                    shape = ButtonBorder,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(followSet.title, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = StdHorzSpacer)
+                    FilterChip(
+                        selected = true,
+                        onClick = {},
+                        label = {
+                            Text(text = "${followSet.profileList.size}")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = null,
+                            )
+                        },
+                        shape = ButtonBorder,
+                    )
+                }
+                Spacer(modifier = StdVertSpacer)
+                Text(
+                    followSet.description ?: "",
+                    fontWeight = FontWeight.Light,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 2,
                 )
             }
-            Spacer(modifier = StdVertSpacer)
-            Text(
-                followSet.description ?: "",
-                fontWeight = FontWeight.Light,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 3,
-            )
-        }
 
-        Row(
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.End,
-        ) {
             followSet.visibility.let {
                 val text by derivedStateOf {
                     when (it) {
@@ -382,13 +383,14 @@ fun CustomListItem(
                     Text(text, color = Color.Gray, fontWeight = FontWeight.Light)
                 }
             }
+        }
 
-            Column(
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.End,
-            ) {
-                ListOptionsButton(followSetName = followSet.title)
-            }
+        Column(
+            modifier = modifier.padding(vertical = 7.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.End,
+        ) {
+            ListOptionsButton(followSetName = followSet.title)
         }
     }
 }
