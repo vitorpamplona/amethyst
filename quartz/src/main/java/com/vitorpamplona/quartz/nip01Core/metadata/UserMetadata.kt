@@ -50,6 +50,9 @@ class UserMetadata {
 
     var twitter: String? = null
 
+    @JsonProperty("cryptocurrency_addresses")
+    var cryptoAddresses: Map<String, String>? = null
+
     @Transient
     var tags: ImmutableListOfLists<String>? = null
 
@@ -96,5 +99,6 @@ class UserMetadata {
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
+        if (cryptoAddresses?.isNotEmpty() == true) cryptoAddresses = null
     }
 }
