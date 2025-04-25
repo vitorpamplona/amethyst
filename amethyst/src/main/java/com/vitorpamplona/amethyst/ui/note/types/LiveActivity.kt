@@ -264,7 +264,7 @@ fun RenderLiveActivityEventInner(
                 Text(
                     text =
                         it.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                         },
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 1,

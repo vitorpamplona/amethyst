@@ -228,7 +228,7 @@ fun LongCommunityHeader(
                 Text(
                     text =
                         it1.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                         },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
