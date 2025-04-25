@@ -122,7 +122,6 @@ import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
-import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -429,8 +428,6 @@ fun ListContent(
 
     var backupDialogOpen by remember { mutableStateOf(false) }
 
-    var conectOrbotDialogOpen by remember { mutableStateOf(false) }
-
     val context = LocalContext.current
 
     Column(modifier) {
@@ -484,14 +481,12 @@ fun ListContent(
             route = Route.SecurityFilters,
         )
 
-        IconRow(
+        NavigationRow(
             title = R.string.privacy_options,
             icon = R.drawable.ic_tor,
             tint = MaterialTheme.colorScheme.onBackground,
-            onClick = {
-                nav.closeDrawer()
-                conectOrbotDialogOpen = true
-            },
+            nav = nav,
+            route = Route.PrivacyOptions,
         )
 
         accountViewModel.account.settings.keyPair.privKey?.let {
@@ -529,24 +524,6 @@ fun ListContent(
     }
     if (backupDialogOpen) {
         AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
-    }
-    if (conectOrbotDialogOpen) {
-        ConnectTorDialog(
-            torSettings =
-                accountViewModel.account.settings.torSettings
-                    .toSettings(),
-            onClose = { conectOrbotDialogOpen = false },
-            onPost = { torSettings ->
-                conectOrbotDialogOpen = false
-                accountViewModel.setTorSettings(torSettings)
-            },
-            onError = {
-                accountViewModel.toastManager.toast(
-                    stringRes(context, R.string.could_not_connect_to_tor),
-                    it,
-                )
-            },
-        )
     }
 }
 
