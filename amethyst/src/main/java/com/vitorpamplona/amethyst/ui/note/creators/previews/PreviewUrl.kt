@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlin.text.startsWith
 
 @Composable
 fun PreviewUrl(
@@ -201,17 +202,17 @@ private fun MyLoadUrlPreviewDirect(
     ) { state ->
         when (state) {
             is UrlPreviewState.Loaded -> {
-                if (state.previewInfo.mimeType.type == "image") {
+                if (state.previewInfo.mimeType.startsWith("image")) {
                     AsyncImage(
                         model = state.previewInfo.url,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxHeight().aspectRatio(1f),
                     )
-                } else if (state.previewInfo.mimeType.type == "video") {
+                } else if (state.previewInfo.mimeType.startsWith("video")) {
                     VideoView(
                         state.previewInfo.url,
-                        mimeType = state.previewInfo.mimeType.toString(),
+                        mimeType = state.previewInfo.mimeType,
                         roundedCorner = false,
                         gallery = false,
                         contentScale = ContentScale.Crop,
@@ -268,17 +269,17 @@ private fun MyLoadUrlPreviewDirectFillWidth(
     ) { state ->
         when (state) {
             is UrlPreviewState.Loaded -> {
-                if (state.previewInfo.mimeType.type == "image") {
+                if (state.previewInfo.mimeType.startsWith("image")) {
                     AsyncImage(
                         model = state.previewInfo.url,
                         contentDescription = null,
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                } else if (state.previewInfo.mimeType.type == "video") {
+                } else if (state.previewInfo.mimeType.startsWith("video")) {
                     VideoView(
                         state.previewInfo.url,
-                        mimeType = state.previewInfo.mimeType.toString(),
+                        mimeType = state.previewInfo.mimeType,
                         roundedCorner = false,
                         gallery = false,
                         contentScale = ContentScale.FillWidth,

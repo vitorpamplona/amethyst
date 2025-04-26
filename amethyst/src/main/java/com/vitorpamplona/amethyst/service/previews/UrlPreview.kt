@@ -60,11 +60,11 @@ class UrlPreview {
                             ?: throw IllegalArgumentException("Website returned unknown mimetype: ${it.headers["Content-Type"]}")
                     if (mimeType.type == "text" && mimeType.subtype == "html") {
                         val data = OpenGraphParser().extractUrlInfo(HtmlParser().parseHtml(it.body.source(), mimeType))
-                        UrlInfoItem(url, data.title, data.description, data.image, mimeType)
+                        UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
                     } else if (mimeType.type == "image") {
-                        UrlInfoItem(url, image = url, mimeType = mimeType)
+                        UrlInfoItem(url, image = url, mimeType = mimeType.toString())
                     } else if (mimeType.type == "video") {
-                        UrlInfoItem(url, image = url, mimeType = mimeType)
+                        UrlInfoItem(url, image = url, mimeType = mimeType.toString())
                     } else {
                         throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
                     }
