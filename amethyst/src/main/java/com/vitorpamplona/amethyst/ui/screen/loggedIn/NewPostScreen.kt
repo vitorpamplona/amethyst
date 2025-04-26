@@ -25,6 +25,7 @@ import android.net.Uri
 import android.os.Parcelable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -32,7 +33,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,7 +68,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -123,10 +122,13 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.FillWidthQuoteBorderModifier
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -576,17 +578,17 @@ fun DisplayPreviews(
     val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
 
     if (urlPreviews.isNotEmpty()) {
-        Row(modifier = Modifier.padding(vertical = Size5dp)) {
+        Row(HalfHorzPadding) {
             if (urlPreviews.size > 1) {
-                LazyRow(modifier = Modifier.height(100.dp)) {
+                LazyRow(Height100Modifier, horizontalArrangement = spacedBy(Size5dp)) {
                     items(urlPreviews) {
-                        Box(modifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)) {
+                        Box(SquaredQuoteBorderModifier) {
                             PreviewUrl(it, accountViewModel, nav)
                         }
                     }
                 }
             } else {
-                Box(modifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)) {
+                Box(FillWidthQuoteBorderModifier) {
                     PreviewUrlFillWidth(urlPreviews[0], accountViewModel, nav)
                 }
             }

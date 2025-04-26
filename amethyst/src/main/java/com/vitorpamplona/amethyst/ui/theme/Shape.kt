@@ -24,6 +24,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,6 +80,8 @@ val StdVertSpacer = Modifier.height(5.dp)
 
 val DoubleHorzSpacer = Modifier.width(10.dp)
 val DoubleVertSpacer = Modifier.height(10.dp)
+
+val Height100Modifier = Modifier.height(100.dp)
 
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
@@ -317,3 +320,6 @@ val PostKeyboard =
 
 val SettingsCategoryFirstModifier = Modifier.padding(bottom = 8.dp)
 val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+
+val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
+val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)
