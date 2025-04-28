@@ -1159,4 +1159,7 @@
 
     <string name="group_relay">Chat Relay</string>
     <string name="group_relay_explanation">The relay that all users of this chat connect to</string>
+
+    <string name="monero">Monero</string>
+    <string name="monero_template">8... or 4...</string>
 </resources>

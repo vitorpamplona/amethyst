@@ -1272,6 +1272,7 @@ class Account(
         twitter: String? = null,
         mastodon: String? = null,
         github: String? = null,
+        moneroAddress: String? = null,
     ) {
         if (!isWriteable()) return
 
@@ -1294,6 +1295,7 @@ class Account(
                     twitter = twitter,
                     mastodon = mastodon,
                     github = github,
+                    moneroAddress = moneroAddress,
                 )
             } else {
                 MetadataEvent.createNew(
@@ -1310,6 +1312,7 @@ class Account(
                     twitter = twitter,
                     mastodon = mastodon,
                     github = github,
+                    moneroAddress = moneroAddress,
                 )
             }
 

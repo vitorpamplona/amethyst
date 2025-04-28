@@ -51,3 +51,12 @@ fun TagArrayBuilder<MetadataEvent>.lud06(lud06: String) = addUnique(Lud06Tag.ass
 fun TagArrayBuilder<MetadataEvent>.banner(banner: String) = addUnique(BannerTag.assemble(banner))
 
 fun TagArrayBuilder<MetadataEvent>.pronouns(pronouns: String) = addUnique(PronounsTag.assemble(pronouns))
+
+fun TagArrayBuilder<MetadataEvent>.cryptoCurrenciesAddresses(
+    tagName: String,
+    currency: String,
+    address: String,
+) {
+    remove(tagName, currency)
+    add(arrayOf(tagName, currency, address))
+}
