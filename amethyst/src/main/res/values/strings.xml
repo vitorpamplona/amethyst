@@ -1178,4 +1178,6 @@
     <string name="share_image">Share image…</string>
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
+    <string name="monero">Monero</string>
+    <string name="monero_template">8... or 4...</string>
 </resources>
