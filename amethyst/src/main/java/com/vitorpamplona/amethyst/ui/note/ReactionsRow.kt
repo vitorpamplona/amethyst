@@ -92,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
@@ -198,6 +199,11 @@ private fun InnerReactionRow(
     nav: INav,
 ) {
     GenericInnerReactionRow(
+        showTipping =
+            baseNote.author
+                ?.info
+                ?.moneroAddress()
+                ?.isNotBlank() == true,
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
         one = {
@@ -229,15 +235,46 @@ private fun InnerReactionRow(
             LikeReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
         },
         five = {
-            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+            MoneroTippingReaction(note = baseNote, grayTint = MaterialTheme.colorScheme.placeholderText, accountViewModel = accountViewModel)
         },
         six = {
+            ZapReaction(baseNote, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+        },
+        seven = {
             ShareReaction(
                 note = baseNote,
                 grayTint = MaterialTheme.colorScheme.placeholderText,
             )
         },
     )
+}
+
+@Composable
+fun MoneroTippingReaction(
+    note: Note,
+    grayTint: Color,
+    barChartModifier: Modifier = Size19Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    val context = LocalContext.current
+
+    ClickableBox(
+        modifier = barChartModifier,
+        onClick = {
+            note.author?.info?.moneroAddress()?.let {
+                try {
+                    val sendIntent =
+                        Intent(Intent.ACTION_VIEW, "monero:$it".toUri())
+
+                    context.startActivity(sendIntent)
+                } catch (_: Exception) {
+                    accountViewModel.toastManager.toast("Monero wallet", "No monero wallet found")
+                }
+            }
+        },
+    ) {
+        MoneroIcon(barChartModifier, grayTint)
+    }
 }
 
 @Composable
@@ -281,12 +318,14 @@ fun ShareReaction(
 private fun GenericInnerReactionRow(
     showReactionDetail: Boolean,
     addPadding: Boolean,
+    showTipping: Boolean,
     one: @Composable () -> Unit,
     two: @Composable () -> Unit,
     three: @Composable () -> Unit,
     four: @Composable () -> Unit,
     five: @Composable () -> Unit,
     six: @Composable () -> Unit,
+    seven: @Composable () -> Unit,
 ) {
     Row(
         verticalAlignment = CenterVertically,
@@ -308,9 +347,13 @@ private fun GenericInnerReactionRow(
 
         Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { four() }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { five() }
+        if (showTipping) {
+            Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { five() }
+        }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier) { six() }
+        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { six() }
+
+        Row(verticalAlignment = CenterVertically, modifier = Modifier) { seven() }
     }
 }
 
