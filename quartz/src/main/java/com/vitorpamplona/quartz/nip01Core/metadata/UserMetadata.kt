@@ -71,6 +71,8 @@ class UserMetadata {
 
     fun profilePicture(): String? = picture
 
+    fun moneroAddress(): String? = cryptoAddresses?.get("monero")
+
     fun cleanBlankNames() {
         if (pronouns == "null") pronouns = null
 
@@ -99,6 +101,6 @@ class UserMetadata {
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
-        if (cryptoAddresses?.isNotEmpty() == true) cryptoAddresses = null
+        if (cryptoAddresses?.isEmpty() == true) cryptoAddresses = null
     }
 }

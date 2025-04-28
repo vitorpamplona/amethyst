@@ -63,6 +63,7 @@ class NewUserMetadataViewModel : ViewModel() {
     val twitter = mutableStateOf("")
     val github = mutableStateOf("")
     val mastodon = mutableStateOf("")
+    val moneroAddress = mutableStateOf("")
 
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
@@ -81,6 +82,7 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info?.nip05 ?: ""
             lnAddress.value = it.info?.lud16 ?: ""
             lnURL.value = it.info?.lud06 ?: ""
+            moneroAddress.value = it.info?.moneroAddress() ?: ""
 
             twitter.value = ""
             github.value = ""
@@ -113,6 +115,7 @@ class NewUserMetadataViewModel : ViewModel() {
                 twitter = twitter.value,
                 mastodon = mastodon.value,
                 github = github.value,
+                moneroAddress = moneroAddress.value,
             )
             clear()
         }
@@ -131,6 +134,7 @@ class NewUserMetadataViewModel : ViewModel() {
         twitter.value = ""
         github.value = ""
         mastodon.value = ""
+        moneroAddress.value = ""
     }
 
     fun uploadForPicture(

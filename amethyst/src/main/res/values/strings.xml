@@ -1182,4 +1182,8 @@
 
     <string name="dont_translate_from">Don\'t Translate From</string>
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
+
+    <string name="monero">Monero</string>
+    <string name="monero_template">8... or 4...</string>
+
 </resources>
