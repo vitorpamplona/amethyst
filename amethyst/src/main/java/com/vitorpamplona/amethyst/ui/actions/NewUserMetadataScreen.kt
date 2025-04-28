@@ -140,6 +140,7 @@ fun NewUserMetadataScreen(
         ) {
             Column(
                 modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.profile_name)) },
@@ -159,8 +160,6 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.about_me)) },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
@@ -178,8 +177,6 @@ fun NewUserMetadataScreen(
                         ),
                     maxLines = 10,
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.avatar_url)) },
@@ -204,8 +201,6 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.banner_url)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -229,8 +224,6 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.pronouns)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -244,8 +237,6 @@ fun NewUserMetadataScreen(
                     },
                     singleLine = true,
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.website_url)) },
@@ -261,8 +252,6 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.nip_05)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -277,7 +266,6 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.ln_address)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -292,8 +280,6 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.ln_url_outdated)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -306,8 +292,6 @@ fun NewUserMetadataScreen(
                         )
                     },
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.twitter)) },
@@ -322,8 +306,6 @@ fun NewUserMetadataScreen(
                     },
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.mastodon)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -337,8 +319,6 @@ fun NewUserMetadataScreen(
                     },
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-
                 OutlinedTextField(
                     label = { Text(text = stringRes(R.string.github)) },
                     modifier = Modifier.fillMaxWidth(),
@@ -347,6 +327,19 @@ fun NewUserMetadataScreen(
                     placeholder = {
                         Text(
                             text = stringRes(R.string.github_proof_url_template),
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                )
+
+                OutlinedTextField(
+                    label = { Text(text = stringRes(R.string.monero)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.moneroAddress.value,
+                    onValueChange = { postViewModel.moneroAddress.value = it },
+                    placeholder = {
+                        Text(
+                            text = stringRes(R.string.monero_template),
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },
