@@ -28,13 +28,13 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,10 +42,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
@@ -53,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
@@ -80,17 +84,30 @@ fun DisplayFollowList(
             members.take(3)
         }
 
-    val name by remember { derivedStateOf { "#${noteEvent.nameOrTitle() ?: noteEvent.dTag()}" } }
+    val image = noteEvent.image()
+
+    image?.let {
+        AsyncImage(
+            model = it,
+            contentDescription =
+                stringRes(
+                    R.string.preview_card_image_for,
+                    it,
+                ),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().padding(top = 5.dp).heightIn(max = 150.dp),
+        )
+    }
 
     Text(
-        text = name,
+        text = noteEvent.nameOrTitle() ?: noteEvent.dTag(),
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(5.dp),
+                .padding(top = 10.dp),
         textAlign = TextAlign.Center,
     )
 
