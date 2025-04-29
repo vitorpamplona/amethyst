@@ -43,8 +43,8 @@ open class NIP90ContentDiscoveryResponseFilter(
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
-            followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
+        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     fun acceptableEvent(note: Note): Boolean {
         val noteEvent = note.event
@@ -72,7 +72,7 @@ open class NIP90ContentDiscoveryResponseFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
+        FilterByListParams.create(
             account.userProfile().pubkeyHex,
             account.settings.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,

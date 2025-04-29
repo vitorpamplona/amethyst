@@ -55,7 +55,7 @@ open class DiscoverLiveFeedFilter(
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams =
-            FilterByListParams.Companion.create(
+            FilterByListParams.create(
                 userHex = account.userProfile().pubkeyHex,
                 selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,

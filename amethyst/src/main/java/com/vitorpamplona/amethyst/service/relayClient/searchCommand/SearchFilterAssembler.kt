@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -226,6 +227,7 @@ class SearchFilterAssembler(
                                         listOf(
                                             InteractiveStoryPrologueEvent.KIND,
                                             InteractiveStorySceneEvent.KIND,
+                                            FollowListEvent.KIND,
                                         ),
                                     search = mySearchString,
                                     limit = 100,

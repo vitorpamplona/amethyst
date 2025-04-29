@@ -57,12 +57,12 @@ class NotificationFeedFilter(
 
     override fun showHiddenKey(): Boolean =
         account.settings.defaultNotificationFollowList.value ==
-            PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
+            PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
             account.settings.defaultNotificationFollowList.value ==
-            MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
+            MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.settings.defaultNotificationFollowList.value,
             followLists = account.liveNotificationFollowLists.value,

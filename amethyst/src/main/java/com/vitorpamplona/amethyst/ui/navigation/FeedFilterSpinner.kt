@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 
@@ -252,7 +253,15 @@ fun RenderOption(option: Name) {
             ) {
                 val noteState by observeNote(option.note)
 
-                val name = (noteState?.note?.event as? PeopleListEvent)?.nameOrTitle() ?: option.note.dTag() ?: ""
+                val noteEvent = noteState.note.event
+                val name =
+                    if (noteEvent is PeopleListEvent) {
+                        noteEvent.nameOrTitle() ?: option.note.dTag()
+                    } else if (noteEvent is FollowListEvent) {
+                        noteEvent.nameOrTitle() ?: option.note.dTag()
+                    } else {
+                        option.note.dTag()
+                    }
 
                 Text(text = name, color = MaterialTheme.colorScheme.onSurface)
             }

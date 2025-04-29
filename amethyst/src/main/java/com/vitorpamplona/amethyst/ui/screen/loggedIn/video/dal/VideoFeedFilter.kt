@@ -45,8 +45,8 @@ class VideoFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.settings.defaultStoriesFollowList.value == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultStoriesFollowList.value == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
+        account.settings.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            account.settings.defaultStoriesFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -120,7 +120,7 @@ class VideoFeedFilter(
     }
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.settings.defaultStoriesFollowList.value,
             followLists = account.liveStoriesFollowLists.value,

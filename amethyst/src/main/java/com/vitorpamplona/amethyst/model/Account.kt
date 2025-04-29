@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.Account.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
@@ -140,6 +141,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
@@ -194,6 +196,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.toSet
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -697,9 +700,11 @@ class Account(
                 LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
             }
         } else {
-            val peopleList = noteState.note.event as? GeneralListEvent
-            if (peopleList != null) {
-                waitToDecrypt(peopleList) ?: LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            val noteEvent = noteState.note.event
+            if (noteEvent is GeneralListEvent) {
+                waitToDecrypt(noteEvent) ?: LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            } else if (noteEvent is FollowListEvent) {
+                LiveFollowList(authors = noteEvent.pubKeys().toSet(), authorsPlusMe = setOf(signer.pubKey) + noteEvent.pubKeys())
             } else {
                 LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
             }
@@ -3622,10 +3627,15 @@ class Account(
     fun getAllPeopleLists(pubkey: HexKey): List<AddressableNote> =
         LocalCache.addressables
             .filter { _, addressableNote ->
-                val event = (addressableNote.event as? PeopleListEvent)
-                event != null &&
-                    event.pubKey == pubkey &&
-                    (event.hasAnyTaggedUser() || event.cachedPrivateTags()?.isNotEmpty() == true)
+                val noteEvent = addressableNote.event
+
+                if (noteEvent is PeopleListEvent) {
+                    noteEvent.pubKey == pubkey && (noteEvent.hasAnyTaggedUser() || noteEvent.cachedPrivateTags()?.isNotEmpty() == true)
+                } else if (noteEvent is FollowListEvent) {
+                    noteEvent.pubKey == pubkey && noteEvent.hasAnyTaggedUser()
+                } else {
+                    false
+                }
             }
 
     fun markAsRead(

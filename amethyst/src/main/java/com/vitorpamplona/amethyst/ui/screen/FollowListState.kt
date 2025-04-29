@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
@@ -135,6 +136,7 @@ class FollowListState(
                     (
                         (
                             noteEvent is PeopleListEvent ||
+                                noteEvent is FollowListEvent ||
                                 noteEvent is MuteListEvent ||
                                 noteEvent is ContactListEvent
                         ) ||
@@ -288,13 +290,22 @@ class ResourceName(
 class PeopleListName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = (note.event as? PeopleListEvent)?.nameOrTitle() ?: note.dTag() ?: ""
+    override fun name(): String {
+        val noteEvent = note.event
+        return if (noteEvent is PeopleListEvent) {
+            noteEvent.nameOrTitle() ?: note.dTag()
+        } else if (noteEvent is FollowListEvent) {
+            noteEvent.nameOrTitle() ?: note.dTag()
+        } else {
+            note.dTag()
+        }
+    }
 }
 
 class CommunityName(
     val note: AddressableNote,
 ) : Name() {
-    override fun name() = "/n/${(note.dTag() ?: "")}"
+    override fun name() = "/n/${(note.dTag())}"
 }
 
 @Immutable

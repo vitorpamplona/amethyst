@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
@@ -181,6 +182,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
@@ -624,6 +626,7 @@ private fun RenderNoteRow(
         is BadgeAwardEvent -> RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
         is FhirResourceEvent -> RenderFhirResource(baseNote, accountViewModel, nav)
         is PeopleListEvent -> DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+        is FollowListEvent -> DisplayFollowList(baseNote, backgroundColor, accountViewModel, nav)
         is RelaySetEvent -> DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
         is ChatMessageRelayListEvent -> DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is AdvertisedRelayListEvent -> DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
