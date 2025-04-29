@@ -163,10 +163,11 @@ class Amethyst : Application() {
 
     fun contentResolverFn(): ContentResolver = contentResolver
 
-    fun setImageLoader(shouldUseTor: Boolean?) =
-        ImageLoaderSetup.setup(this, diskCache, memoryCache) {
-            shouldUseTor?.let { okHttpClients.getHttpClient(it) } ?: okHttpClients.getHttpClient(false)
+    fun setImageLoader(shouldUseTor: (String) -> Boolean?) {
+        ImageLoaderSetup.setup(this, diskCache, memoryCache) { url ->
+            shouldUseTor(url)?.let { okHttpClients.getHttpClient(it) } ?: okHttpClients.getHttpClient(false)
         }
+    }
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 

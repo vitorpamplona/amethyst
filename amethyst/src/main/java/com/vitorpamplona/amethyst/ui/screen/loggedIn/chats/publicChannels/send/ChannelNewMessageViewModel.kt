@@ -464,7 +464,7 @@ open class ChannelNewMessageViewModel :
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.url.url) }
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
         }
     }
 
@@ -561,12 +561,12 @@ open class ChannelNewMessageViewModel :
     }
 
     open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
-        val wordToInsert = item.url.url + " "
+        val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
-                item.url.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
+                item.link.url,
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
         }
 

@@ -80,7 +80,7 @@ fun ShowEmojiSuggestionList(
                     horizontalArrangement = spacedBy(Size10dp),
                 ) {
                     Box(Size40Modifier) {
-                        UrlImageView(it.url, accountViewModel)
+                        UrlImageView(it.link, accountViewModel)
                     }
                     Text(it.code, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Box(Size40Modifier, contentAlignment = Alignment.Center) {

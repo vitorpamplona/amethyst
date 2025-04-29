@@ -618,6 +618,7 @@ class Account(
                     listName,
                     location = Amethyst.instance.locationManager.geohashStateFlow,
                 )
+
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {
@@ -1126,7 +1127,7 @@ class Account(
 
     class EmojiMedia(
         val code: String,
-        val url: MediaUrlImage,
+        val link: MediaUrlImage,
     )
 
     fun getEmojiPackSelection(): EmojiPackSelectionEvent? = getEmojiPackSelectionNote().event as? EmojiPackSelectionEvent
@@ -1173,7 +1174,7 @@ class Account(
                     null
                 }
             }.flatten()
-            .distinctBy { it.url }
+            .distinctBy { it.link }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val myEmojis by lazy {
@@ -3646,11 +3647,33 @@ class Account(
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
 
-    fun shouldUseTorForImageDownload() =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> settings.torSettings.imagesViaTor.value
-            TorType.EXTERNAL -> settings.torSettings.imagesViaTor.value
+    fun shouldUseTorForImageDownload(url: String) =
+        shouldUseTorFor(
+            url,
+            settings.torSettings.torType.value,
+            settings.torSettings.imagesViaTor.value,
+        )
+
+    fun shouldUseTorFor(
+        url: String,
+        torType: TorType,
+        imagesViaTor: Boolean,
+    ) = when (torType) {
+        TorType.OFF -> false
+        TorType.INTERNAL -> shouldUseTor(url, imagesViaTor)
+        TorType.EXTERNAL -> shouldUseTor(url, imagesViaTor)
+    }
+
+    private fun shouldUseTor(
+        normalizedUrl: String,
+        final: Boolean,
+    ): Boolean =
+        if (isLocalHost(normalizedUrl)) {
+            false
+        } else if (isOnionUrl(normalizedUrl)) {
+            true
+        } else {
+            final
         }
 
     fun shouldUseTorForVideoDownload() =

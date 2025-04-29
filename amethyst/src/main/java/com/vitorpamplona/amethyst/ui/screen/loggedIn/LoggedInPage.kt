@@ -84,9 +84,13 @@ fun LoggedInPage(
     // Adds this account to the authentication procedures for relays.
     RelayAuthSubscription(accountViewModel)
 
-    // Loads account information from Relays.
+    // Sets up Coil's Image Loader
+    ObserveImageLoadingTor(accountViewModel)
+
+    // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)
 
+    // Pre-loads each of the main screens.
     HomeFilterAssemblerSubscription(accountViewModel)
     ChatroomListFilterAssemblerSubscription(accountViewModel)
     VideoFilterAssemblerSubscription(accountViewModel)
@@ -122,6 +126,13 @@ fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle(true)
 
     Amethyst.instance.cache.antiSpam.active = isSpamActive
+}
+
+@Composable
+fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
+    LaunchedEffect(Unit) {
+        Amethyst.instance.setImageLoader(accountViewModel.account::shouldUseTorForImageDownload)
+    }
 }
 
 @Composable
