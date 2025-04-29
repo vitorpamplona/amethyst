@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.launch
 
 @Composable
@@ -48,6 +49,49 @@ fun ToggleNip17Button(
     accountViewModel: AccountViewModel,
 ) {
     var wantsToActivateNIP17 by remember { mutableStateOf(false) }
+
+    // First, ensure we have DVMs loaded
+    val dvmList =
+        remember(channelScreenModel.room) {
+            if (channelScreenModel.availableDvms.isEmpty()) {
+                channelScreenModel.getKind5050DVMs()
+            } else {
+                channelScreenModel.availableDvms
+            }
+        }
+
+    // Store the list if empty
+    if (channelScreenModel.availableDvms.isEmpty() && dvmList.isNotEmpty()) {
+        channelScreenModel.availableDvms = dvmList
+    }
+
+    // Check if this is a new DVM conversation by looking at the To field
+    val isDvmInToField =
+        channelScreenModel.availableDvms.any { dvm ->
+            channelScreenModel.toUsers.text.contains(dvm.pubkey) ||
+                channelScreenModel.toUsers.text.contains(
+                    com.vitorpamplona.quartz.utils.Hex
+                        .decode(dvm.pubkey)
+                        .toNpub(),
+                )
+        }
+
+    // Check if this is an existing DVM conversation by looking at room users
+    val isExistingDvmConversation =
+        channelScreenModel.room?.let { room ->
+            // Check if any user in the room is a known DVM
+            room.users.any { userPubkey ->
+                channelScreenModel.availableDvms.any { dvm -> dvm.pubkey == userPubkey }
+            }
+        } ?: false
+
+    // Combined check for any DVM involvement
+    val isDvmConversation = isDvmInToField || isExistingDvmConversation
+
+    // If this is a DVM conversation, force nip17 to false to maintain consistency
+    if (isDvmConversation && channelScreenModel.nip17) {
+        channelScreenModel.nip17 = false
+    }
 
     if (wantsToActivateNIP17) {
         NewFeatureNIP17AlertDialog(
@@ -60,7 +104,14 @@ fun ToggleNip17Button(
     IconButton(
         modifier = Modifier.width(30.dp),
         onClick = {
-            if (
+            // Only allow toggle if not a DVM conversation
+            if (isDvmConversation) {
+                // If DVM conversation, show toast explaining why NIP-17 is disabled
+                accountViewModel.toastManager.toast(
+                    R.string.dvm_nip17_disabled_title,
+                    R.string.dvm_nip17_disabled_message,
+                )
+            } else if (
                 !accountViewModel.account.settings.hideNIP17WarningDialog &&
                 !channelScreenModel.nip17 &&
                 !channelScreenModel.requiresNIP17
@@ -71,7 +122,7 @@ fun ToggleNip17Button(
             }
         },
     ) {
-        if (channelScreenModel.nip17) {
+        if (channelScreenModel.nip17 && !isDvmConversation) {
             IncognitoIconOn(
                 modifier =
                     Modifier
@@ -85,7 +136,12 @@ fun ToggleNip17Button(
                     Modifier
                         .padding(top = 2.dp)
                         .size(20.dp),
-                tint = MaterialTheme.colorScheme.placeholderText,
+                tint =
+                    if (isDvmConversation) {
+                        MaterialTheme.colorScheme.placeholderText.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.placeholderText
+                    },
             )
         }
     }

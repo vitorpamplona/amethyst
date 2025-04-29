@@ -356,11 +356,15 @@ class ChatNewMessageViewModel :
 
     fun sendPost(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if this is a DVM conversation and force non-NIP-17
             if (isDvmConversation()) {
                 // Format message as a NIP-90 request if sending to a DVM
                 val originalMessage = message.text
                 val formattedMessage = formatTextGenerationRequest(originalMessage)
                 message = TextFieldValue(formattedMessage)
+
+                // Force regular DM (type 4) for DVM conversations
+                nip17 = false
 
                 Log.d("DVM", "Sending NIP-90 formatted request: $formattedMessage")
             }
@@ -785,10 +789,25 @@ class ChatNewMessageViewModel :
     }
 
     private fun isDvmConversation(): Boolean {
-        // Check if we're talking to a DVM
-        return availableDvms.any { dvm ->
-            room?.users?.contains(dvm.pubkey) == true
-        }
+        // First check if any user in the room matches a known DVM
+        val isExistingDvm =
+            room?.users?.any { userPubkey ->
+                availableDvms.any { dvm -> dvm.pubkey == userPubkey }
+            } ?: false
+
+        // Then check if the To field contains a DVM
+        val isNewDvm =
+            !availableDvms.isEmpty() &&
+                availableDvms.any { dvm ->
+                    toUsers.text.contains(dvm.pubkey) ||
+                        toUsers.text.contains(
+                            com.vitorpamplona.quartz.utils.Hex
+                                .decode(dvm.pubkey)
+                                .toNpub(),
+                        )
+                }
+
+        return isExistingDvm || isNewDvm
     }
 
     private fun formatTextGenerationRequest(message: String): String {
