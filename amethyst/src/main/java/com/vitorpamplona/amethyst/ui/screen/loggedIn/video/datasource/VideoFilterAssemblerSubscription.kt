@@ -27,6 +27,14 @@ import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
+fun VideoFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+    VideoFilterAssemblerSubscription(
+        accountViewModel.dataSources().video,
+        accountViewModel,
+    )
+}
+
+@Composable
 fun VideoFilterAssemblerSubscription(
     filterAssembler: VideoFilterAssembler,
     accountViewModel: AccountViewModel,

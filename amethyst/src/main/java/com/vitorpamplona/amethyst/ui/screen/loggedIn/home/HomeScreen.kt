@@ -96,7 +96,8 @@ fun HomeScreen(
 
     WatchLifecycleAndUpdateModel(newThreadsFeedState)
     WatchLifecycleAndUpdateModel(repliesFeedState)
-    HomeFilterAssemblerSubscription(accountViewModel.dataSources().home, accountViewModel)
+
+    HomeFilterAssemblerSubscription(accountViewModel)
 
     AssembleHomeTabs(newThreadsFeedState, repliesFeedState) { pagerState, tabItems ->
         HomePages(pagerState, tabItems, accountViewModel, nav)
