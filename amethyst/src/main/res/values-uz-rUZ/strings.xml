@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="point_to_the_qr_code">Kamerani QR kodga yo\'naltiring</string>
+    <string name="point_to_the_qr_code">Point to the QR Code</string>
     <string name="show_qr">QR kodni ko‘rsatish</string>
     <string name="profile_image">Profil rasmini</string>
     <string name="your_profile_image">Sizning profil rasmingiz</string>
@@ -8,7 +8,7 @@
     <string name="show_anyway">Baribir postni ko‘rsat</string>
     <string name="post_was_hidden">Ushbu post yashirilgan, chunki u siz yashirgan foydalanuvchilar yoki so\'zlarni eslatadi</string>
     <string name="post_was_flagged_as_inappropriate_by">Post kim tomonidan bloklangan yoki bildirgan</string>
-    <string name="post_not_found">Post yuklanmoqda yoki estafetalar ro‘yxatingizda topilmadi</string>
+    <string name="post_not_found">Post yuklanmoqda yoki relaylardan ro‘yxatingizda topilmadi</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal rasmi</string>
     <string name="referenced_event_not_found">Havola qilingan post topilmadi</string>
@@ -28,13 +28,13 @@
     <string name="copy_user_pubkey">Muallif identifikatorini nusxalash</string>
     <string name="copy_note_id">Post identifikatorini nusxalash</string>
     <string name="broadcast">Tarqatish</string>
-    <string name="timestamp_it">Vaqtni belgilang</string>
+    <string name="timestamp_it">Vaqtni belgilash</string>
     <string name="timestamp_pending">Vaqt: Tasdiqlash kutilmoqda</string>
     <string name="timestamp_pending_short">OTS: Kutilmoqda</string>
-    <string name="request_deletion">Oʻchirishni soʻrang</string>
-    <string name="block_report">Bloklash / Shikoyat qilish</string>
+    <string name="request_deletion">Oʻchirishni soʻrash</string>
+    <string name="block_report">Bloklash / Bildirish</string>
     <string name="block_hide_user"><![CDATA[Foydalanuvchini bloklash va yashirish]]></string>
-    <string name="report_spam_scam">Spam / Firibgarlik deb shikoyat qilish</string>
+    <string name="report_spam_scam">Spam / Firibgarlik deb bildirish</string>
     <string name="report_impersonation">Soxta profilni bildirish</string>
     <string name="report_explicit_content">Uyatsiz kontentni bildirish</string>
     <string name="report_illegal_behaviour">Noqonuniy xatti-harakatni bildirish</string>
@@ -43,4 +43,6 @@
     <string name="malware">Zararli dastur</string>
     <string name="mod">Moderator</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">Sizda ommaviy kalit faol. Ommaviy kalitlar orqali faqat o‘qish mumkin. Xabar yozish uchun, maxfiy kalit bilan avtorizatsiyadan o‘ting</string>
+    <string name="login_with_a_private_key_to_be_able_to_boost_posts">Sizda ommaviy kalit faol. Ommaviy kalitlar orqali faqat o‘qish mumkin. Postni targ‘ib qilish uchun, maxfiy kalit bilan avtorizatsiyadan o‘ting</string>
+    <string name="login_with_a_private_key_to_like_posts">Sizda ommaviy kalit faol. Ommaviy kalitlar orqali faqat o‘qish mumkin. Postga reaksiya qilish uchun, maxfiy kalit bilan avtorizatsiyadan o‘ting</string>
 </resources>

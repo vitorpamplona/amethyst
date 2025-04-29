@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">अपक्रम संदेश परखने में अपक्रम</string>
     <string name="following">" का अनुचरण"</string>
     <string name="followers">" अनुचर"</string>
+    <string name="number_following">"%1$s का अनुचरण"</string>
+    <string name="number_followers">"%1$s अनुचर"</string>
     <string name="profile">परिचय</string>
     <string name="security_filters">सुरक्षा छलनियाँ</string>
     <string name="log_out">निर्गमनांकन</string>
@@ -155,6 +157,7 @@
     <string name="gallery">चित्रालय</string>
     <string name="follows">"का अनुचरण"</string>
     <string name="reports">"सूचनाएँ"</string>
+    <string name="number_reports">"%1$s सूचनाएँ"</string>
     <string name="more_options">अधिक विकल्प</string>
     <string name="relays">" पुनःप्रसारक"</string>
     <string name="website">जालस्थान</string>
