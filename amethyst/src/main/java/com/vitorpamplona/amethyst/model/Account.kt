@@ -579,6 +579,21 @@ class Account(
                 normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()),
             )
 
+    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<String> {
+        val event = note.event as? AdvertisedRelayListEvent ?: settings.backupNIP65RelayList
+        return event?.writeRelays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+    }
+
+    val normalizedNIP65WriteRelayList =
+        getNIP65RelayListFlow()
+            .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                normalizeNIP65WriteRelayListWithBackup(getNIP65RelayListNote()),
+            )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowList> =
         userProfile().flow().follows.stateFlow.transformLatest {

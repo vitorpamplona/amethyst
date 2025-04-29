@@ -36,7 +36,7 @@ fun TagArrayBuilder<ClassifiedsEvent>.summary(summary: String) = addUnique(Summa
 
 fun TagArrayBuilder<ClassifiedsEvent>.location(location: String) = addUnique(LocationTag.assemble(location))
 
-fun TagArrayBuilder<ClassifiedsEvent>.image(imageUrl: String) = addUnique(ImageTag.assemble(imageUrl))
+fun TagArrayBuilder<ClassifiedsEvent>.image(imageUrl: String) = add(ImageTag.assemble(imageUrl))
 
 fun TagArrayBuilder<ClassifiedsEvent>.images(imageUrls: List<String>) = addAll(imageUrls.map { ImageTag.assemble(it) })
 

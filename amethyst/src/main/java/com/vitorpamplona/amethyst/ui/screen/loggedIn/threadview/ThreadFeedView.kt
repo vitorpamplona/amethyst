@@ -73,12 +73,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.ui.components.InlineCarrousel
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
@@ -726,7 +728,19 @@ private fun RenderClassifiedsReaderForThread(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val images = remember(noteEvent) { noteEvent.images().toImmutableList() }
+    val imageSet =
+        noteEvent.imageMetas().ifEmpty { null }?.map {
+            MediaUrlImage(
+                url = it.url,
+                description = it.alt,
+                hash = it.hash,
+                blurhash = it.blurhash,
+                dim = it.dimension,
+                uri = note.toNostrUri(),
+                mimeType = it.mimeType,
+            )
+        }
+
     val title = remember(noteEvent) { noteEvent.title() }
     val summary =
         remember(noteEvent) {
@@ -742,11 +756,14 @@ private fun RenderClassifiedsReaderForThread(
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
-            if (images.isNotEmpty()) {
-                Row {
-                    InlineCarrousel(
-                        images,
-                        images.first(),
+            if (imageSet != null && imageSet.isNotEmpty()) {
+                AutoNonlazyGrid(imageSet.size) {
+                    ZoomableContentView(
+                        content = imageSet[it],
+                        images = imageSet.toImmutableList(),
+                        roundedCorner = false,
+                        contentScale = ContentScale.Crop,
+                        accountViewModel = accountViewModel,
                     )
                 }
             } else {

@@ -68,6 +68,10 @@ class IMetaAttachments {
         }
     }
 
+    fun add(imeta: IMetaTag) {
+        replace(imeta.url, imeta)
+    }
+
     fun addAll(imetas: List<IMetaTag>) {
         imetas.forEach {
             replace(it.url, it)

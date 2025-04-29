@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import android.R.attr.maxLines
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,19 +38,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun RenderClassifieds(
@@ -59,12 +60,22 @@ fun RenderClassifieds(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val image = remember(noteEvent) { noteEvent.image() }
-    val title = remember(noteEvent) { noteEvent.title() }
-    val summary =
-        remember(noteEvent) { noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null } }
-    val price = remember(noteEvent) { noteEvent.price() }
-    val location = remember(noteEvent) { noteEvent.location() }
+    val imageSet =
+        noteEvent.imageMetas().ifEmpty { null }?.map {
+            MediaUrlImage(
+                url = it.url,
+                description = it.alt,
+                hash = it.hash,
+                blurhash = it.blurhash,
+                dim = it.dimension,
+                uri = note.toNostrUri(),
+                mimeType = it.mimeType,
+            )
+        }
+    val title = noteEvent.title()
+    val summary = noteEvent.summary() ?: noteEvent.content.take(200).ifBlank { null }
+    val price = noteEvent.price()
+    val location = noteEvent.location()
 
     Row(
         modifier =
@@ -78,17 +89,16 @@ fun RenderClassifieds(
     ) {
         Column {
             Row {
-                image?.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription =
-                            stringRes(
-                                R.string.preview_card_image_for,
-                                it,
-                            ),
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                imageSet?.let { images ->
+                    AutoNonlazyGrid(images.size) {
+                        ZoomableContentView(
+                            content = images[it],
+                            images = images.toImmutableList(),
+                            roundedCorner = false,
+                            contentScale = ContentScale.Crop,
+                            accountViewModel = accountViewModel,
+                        )
+                    }
                 } ?: run {
                     DefaultImageHeader(note, accountViewModel)
                 }
@@ -100,7 +110,7 @@ fun RenderClassifieds(
             ) {
                 title?.let {
                     Text(
-                        text = it,
+                        text = "test'",
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

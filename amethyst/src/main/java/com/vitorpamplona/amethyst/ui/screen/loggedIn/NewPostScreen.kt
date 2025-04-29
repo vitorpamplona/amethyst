@@ -108,8 +108,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrlFillWidth
-import com.vitorpamplona.amethyst.ui.note.creators.products.AddClassifiedsButton
-import com.vitorpamplona.amethyst.ui.note.creators.products.SellProduct
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -336,15 +334,6 @@ fun NewPostScreen(
                             }
                         }
 
-                        if (postViewModel.wantsProduct) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                SellProduct(postViewModel = postViewModel)
-                            }
-                        }
-
                         Row(
                             modifier = Modifier.padding(vertical = Size10dp),
                         ) {
@@ -354,7 +343,7 @@ fun NewPostScreen(
                                 accountViewModel = accountViewModel,
                             )
                             MessageField(
-                                if (postViewModel.wantsProduct) R.string.description else R.string.what_s_on_your_mind,
+                                R.string.what_s_on_your_mind,
                                 postViewModel,
                             )
                         }
@@ -526,16 +515,6 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
             AddPollButton(postViewModel.wantsPoll) {
                 postViewModel.wantsPoll = !postViewModel.wantsPoll
-                if (postViewModel.wantsPoll) {
-                    postViewModel.wantsProduct = false
-                }
-            }
-        }
-
-        AddClassifiedsButton(postViewModel.wantsProduct) {
-            postViewModel.wantsProduct = !postViewModel.wantsProduct
-            if (postViewModel.wantsProduct) {
-                postViewModel.wantsPoll = false
             }
         }
 

@@ -25,6 +25,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -34,7 +35,12 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -75,6 +81,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -226,6 +234,11 @@ private fun DiscoverPages(
                 }
             }
         },
+        floatingButton = {
+            if (tabs[pagerState.currentPage].resource == R.string.discover_marketplace) {
+                NewProductButton(accountViewModel, nav)
+            }
+        },
         accountViewModel = accountViewModel,
     ) {
         HorizontalPager(state = pagerState, contentPadding = it) { page ->
@@ -296,6 +309,28 @@ private fun RenderDiscoverFeed(
                 LoadingFeed()
             }
         }
+    }
+}
+
+@Composable
+fun NewProductButton(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    FloatingActionButton(
+        onClick = {
+            nav.nav(Route.NewProduct())
+        },
+        modifier = Size55Modifier,
+        shape = CircleShape,
+        containerColor = MaterialTheme.colorScheme.primary,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Add,
+            contentDescription = stringRes(id = R.string.new_product),
+            modifier = Size26Modifier,
+            tint = Color.White,
+        )
     }
 }
 

@@ -125,6 +125,14 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class NewProduct(
+        val message: String? = null,
+        val attachment: String? = null,
+        val quote: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
     data class NewPost(
         val message: String? = null,
         val attachment: String? = null,
@@ -173,6 +181,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
         dest.hasRoute<Route.NewPost>() -> entry.toRoute<Route.NewPost>()
+        dest.hasRoute<Route.NewProduct>() -> entry.toRoute<Route.NewProduct>()
 
         else -> {
             null

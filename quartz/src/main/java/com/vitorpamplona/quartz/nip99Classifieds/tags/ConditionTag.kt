@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.utils.ensure
 
 class ConditionTag {
     enum class CONDITION(
-        val value: String,
+        val code: String,
     ) {
         NEW("new"),
         USED_LIKE_NEW("like new"),
@@ -34,6 +34,10 @@ class ConditionTag {
         ;
 
         fun toTagArray() = assemble(this)
+
+        companion object {
+            fun parse(cond: String) = entries.firstOrNull { it.code == cond }
+        }
     }
 
     companion object {
@@ -48,6 +52,9 @@ class ConditionTag {
         }
 
         @JvmStatic
-        fun assemble(condition: CONDITION) = arrayOf(TAG_NAME, condition.value)
+        fun parseCondition(tag: Array<String>): CONDITION? = parse(tag)?.let { CONDITION.parse(it) }
+
+        @JvmStatic
+        fun assemble(condition: CONDITION) = arrayOf(TAG_NAME, condition.code)
     }
 }
