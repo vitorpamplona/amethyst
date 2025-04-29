@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">Erro ao analisar mensagem de erro</string>
     <string name="following">" Seguindo"</string>
     <string name="followers">" Seguidores"</string>
+    <string name="number_following">"%1$s Seguindo"</string>
+    <string name="number_followers">"%1$s Seguidores"</string>
     <string name="profile">Perfil</string>
     <string name="security_filters">Filtros de segurança</string>
     <string name="log_out">Sair</string>
@@ -155,6 +157,7 @@
     <string name="gallery">Galeria</string>
     <string name="follows">"Seguindo"</string>
     <string name="reports">"Denúncias"</string>
+    <string name="number_reports">"%1$s Relatórios"</string>
     <string name="more_options">Mais opções</string>
     <string name="relays">" Relés"</string>
     <string name="website">Site</string>
@@ -793,6 +796,7 @@
     <string name="new_post">Novo Post</string>
     <string name="new_short">Novos Vídeos Curtos: imagens ou vídeos</string>
     <string name="new_community_note">Nova Nota da Comunidade</string>
+    <string name="new_product">Produto Novo</string>
     <string name="open_all_reactions_to_this_post">Abrir todas as reações a esta postagem</string>
     <string name="close_all_reactions_to_this_post">Fechar todas as reações a esta postagem</string>
     <string name="reply_description">Responder</string>

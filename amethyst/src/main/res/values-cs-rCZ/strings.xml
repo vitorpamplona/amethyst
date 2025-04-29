@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">Chyba při zpracování chybové zprávy</string>
     <string name="following">" Sleduje"</string>
     <string name="followers">" Sledující"</string>
+    <string name="number_following">"%1$s následuje"</string>
+    <string name="number_followers">"%1$s Sledujících"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Bezpečnostní filtry</string>
     <string name="log_out">Odhlásit</string>
@@ -155,6 +157,7 @@
     <string name="gallery">Galerie</string>
     <string name="follows">"Sleduje"</string>
     <string name="reports">"Zprávy"</string>
+    <string name="number_reports">"%1$s Reportů"</string>
     <string name="more_options">Více možností</string>
     <string name="relays">" Přeposílání"</string>
     <string name="website">Webová stránka</string>
@@ -793,6 +796,7 @@
     <string name="new_post">Nový příspěvek</string>
     <string name="new_short">Nové Shorts: obrázky nebo videa</string>
     <string name="new_community_note">Nová poznámka komunity</string>
+    <string name="new_product">Nový produkt</string>
     <string name="open_all_reactions_to_this_post">Otevřít všechny reakce pro tento příspěvek</string>
     <string name="close_all_reactions_to_this_post">Zavřít všechny reakce na tento příspěvek</string>
     <string name="reply_description">Odpověď</string>

@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">Fel vid tolkning av felmeddelande</string>
     <string name="following">" Följer"</string>
     <string name="followers">" Följare"</string>
+    <string name="number_following">"%1$s Följande"</string>
+    <string name="number_followers">"%1$s Följare"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Säkerhetsfilter</string>
     <string name="log_out">Logga ut</string>
@@ -155,6 +157,7 @@
     <string name="gallery">Galleri</string>
     <string name="follows">"Följer"</string>
     <string name="reports">"Rapporter"</string>
+    <string name="number_reports">"%1$s Rapporter"</string>
     <string name="more_options">Fler alternativ</string>
     <string name="relays">" Reläer"</string>
     <string name="website">Websida</string>
@@ -792,6 +795,7 @@
     <string name="new_post">Nytt inlägg</string>
     <string name="new_short">Nya kort: bilder eller videor</string>
     <string name="new_community_note">Nytt Community-meddelande</string>
+    <string name="new_product">Ny produkt</string>
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
