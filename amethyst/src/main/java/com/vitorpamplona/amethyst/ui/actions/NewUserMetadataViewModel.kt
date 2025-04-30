@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.MoneroValidator
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -67,6 +68,23 @@ class NewUserMetadataViewModel : ViewModel() {
 
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
+
+    fun checkData(
+        onSuccess: () -> Unit,
+        onError: (resId: Int) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (moneroAddress.value.isNotBlank()) {
+                if (!isValidMoneroAddress()) {
+                    onError(R.string.invalid_monero_address)
+                    return@launch
+                }
+            }
+            onSuccess()
+        }
+    }
+
+    fun isValidMoneroAddress(): Boolean = MoneroValidator.isValidAddress(moneroAddress.value)
 
     fun load(account: Account) {
         this.account = account
