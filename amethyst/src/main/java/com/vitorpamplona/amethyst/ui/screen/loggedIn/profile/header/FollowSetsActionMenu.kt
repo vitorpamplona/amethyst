@@ -181,7 +181,6 @@ fun generateFollowLists(): List<FollowSet> =
             visibility =
                 when {
                     index % 2 == 0 -> ListVisibility.Private
-                    index in listOf(3, 7, 9) -> ListVisibility.Mixed
                     else -> ListVisibility.Public
                 },
             profileList = emptySet(),
