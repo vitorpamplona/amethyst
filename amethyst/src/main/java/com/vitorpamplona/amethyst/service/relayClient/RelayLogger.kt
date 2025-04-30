@@ -18,30 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.datasources
+package com.vitorpamplona.amethyst.service.relayClient
 
 import android.util.Log
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
  * Listens to NostrClient's onNotify messages from the relay
  */
-class RelayNotifier(
+class RelayLogger(
     val client: NostrClient,
-    val notify: (message: String, relay: Relay) -> Unit,
 ) {
     companion object {
-        val TAG = RelayNotifier::class.java.simpleName
+        val TAG = RelayLogger::class.java.simpleName
     }
 
     private val clientListener =
         object : NostrClient.Listener {
-            override fun onNotify(
+            /** A new message was received */
+            override fun onEvent(
+                event: Event,
+                subscriptionId: String,
                 relay: Relay,
-                message: String,
+                afterEOSE: Boolean,
             ) {
-                notify(message, relay)
+                Log.d(TAG, "Relay onEVENT ${relay.url} ($subscriptionId - $afterEOSE) ${event.toJson()}")
+            }
+
+            override fun onSend(
+                relay: Relay,
+                msg: String,
+                success: Boolean,
+            ) {
+                Log.d(TAG, "Relay send ${relay.url} (${msg.length} chars) $msg")
             }
         }
 

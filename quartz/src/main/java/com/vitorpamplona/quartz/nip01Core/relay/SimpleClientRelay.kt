@@ -418,8 +418,6 @@ class SimpleClientRelay(
             val result = it.send(str)
             listener.onSend(this@SimpleClientRelay, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())
-
-            Log.d("Relay", "Relay send $url (${str.length} chars) $str")
         }
     }
 

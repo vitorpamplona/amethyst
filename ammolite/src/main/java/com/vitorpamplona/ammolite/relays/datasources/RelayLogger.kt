@@ -23,36 +23,44 @@ package com.vitorpamplona.ammolite.relays.datasources
 import android.util.Log
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
  * Listens to NostrClient's onNotify messages from the relay
  */
-class RelayNotifier(
+class RelayLogger(
     val client: NostrClient,
     val notify: (message: String, relay: Relay) -> Unit,
 ) {
-    companion object {
-        val TAG = RelayNotifier::class.java.simpleName
-    }
-
     private val clientListener =
         object : NostrClient.Listener {
-            override fun onNotify(
+            /** A new message was received */
+            override fun onEvent(
+                event: Event,
+                subscriptionId: String,
                 relay: Relay,
-                message: String,
+                afterEOSE: Boolean,
             ) {
-                notify(message, relay)
+                Log.d("Relay", "Relay onEVENT ${relay.url} ($subscriptionId - $afterEOSE) ${event.toJson()}")
+            }
+
+            override fun onSend(
+                relay: Relay,
+                msg: String,
+                success: Boolean,
+            ) {
+                Log.d("Relay", "Relay send ${relay.url} (${msg.length} chars) $msg")
             }
         }
 
     init {
-        Log.d(TAG, "Init, Subscribe")
+        Log.d("${this.javaClass.simpleName}", "Init, Subscribe")
         client.subscribe(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
-        Log.d(TAG, "Destroy, Unsubscribe")
+        Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
         client.unsubscribe(clientListener)
     }
 }
