@@ -1174,4 +1174,5 @@
 
     <string name="monero">Monero</string>
     <string name="monero_template">8... or 4...</string>
+    <string name="invalid_monero_address">Invalid monero address</string>
 </resources>
