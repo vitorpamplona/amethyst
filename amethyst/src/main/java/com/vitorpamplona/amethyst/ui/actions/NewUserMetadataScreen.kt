@@ -102,8 +102,15 @@ fun NewUserMetadataScreen(
 
                         SaveButton(
                             onPost = {
-                                postViewModel.create()
-                                nav.popBack()
+                                postViewModel.checkData(
+                                    onSuccess = {
+                                        postViewModel.create()
+                                        nav.popBack()
+                                    },
+                                    onError = {
+                                        accountViewModel.toastManager.toast(it, it)
+                                    },
+                                )
                             },
                             true,
                         )
