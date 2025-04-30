@@ -66,12 +66,15 @@ class DiscoveryFilterAssembler(
         key: DiscoveryQueryState,
         relayUrl: String,
         time: Long,
-    ) = latestEOSEs.addOrUpdate(
-        key.account.userProfile(),
-        key.account.settings.defaultDiscoveryFollowList.value,
-        relayUrl,
-        time,
-    )
+    ) {
+        latestEOSEs.addOrUpdate(
+            key.account.userProfile(),
+            key.account.settings.defaultDiscoveryFollowList.value,
+            relayUrl,
+            time,
+        )
+        invalidateFilters()
+    }
 
     fun createMarketplaceFilter(key: DiscoveryQueryState): List<TypedFilter> {
         val follows =
