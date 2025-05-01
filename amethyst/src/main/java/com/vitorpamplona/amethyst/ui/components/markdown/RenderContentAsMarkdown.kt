@@ -84,13 +84,15 @@ fun RenderContentAsMarkdown(
         }
 
     ProvideTextStyle(MarkdownTextStyle) {
+        val strippedContent = stripHashAndAtFromLabel(content)
+
         val astNode =
-            remember(content) {
-                CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(content)
+            remember(strippedContent) {
+                CommonmarkAstNodeParser(MarkdownParseOptions.MarkdownWithLinks).parse(strippedContent)
             }
 
         val renderer =
-            remember(content) {
+            remember(strippedContent) {
                 MarkdownMediaRenderer(
                     startOfText = content.take(100),
                     imetaByUrl = tags?.lists?.imetasByUrl() ?: emptyMap(),
@@ -112,6 +114,17 @@ fun RenderContentAsMarkdown(
         }
     }
 }
+
+private val linkRegex = Regex("""\[(.*?)]\((.*?)\)""")
+
+private fun stripHashAndAtFromLabel(markdownText: String): String =
+    linkRegex.replace(markdownText) { match ->
+        val label = match.groupValues[1]
+        val url = match.groupValues[2]
+        "[${stripHashAndAt(label)}]($url)"
+    }
+
+private fun stripHashAndAt(input: String): String = input.filterNot { it == '#' || it == '@' }
 
 @Preview
 @Composable
