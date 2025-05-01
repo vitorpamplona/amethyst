@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
+import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
 import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import kotlinx.collections.immutable.ImmutableSet
@@ -62,6 +64,10 @@ abstract class GeneralListEvent(
 
     @Deprecated("NIP-51 has deprecated Title. Use name instead", ReplaceWith("name()"))
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+
+    fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
+
+    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
     fun nameOrTitle() = name() ?: title()
 

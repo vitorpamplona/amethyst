@@ -25,14 +25,16 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Surface
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -47,6 +49,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
@@ -54,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
@@ -78,6 +82,22 @@ fun RelaySelectionDialog(
     onPost: (list: ImmutableList<RelaySetupInfo>) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+) = RelaySelectionDialogEasy(
+    preSelectedList.map { it.url }.toImmutableList(),
+    onClose,
+    onPost,
+    accountViewModel,
+    nav,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RelaySelectionDialogEasy(
+    preSelectedList: ImmutableList<String>,
+    onClose: () -> Unit,
+    onPost: (list: ImmutableList<RelaySetupInfo>) -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val context = LocalContext.current
 
@@ -87,7 +107,7 @@ fun RelaySelectionDialog(
                 RelayList(
                     relay = it,
                     relayInfo = RelayBriefInfoCache.RelayBriefInfo(it.url),
-                    isSelected = preSelectedList.any { relay -> it.url == relay.url },
+                    isSelected = preSelectedList.any { relayUrl -> it.url == relayUrl },
                 )
             },
         )
@@ -118,32 +138,39 @@ fun RelaySelectionDialog(
                 decorFitsSystemWindows = false,
             ),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-        ) {
+        SetDialogToEdgeToEdge()
+
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    actions = {
+                        SaveButton(
+                            onPost = {
+                                val selectedRelays = relays.filter { it.isSelected }
+                                onPost(selectedRelays.map { it.relay }.toImmutableList())
+                                onClose()
+                            },
+                            isActive = hasSelectedRelay,
+                        )
+                        Spacer(modifier = StdHorzSpacer)
+                    },
+                    title = {},
+                    navigationIcon = {
+                        Row {
+                            Spacer(modifier = StdHorzSpacer)
+                            CloseButton(
+                                onPress = { onClose() },
+                            )
+                        }
+                    },
+                )
+            },
+        ) { pad ->
             Column(
                 modifier =
-                    Modifier.fillMaxWidth().fillMaxHeight().padding(start = 10.dp, end = 10.dp, top = 10.dp),
+                    Modifier.padding(pad).padding(start = 10.dp, end = 10.dp, top = 10.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CloseButton(
-                        onPress = { onClose() },
-                    )
-
-                    SaveButton(
-                        onPost = {
-                            val selectedRelays = relays.filter { it.isSelected }
-                            onPost(selectedRelays.map { it.relay }.toImmutableList())
-                            onClose()
-                        },
-                        isActive = hasSelectedRelay,
-                    )
-                }
-
                 RelaySwitch(
                     text = stringRes(context, R.string.select_deselect_all),
                     checked = selected,

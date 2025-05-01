@@ -27,6 +27,14 @@ import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
+fun HomeFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+    HomeFilterAssemblerSubscription(
+        accountViewModel.dataSources().home,
+        accountViewModel,
+    )
+}
+
+@Composable
 fun HomeFilterAssemblerSubscription(
     dataSource: HomeFilterAssembler,
     accountViewModel: AccountViewModel,

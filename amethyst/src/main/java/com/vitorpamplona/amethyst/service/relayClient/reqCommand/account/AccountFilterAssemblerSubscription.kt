@@ -22,12 +22,11 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun AccountFilterAssemblerSubscription(accountViewModel: AccountViewModel) = AccountFilterAssemblerSubscription(accountViewModel, Amethyst.instance.sources.account)
+fun AccountFilterAssemblerSubscription(accountViewModel: AccountViewModel) = AccountFilterAssemblerSubscription(accountViewModel, accountViewModel.dataSources().account)
 
 @Composable
 fun AccountFilterAssemblerSubscription(

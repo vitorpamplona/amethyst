@@ -18,17 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.proxyPort
+package com.vitorpamplona.quartz.nip51Lists.tags
 
-import com.vitorpamplona.amethyst.Amethyst
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.onEach
+class DescriptionTag {
+    companion object {
+        const val TAG_NAME = "description"
 
-class ImageProxyFlow(
-    image: StateFlow<Boolean>,
-) {
-    val status =
-        image.onEach {
-            Amethyst.instance.setImageLoader(it)
+        @JvmStatic
+        fun parse(tag: Array<String>): String? {
+            if (tag.size < 2 || tag[0] != TAG_NAME || tag[1].isEmpty()) return null
+            return tag[1]
         }
+
+        @JvmStatic
+        fun assemble(name: String) = arrayOf(TAG_NAME, name)
+    }
 }

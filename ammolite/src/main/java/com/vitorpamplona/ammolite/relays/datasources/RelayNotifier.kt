@@ -31,6 +31,10 @@ class RelayNotifier(
     val client: NostrClient,
     val notify: (message: String, relay: Relay) -> Unit,
 ) {
+    companion object {
+        val TAG = RelayNotifier::class.java.simpleName
+    }
+
     private val clientListener =
         object : NostrClient.Listener {
             override fun onNotify(
@@ -42,13 +46,13 @@ class RelayNotifier(
         }
 
     init {
-        Log.d("${this.javaClass.simpleName}", "Init, Subscribe")
+        Log.d(TAG, "Init, Subscribe")
         client.subscribe(clientListener)
     }
 
     fun destroy() {
         // makes sure to run
-        Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
+        Log.d(TAG, "Destroy, Unsubscribe")
         client.unsubscribe(clientListener)
     }
 }

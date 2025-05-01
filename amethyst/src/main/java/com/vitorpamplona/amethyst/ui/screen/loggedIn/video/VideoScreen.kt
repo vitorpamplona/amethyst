@@ -124,7 +124,7 @@ fun VideoScreen(
 ) {
     WatchLifecycleAndUpdateModel(videoFeedContentState)
     WatchAccountForVideoScreen(videoFeedContentState = videoFeedContentState, accountViewModel = accountViewModel)
-    VideoFilterAssemblerSubscription(accountViewModel.dataSources().video, accountViewModel)
+    VideoFilterAssemblerSubscription(accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,

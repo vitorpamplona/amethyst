@@ -52,6 +52,7 @@ class UserSuggestionState(
             .map(::userSearchTermOrNull)
             .onEach(::updateDataSource)
 
+    @OptIn(FlowPreview::class)
     val results =
         combine(searchTerm, invalidations.debounce(100)) { prefix, version ->
             if (prefix != null) {

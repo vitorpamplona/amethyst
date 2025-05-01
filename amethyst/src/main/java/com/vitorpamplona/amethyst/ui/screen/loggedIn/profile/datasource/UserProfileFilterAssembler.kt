@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -179,6 +180,7 @@ class UserProfileFilterAssembler(
                             listOf(
                                 BookmarkListEvent.KIND,
                                 PeopleListEvent.KIND,
+                                FollowListEvent.KIND,
                                 AppRecommendationEvent.KIND,
                             ),
                         authors = listOf(state.user.pubkeyHex),

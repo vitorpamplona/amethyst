@@ -54,6 +54,8 @@ sealed class Route {
 
     @Serializable object SecurityFilters : Route()
 
+    @Serializable object PrivacyOptions : Route()
+
     @Serializable object Bookmarks : Route()
 
     @Serializable object Drafts : Route()
@@ -123,6 +125,14 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class NewProduct(
+        val message: String? = null,
+        val attachment: String? = null,
+        val quote: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
     data class NewPost(
         val message: String? = null,
         val attachment: String? = null,
@@ -150,6 +160,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
 
         dest.hasRoute<Route.Search>() -> entry.toRoute<Route.Search>()
         dest.hasRoute<Route.SecurityFilters>() -> entry.toRoute<Route.SecurityFilters>()
+        dest.hasRoute<Route.PrivacyOptions>() -> entry.toRoute<Route.PrivacyOptions>()
         dest.hasRoute<Route.Bookmarks>() -> entry.toRoute<Route.Bookmarks>()
         dest.hasRoute<Route.ContentDiscovery>() -> entry.toRoute<Route.ContentDiscovery>()
         dest.hasRoute<Route.Drafts>() -> entry.toRoute<Route.Drafts>()
@@ -170,6 +181,7 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
         dest.hasRoute<Route.NewPost>() -> entry.toRoute<Route.NewPost>()
+        dest.hasRoute<Route.NewProduct>() -> entry.toRoute<Route.NewProduct>()
 
         else -> {
             null

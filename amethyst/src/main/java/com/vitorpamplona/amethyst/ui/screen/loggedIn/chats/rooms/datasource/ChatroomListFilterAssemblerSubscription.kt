@@ -26,6 +26,14 @@ import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
+fun ChatroomListFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
+    ChatroomListFilterAssemblerSubscription(
+        accountViewModel.dataSources().chatroomList,
+        accountViewModel,
+    )
+}
+
+@Composable
 fun ChatroomListFilterAssemblerSubscription(
     dataSource: ChatroomListFilterAssembler,
     accountViewModel: AccountViewModel,

@@ -51,7 +51,7 @@ class HomeNewThreadFeedFilter(
             account.settings.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
+        FilterByListParams.create(
             userHex = account.userProfile().pubkeyHex,
             selectedListName = account.settings.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,

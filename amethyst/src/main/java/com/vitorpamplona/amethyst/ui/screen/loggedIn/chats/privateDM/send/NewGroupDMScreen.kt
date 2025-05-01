@@ -132,7 +132,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -161,14 +160,6 @@ fun NewGroupDMScreen(
     val context = LocalContext.current
 
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(key1 = postViewModel.draftTag) {
-        launch(Dispatchers.IO) {
-            postViewModel.draftTag.versions.collectLatest {
-                postViewModel.sendDraft()
-            }
-        }
-    }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {

@@ -57,7 +57,6 @@ import com.vitorpamplona.quartz.nip92IMeta.imetasByUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
 
 @Composable
 fun RenderContentAsMarkdown(
@@ -375,7 +374,7 @@ fun RenderContentAsMarkdownUserPreview() {
                         image = "https://duckduckgo.com/assets/logo_social-media.png",
                         title = "DuckDuckGo — Privacy, simplified.",
                         description = "The Internet privacy company that empowers you to seamlessly take control of your personal information online, without any tradeoffs.",
-                        mimeType = "text/html".toMediaType(),
+                        mimeType = "text/html",
                     ),
                 ),
             )

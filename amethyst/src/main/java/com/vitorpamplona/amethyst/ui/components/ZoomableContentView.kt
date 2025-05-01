@@ -39,7 +39,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -56,7 +55,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -83,7 +81,6 @@ import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.components.util.DeviceUtils
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
@@ -120,13 +117,6 @@ fun ZoomableContentView(
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
 
-    val activity = LocalView.current.context.getActivity()
-    val currentWindowSize = currentWindowAdaptiveInfo().windowSizeClass
-
-    val isLandscapeMode = DeviceUtils.isLandscapeMetric(LocalContext.current)
-    val isFoldableOrLarge = DeviceUtils.windowIsLarge(windowSize = currentWindowSize, isInLandscapeMode = isLandscapeMode)
-    val isOrientationLocked = DeviceUtils.screenOrientationIsLocked(LocalContext.current)
-
     when (content) {
         is MediaUrlImage ->
             SensitivityWarning(content.contentWarning != null, accountViewModel) {
@@ -155,9 +145,6 @@ fun ZoomableContentView(
                         nostrUriCallback = content.uri,
                         onDialog = {
                             dialogOpen = true
-                            // if (!isFoldableOrLarge && !isOrientationLocked) {
-                            //    DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
-                            // }
                         },
                         accountViewModel = accountViewModel,
                     )
@@ -198,7 +185,6 @@ fun ZoomableContentView(
             images,
             onDismiss = {
                 dialogOpen = false
-                // if (!isFoldableOrLarge && !isOrientationLocked) DeviceUtils.changeDeviceOrientation(isLandscapeMode, activity)
             },
             accountViewModel,
         )
@@ -617,6 +603,38 @@ fun DisplayUrlWithLoadingSymbol(content: BaseMediaContent) {
             modifier =
                 pressIndicator
                     .weight(1f, fill = false),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        InlineLoadingIcon()
+    }
+}
+
+@Composable
+fun DisplayUrlWithLoadingSymbol(url: String) {
+    val uri = LocalUriHandler.current
+
+    val primary = MaterialTheme.colorScheme.primary
+    val annotatedTermsString =
+        remember {
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = primary)) {
+                    pushStringAnnotation("routeToImage", "")
+                    append("$url ")
+                    pop()
+                }
+            }
+        }
+
+    val pressIndicator = remember { Modifier.clickable { runCatching { uri.openUri(url) } } }
+
+    Row(
+        modifier = Modifier.width(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = annotatedTermsString,
+            modifier = pressIndicator.weight(1f, fill = false),
             overflow = TextOverflow.Ellipsis,
             maxLines = 1,
         )

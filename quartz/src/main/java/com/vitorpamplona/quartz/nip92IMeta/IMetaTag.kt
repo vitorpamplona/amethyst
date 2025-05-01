@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.utils.ensure
 
 class IMetaTag(
     val url: String,
-    val properties: Map<String, List<String>>,
+    val properties: Map<String, List<String>> = emptyMap(),
 ) {
     fun toTagArray() =
         arrayOf(TAG_NAME, "$ANCHOR_PROPERTY $url") +

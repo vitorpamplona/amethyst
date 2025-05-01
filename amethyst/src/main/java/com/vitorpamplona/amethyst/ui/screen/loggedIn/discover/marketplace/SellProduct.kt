@@ -18,12 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.products
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.marketplace
 
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -34,28 +40,62 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import kotlinx.collections.immutable.toImmutableList
 
+@Preview
 @Composable
-fun SellProduct(postViewModel: NewPostViewModel) {
+fun SellProductPreview() {
+    val accountViewModel = mockAccountViewModel()
+    val postViewModel = NewProductViewModel()
+    postViewModel.init(accountViewModel)
+
+    ThemeComparisonColumn {
+        SellProduct(postViewModel)
+    }
+}
+
+@Composable
+fun SellProduct(postViewModel: NewProductViewModel) {
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
+        if (!postViewModel.productImages.isEmpty()) {
+            LazyRow(Height100Modifier, horizontalArrangement = spacedBy(Size5dp)) {
+                items(postViewModel.productImages) {
+                    Box(SquaredQuoteBorderModifier) {
+                        AsyncImage(
+                            model = it.url,
+                            contentDescription = it.alt ?: it.url,
+                            contentScale = ContentScale.FillHeight,
+                            modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+                        )
+                    }
+                }
+            }
+        }
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
@@ -233,9 +273,7 @@ fun SellProduct(postViewModel: NewPostViewModel) {
                     categoryTypes.map { TitleExplainer(it.second, null) }.toImmutableList()
                 }
             TextSpinner(
-                placeholder =
-                    categoryTypes.filter { it.second == postViewModel.category.text }.firstOrNull()?.second
-                        ?: "",
+                placeholder = categoryTypes.firstOrNull { it.second == postViewModel.category.text }?.second ?: "",
                 options = categoryOptions,
                 onSelect = {
                     postViewModel.updateCategory(TextFieldValue(categoryTypes[it].second))

@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">Fehler beim Parsen der Fehlermeldung</string>
     <string name="following">" Folgen"</string>
     <string name="followers">" Anhänger"</string>
+    <string name="number_following">"%1$s Folgen"</string>
+    <string name="number_followers">"%1$s Anhänger"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Sicherheitsfilter</string>
     <string name="log_out">Ausloggen</string>
@@ -157,6 +159,7 @@ erie gespeichert</string>
     <string name="gallery">Galerie</string>
     <string name="follows">"Folgt"</string>
     <string name="reports">"Berichte"</string>
+    <string name="number_reports">"%1$s Meldungen"</string>
     <string name="more_options">Weitere Optionen</string>
     <string name="relays">" Relais"</string>
     <string name="website">Webseite</string>
@@ -798,6 +801,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="new_post">Neuer Beitrag</string>
     <string name="new_short">Neue Kurzfilme: Bilder oder Videos</string>
     <string name="new_community_note">Neue Community-Notiz</string>
+    <string name="new_product">Neues Produkt</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
     <string name="close_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag schließen</string>
     <string name="reply_description">Antworten</string>

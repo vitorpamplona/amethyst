@@ -44,7 +44,7 @@ open class DiscoverCommunityFeedFilter(
 
     override fun feed(): List<Note> {
         val filterParams =
-            FilterByListParams.Companion.create(
+            FilterByListParams.create(
                 userHex = account.userProfile().pubkeyHex,
                 selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,
@@ -73,7 +73,7 @@ open class DiscoverCommunityFeedFilter(
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // here, we need to look for CommunityDefinition in new collection AND new CommunityDefinition from Post Approvals
         val filterParams =
-            FilterByListParams.Companion.create(
+            FilterByListParams.create(
                 userHex = account.userProfile().pubkeyHex,
                 selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,

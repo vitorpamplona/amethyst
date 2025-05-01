@@ -50,6 +50,10 @@ import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
@@ -80,8 +84,17 @@ fun LoggedInPage(
     // Adds this account to the authentication procedures for relays.
     RelayAuthSubscription(accountViewModel)
 
-    // Loads account information from Relays.
+    // Sets up Coil's Image Loader
+    ObserveImageLoadingTor(accountViewModel)
+
+    // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)
+
+    // Pre-loads each of the main screens.
+    HomeFilterAssemblerSubscription(accountViewModel)
+    ChatroomListFilterAssemblerSubscription(accountViewModel)
+    VideoFilterAssemblerSubscription(accountViewModel)
+    DiscoveryFilterAssemblerSubscription(accountViewModel)
 
     // TODO: Is this needed?
     RelaySubscriptionsCoordinatorSubscription()
@@ -113,6 +126,13 @@ fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
         .collectAsStateWithLifecycle(true)
 
     Amethyst.instance.cache.antiSpam.active = isSpamActive
+}
+
+@Composable
+fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
+    LaunchedEffect(Unit) {
+        Amethyst.instance.setImageLoader(accountViewModel.account::shouldUseTorForImageDownload)
+    }
 }
 
 @Composable

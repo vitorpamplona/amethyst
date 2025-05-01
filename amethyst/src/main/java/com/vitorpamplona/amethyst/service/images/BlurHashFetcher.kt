@@ -40,10 +40,10 @@ class BlurHashFetcher(
     private val options: Options,
     private val data: BlurhashWrapper,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult {
+    override suspend fun fetch(): FetchResult? {
         val hash = data.blurhash
 
-        val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: throw Exception("Unable to convert Blurhash $data")
+        val bitmap = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
 
         return ImageFetchResult(
             image = bitmap.asImage(true),

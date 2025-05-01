@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import androidx.collection.mutableScatterMapOf
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Transition
@@ -82,10 +83,7 @@ fun <T> Transition<T>.MyCrossfade(
     content: @Composable (targetState: T) -> Unit,
 ) {
     val currentlyVisible = remember { mutableStateListOf<T>().apply { add(currentState) } }
-    val contentMap =
-        remember {
-            mutableMapOf<T, @Composable () -> Unit>()
-        }
+    val contentMap = remember { mutableScatterMapOf<T, @Composable () -> Unit>() }
     if (currentState == targetState) {
         // If not animating, just display the current state
         if (currentlyVisible.size != 1 || currentlyVisible[0] != targetState) {
@@ -94,12 +92,11 @@ fun <T> Transition<T>.MyCrossfade(
             contentMap.clear()
         }
     }
-    if (!contentMap.contains(targetState)) {
+
+    if (targetState !in contentMap) {
         // Replace target with the same key if any
         val replacementId =
-            currentlyVisible.indexOfFirst {
-                contentKey(it) == contentKey(targetState)
-            }
+            currentlyVisible.indexOfFirst { contentKey(it) == contentKey(targetState) }
         if (replacementId == -1) {
             currentlyVisible.add(targetState)
         } else {
@@ -108,21 +105,16 @@ fun <T> Transition<T>.MyCrossfade(
         contentMap.clear()
         currentlyVisible.fastForEach { stateForContent ->
             contentMap[stateForContent] = {
-                val alpha by animateFloat(
-                    transitionSpec = { animationSpec },
-                ) { if (it == stateForContent) 1f else 0f }
-                Box(Modifier.graphicsLayer { this.alpha = alpha }, contentAlignment) {
-                    content(stateForContent)
-                }
+                val alpha by
+                    animateFloat(transitionSpec = { animationSpec }) {
+                        if (it == stateForContent) 1f else 0f
+                    }
+                Box(Modifier.graphicsLayer { this.alpha = alpha }) { content(stateForContent) }
             }
         }
     }
 
     Box(modifier, contentAlignment) {
-        currentlyVisible.fastForEach {
-            key(contentKey(it)) {
-                contentMap[it]?.invoke()
-            }
-        }
+        currentlyVisible.fastForEach { key(contentKey(it)) { contentMap[it]?.invoke() } }
     }
 }

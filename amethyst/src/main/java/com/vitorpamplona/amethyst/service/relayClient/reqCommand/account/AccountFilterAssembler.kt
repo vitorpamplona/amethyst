@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -135,6 +136,7 @@ class AccountFilterAssembler(
                     kinds =
                         listOf(
                             PeopleListEvent.KIND,
+                            FollowListEvent.KIND,
                             MuteListEvent.KIND,
                             BadgeProfilesEvent.KIND,
                             EmojiPackSelectionEvent.KIND,

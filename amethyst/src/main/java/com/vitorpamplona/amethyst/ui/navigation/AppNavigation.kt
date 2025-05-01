@@ -64,12 +64,14 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.marketplace.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
@@ -111,6 +113,7 @@ fun AppNavigation(
             composable<Route.Search> { SearchScreen(accountViewModel, nav) }
 
             composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
+            composableFromEnd<Route.PrivacyOptions> { PrivacyOptionsScreen(accountViewModel, nav) }
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Settings> { SettingsScreen(sharedPreferencesViewModel, accountViewModel, nav) }
@@ -131,6 +134,17 @@ fun AppNavigation(
             composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
 
             composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
+
+            composableFromBottomArgs<Route.NewProduct> {
+                NewProductScreen(
+                    message = it.message,
+                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
 
             composableFromBottomArgs<Route.NewPost> {
                 NewPostScreen(

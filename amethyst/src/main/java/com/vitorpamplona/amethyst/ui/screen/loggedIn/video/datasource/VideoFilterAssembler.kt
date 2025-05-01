@@ -103,8 +103,16 @@ class VideoFilterAssembler(
 
         val hashtags =
             hashToLoad
-                .map { listOf(it, it.lowercase(), it.uppercase(), it.capitalize(Locale.getDefault())) }
-                .flatten()
+                .map {
+                    listOf(
+                        it,
+                        it.lowercase(),
+                        it.uppercase(),
+                        it.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                        },
+                    )
+                }.flatten()
 
         return listOf(
             TypedFilter(

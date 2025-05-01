@@ -55,14 +55,15 @@ class SimpleClientRelay(
 ) {
     companion object {
         // waits 3 minutes to reconnect once things fail
-        const val RECONNECTING_IN_SECONDS = 60 * 3
+        const val DELAY_TO_RECONNECT_IN_MSECS = 500L
     }
 
     private var socket: WebSocket? = null
     private var isReady: Boolean = false
     private var usingCompression: Boolean = false
 
-    private var lastConnectTentative: Long = 0L
+    private var lastConnectTentative: Long = 0L // the beginning of time.
+    private var delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
 
     private var afterEOSEPerSubscription = mutableMapOf<String, Boolean>()
 
@@ -217,6 +218,9 @@ class SimpleClientRelay(
         this.isReady = true
         this.usingCompression = usingCompression
 
+        // resets any extra delays added during on offline state
+        this.delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
+
         stats.pingInMs = pingInMs
     }
 
@@ -292,6 +296,7 @@ class SimpleClientRelay(
     fun disconnect() {
         Log.d("Relay", "Relay.disconnect $url")
         lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
+        delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
         socket?.cancel()
         socket = null
         isReady = false
@@ -319,7 +324,8 @@ class SimpleClientRelay(
             }
         } else {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
+            if (TimeUtils.now() > lastConnectTentative + delayToConnect) {
+                delayToConnect = delayToConnect * 2
                 // sends all filters after connection is successful.
                 connect()
             }
@@ -339,8 +345,9 @@ class SimpleClientRelay(
             }
         } else {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
+            if (TimeUtils.now() > lastConnectTentative + delayToConnect) {
                 // sends all filters after connection is successful.
+                delayToConnect = delayToConnect * 2
                 connect()
             }
         }
@@ -349,7 +356,8 @@ class SimpleClientRelay(
     fun connectAndSendFiltersIfDisconnected() {
         if (socket == null) {
             // waits 60 seconds to reconnect after disconnected.
-            if (TimeUtils.now() > lastConnectTentative + RECONNECTING_IN_SECONDS) {
+            if (TimeUtils.now() > lastConnectTentative + delayToConnect) {
+                delayToConnect = delayToConnect * 2
                 connect()
             }
         }
@@ -410,8 +418,6 @@ class SimpleClientRelay(
             val result = it.send(str)
             listener.onSend(this@SimpleClientRelay, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())
-
-            Log.d("Relay", "Relay send $url (${str.length} chars) $str")
         }
     }
 

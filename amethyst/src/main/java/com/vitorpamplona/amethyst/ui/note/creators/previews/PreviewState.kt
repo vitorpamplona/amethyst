@@ -21,8 +21,9 @@
 package com.vitorpamplona.amethyst.ui.note.creators.previews
 
 import androidx.compose.ui.text.input.TextFieldValue
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.service.CachedUrlParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -32,17 +33,13 @@ import kotlinx.coroutines.flow.map
 class PreviewState {
     var source = MutableStateFlow(TextFieldValue(""))
 
+    @OptIn(FlowPreview::class)
     val results =
         source
-            .debounce(200)
+            .debounce(500)
+            .map { CachedUrlParser.parseValidUrls(it.text) }
             .distinctUntilChanged()
-            .map {
-                if (it.text.isNotEmpty()) {
-                    RichTextParser().parseValidUrls(it.text).toList()
-                } else {
-                    emptyList()
-                }
-            }.flowOn(Dispatchers.Default)
+            .flowOn(Dispatchers.Default)
 
     fun reset() {
         source.tryEmit(TextFieldValue(""))

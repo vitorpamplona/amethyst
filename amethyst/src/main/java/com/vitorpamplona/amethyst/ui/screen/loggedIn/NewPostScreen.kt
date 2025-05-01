@@ -25,6 +25,7 @@ import android.net.Uri
 import android.os.Parcelable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -32,7 +33,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,7 +68,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -108,8 +107,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
-import com.vitorpamplona.amethyst.ui.note.creators.products.AddClassifiedsButton
-import com.vitorpamplona.amethyst.ui.note.creators.products.SellProduct
+import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrlFillWidth
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -122,10 +120,13 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.FillWidthQuoteBorderModifier
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
@@ -333,15 +334,6 @@ fun NewPostScreen(
                             }
                         }
 
-                        if (postViewModel.wantsProduct) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                SellProduct(postViewModel = postViewModel)
-                            }
-                        }
-
                         Row(
                             modifier = Modifier.padding(vertical = Size10dp),
                         ) {
@@ -351,7 +343,7 @@ fun NewPostScreen(
                                 accountViewModel = accountViewModel,
                             )
                             MessageField(
-                                if (postViewModel.wantsProduct) R.string.description else R.string.what_s_on_your_mind,
+                                R.string.what_s_on_your_mind,
                                 postViewModel,
                             )
                         }
@@ -523,16 +515,6 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
             // postViewModel.includePollHashtagInMessage(postViewModel.wantsPoll, hashtag)
             AddPollButton(postViewModel.wantsPoll) {
                 postViewModel.wantsPoll = !postViewModel.wantsPoll
-                if (postViewModel.wantsPoll) {
-                    postViewModel.wantsProduct = false
-                }
-            }
-        }
-
-        AddClassifiedsButton(postViewModel.wantsProduct) {
-            postViewModel.wantsProduct = !postViewModel.wantsProduct
-            if (postViewModel.wantsProduct) {
-                postViewModel.wantsPoll = false
             }
         }
 
@@ -575,12 +557,18 @@ fun DisplayPreviews(
     val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
 
     if (urlPreviews.isNotEmpty()) {
-        Row(modifier = Modifier.padding(vertical = Size5dp)) {
-            LazyRow(modifier = Modifier.height(100.dp)) {
-                items(urlPreviews) {
-                    Box(modifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)) {
-                        PreviewUrl(it, accountViewModel, nav)
+        Row(HalfHorzPadding) {
+            if (urlPreviews.size > 1) {
+                LazyRow(Height100Modifier, horizontalArrangement = spacedBy(Size5dp)) {
+                    items(urlPreviews) {
+                        Box(SquaredQuoteBorderModifier) {
+                            PreviewUrl(it, accountViewModel, nav)
+                        }
                     }
+                }
+            } else {
+                Box(FillWidthQuoteBorderModifier) {
+                    PreviewUrlFillWidth(urlPreviews[0], accountViewModel, nav)
                 }
             }
         }

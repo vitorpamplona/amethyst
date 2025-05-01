@@ -55,7 +55,7 @@ open class DiscoverMarketplaceFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
+        FilterByListParams.create(
             account.userProfile().pubkeyHex,
             account.settings.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,

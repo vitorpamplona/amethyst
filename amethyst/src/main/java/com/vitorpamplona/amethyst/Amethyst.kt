@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
+import com.vitorpamplona.amethyst.service.relayClient.RelayLogger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -109,6 +110,8 @@ class Amethyst : Application() {
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client)
 
+    val logger = if (isDebug) RelayLogger(client) else null
+
     // Organizes cache clearing
     val trimmingService = MemoryTrimmingService(cache)
 
@@ -163,10 +166,11 @@ class Amethyst : Application() {
 
     fun contentResolverFn(): ContentResolver = contentResolver
 
-    fun setImageLoader(shouldUseTor: Boolean?) =
-        ImageLoaderSetup.setup(this, diskCache, memoryCache) {
-            shouldUseTor?.let { okHttpClients.getHttpClient(it) } ?: okHttpClients.getHttpClient(false)
+    fun setImageLoader(shouldUseTor: (String) -> Boolean?) {
+        ImageLoaderSetup.setup(this, diskCache, memoryCache) { url ->
+            shouldUseTor(url)?.let { okHttpClients.getHttpClient(it) } ?: okHttpClients.getHttpClient(false)
         }
+    }
 
     fun encryptedStorage(npub: String? = null): EncryptedSharedPreferences = EncryptedStorage.preferences(instance, npub)
 

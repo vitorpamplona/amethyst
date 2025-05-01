@@ -926,7 +926,14 @@ open class Note(
         }
     }
 
-    fun <T : Event> toEventHint() = (event as? T)?.let { EventHintBundle(it, relayHintUrl(), author?.bestRelayHint()) }
+    inline fun <reified T : Event> toEventHint(): EventHintBundle<T>? {
+        val safeEvent = event
+        return if (safeEvent is T) {
+            EventHintBundle(safeEvent, relayHintUrl(), author?.bestRelayHint())
+        } else {
+            null
+        }
+    }
 
     fun toMarkedETag(marker: MarkedETag.MARKER): MarkedETag {
         val noteEvent = event

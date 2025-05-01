@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.imageExtensions
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -129,9 +128,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
-import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -197,14 +193,6 @@ open class NewPostViewModel :
     var isValidvalueMinimum = mutableStateOf(true)
     var isValidConsensusThreshold = mutableStateOf(true)
     var isValidClosedAt = mutableStateOf(true)
-
-    // Classifieds
-    var wantsProduct by mutableStateOf(false)
-    var title by mutableStateOf(TextFieldValue(""))
-    var price by mutableStateOf(TextFieldValue(""))
-    var locationText by mutableStateOf(TextFieldValue(""))
-    var category by mutableStateOf(TextFieldValue(""))
-    var condition by mutableStateOf<ConditionTag.CONDITION>(ConditionTag.CONDITION.USED_LIKE_NEW)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -473,49 +461,6 @@ open class NewPostViewModel :
                 valueMinimum = it[1].toLong()
             }
         }
-
-        wantsProduct = draftEvent.kind == 30402
-
-        title =
-            TextFieldValue(
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && it[0] == "title" }
-                    .map { it[1] }
-                    ?.firstOrNull() ?: "",
-            )
-        price =
-            TextFieldValue(
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && it[0] == "price" }
-                    .map { it[1] }
-                    ?.firstOrNull() ?: "",
-            )
-        category =
-            TextFieldValue(
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && it[0] == "t" }
-                    .map { it[1] }
-                    ?.firstOrNull() ?: "",
-            )
-        locationText =
-            TextFieldValue(
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && it[0] == "location" }
-                    .map { it[1] }
-                    ?.firstOrNull() ?: "",
-            )
-        condition = ConditionTag.CONDITION.entries.firstOrNull {
-            it.value ==
-                draftEvent
-                    .tags
-                    .filter { it.size > 1 && it[0] == "condition" }
-                    .map { it[1] }
-                    .firstOrNull()
-        } ?: ConditionTag.CONDITION.USED_LIKE_NEW
 
         message = TextFieldValue(draftEvent.content)
 
@@ -892,49 +837,6 @@ open class NewPostViewModel :
                     }
 
                 account?.signAndSend(localDraft, template, relayList, quotes)
-            } else if (wantsProduct) {
-                val images =
-                    urls.mapNotNull {
-                        val removedParamsFromUrl =
-                            if (it.contains("?")) {
-                                it.split("?")[0].lowercase()
-                            } else if (it.contains("#")) {
-                                it.split("#")[0].lowercase()
-                            } else {
-                                it
-                            }
-
-                        if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) {
-                            it
-                        } else {
-                            null
-                        }
-                    }
-
-                val quotes = findNostrUris(tagger.message)
-
-                val template =
-                    ClassifiedsEvent.build(
-                        title.text,
-                        PriceTag(price.text, "SATS", null),
-                        tagger.message,
-                        locationText.text.ifBlank { null },
-                        condition,
-                        images,
-                    ) {
-                        hashtags(listOfNotNull(category.text.ifBlank { null }) + findHashtags(tagger.message))
-                        quotes(quotes)
-
-                        geoHash?.let { geohash(it) }
-                        localZapRaiserAmount?.let { zapraiser(it) }
-                        zapReceiver?.let { zapSplits(it) }
-                        contentWarningReason?.let { contentWarning(it) }
-
-                        emojis(emojis)
-                        imetas(usedAttachments)
-                    }
-
-                account?.signAndSend(localDraft, template, relayList, quotes)
             } else {
                 val replyToSet =
                     if (forkedFromNote != null) {
@@ -977,7 +879,7 @@ open class NewPostViewModel :
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.url.url) }
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
         }
     }
 
@@ -1078,13 +980,6 @@ open class NewPostViewModel :
         wantsZapraiser = false
         zapRaiserAmount.value = null
 
-        wantsProduct = false
-        condition = ConditionTag.CONDITION.USED_LIKE_NEW
-        locationText = TextFieldValue("")
-        title = TextFieldValue("")
-        category = TextFieldValue("")
-        price = TextFieldValue("")
-
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
         wantsToAddGeoHash = false
@@ -1183,12 +1078,12 @@ open class NewPostViewModel :
     }
 
     open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
-        val wordToInsert = item.url.url + " "
+        val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
-                item.url.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload() ?: false) },
+                item.link.url,
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
         }
 
@@ -1213,14 +1108,6 @@ open class NewPostViewModel :
                         pollOptions.values.all { it.isNotEmpty() } &&
                             isValidvalueMinimum.value &&
                             isValidvalueMaximum.value
-                    )
-            ) &&
-            (
-                !wantsProduct ||
-                    (
-                        !title.text.isNullOrBlank() &&
-                            !price.text.isNullOrBlank() &&
-                            !category.text.isNullOrBlank()
                     )
             ) &&
             multiOrchestrator == null
@@ -1323,37 +1210,6 @@ open class NewPostViewModel :
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
-        saveDraft()
-    }
-
-    fun updateTitle(it: TextFieldValue) {
-        title = it
-        saveDraft()
-    }
-
-    fun updatePrice(it: TextFieldValue) {
-        runCatching {
-            if (it.text.isEmpty()) {
-                price = TextFieldValue("")
-            } else if (it.text.toLongOrNull() != null) {
-                price = it
-            }
-        }
-        saveDraft()
-    }
-
-    fun updateCondition(newCondition: ConditionTag.CONDITION) {
-        condition = newCondition
-        saveDraft()
-    }
-
-    fun updateCategory(value: TextFieldValue) {
-        category = value
-        saveDraft()
-    }
-
-    fun updateLocation(it: TextFieldValue) {
-        locationText = it
         saveDraft()
     }
 

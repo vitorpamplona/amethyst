@@ -33,6 +33,7 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,6 +97,7 @@ class RelayFeedViewModel :
         return (userRelaysBeingUsed + currentUserRelays).sortedWith(order)
     }
 
+    @OptIn(FlowPreview::class)
     fun subscribeTo(user: User) {
         if (currentUser != user) {
             currentUser = user

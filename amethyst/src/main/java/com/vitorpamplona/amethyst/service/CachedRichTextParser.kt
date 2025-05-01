@@ -63,3 +63,23 @@ object CachedRichTextParser {
         }
     }
 }
+
+object CachedUrlParser {
+    private val parsedUrlsCache = LruCache<Int, List<String>>(10)
+
+    fun cachedParseValidUrls(content: String): List<String> = parsedUrlsCache[content.hashCode()]
+
+    fun parseValidUrls(content: String): List<String> {
+        if (content.isEmpty()) return emptyList()
+
+        val key = content.hashCode()
+        val cached = parsedUrlsCache[key]
+        return if (cached != null) {
+            cached
+        } else {
+            val newUrls = RichTextParser().parseValidUrls(content).toList()
+            parsedUrlsCache.put(key, newUrls)
+            newUrls
+        }
+    }
+}

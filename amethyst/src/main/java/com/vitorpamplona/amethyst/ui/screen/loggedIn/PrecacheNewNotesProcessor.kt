@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -112,6 +113,7 @@ class PrecacheNewNotesProcessor(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            Log.e("PrecacheNewNotesProcessor", "This shouldn't happen", e)
         }
     }
 }

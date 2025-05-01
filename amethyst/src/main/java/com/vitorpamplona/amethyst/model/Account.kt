@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.Account.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
@@ -140,6 +141,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
@@ -181,6 +183,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -193,6 +196,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.toSet
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -578,6 +582,21 @@ class Account(
                 normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()),
             )
 
+    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<String> {
+        val event = note.event as? AdvertisedRelayListEvent ?: settings.backupNIP65RelayList
+        return event?.writeRelays()?.map { RelayUrlFormatter.normalize(it) }?.toSet() ?: emptySet()
+    }
+
+    val normalizedNIP65WriteRelayList =
+        getNIP65RelayListFlow()
+            .map { normalizeNIP65WriteRelayListWithBackup(it.note) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                normalizeNIP65WriteRelayListWithBackup(getNIP65RelayListNote()),
+            )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<LiveFollowList> =
         userProfile().flow().follows.stateFlow.transformLatest {
@@ -602,6 +621,7 @@ class Account(
                     listName,
                     location = Amethyst.instance.locationManager.geohashStateFlow,
                 )
+
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {
@@ -680,9 +700,11 @@ class Account(
                 LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
             }
         } else {
-            val peopleList = noteState.note.event as? GeneralListEvent
-            if (peopleList != null) {
-                waitToDecrypt(peopleList) ?: LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            val noteEvent = noteState.note.event
+            if (noteEvent is GeneralListEvent) {
+                waitToDecrypt(noteEvent) ?: LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
+            } else if (noteEvent is FollowListEvent) {
+                LiveFollowList(authors = noteEvent.pubKeys().toSet(), authorsPlusMe = setOf(signer.pubKey) + noteEvent.pubKeys())
             } else {
                 LiveFollowList(authorsPlusMe = setOf(signer.pubKey))
             }
@@ -1086,6 +1108,7 @@ class Account(
             )
     }
 
+    @OptIn(FlowPreview::class)
     val decryptBookmarks: Flow<BookmarkListEvent?> by lazy {
         userProfile()
             .flow()
@@ -1109,7 +1132,7 @@ class Account(
 
     class EmojiMedia(
         val code: String,
-        val url: MediaUrlImage,
+        val link: MediaUrlImage,
     )
 
     fun getEmojiPackSelection(): EmojiPackSelectionEvent? = getEmojiPackSelectionNote().event as? EmojiPackSelectionEvent
@@ -1156,7 +1179,7 @@ class Account(
                     null
                 }
             }.flatten()
-            .distinctBy { it.url }
+            .distinctBy { it.link }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val myEmojis by lazy {
@@ -3604,10 +3627,15 @@ class Account(
     fun getAllPeopleLists(pubkey: HexKey): List<AddressableNote> =
         LocalCache.addressables
             .filter { _, addressableNote ->
-                val event = (addressableNote.event as? PeopleListEvent)
-                event != null &&
-                    event.pubKey == pubkey &&
-                    (event.hasAnyTaggedUser() || event.cachedPrivateTags()?.isNotEmpty() == true)
+                val noteEvent = addressableNote.event
+
+                if (noteEvent is PeopleListEvent) {
+                    noteEvent.pubKey == pubkey && (noteEvent.hasAnyTaggedUser() || noteEvent.cachedPrivateTags()?.isNotEmpty() == true)
+                } else if (noteEvent is FollowListEvent) {
+                    noteEvent.pubKey == pubkey && noteEvent.hasAnyTaggedUser()
+                } else {
+                    false
+                }
             }
 
     fun markAsRead(
@@ -3629,11 +3657,33 @@ class Account(
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
 
-    fun shouldUseTorForImageDownload() =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> settings.torSettings.imagesViaTor.value
-            TorType.EXTERNAL -> settings.torSettings.imagesViaTor.value
+    fun shouldUseTorForImageDownload(url: String) =
+        shouldUseTorFor(
+            url,
+            settings.torSettings.torType.value,
+            settings.torSettings.imagesViaTor.value,
+        )
+
+    fun shouldUseTorFor(
+        url: String,
+        torType: TorType,
+        imagesViaTor: Boolean,
+    ) = when (torType) {
+        TorType.OFF -> false
+        TorType.INTERNAL -> shouldUseTor(url, imagesViaTor)
+        TorType.EXTERNAL -> shouldUseTor(url, imagesViaTor)
+    }
+
+    private fun shouldUseTor(
+        normalizedUrl: String,
+        final: Boolean,
+    ): Boolean =
+        if (isLocalHost(normalizedUrl)) {
+            false
+        } else if (isOnionUrl(normalizedUrl)) {
+            true
+        } else {
+            final
         }
 
     fun shouldUseTorForVideoDownload() =

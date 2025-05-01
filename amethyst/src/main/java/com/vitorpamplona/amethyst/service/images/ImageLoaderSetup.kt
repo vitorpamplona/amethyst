@@ -24,11 +24,19 @@ import android.app.Application
 import android.os.Build
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.Uri
+import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
+import coil3.fetch.Fetcher
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.network.CacheStrategy
+import coil3.network.ConnectivityChecker
+import coil3.network.NetworkFetcher
+import coil3.network.okhttp.asNetworkClient
+import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import coil3.util.DebugLogger
@@ -37,11 +45,22 @@ import okhttp3.Call
 
 class ImageLoaderSetup {
     companion object {
+        val gifFactory =
+            if (Build.VERSION.SDK_INT >= 28) {
+                AnimatedImageDecoder.Factory()
+            } else {
+                GifDecoder.Factory()
+            }
+        val svgFactory = SvgDecoder.Factory()
+
+        val debugLogger = if (isDebug) DebugLogger() else null
+
+        @OptIn(DelicateCoilApi::class)
         fun setup(
             app: Application,
             diskCache: DiskCache,
             memoryCache: MemoryCache,
-            callFactory: () -> Call.Factory,
+            callFactory: (url: String) -> Call.Factory,
         ) {
             SingletonImageLoader.setUnsafe(
                 ImageLoader
@@ -49,21 +68,81 @@ class ImageLoaderSetup {
                     .diskCache { diskCache }
                     .memoryCache { memoryCache }
                     .precision(Precision.INEXACT)
-                    .logger(if (isDebug) DebugLogger() else null)
+                    .logger(debugLogger)
                     .components {
-                        if (Build.VERSION.SDK_INT >= 28) {
-                            add(AnimatedImageDecoder.Factory())
-                        } else {
-                            add(GifDecoder.Factory())
-                        }
-                        add(SvgDecoder.Factory())
+                        add(gifFactory)
+                        add(svgFactory)
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
-                        add(OkHttpNetworkFetcherFactory(callFactory))
+                        add(OkHttpFactory(callFactory))
                     }.build(),
             )
         }
     }
 }
+
+/**
+ * Copied from Coil to allow networkClient to be a function of the url.
+ * So that Tor and non Tor clients can be used.
+ */
+@OptIn(ExperimentalCoilApi::class)
+class OkHttpFactory(
+    val networkClient: (url: String) -> Call.Factory,
+) : Fetcher.Factory<Uri> {
+    private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
+    private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
+
+    override fun create(
+        data: Uri,
+        options: Options,
+        imageLoader: ImageLoader,
+    ): Fetcher? {
+        if (!isApplicable(data)) return null
+
+        val url = data.toString()
+
+        return NetworkFetcher(
+            url = url,
+            options = options,
+            networkClient = lazy { networkClient(url).asNetworkClient() },
+            diskCache = lazy { imageLoader.diskCache },
+            cacheStrategy = cacheStrategyLazy,
+            connectivityChecker = connectivityCheckerLazy.get(options.context),
+        )
+    }
+
+    private fun isApplicable(data: Uri): Boolean = data.scheme == "http" || data.scheme == "https"
+}
+
+internal fun <P, T> singleParameterLazy(initializer: (P) -> T) = SingleParameterLazy(initializer)
+
+internal class SingleParameterLazy<P, T>(
+    initializer: (P) -> T,
+) : Any() {
+    private var initializer: ((P) -> T)? = initializer
+    private var value: Any? = UNINITIALIZED
+
+    @Suppress("UNCHECKED_CAST")
+    fun get(parameter: P): T {
+        val value1 = value
+        if (value1 !== UNINITIALIZED) {
+            return value1 as T
+        }
+
+        return synchronized(this) {
+            val value2 = value
+            if (value2 !== UNINITIALIZED) {
+                value2 as T
+            } else {
+                val newValue = initializer!!(parameter)
+                value = newValue
+                initializer = null
+                newValue
+            }
+        }
+    }
+}
+
+private object UNINITIALIZED

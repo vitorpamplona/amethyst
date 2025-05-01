@@ -61,8 +61,6 @@ class ServiceManager(
 
         val myAccount = account
 
-        Amethyst.instance.setImageLoader(myAccount?.shouldUseTorForImageDownload())
-
         if (myAccount != null) {
             val relaySet = myAccount.connectToRelaysWithProxy.value
             client.reconnect(relaySet)

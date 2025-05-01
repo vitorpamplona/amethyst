@@ -39,12 +39,14 @@ class Base64Fetcher(
     private val options: Options,
     private val data: Uri,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult =
-        ImageFetchResult(
-            image = Base64Image.Companion.toBitmap(data.toString()).asImage(true),
-            isSampled = false,
-            dataSource = DataSource.MEMORY,
-        )
+    override suspend fun fetch(): FetchResult? =
+        runCatching {
+            ImageFetchResult(
+                image = Base64Image.Companion.toBitmap(data.toString()).asImage(true),
+                isSampled = false,
+                dataSource = DataSource.MEMORY,
+            )
+        }.getOrNull()
 
     object Factory : Fetcher.Factory<Uri> {
         override fun create(

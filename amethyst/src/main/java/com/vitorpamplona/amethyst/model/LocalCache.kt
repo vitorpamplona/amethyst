@@ -109,6 +109,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
@@ -823,6 +824,13 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: PeopleListEvent,
+        relay: Relay?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: FollowListEvent,
         relay: Relay?,
     ) {
         consumeBaseReplaceable(event, relay)
@@ -1777,7 +1785,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event.copyNoContent(), author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers(note)
     }
@@ -1797,7 +1805,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event != null) return
 
-        note.loadEvent(event.copyNoContent(), author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
         refreshObservers(note)
     }
@@ -2622,6 +2630,7 @@ object LocalCache : ILocalCache {
                 is FileServersEvent -> consume(event, relay)
                 is FileStorageEvent -> consume(event, relay)
                 is FileStorageHeaderEvent -> consume(event, relay)
+                is FollowListEvent -> consume(event, relay)
                 is GiftWrapEvent -> consume(event, relay)
                 is GitIssueEvent -> consume(event, relay)
                 is GitReplyEvent -> consume(event, relay)

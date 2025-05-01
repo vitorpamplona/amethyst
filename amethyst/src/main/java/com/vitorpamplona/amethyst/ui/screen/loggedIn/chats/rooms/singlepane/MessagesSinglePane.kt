@@ -57,7 +57,7 @@ fun MessagesSinglePane(
     WatchLifecycleAndUpdateModel(knownFeedContentState)
     WatchLifecycleAndUpdateModel(newFeedContentState)
 
-    ChatroomListFilterAssemblerSubscription(accountViewModel.dataSources().chatroomList, accountViewModel)
+    ChatroomListFilterAssemblerSubscription(accountViewModel)
 
     val tabs by
         remember(knownFeedContentState, markKnownAsRead) {

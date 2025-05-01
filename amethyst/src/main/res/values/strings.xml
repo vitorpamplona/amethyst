@@ -964,6 +964,7 @@
     <string name="new_post">New Post</string>
     <string name="new_short">New Shorts: images or videos</string>
     <string name="new_community_note">New Community Note</string>
+    <string name="new_product">New Product</string>
 
     <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>

@@ -164,7 +164,7 @@ inline fun <T> logTime(
         block()
     }
 
-inline fun debug(
+fun debug(
     tag: String,
     debugMessage: String,
 ) {

@@ -1522,7 +1522,7 @@ class AccountViewModel(
 
     fun okHttpClientForNip96(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(url))
 
-    fun okHttpClientForImage(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload())
+    fun okHttpClientForImage(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload(url))
 
     fun okHttpClientForVideo(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForVideoDownload(url))
 
