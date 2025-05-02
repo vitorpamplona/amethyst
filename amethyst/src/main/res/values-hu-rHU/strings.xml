@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">Hiba a hibaüzenet elemzésekor</string>
     <string name="following">" Követett"</string>
     <string name="followers">" Követő"</string>
+    <string name="number_following">"%1$s követett"</string>
+    <string name="number_followers">"%1$s követő"</string>
     <string name="profile">Profil</string>
     <string name="security_filters">Biztonsági szűrők</string>
     <string name="log_out">Kijelentkezés</string>
@@ -155,6 +157,7 @@
     <string name="gallery">Galéria</string>
     <string name="follows">"Követett"</string>
     <string name="reports">"Bejelentés"</string>
+    <string name="number_reports">"%1$s jelentés"</string>
     <string name="more_options">További beállítások</string>
     <string name="relays">" Átjátszó"</string>
     <string name="website">Weboldal</string>
@@ -795,6 +798,7 @@
     <string name="new_post">Új bejegyzés</string>
     <string name="new_short">Új rövidek: képek vagy videók</string>
     <string name="new_community_note">Új közösségi bejegyzés</string>
+    <string name="new_product">Új termék</string>
     <string name="open_all_reactions_to_this_post">A bejegyzésre adott összes reakció kibontása</string>
     <string name="close_all_reactions_to_this_post">A bejegyzésre adott összes reakció összecsukása</string>
     <string name="reply_description">Válasz</string>
