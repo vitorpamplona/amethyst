@@ -82,6 +82,7 @@ object MetaTagsParser {
 
         fun nextTag(): RawTag? {
             skipWhile { it != '<' }
+            if (this.exhausted()) return null
             consume()
 
             // read tag name
