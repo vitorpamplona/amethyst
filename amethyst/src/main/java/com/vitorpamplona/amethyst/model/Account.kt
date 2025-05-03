@@ -3908,15 +3908,15 @@ class Account(
             val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { LocalCache.getChannelIfExists(it) as? PublicChatChannel }
 
             if (oldChannels != null && oldChannels.isNotEmpty()) {
-                println("AABBCC Migrating List with ${oldChannels.size} old channels ")
+                Log.d("DB UPGRADE", "Migrating List with ${oldChannels.size} old channels ")
                 val existingChannels = publicChatList.livePublicChatEventIdSet.value
 
                 val needsToUpgrade = oldChannels.filter { it.idHex !in existingChannels }
 
-                println("AABBCC Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
+                Log.d("DB UPGRADE", "Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
 
                 if (needsToUpgrade.isNotEmpty()) {
-                    println("AABBCC Migrating List")
+                    Log.d("DB UPGRADE", "Migrating List")
                     publicChatList.follow(oldChannels) {
                         sendToPrivateOutboxAndLocal(it)
                         LocalCache.justConsume(it, null)

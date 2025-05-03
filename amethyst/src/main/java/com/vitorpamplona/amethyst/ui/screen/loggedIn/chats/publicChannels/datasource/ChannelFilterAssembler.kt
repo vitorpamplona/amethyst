@@ -112,7 +112,6 @@ class ChannelFilterAssembler(
                         ),
                 )
             is EphemeralChatChannel -> {
-                println("AABBCC - Creating ${channel.roomId.id} ${channel.roomId.relayUrl}")
                 TypedFilter(
                     types =
                         setOf(
