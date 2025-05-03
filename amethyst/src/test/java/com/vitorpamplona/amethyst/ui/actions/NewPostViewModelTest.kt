@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -77,7 +78,7 @@ class NewPostViewModelTest {
 
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
             every { accountViewModel.account.userProfile() } returns mockk<User>(relaxed = true)
-            every { accountViewModel.account.myEmojis } returns mockk<StateFlow<List<Account.EmojiMedia>>>(relaxed = true)
+            every { accountViewModel.account.emoji.myEmojis } returns mockk<StateFlow<List<EmojiMedia>>>(relaxed = true)
 
             // Act: Call load with mentions
             newPostViewModelUnderTest.init(accountViewModel)
