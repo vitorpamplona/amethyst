@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -154,7 +156,14 @@ fun routeToMessage(
     accountViewModel: AccountViewModel,
 ): Route = routeToMessage(user.pubkeyHex, draftMessage, replyId, draftId, accountViewModel)
 
-fun routeFor(note: Channel): Route = Route.Channel(note.idHex)
+fun routeFor(note: Channel): Route =
+    if (note is EphemeralChatChannel) {
+        Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl)
+    } else {
+        Route.Channel(note.idHex)
+    }
+
+fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.relayUrl)
 
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 

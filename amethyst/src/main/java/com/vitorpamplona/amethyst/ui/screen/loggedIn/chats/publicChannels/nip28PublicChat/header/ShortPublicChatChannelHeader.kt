@@ -139,7 +139,7 @@ fun JoinChatButtonIfNotAlreadyJoined(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isFollowing by observeUserIsFollowingChannel(accountViewModel.userProfile(), channel)
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel)
 
     if (!isFollowing) {
         JoinChatButton(channel, accountViewModel, nav)

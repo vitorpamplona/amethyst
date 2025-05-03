@@ -20,17 +20,19 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.collections.immutable.ImmutableList
@@ -392,26 +394,51 @@ fun observeUserIsFollowingGeohash(
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
 fun observeUserIsFollowingChannel(
-    user: User,
-    channel: Channel,
+    account: Account,
+    channel: PublicChatChannel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(account.userProfile())
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(user) {
-            user
-                .flow()
-                .follows.stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.latestContactList?.isTaggedEvent(channel.idHex) ?: false
+        remember(account) {
+            account
+                .publicChatList
+                .livePublicChatEventIdSet
+                .mapLatest { followingChannels ->
+                    channel.idHex in followingChannels
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
-    return flow.collectAsStateWithLifecycle(user.latestContactList?.isTaggedEvent(channel.idHex) ?: false)
+    @SuppressLint("StateFlowValueCalledInComposition")
+    return flow.collectAsStateWithLifecycle(channel.idHex in account.publicChatList.livePublicChatEventIdSet.value)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeUserIsFollowingChannel(
+    account: Account,
+    channel: EphemeralChatChannel,
+): State<Boolean> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(account.userProfile())
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(account) {
+            account
+                .ephemeralChatList
+                .liveEphemeralChatList
+                .mapLatest { followingChannels ->
+                    channel.roomId in followingChannels
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    @SuppressLint("StateFlowValueCalledInComposition")
+    return flow.collectAsStateWithLifecycle(channel.roomId in account.ephemeralChatList.liveEphemeralChatList.value)
 }
 
 @Composable

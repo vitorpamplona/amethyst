@@ -37,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,12 +51,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -122,29 +121,14 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo by
-        produceState(
-            initialValue = Nip11CachedRetriever.getFromCache(relay.url),
-        ) {
-            if (value == null) {
-                accountViewModel.retrieveRelayDocument(
-                    relay.url,
-                    onInfo = {
-                        value = it
-                    },
-                    onError = { url, errorCode, exceptionMessage ->
-                    },
-                )
-            }
-        }
+    val relayInfo = loadRelayInfo(relay.url, accountViewModel)
 
     var openRelayDialog by remember { mutableStateOf(false) }
 
     if (openRelayDialog && relayInfo != null) {
         RelayInformationDialog(
             onClose = { openRelayDialog = false },
-            relayInfo = relayInfo!!,
+            relayInfo = relayInfo,
             relayBriefInfo = relay,
             accountViewModel = accountViewModel,
             nav = nav,

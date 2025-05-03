@@ -110,9 +110,9 @@ class ChannelMetadataViewModel : ViewModel() {
                         relayList = { it.channelInfo().relays },
                         onDone = {
                             val channel = LocalCache.getOrCreateChannel(it.id) { PublicChatChannel(it) }
-                            // follows the channel
-                            account.follow(channel)
                             if (channel is PublicChatChannel) {
+                                // follows the channel
+                                account.follow(channel)
                                 onDone(channel)
                             }
                         },

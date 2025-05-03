@@ -29,14 +29,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
@@ -69,10 +68,7 @@ fun BasicRelaySetupInfoClickableRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,
         ) {
-            val iconUrlFromRelayInfoDoc =
-                remember(item) {
-                    Nip11CachedRetriever.getFromCache(item.url)?.icon
-                }
+            val iconUrlFromRelayInfoDoc = loadRelayInfo(item.url, accountViewModel)?.icon
 
             RenderRelayIcon(
                 item.briefInfo.displayUrl,

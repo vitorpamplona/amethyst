@@ -37,11 +37,13 @@ import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -58,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -371,7 +374,7 @@ open class ChannelNewMessageViewModel :
 
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(message.text, accountViewModel.account.myEmojis.value)
+        val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
 
         val channelRelays = channel.relays()
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
@@ -453,6 +456,19 @@ open class ChannelNewMessageViewModel :
                     imetas(usedAttachments)
                 }
             }
+        } else if (channel is EphemeralChatChannel) {
+            EphemeralChatEvent.build(
+                tagger.message,
+                channel.roomId.relayUrl,
+                channel.roomId.id,
+            ) {
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
+
+                emojis(emojis)
+                imetas(usedAttachments)
+            }
         } else {
             null
         }
@@ -460,7 +476,7 @@ open class ChannelNewMessageViewModel :
 
     fun findEmoji(
         message: String,
-        myEmojiSet: List<Account.EmojiMedia>?,
+        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
@@ -551,7 +567,7 @@ open class ChannelNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmoji(item: Account.EmojiMedia) {
+    open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
         message = message.replaceCurrentWord(wordToInsert)
 
@@ -560,7 +576,7 @@ open class ChannelNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
+    open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {

@@ -1024,16 +1024,28 @@ fun Gallery(
     users: ImmutableList<User>,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
+    maxPictures: Int = 6,
 ) {
-    FlowRow(modifier, verticalArrangement = Arrangement.Center) {
-        users.take(6).forEach { ClickableUserPicture(it, Size25dp, accountViewModel) }
+    FlowRow(
+        modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy((-6).dp),
+    ) {
+        users.take(maxPictures).forEach {
+            ClickableUserPicture(
+                it,
+                Size25dp,
+                accountViewModel,
+                Modifier,
+            )
+        }
 
-        if (users.size > 6) {
+        if (users.size > maxPictures) {
             Text(
-                text = " + " + showCount(users.size - 6),
+                text = " + " + showCount(users.size - maxPictures),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 3.dp).align(CenterVertically),
+                modifier = Modifier.padding(start = 6.dp).align(CenterVertically),
             )
         }
     }

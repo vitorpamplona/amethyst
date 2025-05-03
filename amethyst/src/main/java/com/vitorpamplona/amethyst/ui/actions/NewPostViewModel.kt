@@ -43,6 +43,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
@@ -514,7 +516,7 @@ open class NewPostViewModel :
             }
         }
 
-        val emojis = findEmoji(tagger.message, account?.myEmojis?.value)
+        val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
@@ -875,7 +877,7 @@ open class NewPostViewModel :
 
     fun findEmoji(
         message: String,
-        myEmojiSet: List<Account.EmojiMedia>?,
+        myEmojiSet: List<EmojiMedia>?,
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
@@ -1066,7 +1068,7 @@ open class NewPostViewModel :
         saveDraft()
     }
 
-    open fun autocompleteWithEmoji(item: Account.EmojiMedia) {
+    open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -1077,7 +1079,7 @@ open class NewPostViewModel :
         saveDraft()
     }
 
-    open fun autocompleteWithEmojiUrl(item: Account.EmojiMedia) {
+    open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {

@@ -39,20 +39,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -85,14 +84,11 @@ fun Kind3RelaySetupInfoProposalRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
         ) {
-            val iconUrlFromRelayInfoDoc =
-                remember(item) {
-                    Nip11CachedRetriever.getFromCache(item.url)?.icon
-                }
+            val relayInfo = loadRelayInfo(item.url, accountViewModel)
 
             RenderRelayIcon(
                 item.briefInfo.displayUrl,
-                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                relayInfo?.icon ?: item.briefInfo.favIcon,
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,

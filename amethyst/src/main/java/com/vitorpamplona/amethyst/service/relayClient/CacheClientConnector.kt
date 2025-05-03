@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.datasources.EventCollector
 import com.vitorpamplona.ammolite.relays.datasources.RelayInsertConfirmationCollector
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -40,8 +40,8 @@ class CacheClientConnector(
 
     val confirmationWatcher =
         RelayInsertConfirmationCollector(client) { eventId, relay ->
-            cache.markAsSeen(eventId, relay)
-            unwrapAndMarkAsSeen(eventId, relay)
+            cache.markAsSeen(eventId, relay.brief)
+            unwrapAndMarkAsSeen(eventId, relay.brief)
         }
 
     fun destroy() {
@@ -51,7 +51,7 @@ class CacheClientConnector(
 
     private fun unwrapAndMarkAsSeen(
         eventId: HexKey,
-        relay: Relay,
+        relay: RelayBriefInfoCache.RelayBriefInfo,
     ) {
         val note = LocalCache.getNoteIfExists(eventId)
 

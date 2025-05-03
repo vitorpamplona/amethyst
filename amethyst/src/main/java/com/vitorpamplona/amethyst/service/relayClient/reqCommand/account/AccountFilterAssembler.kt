@@ -31,6 +31,8 @@ import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
@@ -43,6 +45,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -140,6 +143,8 @@ class AccountFilterAssembler(
                             MuteListEvent.KIND,
                             BadgeProfilesEvent.KIND,
                             EmojiPackSelectionEvent.KIND,
+                            EphemeralChatListEvent.KIND,
+                            ChannelListEvent.KIND,
                         ),
                     authors = authorsHexes,
                     limit = 100 * authorsHexes.size,
@@ -209,7 +214,6 @@ class AccountFilterAssembler(
                     kinds =
                         listOf(
                             TextNoteEvent.KIND,
-                            PollNoteEvent.KIND,
                             ReactionEvent.KIND,
                             RepostEvent.KIND,
                             GenericRepostEvent.KIND,
@@ -217,6 +221,7 @@ class AccountFilterAssembler(
                             LnZapEvent.KIND,
                             LnZapPaymentResponseEvent.KIND,
                             ChannelMessageEvent.KIND,
+                            EphemeralChatEvent.KIND,
                             BadgeAwardEvent.KIND,
                         ),
                     tags = mapOf("p" to authorsHexes),
@@ -249,6 +254,21 @@ class AccountFilterAssembler(
                 ),
         )
 
+    fun createNotificationFilter3(authorsHexes: List<String>) =
+        TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                SincePerRelayFilter(
+                    kinds =
+                        listOf(
+                            PollNoteEvent.KIND,
+                        ),
+                    tags = mapOf("p" to authorsHexes),
+                    limit = 100,
+                    since = latestEOSE.relayList,
+                ),
+        )
+
     fun mergeAllFilters(
         mainAccounts: List<HexKey>,
         otherAccounts: List<HexKey>,
@@ -260,6 +280,7 @@ class AccountFilterAssembler(
                 createAccountSettings2Filter(mainAccounts),
                 createNotificationFilter(mainAccounts),
                 createNotificationFilter2(mainAccounts),
+                createNotificationFilter3(mainAccounts),
                 createGiftWrapsToMeFilter(mainAccounts),
                 createAccountReportsAndDraftsFilter(mainAccounts),
                 createAccountSettingsFilter(mainAccounts),

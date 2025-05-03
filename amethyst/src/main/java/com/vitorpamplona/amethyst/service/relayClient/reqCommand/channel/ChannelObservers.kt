@@ -27,16 +27,48 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ChannelState
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.model.LocalCache.notes
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 
 @Composable
 fun observeChannel(baseChannel: Channel): State<ChannelState?> {
     ChannelFinderFilterAssemblerSubscription(baseChannel)
 
-    return baseChannel.flow.stateFlow.collectAsStateWithLifecycle()
+    return baseChannel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
+fun observeChannelNoteAuthors(baseChannel: Channel): State<ImmutableList<User>> {
+    ChannelFinderFilterAssemblerSubscription(baseChannel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(baseChannel) {
+            baseChannel
+                .flow()
+                .notes.stateFlow
+                .mapLatest {
+                    it.channel.notes
+                        .mapNotNull { key, value -> value.author }
+                        .toSet()
+                        .toImmutableList()
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(persistentListOf())
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -49,7 +81,8 @@ fun observeChannelPicture(baseChannel: Channel): State<String?> {
     val flow =
         remember(baseChannel) {
             baseChannel
-                .flow.stateFlow
+                .flow()
+                .metadata.stateFlow
                 .mapLatest { it.channel.profilePicture() }
                 .distinctUntilChanged()
         }
@@ -67,7 +100,8 @@ fun observeChannelInfo(baseChannel: LiveActivitiesChannel): State<LiveActivities
     val flow =
         remember(baseChannel) {
             baseChannel
-                .flow.stateFlow
+                .flow()
+                .metadata.stateFlow
                 .mapLatest { (it.channel as? LiveActivitiesChannel)?.info }
                 .distinctUntilChanged()
         }

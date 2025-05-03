@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.screen.FollowListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
@@ -33,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverLiveFe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverMarketplaceFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.DiscoverNIP89FeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeConversationsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
@@ -42,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 class AccountFeedContentStates(
     val accountViewModel: AccountViewModel,
 ) {
+    val homeLive = ChannelFeedContentState(HomeLiveFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val homeReplies = FeedContentState(HomeConversationsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
 
@@ -69,6 +72,7 @@ class AccountFeedContentStates(
     fun updateFeedsWith(newNotes: Set<Note>) {
         checkNotInMainThread()
 
+        homeLive.updateFeedWith(newNotes)
         homeNewThreads.updateFeedWith(newNotes)
         homeReplies.updateFeedWith(newNotes)
 

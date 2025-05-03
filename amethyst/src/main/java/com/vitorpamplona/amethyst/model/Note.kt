@@ -34,6 +34,7 @@ import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -200,13 +201,15 @@ open class Note(
             event is ChannelMetadataEvent ||
             event is ChannelCreateEvent ||
             event is LiveActivitiesChatMessageEvent ||
-            event is LiveActivitiesEvent
+            event is LiveActivitiesEvent ||
+            event is EphemeralChatEvent
         ) {
             (event as? ChannelMessageEvent)?.channelId()
                 ?: (event as? ChannelMetadataEvent)?.channelId()
                 ?: (event as? ChannelCreateEvent)?.id
                 ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
                 ?: (event as? LiveActivitiesEvent)?.aTag()?.toTag()
+                ?: (event as? EphemeralChatEvent)?.roomId()?.toKey()
         } else {
             null
         }
@@ -447,14 +450,7 @@ open class Note(
 
     fun hasRelay(relay: Relay) = relay.brief !in relays
 
-    fun addRelay(relay: Relay) {
-        if (relay.brief !in relays) {
-            addRelaySync(relay.brief)
-            flowSet?.relays?.invalidateData()
-        }
-    }
-
-    fun addRelayBrief(brief: RelayBriefInfoCache.RelayBriefInfo) {
+    fun addRelay(brief: RelayBriefInfoCache.RelayBriefInfo) {
         if (brief !in relays) {
             addRelaySync(brief)
             flowSet?.relays?.invalidateData()

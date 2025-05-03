@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.EphemeralChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
@@ -83,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -129,8 +132,10 @@ fun AppNavigation(
             composableFromEndArgs<Route.Room> { ChatroomScreen(it.id.toString(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
             composableFromEndArgs<Route.Channel> { ChannelScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.EphemeralChat> { EphemeralChatScreen(RoomId(it.id, it.relayUrl), accountViewModel, nav) }
 
             composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
+            composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
             composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
 
             composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }

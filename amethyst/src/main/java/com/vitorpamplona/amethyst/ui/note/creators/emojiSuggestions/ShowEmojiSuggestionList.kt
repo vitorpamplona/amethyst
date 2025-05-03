@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.gallery.UrlImageView
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -55,8 +55,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 @Composable
 fun ShowEmojiSuggestionList(
     emojiSuggestions: EmojiSuggestionState,
-    onSelect: (Account.EmojiMedia) -> Unit,
-    onFullSize: (Account.EmojiMedia) -> Unit,
+    onSelect: (EmojiPackState.EmojiMedia) -> Unit,
+    onFullSize: (EmojiPackState.EmojiMedia) -> Unit,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
 ) {

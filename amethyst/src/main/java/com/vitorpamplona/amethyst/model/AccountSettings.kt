@@ -30,13 +30,16 @@ import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
@@ -53,12 +56,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.util.Locale
 
-val DefaultChannels =
+val DefaultChannelSet =
     setOf(
         // Anigma's Nostr
         "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb",
         // Amethyst's Group
         "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5",
+    )
+
+val DefaultChannels =
+    listOf(
+        // Anigma's Nostr
+        EventIdHint("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", "wss://nos.lol"),
+        // Amethyst's Group
+        EventIdHint("42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5", "wss://nos.lol"),
     )
 
 val DefaultNIP65List =
@@ -116,16 +127,15 @@ class AccountSettings(
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
     var backupAppSpecificData: AppSpecificDataEvent? = null,
-    backupSyncedSettings: AccountSyncedSettingsInternal? = null, // only exist for migration purposes
+    var backupChannelList: ChannelListEvent? = null,
+    var backupEphemeralChatList: EphemeralChatListEvent? = null,
     val torSettings: TorSettingsFlow = TorSettingsFlow(),
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     var hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf<String>()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow<Map<HexKey, String>>(mapOf()),
 ) {
     val saveable = MutableStateFlow(AccountSettingsUpdater(null))
-    val syncedSettings: AccountSyncedSettings =
-        backupSyncedSettings?.let { AccountSyncedSettings(it) }
-            ?: AccountSyncedSettings(AccountSyncedSettingsInternal())
+    val syncedSettings: AccountSyncedSettings = AccountSyncedSettings(AccountSyncedSettingsInternal())
 
     class AccountSettingsUpdater(
         val accountSettings: AccountSettings?,
@@ -353,6 +363,26 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupPrivateHomeRelayList?.id != newPrivateHomeRelayList.id) {
             backupPrivateHomeRelayList = newPrivateHomeRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateChannelListTo(newChannelList: ChannelListEvent?) {
+        if (newChannelList == null || newChannelList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupChannelList?.id != newChannelList.id) {
+            backupChannelList = newChannelList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateEphemeralChatListTo(newEphemeralChatList: EphemeralChatListEvent?) {
+        if (newEphemeralChatList == null || newEphemeralChatList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupEphemeralChatList?.id != newEphemeralChatList.id) {
+            backupEphemeralChatList = newEphemeralChatList
             saveAccountSettings()
         }
     }

@@ -100,6 +100,13 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class EphemeralChat(
+        val id: String,
+        val relayUrl: String,
+    ) : Route()
+
+    @Serializable object NewEphemeralChat : Route()
+
     @Serializable data class ChannelMetadataEdit(
         val id: String? = null,
     ) : Route()
@@ -176,6 +183,8 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
         dest.hasRoute<Route.Channel>() -> entry.toRoute<Route.Channel>()
         dest.hasRoute<Route.ChannelMetadataEdit>() -> entry.toRoute<Route.ChannelMetadataEdit>()
+        dest.hasRoute<Route.EphemeralChat>() -> entry.toRoute<Route.EphemeralChat>()
+        dest.hasRoute<Route.NewEphemeralChat>() -> entry.toRoute<Route.NewEphemeralChat>()
         dest.hasRoute<Route.EventRedirect>() -> entry.toRoute<Route.EventRedirect>()
         dest.hasRoute<Route.EditRelays>() -> entry.toRoute<Route.EditRelays>()
         dest.hasRoute<Route.Nip47NWCSetup>() -> entry.toRoute<Route.Nip47NWCSetup>()

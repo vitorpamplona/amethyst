@@ -36,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,7 +51,6 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
@@ -60,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -239,20 +238,7 @@ fun RenderRelayLinePublicChat(
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo by produceState(
-        initialValue = Nip11CachedRetriever.getFromCache(dirtyUrl),
-    ) {
-        if (value == null) {
-            accountViewModel.retrieveRelayDocument(
-                dirtyUrl,
-                onInfo = {
-                    value = it
-                },
-                onError = { url, errorCode, exceptionMessage ->
-                },
-            )
-        }
-    }
+    val relayInfo = loadRelayInfo(dirtyUrl, accountViewModel)
 
     var openRelayDialog by remember { mutableStateOf(false) }
 

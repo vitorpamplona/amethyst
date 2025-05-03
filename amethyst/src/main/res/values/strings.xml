@@ -225,6 +225,15 @@
     <string name="unfollow">Unfollow</string>
     <string name="channel_created">Channel created</string>
     <string name="channel_information_changed_to">"Channel Information changed to"</string>
+
+    <string name="ephemeral_relay_chat">Disappearing Chat</string>
+    <string name="relay_chat">Relay Chat</string>
+    <string name="relay_chat_title">Relay Chats</string>
+    <string name="relay_chat_explainer">Relay chats are chat groups controlled by their home relay.
+        They are visible to everyone on Nostr and anyone can participate on them.
+        They are great for open communities around specific topics. Some of these groups are ephemeral
+    and thus chat messages disappear over time</string>
+
     <string name="public_chat">Public Chat</string>
     <string name="public_chat_title">Public Chat Metadata</string>
     <string name="public_chat_explainer">Public chats are visible to everyone on Nostr and anyone
@@ -722,6 +731,7 @@
 
     <string name="messages_create_public_chat">Public</string>
     <string name="messages_create_public_private_chat_description">New Public or Private Group</string>
+    <string name="messages_relay_based">Relay</string>
     <string name="messages_new_message">Private</string>
     <string name="messages_new_message_to">To</string>
     <string name="messages_new_message_subject">Subject</string>
@@ -1144,4 +1154,7 @@
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>
+
+    <string name="group_relay">Chat Relay</string>
+    <string name="group_relay_explanation">The relay that all users of this chat connect to</string>
 </resources>

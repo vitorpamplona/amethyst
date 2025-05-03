@@ -25,7 +25,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache.RelayBriefInfo
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -298,12 +298,12 @@ class User(
     }
 
     fun addRelayBeingUsed(
-        relay: Relay,
+        relay: RelayBriefInfo,
         eventTime: Long,
     ) {
-        val here = relaysBeingUsed[relay.brief.url]
+        val here = relaysBeingUsed[relay.url]
         if (here == null) {
-            relaysBeingUsed = relaysBeingUsed + Pair(relay.brief.url, RelayInfo(relay.brief.url, eventTime, 1))
+            relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))
         } else {
             if (eventTime > here.lastEvent) {
                 here.lastEvent = eventTime

@@ -21,13 +21,14 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
@@ -40,8 +41,28 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+
+@Stable
+class EphemeralChatChannel(
+    val roomId: RoomId,
+) : Channel(roomId.toKey()) {
+    override fun idNote() = roomId.toDisplayKey()
+
+    override fun idDisplayNote() = idNote().toShortenHex()
+
+    override fun relays() = listOf(roomId.relayUrl)
+
+    override fun toBestDisplayName() = roomId.toDisplayKey()
+
+    override fun summary(): String? = null
+
+    override fun profilePicture(): String? = null
+
+    override fun anyNameStartsWith(prefix: String): Boolean = roomId.id.contains(prefix, true)
+}
 
 @Stable
 class PublicChatChannel(
@@ -56,6 +77,10 @@ class PublicChatChannel(
     fun toNEvent() = NEvent.create(idHex, event?.pubKey, ChannelCreateEvent.KIND, *relays().toTypedArray())
 
     fun toNostrUri() = "nostr:${toNEvent()}"
+
+    fun toEventHint() = event?.let { EventHintBundle<ChannelCreateEvent>(it, relays().firstOrNull(), null) }
+
+    fun toEventId() = EventIdHint(idHex, relays().firstOrNull())
 
     fun updateChannelInfo(
         creator: User,
@@ -152,9 +177,7 @@ abstract class Channel(
     var lastNoteCreatedAt: Long = 0
     private var relays = mapOf<RelayBriefInfoCache.RelayBriefInfo, Counter>()
 
-    open fun id() = Hex.decode(idHex)
-
-    open fun idNote() = id().toNEvent()
+    open fun idNote() = Hex.decode(idHex).toNEvent()
 
     open fun idDisplayNote() = idNote().toShortenHex()
 
@@ -181,7 +204,7 @@ abstract class Channel(
         this.creator = creator
         this.updatedMetadataAt = updatedAt
 
-        flow.invalidateData()
+        flowSet?.metadata?.invalidateData()
     }
 
     @Synchronized
@@ -191,18 +214,18 @@ abstract class Channel(
         }
     }
 
-    fun addRelay(relay: Relay) {
-        val counter = relays[relay.brief]
+    fun addRelay(relay: RelayBriefInfoCache.RelayBriefInfo) {
+        val counter = relays[relay]
         if (counter != null) {
             counter.number++
         } else {
-            addRelaySync(relay.brief)
+            addRelaySync(relay)
         }
     }
 
     fun addNote(
         note: Note,
-        relay: Relay? = null,
+        relay: RelayBriefInfoCache.RelayBriefInfo? = null,
     ) {
         notes.put(note.idHex, note)
 
@@ -213,6 +236,8 @@ abstract class Channel(
         if (relay != null) {
             addRelay(relay)
         }
+
+        flowSet?.notes?.invalidateData()
     }
 
     fun removeNote(note: Note) {
@@ -224,9 +249,6 @@ abstract class Channel(
     }
 
     abstract fun anyNameStartsWith(prefix: String): Boolean
-
-    // Observers line up here.
-    val flow: ChannelFlow = ChannelFlow(this)
 
     fun pruneOldMessages(): Set<Note> {
         val important =
@@ -240,6 +262,8 @@ abstract class Channel(
 
         toBeRemoved.forEach { notes.remove(it.idHex) }
 
+        flowSet?.notes?.invalidateData()
+
         return toBeRemoved.toSet()
     }
 
@@ -252,7 +276,56 @@ abstract class Channel(
 
         hidden.forEach { notes.remove(it.idHex) }
 
+        flowSet?.notes?.invalidateData()
+
         return hidden.toSet()
+    }
+
+    var flowSet: ChannelFlowSet? = null
+
+    @Synchronized
+    fun createOrDestroyFlowSync(create: Boolean) {
+        if (create) {
+            if (flowSet == null) {
+                flowSet = ChannelFlowSet(this)
+            }
+        } else {
+            if (flowSet != null && flowSet?.isInUse() == false) {
+                flowSet?.destroy()
+                flowSet = null
+            }
+        }
+    }
+
+    fun flow(): ChannelFlowSet {
+        if (flowSet == null) {
+            createOrDestroyFlowSync(true)
+        }
+        return flowSet!!
+    }
+
+    fun clearFlow() {
+        if (flowSet != null && flowSet?.isInUse() == false) {
+            createOrDestroyFlowSync(false)
+        }
+    }
+}
+
+@Stable
+class ChannelFlowSet(
+    u: Channel,
+) {
+    // Observers line up here.
+    val metadata = ChannelFlow(u)
+    val notes = ChannelFlow(u)
+
+    fun isInUse(): Boolean =
+        metadata.hasObservers() ||
+            notes.hasObservers()
+
+    fun destroy() {
+        metadata.destroy()
+        notes.destroy()
     }
 }
 

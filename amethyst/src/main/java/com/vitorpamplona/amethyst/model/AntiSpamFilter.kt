@@ -24,7 +24,7 @@ import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.njumpLink
-import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -45,7 +45,7 @@ class AntiSpamFilter {
 
     fun isSpam(
         event: Event,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ): Boolean {
         checkNotInMainThread()
 

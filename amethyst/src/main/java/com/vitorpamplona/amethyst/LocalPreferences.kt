@@ -27,14 +27,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.amethyst.model.AccountLanguagePreferencesInternal
-import com.vitorpamplona.amethyst.model.AccountReactionPreferencesInternal
-import com.vitorpamplona.amethyst.model.AccountSecurityPreferencesInternal
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
-import com.vitorpamplona.amethyst.model.AccountZapPreferencesInternal
-import com.vitorpamplona.amethyst.model.DefaultReactions
-import com.vitorpamplona.amethyst.model.DefaultZapAmounts
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
 import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Settings
@@ -43,9 +36,9 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -56,10 +49,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import kotlinx.coroutines.CancellationException
@@ -69,7 +62,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Locale
 
 // Release mode (!BuildConfig.DEBUG) always uses encrypted preferences
 // To use plaintext SharedPreferences for debugging, set this to true
@@ -91,13 +83,7 @@ private object PrefKeys {
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val RELAYS = "relays"
-    const val DONT_TRANSLATE_FROM = "dontTranslateFrom"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
-    const val LANGUAGE_PREFS = "languagePreferences"
-    const val TRANSLATE_TO = "translateTo"
-    const val ZAP_AMOUNTS = "zapAmounts"
-    const val REACTION_CHOICES = "reactionChoices"
-    const val DEFAULT_ZAPTYPE = "defaultZapType"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
@@ -112,15 +98,14 @@ private object PrefKeys {
     const val LATEST_MUTE_LIST = "latestMuteList"
     const val LATEST_PRIVATE_HOME_RELAY_LIST = "latestPrivateHomeRelayList"
     const val LATEST_APP_SPECIFIC_DATA = "latestAppSpecificData"
+    const val LATEST_CHANNEL_LIST = "latestChannelList"
+    const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val TOR_SETTINGS = "tor_settings"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
-    const val SHOW_SENSITIVE_CONTENT = "show_sensitive_content"
-    const val WARN_ABOUT_REPORTS = "warn_about_reports"
-    const val FILTER_SPAM_FROM_STRANGERS = "filter_spam_from_strangers"
     const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
@@ -412,6 +397,24 @@ object LocalPreferences {
                         remove(PrefKeys.LATEST_APP_SPECIFIC_DATA)
                     }
 
+                    if (settings.backupChannelList != null) {
+                        putString(
+                            PrefKeys.LATEST_CHANNEL_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupChannelList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_CHANNEL_LIST)
+                    }
+
+                    if (settings.backupEphemeralChatList != null) {
+                        putString(
+                            PrefKeys.LATEST_EPHEMERAL_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupEphemeralChatList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_EPHEMERAL_LIST)
+                    }
+
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
                     putBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, settings.hideBlockAlertDialog)
@@ -519,11 +522,6 @@ object LocalPreferences {
                     val defaultDiscoveryFollowList =
                         getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
 
-                    val defaultZapType =
-                        getString(PrefKeys.DEFAULT_ZAPTYPE, "")?.let { serverName ->
-                            LnZapEvent.ZapType.entries.firstOrNull { it.name == serverName }
-                        } ?: LnZapEvent.ZapType.PUBLIC
-
                     val localRelays = parseOrNull<Set<RelaySetupInfo>>(PrefKeys.RELAYS) ?: emptySet()
 
                     val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
@@ -540,80 +538,14 @@ object LocalPreferences {
                     val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
                     val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
                     val latestAppSpecificData = parseEventOrNull<AppSpecificDataEvent>(PrefKeys.LATEST_APP_SPECIFIC_DATA)
-
-                    val syncedSettings =
-                        if (latestAppSpecificData != null) {
-                            null
-                        } else {
-                            // previous version. Delete this when ready.
-                            val reactionChoices = parseOrNull<List<String>>(PrefKeys.REACTION_CHOICES)?.ifEmpty { DefaultReactions } ?: DefaultReactions
-                            val zapAmountChoices = parseOrNull<List<Long>>(PrefKeys.ZAP_AMOUNTS)?.ifEmpty { DefaultZapAmounts } ?: DefaultZapAmounts
-
-                            val languagePreferences = parseOrNull<Map<String, String>>(PrefKeys.LANGUAGE_PREFS) ?: mapOf()
-
-                            val showSensitiveContent =
-                                if (contains(PrefKeys.SHOW_SENSITIVE_CONTENT)) {
-                                    getBoolean(PrefKeys.SHOW_SENSITIVE_CONTENT, false)
-                                } else {
-                                    null
-                                }
-                            val filterSpam = getBoolean(PrefKeys.FILTER_SPAM_FROM_STRANGERS, true)
-                            val warnAboutReports = getBoolean(PrefKeys.WARN_ABOUT_REPORTS, true)
-
-                            val dontTranslateFrom = getStringSet(PrefKeys.DONT_TRANSLATE_FROM, null) ?: setOf()
-                            val translateTo = getString(PrefKeys.TRANSLATE_TO, null) ?: Locale.getDefault().language
-
-                            AccountSyncedSettingsInternal(
-                                reactions =
-                                    AccountReactionPreferencesInternal(
-                                        reactionChoices = reactionChoices,
-                                    ),
-                                zaps =
-                                    AccountZapPreferencesInternal(
-                                        zapAmountChoices = zapAmountChoices,
-                                        defaultZapType = defaultZapType,
-                                    ),
-                                languages =
-                                    AccountLanguagePreferencesInternal(
-                                        dontTranslateFrom = dontTranslateFrom,
-                                        languagePreferences = languagePreferences,
-                                        translateTo = translateTo,
-                                    ),
-                                security =
-                                    AccountSecurityPreferencesInternal(
-                                        showSensitiveContent = showSensitiveContent,
-                                        warnAboutPostsWithReports = warnAboutReports,
-                                        filterSpamFromStrangers = filterSpam,
-                                    ),
-                            )
-                        }
+                    val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
+                    val latestChannelList = parseEventOrNull<ChannelListEvent>(PrefKeys.LATEST_CHANNEL_LIST)
 
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
-                    val useProxy = getBoolean(PrefKeys.USE_PROXY, false)
 
-                    val torSettings =
-                        if (useProxy) {
-                            // old settings, means Orbot
-                            TorSettings(
-                                TorType.EXTERNAL,
-                                getInt(PrefKeys.PROXY_PORT, 9050),
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                            )
-                        } else {
-                            parseOrNull<TorSettings>(PrefKeys.TOR_SETTINGS) ?: TorSettings()
-                        }
+                    val torSettings = parseOrNull<TorSettings>(PrefKeys.TOR_SETTINGS) ?: TorSettings()
 
                     val lastReadPerRoute =
                         parseOrNull<Map<String, Long>>(PrefKeys.LAST_READ_PER_ROUTE)?.mapValues {
@@ -646,7 +578,8 @@ object LocalPreferences {
                         backupPrivateHomeRelayList = latestPrivateHomeRelayList,
                         backupMuteList = latestMuteList,
                         backupAppSpecificData = latestAppSpecificData,
-                        backupSyncedSettings = syncedSettings,
+                        backupChannelList = latestChannelList,
+                        backupEphemeralChatList = latestEphemeralList,
                         torSettings = TorSettingsFlow.build(torSettings),
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),

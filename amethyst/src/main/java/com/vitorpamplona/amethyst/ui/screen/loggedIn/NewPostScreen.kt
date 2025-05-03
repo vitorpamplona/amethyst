@@ -695,3 +695,18 @@ fun CreateButton(
         Text(text = stringRes(R.string.create))
     }
 }
+
+@Composable
+fun JoinButton(
+    onPost: () -> Unit = {},
+    isActive: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        enabled = isActive,
+        modifier = modifier,
+        onClick = onPost,
+    ) {
+        Text(text = stringRes(R.string.join))
+    }
+}

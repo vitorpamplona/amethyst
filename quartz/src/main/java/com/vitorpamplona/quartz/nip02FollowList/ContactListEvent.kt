@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -88,7 +87,6 @@ class ContactListEvent(
             followTags: List<String> = emptyList(),
             followGeohashes: List<String> = emptyList(),
             followCommunities: List<ATag> = emptyList(),
-            followEvents: List<String> = emptyList(),
             relayUse: Map<String, ReadWrite>? = emptyMap(),
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
@@ -99,7 +97,6 @@ class ContactListEvent(
                 listOf(AltTag.assemble(ALT)) +
                     followUsers.map { it.toTagArray() } +
                     followTags.map { arrayOf("t", it) } +
-                    followEvents.map { arrayOf("e", it) } +
                     followCommunities.map { it.toATagArray() } +
                     followGeohashes.map { arrayOf("g", it) }
 
@@ -111,7 +108,6 @@ class ContactListEvent(
             followTags: List<String>,
             followGeohashes: List<String>,
             followCommunities: List<ATag>,
-            followEvents: List<String>,
             relayUse: Map<String, ReadWrite>?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -122,7 +118,6 @@ class ContactListEvent(
             val tags =
                 followUsers.map { it.toTagArray() } +
                     followTags.map { arrayOf("t", it) } +
-                    followEvents.map { arrayOf("e", it) } +
                     followCommunities.map { it.toATagArray() } +
                     followGeohashes.map { arrayOf("g", it) }
 
@@ -238,42 +233,6 @@ class ContactListEvent(
             return create(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.filter { it.size > 1 && it[1] != hashtag }.toTypedArray(),
-                signer = signer,
-                createdAt = createdAt,
-                onReady = onReady,
-            )
-        }
-
-        fun followEvent(
-            earlierVersion: ContactListEvent,
-            idHex: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
-            if (earlierVersion.isTaggedEvent(idHex)) return
-
-            return create(
-                content = earlierVersion.content,
-                tags = earlierVersion.tags.plus(element = arrayOf("e", idHex)),
-                signer = signer,
-                createdAt = createdAt,
-                onReady = onReady,
-            )
-        }
-
-        fun unfollowEvent(
-            earlierVersion: ContactListEvent,
-            idHex: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
-            if (!earlierVersion.isTaggedEvent(idHex)) return
-
-            return create(
-                content = earlierVersion.content,
-                tags = earlierVersion.tags.filter { it.size > 1 && it[1] != idHex }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
                 onReady = onReady,

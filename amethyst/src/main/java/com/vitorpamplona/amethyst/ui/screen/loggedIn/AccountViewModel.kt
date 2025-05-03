@@ -46,8 +46,10 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
@@ -77,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -823,11 +826,19 @@ class AccountViewModel(
         account.decryptZapContentAuthor(note, onReady)
     }
 
-    fun follow(channel: Channel) {
+    fun follow(channel: PublicChatChannel) {
         viewModelScope.launch(Dispatchers.IO) { account.follow(channel) }
     }
 
-    fun unfollow(channel: Channel) {
+    fun follow(channel: EphemeralChatChannel) {
+        viewModelScope.launch(Dispatchers.IO) { account.follow(channel) }
+    }
+
+    fun unfollow(channel: PublicChatChannel) {
+        viewModelScope.launch(Dispatchers.IO) { account.unfollow(channel) }
+    }
+
+    fun unfollow(channel: EphemeralChatChannel) {
         viewModelScope.launch(Dispatchers.IO) { account.unfollow(channel) }
     }
 
@@ -1147,6 +1158,8 @@ class AccountViewModel(
 
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? = LocalCache.checkGetOrCreateChannel(key)
 
+    suspend fun checkGetOrCreateChannel(key: RoomId): Channel? = LocalCache.checkGetOrCreateChannel(key)
+
     fun checkGetOrCreateChannel(
         key: HexKey,
         onResult: (Channel?) -> Unit,
@@ -1155,6 +1168,8 @@ class AccountViewModel(
     }
 
     fun getChannelIfExists(hex: HexKey): Channel? = LocalCache.getChannelIfExists(hex)
+
+    fun getChannelIfExists(key: RoomId): Channel? = LocalCache.getChannelIfExists(key.toKey())
 
     fun <T : PubKeyReferenceTag> loadParticipants(
         participants: List<T>,

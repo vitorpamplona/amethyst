@@ -203,7 +203,8 @@ class DiscoveryFilterAssembler(
         val follows =
             key.account.liveDiscoveryListAuthorsPerRelay.value
                 ?.ifEmpty { null }
-        val followChats = key.account.selectedChatsFollowList().toList()
+        val followChats =
+            key.account.publicChatList.livePublicChatEventIdSet.value
 
         return listOfNotNull(
             TypedFilter(
@@ -221,7 +222,7 @@ class DiscoveryFilterAssembler(
                     types = setOf(FeedType.PUBLIC_CHATS),
                     filter =
                         SincePerRelayFilter(
-                            ids = followChats,
+                            ids = followChats.toList(),
                             kinds =
                                 listOf(
                                     ChannelCreateEvent.KIND,

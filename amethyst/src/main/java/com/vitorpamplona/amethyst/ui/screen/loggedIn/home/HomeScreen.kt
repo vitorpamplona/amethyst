@@ -22,11 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
@@ -47,9 +55,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AROUND_ME
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedState
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
@@ -59,17 +71,25 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import kotlin.collections.forEachIndexed
 
 @Composable
 fun HomeScreen(
@@ -77,6 +97,7 @@ fun HomeScreen(
     nav: INav,
 ) {
     HomeScreen(
+        liveFeedState = accountViewModel.feedStates.homeLive,
         newThreadsFeedState = accountViewModel.feedStates.homeNewThreads,
         repliesFeedState = accountViewModel.feedStates.homeReplies,
         accountViewModel = accountViewModel,
@@ -87,6 +108,7 @@ fun HomeScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
+    liveFeedState: ChannelFeedContentState,
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
@@ -94,12 +116,13 @@ fun HomeScreen(
 ) {
     WatchAccountForHomeScreen(newThreadsFeedState, repliesFeedState, accountViewModel)
 
+    WatchLifecycleAndUpdateModel(liveFeedState)
     WatchLifecycleAndUpdateModel(newThreadsFeedState)
     WatchLifecycleAndUpdateModel(repliesFeedState)
 
     HomeFilterAssemblerSubscription(accountViewModel)
 
-    AssembleHomeTabs(newThreadsFeedState, repliesFeedState) { pagerState, tabItems ->
+    AssembleHomeTabs(newThreadsFeedState, repliesFeedState, liveFeedState) { pagerState, tabItems ->
         HomePages(pagerState, tabItems, accountViewModel, nav)
     }
 }
@@ -109,6 +132,7 @@ fun HomeScreen(
 private fun AssembleHomeTabs(
     newThreadsFeedState: FeedContentState,
     repliesFeedState: FeedContentState,
+    liveFeedState: ChannelFeedContentState,
     inner: @Composable (PagerState, ImmutableList<TabItem>) -> Unit,
 ) {
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.HOME_SCREEN) { 2 }
@@ -122,12 +146,14 @@ private fun AssembleHomeTabs(
                         feedState = newThreadsFeedState,
                         routeForLastRead = "HomeFollows",
                         scrollStateKey = ScrollStateKeys.HOME_FOLLOWS,
+                        liveSection = liveFeedState,
                     ),
                     TabItem(
                         resource = R.string.conversations,
                         feedState = repliesFeedState,
                         routeForLastRead = "HomeFollowsReplies",
                         scrollStateKey = ScrollStateKeys.HOME_REPLIES,
+                        liveSection = liveFeedState,
                     ),
                 ).toImmutableList(),
             )
@@ -192,6 +218,7 @@ private fun HomePages(
                 feedState = tabs[page].feedState,
                 routeForLastRead = tabs[page].routeForLastRead,
                 scrollStateKey = tabs[page].scrollStateKey,
+                liveSection = tabs[page].liveSection,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -205,6 +232,7 @@ fun HomeFeeds(
     routeForLastRead: String?,
     enablePullRefresh: Boolean = true,
     scrollStateKey: String? = null,
+    liveSection: ChannelFeedContentState? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -216,8 +244,89 @@ fun HomeFeeds(
                 listState = listState,
                 nav = nav,
                 routeForLastRead = routeForLastRead,
+                onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
                 onEmpty = { HomeFeedEmpty(feedState::invalidateData) },
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun FeedLoaded(
+    loaded: FeedState.Loaded,
+    listState: LazyListState,
+    routeForLastRead: String?,
+    liveSection: ChannelFeedContentState? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val items by loaded.feed.collectAsStateWithLifecycle()
+
+    LazyColumn(
+        contentPadding = FeedPadding,
+        state = listState,
+    ) {
+        if (liveSection != null) {
+            item {
+                DisplayLiveBubbles(liveSection, accountViewModel, nav)
+                Spacer(StdVertSpacer)
+            }
+        }
+        itemsIndexed(items.list, key = { _, item -> item.idHex }) { _, item ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .animateItem(),
+            ) {
+                NoteCompose(
+                    item,
+                    modifier = Modifier.fillMaxWidth(),
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = false,
+                    isHiddenFeed = items.showHidden,
+                    quotesLeft = 3,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+
+            HorizontalDivider(
+                thickness = DividerThickness,
+            )
+        }
+    }
+}
+
+@Composable
+fun DisplayLiveBubbles(
+    liveSection: ChannelFeedContentState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val feedState by liveSection.feedContent.collectAsStateWithLifecycle()
+
+    when (val state = feedState) {
+        is ChannelFeedState.Empty -> null
+        is ChannelFeedState.FeedError -> null
+        is ChannelFeedState.Loaded -> DisplayLiveBubbles(state, accountViewModel, nav)
+        is ChannelFeedState.Loading -> null
+    }
+}
+
+@Composable
+fun DisplayLiveBubbles(
+    liveFeed: ChannelFeedState.Loaded,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val feed by liveFeed.feed.collectAsStateWithLifecycle()
+
+    LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
+        itemsIndexed(feed.list, key = { _, item -> item.idHex }) { _, item ->
+            when (item) {
+                is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
+            }
         }
     }
 }
@@ -319,4 +428,5 @@ class TabItem(
     val scrollStateKey: String,
     val forceEventKind: Int? = null,
     val useGridLayout: Boolean = false,
+    val liveSection: ChannelFeedContentState? = null,
 )

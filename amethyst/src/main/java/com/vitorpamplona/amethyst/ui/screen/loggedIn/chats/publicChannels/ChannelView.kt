@@ -43,11 +43,29 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53L
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import kotlinx.coroutines.launch
 
 @Composable
 fun ChannelView(
     channelId: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (channelId == null) return
+
+    LoadChannel(channelId, accountViewModel) {
+        PrepareChannelViewModels(
+            baseChannel = it,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+@Composable
+fun ChannelView(
+    channelId: RoomId?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

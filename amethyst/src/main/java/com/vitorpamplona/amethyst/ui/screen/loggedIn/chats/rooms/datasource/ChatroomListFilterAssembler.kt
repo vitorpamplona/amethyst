@@ -30,10 +30,13 @@ import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import kotlinx.coroutines.flow.toList
+import kotlin.collections.flatten
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChatroomListState(
@@ -96,7 +99,7 @@ class ChatroomListFilterAssembler(
         )
 
     fun createMyChannelsFilter(account: Account): TypedFilter? {
-        val followingEvents = account.selectedChatsFollowList()
+        val followingEvents = account.publicChatList.livePublicChatEventIdSet.value
 
         if (followingEvents.isEmpty()) return null
 
@@ -117,7 +120,8 @@ class ChatroomListFilterAssembler(
     }
 
     fun createLastChannelInfoFilter(account: Account): List<TypedFilter>? {
-        val followingEvents = account.selectedChatsFollowList()
+        val followingEvents =
+            account.publicChatList.livePublicChatEventIdSet.value
 
         if (followingEvents.isEmpty()) return null
 
@@ -136,7 +140,8 @@ class ChatroomListFilterAssembler(
     }
 
     fun createLastMessageOfEachChannelFilter(account: Account): List<TypedFilter>? {
-        val followingEvents = account.selectedChatsFollowList()
+        val followingEvents =
+            account.publicChatList.livePublicChatEventIdSet.value
 
         if (followingEvents.isEmpty()) return null
 
@@ -159,6 +164,33 @@ class ChatroomListFilterAssembler(
         }
     }
 
+    fun createLastMessageOfEachEphemeralChatFilter(account: Account): List<TypedFilter>? {
+        val followingEvents =
+            account.ephemeralChatList.liveEphemeralChatList.value
+                .map { it.id }
+
+        if (followingEvents.isEmpty()) return null
+
+        return listOf(
+            TypedFilter(
+                // Metadata comes from any relay
+                types = setOf(FeedType.PUBLIC_CHATS),
+                filter =
+                    SincePerRelayFilter(
+                        kinds = listOf(EphemeralChatEvent.KIND),
+                        tags = mapOf("d" to followingEvents),
+                        since =
+                            latestEOSEs.users[account.userProfile()]
+                                ?.followList
+                                ?.get(chatRoomListKey)
+                                ?.relayList,
+                        // Remember to consider spam that is being removed from the UI
+                        limit = 50,
+                    ),
+            ),
+        )
+    }
+
     fun mergeAllFilters(account: Account): List<TypedFilter>? =
         listOfNotNull(
             listOfNotNull(
@@ -168,6 +200,7 @@ class ChatroomListFilterAssembler(
             ),
             createLastChannelInfoFilter(account),
             createLastMessageOfEachChannelFilter(account),
+            createLastMessageOfEachEphemeralChatFilter(account),
         ).flatten().ifEmpty { null }
 
     fun newSub(key: ChatroomListState): Subscription =

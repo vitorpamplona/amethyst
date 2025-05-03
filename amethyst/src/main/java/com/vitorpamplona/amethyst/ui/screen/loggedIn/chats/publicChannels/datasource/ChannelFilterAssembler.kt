@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datas
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
@@ -32,6 +33,7 @@ import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 
@@ -52,9 +54,6 @@ class ChannelFilterAssembler(
                 FeedType.GLOBAL,
                 FeedType.SEARCH,
             )
-
-        val PUBLIC_CHAT_LIST = listOf(ChannelMessageEvent.KIND)
-        val LIVE_ACTIVITY_LIST = listOf(LiveActivitiesChatMessageEvent.KIND)
     }
 
     private val latestEOSEs = EOSEAccount()
@@ -66,7 +65,7 @@ class ChannelFilterAssembler(
                     types = RELAY_SET,
                     filter =
                         SincePerRelayFilter(
-                            kinds = PUBLIC_CHAT_LIST,
+                            kinds = listOf(ChannelMessageEvent.KIND),
                             authors = listOf(key.account.userProfile().pubkeyHex),
                             limit = 50,
                         ),
@@ -76,25 +75,29 @@ class ChannelFilterAssembler(
                     types = RELAY_SET,
                     filter =
                         SincePerRelayFilter(
-                            kinds = LIVE_ACTIVITY_LIST,
+                            kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                             authors = listOf(key.account.userProfile().pubkeyHex),
                             limit = 50,
                         ),
                 )
+            is EphemeralChatChannel ->
+                null // there is nothing in the past
             else -> {
                 null
             }
         }
 
     fun createMessagesToChannelFilter(key: ChannelQueryState): TypedFilter? {
-        return when (key.channel) {
+        val channel = key.channel
+
+        return when (channel) {
             is PublicChatChannel ->
                 TypedFilter(
                     types = setOf(FeedType.PUBLIC_CHATS),
                     filter =
                         SincePerRelayFilter(
                             kinds = listOf(ChannelMessageEvent.KIND),
-                            tags = mapOf("e" to listOfNotNull(key.channel.idHex)),
+                            tags = mapOf("e" to listOfNotNull(channel.idHex)),
                             limit = 200,
                         ),
                 )
@@ -104,10 +107,32 @@ class ChannelFilterAssembler(
                     filter =
                         SincePerRelayFilter(
                             kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                            tags = mapOf("a" to listOfNotNull(key.channel.idHex)),
+                            tags = mapOf("a" to listOfNotNull(channel.idHex)),
                             limit = 200,
                         ),
                 )
+            is EphemeralChatChannel -> {
+                println("AABBCC - Creating ${channel.roomId.id} ${channel.roomId.relayUrl}")
+                TypedFilter(
+                    types =
+                        setOf(
+                            FeedType.FOLLOWS,
+                            FeedType.PUBLIC_CHATS,
+                            FeedType.GLOBAL,
+                        ),
+                    filter =
+                        SincePerRelayFilter(
+                            kinds = listOf(EphemeralChatEvent.KIND),
+                            tags =
+                                if (channel.roomId.id.isBlank()) {
+                                    mapOf("d" to listOf("_"))
+                                } else {
+                                    mapOf("d" to listOfNotNull(channel.roomId.id))
+                                },
+                            limit = 200,
+                        ),
+                )
+            }
             else -> {
                 null
             }

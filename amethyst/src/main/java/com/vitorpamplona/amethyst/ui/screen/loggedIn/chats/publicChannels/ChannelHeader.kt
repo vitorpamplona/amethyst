@@ -24,12 +24,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.EphemeralChatChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.PublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivitiesChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -80,6 +82,15 @@ fun ChannelHeader(
                 )
             is PublicChatChannel ->
                 PublicChatChannelHeader(
+                    it,
+                    sendToChannel,
+                    modifier,
+                    accountViewModel,
+                    nav,
+                )
+
+            is EphemeralChatChannel ->
+                EphemeralChatChannelHeader(
                     it,
                     sendToChannel,
                     modifier,

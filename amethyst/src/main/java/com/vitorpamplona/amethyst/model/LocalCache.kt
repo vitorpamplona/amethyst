@@ -24,8 +24,6 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.data.DeletionIndex
-import com.vitorpamplona.amethyst.commons.data.LargeCache
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -37,6 +35,9 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -72,6 +73,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -86,11 +88,11 @@ import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip28PublicChat.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
@@ -151,6 +153,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.LargeCache
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentSetOf
@@ -179,14 +182,9 @@ interface ILocalCache {
 
     fun justVerify(event: Event): Boolean
 
-    fun consume(
-        event: DraftEvent,
-        relay: Relay?,
-    )
-
     fun markAsSeen(
         string: String,
-        relay: Relay,
+        relay: RelayBriefInfoCache.RelayBriefInfo,
     ) {}
 }
 
@@ -275,8 +273,6 @@ object LocalCache : ILocalCache {
     }
 
     fun checkGetOrCreateUser(key: String): User? {
-        // checkNotInMainThread()
-
         if (isValidHex(key)) {
             return getOrCreateUser(key)
         }
@@ -284,7 +280,6 @@ object LocalCache : ILocalCache {
     }
 
     fun getOrCreateUser(key: HexKey): User {
-        // checkNotInMainThread()
         require(isValidHex(key = key)) { "$key is not a valid hex" }
 
         return users.getOrCreate(key) {
@@ -306,6 +301,8 @@ object LocalCache : ILocalCache {
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
     fun getChannelIfExists(key: String): Channel? = channels.get(key)
+
+    fun getChannelIfExists(key: RoomId): Channel? = channels.get(key.toKey())
 
     fun getNoteIfExists(event: Event): Note? =
         if (event is AddressableEvent) {
@@ -389,8 +386,20 @@ object LocalCache : ILocalCache {
         return channels.getOrCreate(key, channelFactory)
     }
 
+    fun checkGetOrCreateChannel(key: RoomId): Channel? =
+        channels.getOrCreate(key.toKey()) {
+            EphemeralChatChannel(key)
+        }
+
     fun checkGetOrCreateChannel(key: String): Channel? {
         checkNotInMainThread()
+
+        if (key.contains("@")) {
+            return channels.getOrCreate(key) {
+                val idParts = key.split("@")
+                EphemeralChatChannel(RoomId(idParts[0], idParts[1]))
+            }
+        }
 
         if (isValidHex(key)) {
             return channels.getOrCreate(key) { PublicChatChannel(key) }
@@ -447,14 +456,14 @@ object LocalCache : ILocalCache {
         val relayHint = key.relay
         if (!relayHint.isNullOrBlank()) {
             val relay = RelayBriefInfoCache.get(RelayUrlFormatter.normalize(relayHint))
-            note.addRelayBrief(relay)
+            note.addRelay(relay)
         }
         return note
     }
 
     fun consume(
         event: MetadataEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         // new event
         val oldUser = getOrCreateUser(event.pubKey)
@@ -514,32 +523,32 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: TextNoteEvent,
-        relay: Relay? = null,
+        relay: RelayBriefInfoCache.RelayBriefInfo? = null,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: TorrentEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: InteractiveStoryPrologueEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeBaseReplaceable(event, relay)
 
     fun consume(
         event: InteractiveStorySceneEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeBaseReplaceable(event, relay)
 
     fun consume(
         event: InteractiveStoryReadingStateEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeBaseReplaceable(event, relay)
 
     fun consumeRegularEvent(
         event: Event,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -568,57 +577,57 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: PictureEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: TorrentCommentEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90ContentDiscoveryResponseEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90ContentDiscoveryRequestEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90StatusEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90UserDiscoveryResponseEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: NIP90UserDiscoveryRequestEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: GitPatchEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: GitIssueEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: GitReplyEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: LongTextNoteEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -652,7 +661,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: WikiNoteEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -745,12 +754,12 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: PollNoteEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     private fun consume(
         event: LiveActivitiesEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -782,154 +791,161 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: MuteListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: CommunityListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: GitRepositoryEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: ChannelListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: BlossomServersEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: FileServersEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: PeopleListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+    ) {
+        consumeBaseReplaceable(event, relay)
+    }
+
+    fun consume(
+        event: EphemeralChatListEvent,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: FollowListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: AdvertisedRelayListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: ChatMessageRelayListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: PrivateOutboxRelayListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: SearchRelayListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: CommunityDefinitionEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: EmojiPackSelectionEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: EmojiPackEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: ClassifiedsEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: PinListEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: RelaySetEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: AudioTrackEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: VideoVerticalEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: VideoHorizontalEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: StatusEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -954,14 +970,14 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: RelationshipStatusEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: OtsEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val version = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -979,7 +995,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: BadgeDefinitionEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
@@ -1008,54 +1024,54 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: BadgeAwardEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     private fun comsume(
         event: NNSEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: AppDefinitionEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: CalendarEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: CalendarDateSlotEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: CalendarTimeSlotEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consume(
         event: CalendarRSVPEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     private fun consumeBaseReplaceable(
         event: BaseAddressableEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val version = getOrCreateNote(event.id)
         val note = getOrCreateAddressableNote(event.address())
@@ -1085,21 +1101,21 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: AppRecommendationEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: AppSpecificDataEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         consumeBaseReplaceable(event, relay)
     }
 
     fun consume(
         event: PrivateDmEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ): Note {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1357,7 +1373,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ReportEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1394,7 +1410,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ChannelCreateEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
         val oldChannel = getOrCreateChannel(event.id) { PublicChatChannel(it) }
@@ -1420,7 +1436,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ChannelMetadataEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val channelId = event.channelId()
         // Log.d("MT", "New PublicChatMetadata ${event.channelInfo()}")
@@ -1450,7 +1466,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ChannelMessageEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val channelId = event.channelId()
 
@@ -1489,13 +1505,45 @@ object LocalCache : ILocalCache {
     }
 
     fun consume(
+        event: EphemeralChatEvent,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+    ) {
+        val relayUrl = event.relay() ?: relay?.url ?: return
+
+        val channelId = RoomId(event.room(), relayUrl)
+
+        val channel = checkGetOrCreateChannel(channelId) ?: return
+
+        val note = getOrCreateNote(event.id)
+        channel.addNote(note, relay)
+
+        val author = getOrCreateUser(event.pubKey)
+
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
+
+        // Already processed this event.
+        if (note.event != null) return
+
+        if (antiSpam.isSpam(event, relay)) {
+            return
+        }
+
+        note.loadEvent(event, author, emptyList())
+
+        refreshObservers(note)
+    }
+
+    fun consume(
         event: CommentEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: LiveActivitiesChatMessageEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val activityAddress = event.activityAddress() ?: return
 
@@ -1536,7 +1584,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: LnZapEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         // Already processed this event.
@@ -1587,32 +1635,32 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: AudioHeaderEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FileHeaderEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: ProfileGalleryEntryEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FileStorageHeaderEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FhirResourceEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: TextNoteModificationEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1640,12 +1688,12 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: HighlightEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) = consumeRegularEvent(event, relay)
 
     fun consume(
         event: FileStorageEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1686,7 +1734,7 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: ChatMessageEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1729,7 +1777,7 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: ChatMessageEncryptedFileHeaderEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1772,7 +1820,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: SealedRumorEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -1792,7 +1840,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: GiftWrapEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -2349,7 +2397,7 @@ object LocalCache : ILocalCache {
 
     override fun markAsSeen(
         eventId: String,
-        relay: Relay,
+        relay: RelayBriefInfoCache.RelayBriefInfo,
     ) {
         val note = getNoteIfExists(eventId)
 
@@ -2397,9 +2445,9 @@ object LocalCache : ILocalCache {
         }
     }
 
-    override fun consume(
+    fun consume(
         event: DraftEvent,
-        relay: Relay?,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
         if (!event.isDeleted()) {
             consumeBaseReplaceable(event, relay)
@@ -2464,6 +2512,13 @@ object LocalCache : ILocalCache {
 
                         it.addMessage(authorGroup, note)
                     }
+                }
+            }
+            is EphemeralChatEvent -> {
+                val room = draft.room()
+                val relay = draft.relay()
+                if (relay != null) {
+                    checkGetOrCreateChannel(RoomId(room, relay).toKey())?.addNote(note, null)
                 }
             }
             is ChannelMessageEvent -> {
@@ -2545,6 +2600,15 @@ object LocalCache : ILocalCache {
                     }
                 }
             }
+            is EphemeralChatEvent -> {
+                val room = draft.room()
+                val relay = draft.relay()
+                if (relay != null) {
+                    checkGetOrCreateChannel(RoomId(room, relay))?.let { channel ->
+                        channel.removeNote(draftWrap)
+                    }
+                }
+            }
             is TextNoteEvent -> {
                 val replyTo = computeReplyTo(draft)
                 replyTo.forEach { it.removeReply(draftWrap) }
@@ -2579,6 +2643,13 @@ object LocalCache : ILocalCache {
             }
         }
 
+        justConsumeInner(event, relay?.brief)
+    }
+
+    fun justConsumeInner(
+        event: Event,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+    ) {
         checkNotInMainThread()
 
         try {
@@ -2612,7 +2683,11 @@ object LocalCache : ILocalCache {
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityListEvent -> consume(event, relay)
                 is CommunityPostApprovalEvent -> {
-                    event.containedPost()?.let { verifyAndConsume(it, relay) }
+                    event.containedPost()?.let {
+                        if (justVerify(it)) {
+                            justConsumeInner(it, relay)
+                        }
+                    }
                     consume(event)
                 }
                 is ContactListEvent -> consume(event)
@@ -2620,8 +2695,14 @@ object LocalCache : ILocalCache {
                 is DraftEvent -> consume(event, relay)
                 is EmojiPackEvent -> consume(event, relay)
                 is EmojiPackSelectionEvent -> consume(event, relay)
+                is EphemeralChatEvent -> consume(event, relay)
+                is EphemeralChatListEvent -> consume(event, relay)
                 is GenericRepostEvent -> {
-                    event.containedPost()?.let { verifyAndConsume(it, relay) }
+                    event.containedPost()?.let {
+                        if (justVerify(it)) {
+                            justConsumeInner(it, relay)
+                        }
+                    }
                     consume(event)
                 }
                 is FhirResourceEvent -> consume(event, relay)
@@ -2645,8 +2726,10 @@ object LocalCache : ILocalCache {
                 is LnZapEvent -> {
                     event.zapRequest?.let {
                         // must have a valid request
-                        verifyAndConsume(it, relay)
-                        consume(event, relay)
+                        if (justVerify(it)) {
+                            justConsumeInner(it, relay)
+                            consume(event, relay)
+                        }
                     }
                 }
                 is LnZapRequestEvent -> consume(event)
@@ -2673,7 +2756,11 @@ object LocalCache : ILocalCache {
                 is RelaySetEvent -> consume(event, relay)
                 is ReportEvent -> consume(event, relay)
                 is RepostEvent -> {
-                    event.containedPost()?.let { verifyAndConsume(it, relay) }
+                    event.containedPost()?.let {
+                        if (justVerify(it)) {
+                            justConsumeInner(it, relay)
+                        }
+                    }
                     consume(event)
                 }
                 is SealedRumorEvent -> consume(event, relay)
@@ -2712,7 +2799,7 @@ object LocalCache : ILocalCache {
     ) {
         val toNote = getOrCreateNote(to)
         from.relays.forEach {
-            toNote.addRelayBrief(it)
+            toNote.addRelay(it)
         }
     }
 }

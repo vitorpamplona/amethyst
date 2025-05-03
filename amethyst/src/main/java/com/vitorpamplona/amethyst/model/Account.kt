@@ -27,9 +27,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.fonfon.kgeohash.GeoHash
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.Account.Companion.APP_SPECIFIC_DATA_D_TAG
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListState
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListState
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.Relay
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.ammolite.relays.RelaySetupInfoToConnect
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -52,6 +54,7 @@ import com.vitorpamplona.quartz.blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -84,7 +87,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
@@ -124,11 +126,11 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.taggedEmojis
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftBuilder
@@ -185,6 +187,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -196,7 +199,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.toSet
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -233,7 +235,7 @@ class Account(
     class FeedsBaseFlows(
         val listName: String,
         val peopleList: StateFlow<NoteState> = MutableStateFlow(NoteState(Note(" "))),
-        val kind3: StateFlow<Account.LiveFollowList?> = MutableStateFlow(null),
+        val kind3: StateFlow<LiveFollowList?> = MutableStateFlow(null),
         val location: StateFlow<LocationState.LocationResult?> = MutableStateFlow(null),
     )
 
@@ -1130,77 +1132,9 @@ class Account(
             .flowOn(Dispatchers.Default)
     }
 
-    class EmojiMedia(
-        val code: String,
-        val link: MediaUrlImage,
-    )
-
-    fun getEmojiPackSelection(): EmojiPackSelectionEvent? = getEmojiPackSelectionNote().event as? EmojiPackSelectionEvent
-
-    fun getEmojiPackSelectionFlow(): StateFlow<NoteState> = getEmojiPackSelectionNote().flow().metadata.stateFlow
-
-    fun getEmojiPackSelectionAddress() = EmojiPackSelectionEvent.createAddress(userProfile().pubkeyHex)
-
-    fun getEmojiPackSelectionNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getEmojiPackSelectionAddress())
-
-    fun convertEmojiSelectionPack(selection: EmojiPackSelectionEvent?): List<StateFlow<NoteState>>? =
-        selection?.taggedAddresses()?.map {
-            LocalCache
-                .getOrCreateAddressableNote(it)
-                .flow()
-                .metadata.stateFlow
-        }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val liveEmojiSelectionPack: StateFlow<List<StateFlow<NoteState>>?> by lazy {
-        getEmojiPackSelectionFlow()
-            .transformLatest {
-                emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                convertEmojiSelectionPack(getEmojiPackSelection()),
-            )
-    }
-
-    fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> =
-        pack.taggedEmojis().map {
-            EmojiMedia(it.code, MediaUrlImage(it.url))
-        }
-
-    fun mergePack(list: Array<NoteState>): List<EmojiMedia> =
-        list
-            .mapNotNull {
-                val ev = it.note.event as? EmojiPackEvent
-                if (ev != null) {
-                    convertEmojiPack(ev)
-                } else {
-                    null
-                }
-            }.flatten()
-            .distinctBy { it.link }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val myEmojis by lazy {
-        liveEmojiSelectionPack
-            .transformLatest { emojiList ->
-                if (emojiList != null) {
-                    emitAll(
-                        combineTransform(emojiList) {
-                            emit(mergePack(it))
-                        },
-                    )
-                } else {
-                    emit(emptyList())
-                }
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
-            )
-    }
+    val emoji = EmojiPackState(signer, LocalCache, scope)
+    val ephemeralChatList = EphemeralChatListState(signer, LocalCache, scope)
+    val publicChatList = PublicChatListState(signer, LocalCache, scope)
 
     private var userProfileCache: User? = null
 
@@ -1311,7 +1245,6 @@ class Account(
                 followTags = listOf(),
                 followGeohashes = listOf(),
                 followCommunities = listOf(),
-                followEvents = DefaultChannels.toList(),
                 relayUse = relays,
                 signer = signer,
             ) {
@@ -1827,7 +1760,6 @@ class Account(
                 followTags = emptyList(),
                 followGeohashes = emptyList(),
                 followCommunities = emptyList(),
-                followEvents = DefaultChannels.toList(),
                 relayUse =
                     Constants.defaultRelays.associate {
                         it.url to ReadWrite(it.read, it.write)
@@ -1840,32 +1772,39 @@ class Account(
         }
     }
 
-    fun follow(channel: Channel) {
+    fun follow(channel: PublicChatChannel) {
         if (!isWriteable()) return
 
-        val contactList = userProfile().latestContactList
+        publicChatList.follow(channel) {
+            sendToPrivateOutboxAndLocal(it)
+            LocalCache.justConsume(it, null)
+        }
+    }
 
-        if (contactList != null) {
-            ContactListEvent.followEvent(contactList, channel.idHex, signer) {
-                Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
-            }
-        } else {
-            ContactListEvent.createFromScratch(
-                followUsers = emptyList(),
-                followTags = emptyList(),
-                followGeohashes = emptyList(),
-                followCommunities = emptyList(),
-                followEvents = DefaultChannels.toList().plus(channel.idHex),
-                relayUse =
-                    Constants.defaultRelays.associate {
-                        it.url to ReadWrite(it.read, it.write)
-                    },
-                signer = signer,
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
-            }
+    fun unfollow(channel: PublicChatChannel) {
+        if (!isWriteable()) return
+
+        publicChatList.unfollow(channel) {
+            sendToPrivateOutboxAndLocal(it)
+            LocalCache.justConsume(it, null)
+        }
+    }
+
+    fun follow(channel: EphemeralChatChannel) {
+        if (!isWriteable()) return
+
+        ephemeralChatList.follow(channel) {
+            sendToPrivateOutboxAndLocal(it)
+            LocalCache.justConsumeInner(it, RelayBriefInfoCache.get(channel.roomId.relayUrl))
+        }
+    }
+
+    fun unfollow(channel: EphemeralChatChannel) {
+        if (!isWriteable()) return
+
+        ephemeralChatList.unfollow(channel) {
+            sendToPrivateOutboxAndLocal(it)
+            LocalCache.justConsumeInner(it, RelayBriefInfoCache.get(channel.roomId.relayUrl))
         }
     }
 
@@ -1889,7 +1828,6 @@ class Account(
                 followTags = emptyList(),
                 followGeohashes = emptyList(),
                 followCommunities = listOf(community.toATag()),
-                followEvents = DefaultChannels.toList(),
                 relayUse = relays,
                 signer = signer,
             ) {
@@ -1919,7 +1857,6 @@ class Account(
                 followTags = listOf(tag),
                 followGeohashes = emptyList(),
                 followCommunities = emptyList(),
-                followEvents = DefaultChannels.toList(),
                 relayUse =
                     Constants.defaultRelays.associate {
                         it.url to ReadWrite(it.read, it.write)
@@ -1950,7 +1887,6 @@ class Account(
                 followTags = emptyList(),
                 followGeohashes = listOf(geohash),
                 followCommunities = emptyList(),
-                followEvents = DefaultChannels.toList(),
                 relayUse =
                     Constants.defaultRelays.associate {
                         it.url to ReadWrite(it.read, it.write)
@@ -2005,21 +1941,6 @@ class Account(
             ContactListEvent.unfollowGeohash(
                 contactList,
                 geohash,
-                signer,
-                onReady = this::onNewEventCreated,
-            )
-        }
-    }
-
-    suspend fun unfollow(channel: Channel) {
-        if (!isWriteable()) return
-
-        val contactList = userProfile().latestContactList
-
-        if (contactList != null && contactList.tags.isNotEmpty()) {
-            ContactListEvent.unfollowEvent(
-                contactList,
-                channel.idHex,
                 signer,
                 onReady = this::onNewEventCreated,
             )
@@ -2468,8 +2389,6 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        val relayList = getPrivateOutBoxRelayList()
-
         val template =
             InteractiveStoryReadingStateEvent.build(
                 root = root,
@@ -2479,12 +2398,7 @@ class Account(
             )
 
         signer.sign(template) {
-            if (relayList.isNotEmpty()) {
-                Amethyst.instance.client.sendPrivately(it, relayList = relayList)
-            } else {
-                Amethyst.instance.client.send(it)
-            }
-            LocalCache.justConsume(it, null)
+            sendToPrivateOutboxAndLocal(it)
         }
     }
 
@@ -2495,8 +2409,6 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        val relayList = getPrivateOutBoxRelayList()
-
         val template =
             InteractiveStoryReadingStateEvent.update(
                 base = readingState,
@@ -2505,12 +2417,7 @@ class Account(
             )
 
         signer.sign(template) {
-            if (relayList.isNotEmpty()) {
-                Amethyst.instance.client.sendPrivately(it, relayList = relayList)
-            } else {
-                Amethyst.instance.client.send(it)
-            }
-            LocalCache.justConsume(it, null)
+            sendToPrivateOutboxAndLocal(it)
         }
     }
 
@@ -2749,13 +2656,17 @@ class Account(
         }
 
     fun sendDraftEvent(draftEvent: DraftEvent) {
-        val relayList = getPrivateOutBoxRelayList()
+        sendToPrivateOutboxAndLocal(draftEvent)
+    }
+
+    fun sendToPrivateOutboxAndLocal(event: Event) {
+        val relayList = normalizedPrivateOutBoxRelaySet.value + settings.localRelayServers
         if (relayList.isNotEmpty()) {
-            Amethyst.instance.client.sendPrivately(draftEvent, relayList)
+            Amethyst.instance.client.sendPrivately(event, convertRelayList(relayList.toList()))
         } else {
-            Amethyst.instance.client.send(draftEvent)
+            Amethyst.instance.client.send(event)
         }
-        LocalCache.justConsume(draftEvent, null)
+        LocalCache.justConsume(event, null)
     }
 
     fun convertRelayList(broadcast: List<String>): List<RelaySetupInfoToConnect> =
@@ -3182,11 +3093,6 @@ class Account(
         transientHiddenUsers.update {
             it - pubkeyHex
         }
-    }
-
-    fun selectedChatsFollowList(): Set<String> {
-        val contactList = userProfile().latestContactList
-        return contactList?.taggedEventIds()?.toSet() ?: DefaultChannels
     }
 
     fun requestDVMContentDiscovery(
@@ -3859,6 +3765,18 @@ class Account(
             GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
         }
 
+        settings.backupEphemeralChatList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
+        settings.backupChannelList?.let {
+            Log.d("AccountRegisterObservers", "Loading saved channel list ${it.toJson()}")
+            @OptIn(DelicateCoroutinesApi::class)
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+        }
+
         // saves contact list for the next time.
         scope.launch(Dispatchers.Default) {
             Log.d("AccountRegisterObservers", "Kind 0 Collector Start")
@@ -3928,6 +3846,26 @@ class Account(
         }
 
         scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "Channel List Collector Start")
+            publicChatList.getChannelListFlow().collect {
+                Log.d("AccountRegisterObservers", "Channel List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? ChannelListEvent)?.let {
+                    settings.updateChannelListTo(it)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "EphemeralChatList Collector Start")
+            ephemeralChatList.getEphemeralChatListFlow().collect {
+                Log.d("AccountRegisterObservers", "EphemeralChatList List for ${userProfile().toBestDisplayName()}")
+                (it.note.event as? EphemeralChatListEvent)?.let {
+                    settings.updateEphemeralChatListTo(it)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
             Log.d("AccountRegisterObservers", "AppSpecificData Collector Start")
             getAppSpecificDataFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating AppSpecificData for ${userProfile().toBestDisplayName()}")
@@ -3958,6 +3896,30 @@ class Account(
                                 it + spammer.pubkeyHex
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            delay(1000 * 60 * 1)
+            // waits 5 minutes before migrating the list.
+            val contactList = userProfile().latestContactList
+            val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { LocalCache.getChannelIfExists(it) as? PublicChatChannel }
+
+            if (oldChannels != null && oldChannels.isNotEmpty()) {
+                println("AABBCC Migrating List with ${oldChannels.size} old channels ")
+                val existingChannels = publicChatList.livePublicChatEventIdSet.value
+
+                val needsToUpgrade = oldChannels.filter { it.idHex !in existingChannels }
+
+                println("AABBCC Migrating List with ${needsToUpgrade.size} needsToUpgrade ")
+
+                if (needsToUpgrade.isNotEmpty()) {
+                    println("AABBCC Migrating List")
+                    publicChatList.follow(oldChannels) {
+                        sendToPrivateOutboxAndLocal(it)
+                        LocalCache.justConsume(it, null)
                     }
                 }
             }

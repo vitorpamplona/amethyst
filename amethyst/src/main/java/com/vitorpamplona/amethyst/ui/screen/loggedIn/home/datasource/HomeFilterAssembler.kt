@@ -32,6 +32,7 @@ import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -80,11 +81,8 @@ class HomeFilterAssembler(
                                 GenericRepostEvent.KIND,
                                 ClassifiedsEvent.KIND,
                                 LongTextNoteEvent.KIND,
-                                PollNoteEvent.KIND,
+                                EphemeralChatEvent.KIND,
                                 HighlightEvent.KIND,
-                                AudioTrackEvent.KIND,
-                                AudioHeaderEvent.KIND,
-                                PinListEvent.KIND,
                             ),
                         authors = follows,
                         limit = 400,
@@ -101,6 +99,10 @@ class HomeFilterAssembler(
                     SinceAuthorPerRelayFilter(
                         kinds =
                             listOf(
+                                PollNoteEvent.KIND,
+                                AudioTrackEvent.KIND,
+                                AudioHeaderEvent.KIND,
+                                PinListEvent.KIND,
                                 InteractiveStoryPrologueEvent.KIND,
                                 LiveActivitiesChatMessageEvent.KIND,
                                 LiveActivitiesEvent.KIND,

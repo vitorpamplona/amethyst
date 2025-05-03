@@ -24,14 +24,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.EphemeralChatTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.PublicChatTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header.LiveActivityTopBar
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
 @Composable
 fun ChannelScreen(
@@ -46,9 +49,31 @@ fun ChannelScreen(
         topBar = {
             LoadChannel(channelId, accountViewModel) {
                 when (it) {
+                    is EphemeralChatChannel -> EphemeralChatTopBar(it, accountViewModel, nav)
                     is PublicChatChannel -> PublicChatTopBar(it, accountViewModel, nav)
                     is LiveActivitiesChannel -> LiveActivityTopBar(it, accountViewModel, nav)
                 }
+            }
+        },
+        accountViewModel = accountViewModel,
+    ) {
+        Column(Modifier.padding(it)) {
+            ChannelView(channelId, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+fun EphemeralChatScreen(
+    channelId: RoomId,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    DisappearingScaffold(
+        isInvertedLayout = true,
+        topBar = {
+            LoadChannel(channelId, accountViewModel) {
+                EphemeralChatTopBar(it, accountViewModel, nav)
             }
         },
         accountViewModel = accountViewModel,

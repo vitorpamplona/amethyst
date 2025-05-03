@@ -381,7 +381,7 @@ private fun EmojiSelector(
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->

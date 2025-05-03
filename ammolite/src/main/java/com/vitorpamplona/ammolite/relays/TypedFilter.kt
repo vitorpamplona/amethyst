@@ -25,4 +25,7 @@ import com.vitorpamplona.ammolite.relays.filters.IPerRelayFilter
 class TypedFilter(
     val types: Set<FeedType>,
     val filter: IPerRelayFilter,
-)
+) {
+    // This only exists because some relays confuse empty lists with null lists
+    fun isValidFor(url: String) = filter.isValidFor(url)
+}

@@ -26,7 +26,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -56,7 +57,18 @@ class ChatroomListKnownFeedFilter(
 
         val publicChannels =
             account
-                .selectedChatsFollowList()
+                .publicChatList.livePublicChatList.value
+                .mapNotNull { LocalCache.getChannelIfExists(it.eventId) }
+                .mapNotNull { it ->
+                    it.notes
+                        .filter { key, it -> account.isAcceptable(it) && it.event != null }
+                        .sortedWith(DefaultFeedOrder)
+                        .firstOrNull()
+                }
+
+        val ephemeralChats =
+            account
+                .ephemeralChatList.liveEphemeralChatList.value
                 .mapNotNull { LocalCache.getChannelIfExists(it) }
                 .mapNotNull { it ->
                     it.notes
@@ -65,7 +77,7 @@ class ChatroomListKnownFeedFilter(
                         .firstOrNull()
                 }
 
-        return (privateMessages + publicChannels).sortedWith(DefaultFeedOrder)
+        return (privateMessages + publicChannels + ephemeralChats).sortedWith(DefaultFeedOrder)
     }
 
     override fun updateListWith(
@@ -76,11 +88,12 @@ class ChatroomListKnownFeedFilter(
 
         // Gets the latest message by channel from the new items.
         val newRelevantPublicMessages = filterRelevantPublicMessages(newItems, account)
+        val newRelevantEphemeralChats = filterRelevantEphemeralChats(newItems, account)
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
 
-        if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty()) {
+        if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty() && newRelevantEphemeralChats.isEmpty()) {
             return oldList
         }
 
@@ -90,6 +103,21 @@ class ChatroomListKnownFeedFilter(
             var hasUpdated = false
             oldList.forEach { oldNote ->
                 if (newNotePair.key == oldNote.channelHex()) {
+                    hasUpdated = true
+                    if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
+                        myNewList = myNewList.replace(oldNote, newNotePair.value)
+                    }
+                }
+            }
+            if (!hasUpdated) {
+                myNewList = myNewList.plus(newNotePair.value)
+            }
+        }
+
+        newRelevantEphemeralChats.forEach { newNotePair ->
+            var hasUpdated = false
+            oldList.forEach { oldNote ->
+                if (newNotePair.key.toKey() == oldNote.channelHex()) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
@@ -124,14 +152,15 @@ class ChatroomListKnownFeedFilter(
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
         // Gets the latest message by channel from the new items.
         val newRelevantPublicMessages = filterRelevantPublicMessages(newItems, account)
+        val newRelevantEphemeralChats = filterRelevantEphemeralChats(newItems, account)
 
         // Gets the latest message by room from the new items.
         val newRelevantPrivateMessages = filterRelevantPrivateMessages(newItems, account)
 
-        return if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty()) {
+        return if (newRelevantPrivateMessages.isEmpty() && newRelevantPublicMessages.isEmpty() && newRelevantEphemeralChats.isEmpty()) {
             emptySet()
         } else {
-            (newRelevantPrivateMessages.values + newRelevantPublicMessages.values).toSet()
+            (newRelevantPrivateMessages.values + newRelevantPublicMessages.values + newRelevantEphemeralChats.values).toSet()
         }
     }
 
@@ -139,12 +168,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
-        val followingChannels =
-            account
-                .userProfile()
-                .latestContactList
-                ?.taggedEventIds()
-                ?.toSet() ?: emptySet()
+        val followingChannels = account.publicChatList.livePublicChatEventIdSet.value
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems
             .filter { it.event is ChannelMessageEvent }
@@ -163,6 +187,33 @@ class ChatroomListKnownFeedFilter(
                 }
             }
         return newRelevantPublicMessages
+    }
+
+    private fun filterRelevantEphemeralChats(
+        newItems: Set<Note>,
+        account: Account,
+    ): MutableMap<RoomId, Note> {
+        val followingEphemeralChats = account.ephemeralChatList.liveEphemeralChatList.value
+        val newRelevantEphemeralChats = mutableMapOf<RoomId, Note>()
+        newItems
+            .forEach { newNote ->
+                val noteEvent = newNote.event as? EphemeralChatEvent
+
+                if (noteEvent != null) {
+                    val room = noteEvent.roomId()
+                    if (room in followingEphemeralChats && account.isAcceptable(newNote)) {
+                        val lastNote = newRelevantEphemeralChats.get(room)
+                        if (lastNote != null) {
+                            if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                                newRelevantEphemeralChats.put(room, newNote)
+                            }
+                        } else {
+                            newRelevantEphemeralChats.put(room, newNote)
+                        }
+                    }
+                }
+            }
+        return newRelevantEphemeralChats
     }
 
     private fun filterRelevantPrivateMessages(

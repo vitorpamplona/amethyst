@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
+import android.R.attr.label
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -55,8 +56,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
@@ -75,17 +78,20 @@ import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -166,14 +172,17 @@ private fun ChatroomChannel(
     nav: INav,
 ) {
     LoadChannel(baseChannelHex = channelHex, accountViewModel) { channel ->
-        ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
+        when (channel) {
+            is PublicChatChannel -> ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
+            is EphemeralChatChannel -> ChannelRoomCompose(baseNote, channel, accountViewModel, nav)
+        }
     }
 }
 
 @Composable
 private fun ChannelRoomCompose(
     note: Note,
-    channel: Channel,
+    channel: PublicChatChannel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -201,7 +210,53 @@ private fun ChannelRoomCompose(
     ChannelName(
         channelIdHex = channel.idHex,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, modifier) },
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.public_chat, modifier) },
+        channelLastTime = note.createdAt(),
+        channelLastContent = "$authorName: $description",
+        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        onClick = { nav.nav(route) },
+    )
+}
+
+@Composable
+private fun ChannelRoomCompose(
+    note: Note,
+    channel: EphemeralChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authorName by observeUserName(note.author!!)
+    val channelState by observeChannel(channel)
+
+    val relayInfo = loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
+    val info =
+        remember(channel.roomId.relayUrl) {
+            RelayBriefInfoCache.get(RelayUrlFormatter.normalize(channel.roomId.relayUrl))
+        }
+
+    val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()
+
+    val noteEvent = note.event
+
+    val route = Route.Channel(channel.idHex)
+
+    val description =
+        if (noteEvent is ChannelCreateEvent) {
+            stringRes(R.string.channel_created)
+        } else if (noteEvent is ChannelMetadataEvent) {
+            "${stringRes(R.string.channel_information_changed_to)} "
+        } else {
+            noteEvent?.content?.take(200)
+        }
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("Channel/${channel.idHex}").collectAsStateWithLifecycle()
+
+    ChannelName(
+        channelIdHex = channel.idHex,
+        channelPicture = relayInfo?.icon ?: info.favIcon,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.ephemeral_relay_chat, modifier) },
         channelLastTime = note.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
@@ -214,9 +269,10 @@ private fun ChannelRoomCompose(
 @Composable
 private fun ChannelTitleWithLabelInfo(
     channelName: String,
+    label: Int,
     modifier: Modifier,
 ) {
-    val label = stringRes(id = R.string.public_chat)
+    val label = stringRes(id = label)
     val placeHolderColor = MaterialTheme.colorScheme.placeholderText
     val channelNameAndBoostInfo =
         remember(channelName) {

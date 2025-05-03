@@ -326,14 +326,11 @@ fun ClickableRelayItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
         ) {
-            val iconUrlFromRelayInfoDoc =
-                remember(item) {
-                    Nip11CachedRetriever.getFromCache(item.url)?.icon
-                }
+            val relayInfo = Nip11CachedRetriever.getFromCache(item.url)
 
             RenderRelayIcon(
                 item.briefInfo.displayUrl,
-                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                relayInfo?.icon ?: item.briefInfo.favIcon,
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,

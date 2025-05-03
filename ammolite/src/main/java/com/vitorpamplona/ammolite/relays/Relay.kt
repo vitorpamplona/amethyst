@@ -51,7 +51,7 @@ class RelaySubFilter(
     val activeTypes: Set<FeedType>,
     val subs: SubscriptionManager,
 ) : SubscriptionCollection {
-    fun isMatch(filter: TypedFilter) = activeTypes.any { it in filter.types } && filter.filter.isValidFor(url)
+    fun isMatch(filter: TypedFilter) = activeTypes.any { it in filter.types } && filter.isValidFor(url)
 
     fun match(filters: List<TypedFilter>): Boolean =
         filters.any { filter ->

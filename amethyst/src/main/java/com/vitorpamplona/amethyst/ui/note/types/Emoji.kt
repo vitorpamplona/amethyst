@@ -175,7 +175,7 @@ private fun EmojiListOptions(
     emojiPackNote: Note,
 ) {
     LoadAddressableNote(
-        accountViewModel.account.getEmojiPackSelectionAddress(),
+        accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
         accountViewModel,
     ) {
         it?.let { usersEmojiList ->

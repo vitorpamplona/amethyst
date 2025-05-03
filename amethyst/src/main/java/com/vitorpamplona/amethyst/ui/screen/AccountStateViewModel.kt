@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -297,7 +298,6 @@ class AccountStateViewModel : ViewModel() {
                     backupContactList =
                         ContactListEvent.createFromScratch(
                             followUsers = listOf(ContactTag(keyPair.pubKey.toHexKey(), null, null)),
-                            followEvents = DefaultChannels.toList(),
                             relayUse =
                                 Constants.defaultRelays.associate {
                                     it.url to ReadWrite(it.read, it.write)
@@ -307,6 +307,7 @@ class AccountStateViewModel : ViewModel() {
                     backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
                     backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
                     backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList, tempSigner),
+                    backupChannelList = ChannelListEvent.create(DefaultChannels, tempSigner),
                     torSettings = TorSettingsFlow.build(torSettings),
                 )
 
