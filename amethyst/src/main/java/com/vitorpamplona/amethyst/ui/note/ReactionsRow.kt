@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.MoneroValidator
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
@@ -261,10 +262,14 @@ fun MoneroTippingReaction(
     ClickableBox(
         modifier = barChartModifier,
         onClick = {
-            note.author?.info?.moneroAddress()?.let {
+            note.author?.info?.moneroAddress()?.let { address ->
+                if (!MoneroValidator.isValidAddress(address)) {
+                    accountViewModel.toastManager.toast(context.getString(R.string.monero), context.getString(R.string.invalid_monero_address))
+                    return@ClickableBox
+                }
                 try {
                     val sendIntent =
-                        Intent(Intent.ACTION_VIEW, "monero:$it".toUri())
+                        Intent(Intent.ACTION_VIEW, "monero:$address".toUri())
 
                     context.startActivity(sendIntent)
                 } catch (_: Exception) {
