@@ -71,6 +71,8 @@
     <string name="error_parsing_error_message">Błąd podczas analizowania komunikatu o błędzie</string>
     <string name="following">" Obserwowani"</string>
     <string name="followers">" Obserwujący"</string>
+    <string name="number_following">"%1$s Obserwowanych"</string>
+    <string name="number_followers">"%1$s Obserwujących"</string>
     <string name="profile">Twój Profil</string>
     <string name="security_filters">Filtry bezpieczeństwa</string>
     <string name="log_out">Wyloguj się</string>
@@ -155,6 +157,7 @@
     <string name="gallery">Galeria</string>
     <string name="follows">"Obserwowani"</string>
     <string name="reports">"Zgłoszenia"</string>
+    <string name="number_reports">"%1$s Zgłoszeń"</string>
     <string name="more_options">Więcej opcji</string>
     <string name="relays">" Transmitery"</string>
     <string name="website">Strona www</string>
@@ -792,6 +795,7 @@
     <string name="new_post">Nowy post</string>
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
+    <string name="new_product">Nowy produkt</string>
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedz</string>
