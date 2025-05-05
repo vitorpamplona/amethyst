@@ -34,6 +34,7 @@ class AccountSyncedSettings(
     internalSettings: AccountSyncedSettingsInternal,
 ) {
     val reactions = AccountReactionPreferences(MutableStateFlow(internalSettings.reactions.reactionChoices.toImmutableList()))
+    val tips = AccountTipPreferences(MutableStateFlow(internalSettings.tips.tipAmountChoices.toImmutableList()))
     val zaps =
         AccountZapPreferences(
             MutableStateFlow(internalSettings.zaps.zapAmountChoices.toImmutableList()),
@@ -60,6 +61,10 @@ class AccountSyncedSettings(
                     zaps.zapAmountChoices.value,
                     zaps.defaultZapType.value,
                 ),
+            tips =
+                AccountTipPreferencesInternal(
+                    tips.tipAmountChoices.value,
+                ),
             languages =
                 AccountLanguagePreferencesInternal(
                     languages.dontTranslateFrom,
@@ -83,6 +88,11 @@ class AccountSyncedSettings(
         val newZapChoices = syncedSettingsInternal.zaps.zapAmountChoices.toImmutableList()
         if (!equalImmutableLists(zaps.zapAmountChoices.value, newZapChoices)) {
             zaps.zapAmountChoices.tryEmit(newZapChoices)
+        }
+
+        val newTipChoices = syncedSettingsInternal.tips.tipAmountChoices.toImmutableList()
+        if (!equalImmutableLists(tips.tipAmountChoices.value, newTipChoices)) {
+            tips.tipAmountChoices.tryEmit(newTipChoices)
         }
 
         if (zaps.defaultZapType.value != syncedSettingsInternal.zaps.defaultZapType) {
@@ -122,6 +132,11 @@ class AccountSyncedSettings(
 @Stable
 class AccountReactionPreferences(
     var reactionChoices: MutableStateFlow<ImmutableList<String>>,
+)
+
+@Stable
+class AccountTipPreferences(
+    var tipAmountChoices: MutableStateFlow<ImmutableList<Double>>,
 )
 
 @Stable

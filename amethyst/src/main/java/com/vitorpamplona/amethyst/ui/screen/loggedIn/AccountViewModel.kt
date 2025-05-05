@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.TipPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
@@ -669,6 +670,23 @@ class AccountViewModel(
         }
     }
 
+    fun tip(
+        note: Note,
+        amount: Double,
+        context: Context,
+        onError: (String, String, User?) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            TipPaymentHandler(account)
+                .tip(
+                    note = note,
+                    amount = amount,
+                    context = context,
+                    onError = onError,
+                )
+        }
+    }
+
     fun zap(
         note: Note,
         amountInMillisats: Long,
@@ -911,6 +929,10 @@ class AccountViewModel(
     fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
 
     fun zapAmountChoices() = zapAmountChoicesFlow().value
+
+    fun tipAmountChoicesFlow() = account.settings.syncedSettings.tips.tipAmountChoices
+
+    fun tipAmountChoices() = tipAmountChoicesFlow().value
 
     fun reactionChoicesFlow() = account.settings.syncedSettings.reactions.reactionChoices
 

@@ -1188,5 +1188,9 @@
     <string name="invalid_monero_address">Invalid monero address</string>
     <string name="monero_wallet">Monero wallet</string>
     <string name="no_monero_wallet_found">No monero wallet found</string>
+    <string name="error_dialog_tip_error">Unable to send Tip</string>
+    <string name="no_tip_amount_setup_long_press_to_change">No Tip Amount Setup. Long Press to change</string>
+    <string name="it_s_not_possible_to_tip_to_a_draft_note">It\'s not possible to tip a draft note</string>
+    <string name="new_amount">New amount</string>
 
 </resources>

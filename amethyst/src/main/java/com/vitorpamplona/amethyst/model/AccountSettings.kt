@@ -182,6 +182,15 @@ class AccountSettings(
         return false
     }
 
+    fun changeTipAmounts(newAmounts: List<Double>): Boolean {
+        if (syncedSettings.tips.tipAmountChoices.value != newAmounts) {
+            syncedSettings.tips.tipAmountChoices.tryEmit(newAmounts.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun changeZapAmounts(newAmounts: List<Long>): Boolean {
         if (syncedSettings.zaps.zapAmountChoices.value != newAmounts) {
             syncedSettings.zaps.zapAmountChoices.tryEmit(newAmounts.toImmutableList())
