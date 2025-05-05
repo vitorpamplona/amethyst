@@ -1186,5 +1186,7 @@
     <string name="monero">Monero</string>
     <string name="monero_template">8... or 4...</string>
     <string name="invalid_monero_address">Invalid monero address</string>
+    <string name="monero_wallet">Monero wallet</string>
+    <string name="no_monero_wallet_found">No monero wallet found</string>
 
 </resources>
