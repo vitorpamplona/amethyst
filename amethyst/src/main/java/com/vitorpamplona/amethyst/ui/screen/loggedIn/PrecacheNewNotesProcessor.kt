@@ -42,7 +42,11 @@ class PrecacheNewNotesProcessor(
     fun consume(note: Note) {
         val noteEvent = note.event
         if (noteEvent != null) {
-            consumeAlreadyVerified(noteEvent, note)
+            try {
+                consumeAlreadyVerified(noteEvent, note)
+            } catch (e: Exception) {
+                Log.e("PrecacheNewNotesProcessor", "Error processing note", e)
+            }
         }
     }
 
@@ -70,22 +74,35 @@ class PrecacheNewNotesProcessor(
             }
 
             is GiftWrapEvent -> {
-                if (event.innerEventId == null) {
-                    if (event.recipientPubKey() == account.signer.pubKey) {
+                if (event.recipientPubKey() == account.signer.pubKey) {
+                    val inner = event.innerEventId
+                    if (inner == null) {
                         event.unwrap(account.signer) {
-                            cache.verifyAndConsume(it, null)
-                            cache.copyRelaysFromTo(note, it)
+                            if (cache.justVerify(it)) {
+                                cache.justConsume(it, null)
+                                cache.copyRelaysFromTo(note, it)
+                                consumeAlreadyVerified(it, note)
+                            }
+                        }
+                    } else {
+                        cache.copyRelaysFromTo(note, inner)
+                        val event = cache.getOrCreateNote(inner).event
+                        if (event != null) {
+                            consumeAlreadyVerified(event, note)
                         }
                     }
                 }
             }
 
             is SealedRumorEvent -> {
-                if (event.innerEventId == null) {
+                val inner = event.innerEventId
+                if (inner == null) {
                     event.unseal(account.signer) {
                         cache.justConsume(it, null)
                         cache.copyRelaysFromTo(note, it)
                     }
+                } else {
+                    cache.copyRelaysFromTo(note, inner)
                 }
             }
 

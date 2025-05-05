@@ -1850,7 +1850,6 @@ object LocalCache : ILocalCache {
         val author = getOrCreateUser(event.pubKey)
 
         if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
             note.addRelay(relay)
         }
 
@@ -2797,6 +2796,16 @@ object LocalCache : ILocalCache {
     fun copyRelaysFromTo(
         from: Note,
         to: Event,
+    ) {
+        val toNote = getOrCreateNote(to)
+        from.relays.forEach {
+            toNote.addRelay(it)
+        }
+    }
+
+    fun copyRelaysFromTo(
+        from: Note,
+        to: HexKey,
     ) {
         val toNote = getOrCreateNote(to)
         from.relays.forEach {

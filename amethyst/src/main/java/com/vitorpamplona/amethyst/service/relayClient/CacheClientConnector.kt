@@ -26,8 +26,6 @@ import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.datasources.EventCollector
 import com.vitorpamplona.ammolite.relays.datasources.RelayInsertConfirmationCollector
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
 class CacheClientConnector(
     val client: NostrClient,
@@ -41,7 +39,7 @@ class CacheClientConnector(
     val confirmationWatcher =
         RelayInsertConfirmationCollector(client) { eventId, relay ->
             cache.markAsSeen(eventId, relay.brief)
-            unwrapAndMarkAsSeen(eventId, relay.brief)
+            markAsSeen(eventId, relay.brief)
         }
 
     fun destroy() {
@@ -49,25 +47,12 @@ class CacheClientConnector(
         confirmationWatcher.destroy()
     }
 
-    private fun unwrapAndMarkAsSeen(
+    private fun markAsSeen(
         eventId: HexKey,
         relay: RelayBriefInfoCache.RelayBriefInfo,
     ) {
         val note = LocalCache.getNoteIfExists(eventId)
 
-        if (note != null) {
-            note.addRelay(relay)
-
-            val noteEvent = note.event
-            if (noteEvent is GiftWrapEvent) {
-                noteEvent.innerEventId?.let {
-                    unwrapAndMarkAsSeen(it, relay)
-                }
-            } else if (noteEvent is SealedRumorEvent) {
-                noteEvent.innerEventId?.let {
-                    unwrapAndMarkAsSeen(it, relay)
-                }
-            }
-        }
+        note?.addRelay(relay)
     }
 }
