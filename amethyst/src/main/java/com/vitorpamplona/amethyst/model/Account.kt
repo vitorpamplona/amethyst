@@ -1198,6 +1198,16 @@ class Account(
         }
     }
 
+    fun updateTipAmounts(amountSet: List<Double>) {
+        var changed = false
+
+        if (settings.changeTipAmounts(amountSet)) changed = true
+
+        if (changed) {
+            sendNewAppSpecificData()
+        }
+    }
+
     fun toggleDontTranslateFrom(languageCode: String) {
         settings.toggleDontTranslateFrom(languageCode)
         sendNewAppSpecificData()
