@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.vitorpamplona.amethyst.logTime
 
 /**
  * Cache for stringResource because it seems to be > 1ms function in some phones
@@ -135,10 +134,7 @@ fun painterRes(
         return cached
     }
 
-    val loaded =
-        logTime("loading icon") {
-            painterResource(id)
-        }
+    val loaded = painterResource(id)
 
     iconCache.put(id, loaded)
 
