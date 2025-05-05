@@ -92,14 +92,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.MoneroValidator
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
@@ -254,31 +252,74 @@ private fun InnerReactionRow(
 fun MoneroTippingReaction(
     note: Note,
     grayTint: Color,
-    barChartModifier: Modifier = Size19Modifier,
+    iconSizeModifier: Modifier = Size20Modifier,
+    iconSize: Dp = Size20dp,
     accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
+    var wantsToChangeZapAmount by remember { mutableStateOf(false) }
+    var wantsToTip by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-    ClickableBox(
-        modifier = barChartModifier,
-        onClick = {
-            note.author?.info?.moneroAddress()?.let { address ->
-                if (!MoneroValidator.isValidAddress(address)) {
-                    accountViewModel.toastManager.toast(context.getString(R.string.monero), context.getString(R.string.invalid_monero_address))
-                    return@ClickableBox
+    Row(
+        iconSizeModifier.combinedClickable(
+            role = Role.Button,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = ripple24dp,
+            onClick = {
+                scope.launch {
+                    tipClick(
+                        note,
+                        accountViewModel,
+                        context,
+                        onMultipleChoices = {
+                            scope.launch {
+                                wantsToTip = true
+                            }
+                        },
+                        onError = { _, message, user ->
+                            scope.launch {
+                                accountViewModel.toastManager.toast(R.string.error_dialog_tip_error, message, user)
+                            }
+                        },
+                    )
                 }
-                try {
-                    val sendIntent =
-                        Intent(Intent.ACTION_VIEW, "monero:$address".toUri())
-
-                    context.startActivity(sendIntent)
-                } catch (_: Exception) {
-                    accountViewModel.toastManager.toast(context.getString(R.string.monero_wallet), context.getString(R.string.no_monero_wallet_found))
-                }
-            }
-        },
+            },
+            onLongClick = {
+                wantsToChangeZapAmount = true
+            },
+        ),
     ) {
-        MoneroIcon(barChartModifier, grayTint)
+        if (wantsToTip) {
+            TipAmountChoicePopup(
+                baseNote = note,
+                popupYOffset = iconSize,
+                accountViewModel = accountViewModel,
+                onDismiss = {
+                    wantsToTip = false
+                },
+                onChangeAmount = {
+                    scope.launch {
+                        wantsToTip = false
+                        wantsToChangeZapAmount = true
+                    }
+                },
+                onError = { _, message, user ->
+                    scope.launch {
+                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                    }
+                },
+            )
+        }
+
+        if (wantsToChangeZapAmount) {
+            UpdateTipAmountDialog(
+                onClose = { wantsToChangeZapAmount = false },
+                accountViewModel = accountViewModel,
+            )
+        }
+
+        MoneroIcon(iconSizeModifier, grayTint)
     }
 }
 
@@ -1148,6 +1189,45 @@ fun ZapReaction(
     }
 }
 
+fun tipClick(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    context: Context,
+    onMultipleChoices: () -> Unit,
+    onError: (String, String, User?) -> Unit,
+) {
+    if (baseNote.isDraft()) {
+        accountViewModel.toastManager.toast(
+            R.string.draft_note,
+            R.string.it_s_not_possible_to_tip_to_a_draft_note,
+        )
+        return
+    }
+
+    val choices = accountViewModel.tipAmountChoices()
+
+    if (choices.isEmpty()) {
+        accountViewModel.toastManager.toast(
+            R.string.error_dialog_tip_error,
+            R.string.no_tip_amount_setup_long_press_to_change,
+        )
+    } else if (!accountViewModel.isWriteable()) {
+        accountViewModel.toastManager.toast(
+            R.string.error_dialog_tip_error,
+            R.string.login_with_a_private_key_to_be_able_to_send_zaps,
+        )
+    } else if (choices.size == 1) {
+        accountViewModel.tip(
+            baseNote,
+            choices.first(),
+            context,
+            onError = onError,
+        )
+    } else if (choices.size > 1) {
+        onMultipleChoices()
+    }
+}
+
 fun zapClick(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -1656,6 +1736,107 @@ fun ZapAmountChoicePopup(
                                             onError,
                                             onProgress,
                                             onPayViaIntent,
+                                        )
+                                        visibilityState.targetState = false
+                                    },
+                                    onLongClick = { onChangeAmount() },
+                                ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TipAmountChoicePopup(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    popupYOffset: Dp,
+    onDismiss: () -> Unit,
+    onChangeAmount: () -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
+) {
+    val tipAmountChoices by
+        accountViewModel.account.settings.syncedSettings.tips.tipAmountChoices
+            .collectAsStateWithLifecycle()
+
+    TipAmountChoicePopup(baseNote, tipAmountChoices, accountViewModel, popupYOffset, onDismiss, onChangeAmount, onError)
+}
+
+@Composable
+fun TipAmountChoicePopup(
+    baseNote: Note,
+    tipAmountChoices: ImmutableList<Double>,
+    accountViewModel: AccountViewModel,
+    popupYOffset: Dp,
+    onDismiss: () -> Unit,
+    onChangeAmount: () -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
+) {
+    val visibilityState = rememberVisibilityState(onDismiss)
+    TipAmountChoicePopup(baseNote, tipAmountChoices, accountViewModel, popupYOffset, visibilityState, onChangeAmount, onError)
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+fun TipAmountChoicePopup(
+    baseNote: Note,
+    tipAmountChoices: ImmutableList<Double>,
+    accountViewModel: AccountViewModel,
+    popupYOffset: Dp,
+    visibilityState: MutableTransitionState<Boolean>,
+    onChangeAmount: () -> Unit,
+    onError: (title: String, text: String, user: User?) -> Unit,
+) {
+    val context = LocalContext.current
+    val zapMessage = ""
+
+    val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
+
+    Popup(
+        alignment = Alignment.BottomCenter,
+        offset = IntOffset(0, yOffset),
+        onDismissRequest = { visibilityState.targetState = false },
+        properties = PopupProperties(focusable = true),
+    ) {
+        AnimatedVisibility(
+            visibleState = visibilityState,
+            enter = popupAnimationEnter,
+            exit = popupAnimationExit,
+        ) {
+            FlowRow(horizontalArrangement = Arrangement.Center) {
+                tipAmountChoices.forEach { amount ->
+                    Button(
+                        modifier = Modifier.padding(horizontal = 3.dp),
+                        onClick = {
+                            accountViewModel.tip(
+                                baseNote,
+                                amount,
+                                context,
+                                onError,
+                            )
+                            visibilityState.targetState = false
+                        },
+                        shape = ButtonBorder,
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                            ),
+                    ) {
+                        Text(
+                            "⚡ $amount",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            modifier =
+                                Modifier.combinedClickable(
+                                    onClick = {
+                                        accountViewModel.tip(
+                                            baseNote,
+                                            amount,
+                                            context,
+                                            onError,
                                         )
                                         visibilityState.targetState = false
                                     },
