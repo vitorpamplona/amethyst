@@ -38,6 +38,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 
 @Composable
 fun observeChannel(baseChannel: Channel): State<ChannelState?> {
@@ -49,6 +50,7 @@ fun observeChannel(baseChannel: Channel): State<ChannelState?> {
         .collectAsStateWithLifecycle()
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeChannelNoteAuthors(baseChannel: Channel): State<ImmutableList<User>> {
     ChannelFinderFilterAssemblerSubscription(baseChannel)
@@ -61,6 +63,11 @@ fun observeChannelNoteAuthors(baseChannel: Channel): State<ImmutableList<User>> 
                 .notes.stateFlow
                 .mapLatest {
                     it.channel.notes
+                        .mapNotNull { key, value -> value.author }
+                        .toSet()
+                        .toImmutableList()
+                }.onStart {
+                    baseChannel.notes
                         .mapNotNull { key, value -> value.author }
                         .toSet()
                         .toImmutableList()
