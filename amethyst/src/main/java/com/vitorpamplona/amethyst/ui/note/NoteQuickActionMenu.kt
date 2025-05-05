@@ -71,7 +71,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -86,6 +85,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -539,7 +539,7 @@ fun QuickActionAlertDialog(
         textContent = textContent,
         icon = {
             Icon(
-                painter = painterResource(buttonIconResource),
+                painter = painterRes(buttonIconResource),
                 contentDescription = null,
             )
         },
@@ -636,7 +636,7 @@ fun QuickActionAlertDialogOneButton(
         textContent = textContent,
         icon = {
             Icon(
-                painter = painterResource(buttonIconResource),
+                painter = painterRes(buttonIconResource),
                 contentDescription = null,
             )
         },

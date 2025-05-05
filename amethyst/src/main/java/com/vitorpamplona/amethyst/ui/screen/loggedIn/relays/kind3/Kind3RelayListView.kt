@@ -60,7 +60,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -76,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.recommendations.Kind3RelayProposalSetupInfo
@@ -555,7 +555,7 @@ private fun ActiveToggles(
         onClick = { onToggleFollows(item) },
     ) {
         Icon(
-            painterResource(R.drawable.ic_home),
+            painterRes(R.drawable.ic_home),
             stringRes(R.string.home_feed),
             modifier =
                 Modifier
@@ -589,7 +589,7 @@ private fun ActiveToggles(
         onClick = { onTogglePrivateDMs(item) },
     ) {
         Icon(
-            painterResource(R.drawable.ic_dm),
+            painterRes(R.drawable.ic_dm),
             stringRes(R.string.private_message_feed),
             modifier =
                 Modifier

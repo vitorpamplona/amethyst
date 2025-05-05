@@ -22,16 +22,23 @@ package com.vitorpamplona.amethyst.ui
 
 import android.content.Context
 import android.util.LruCache
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.vitorpamplona.amethyst.logTime
 
 /**
  * Cache for stringResource because it seems to be > 1ms function in some phones
  */
 private val resourceCache = LruCache<Int, String>(300)
 private var resourceCacheLanguage: String? = null
+
+// Caches most common icons in the app to avoid using disk
+private val iconCache = LruCache<Int, Painter>(30)
 
 fun checkLanguage(currentLanguage: String) {
     if (resourceCacheLanguage == null) {
@@ -117,4 +124,23 @@ fun stringRes(
             resourceCache.get(id) ?: res.getString(id).also { resourceCache.put(id, it) },
             *args,
         )
+}
+
+@Composable
+fun painterRes(
+    @DrawableRes id: Int,
+): Painter {
+    val cached = iconCache.get(id)
+    if (cached != null) {
+        return cached
+    }
+
+    val loaded =
+        logTime("loading icon") {
+            painterResource(id)
+        }
+
+    iconCache.put(id, loaded)
+
+    return loaded
 }

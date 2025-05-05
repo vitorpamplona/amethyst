@@ -71,7 +71,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -87,6 +86,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
@@ -460,7 +460,7 @@ fun UpdateZapAmountContent(
                 },
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.alby),
+                    painter = painterRes(R.drawable.alby),
                     contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
                     modifier = Modifier.size(24.dp),
                     tint = Color.Unspecified,
@@ -482,7 +482,7 @@ fun UpdateZapAmountContent(
 
             IconButton(onClick = { qrScanning = true }) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_qrcode),
+                    painter = painterRes(R.drawable.ic_qrcode),
                     contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

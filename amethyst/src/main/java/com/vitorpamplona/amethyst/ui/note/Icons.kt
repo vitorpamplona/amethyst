@@ -49,7 +49,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
@@ -64,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -110,7 +110,7 @@ fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
 @Composable
 fun MessageIcon(modifier: Modifier) {
     Icon(
-        painter = painterResource(R.drawable.ic_dm),
+        painter = painterRes(R.drawable.ic_dm),
         null,
         modifier = modifier,
         tint = MaterialTheme.colorScheme.primary,
@@ -133,7 +133,7 @@ fun DownloadForOfflineIcon(
 @Composable
 fun HashCheckIcon(iconSize: Dp) {
     Icon(
-        painter = painterResource(R.drawable.original),
+        painter = painterRes(R.drawable.original),
         contentDescription = stringRes(id = R.string.hash_verification_passed),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = Color.Unspecified,
@@ -363,7 +363,7 @@ fun CommentIcon(
 @Composable
 fun PollIcon() {
     Icon(
-        painter = painterResource(R.drawable.ic_poll),
+        painter = painterRes(R.drawable.ic_poll),
         contentDescription = stringRes(id = R.string.poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
@@ -373,7 +373,7 @@ fun PollIcon() {
 @Composable
 fun RegularPostIcon() {
     Icon(
-        painter = painterResource(R.drawable.ic_lists),
+        painter = painterRes(R.drawable.ic_lists),
         contentDescription = stringRes(id = R.string.disable_poll),
         modifier = Size20Modifier,
         tint = MaterialTheme.colorScheme.onBackground,
@@ -495,7 +495,7 @@ fun NIP05CheckingIcon(modifier: Modifier) {
 @Composable
 fun NIP05VerifiedIcon(modifier: Modifier) {
     Icon(
-        painter = painterResource(R.drawable.nip_05),
+        painter = painterRes(R.drawable.nip_05),
         contentDescription = stringRes(id = R.string.nip05_verified),
         modifier = modifier,
         tint = Color.Unspecified,
@@ -518,7 +518,7 @@ fun IncognitoIconOn(
     tint: Color,
 ) {
     Icon(
-        painter = painterResource(id = R.drawable.incognito),
+        painter = painterRes(id = R.drawable.incognito),
         contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
         modifier = modifier,
         tint = tint,
@@ -531,7 +531,7 @@ fun IncognitoIconOff(
     tint: Color,
 ) {
     Icon(
-        painter = painterResource(id = R.drawable.incognito_off),
+        painter = painterRes(id = R.drawable.incognito_off),
         contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
         modifier = modifier,
         tint = tint,

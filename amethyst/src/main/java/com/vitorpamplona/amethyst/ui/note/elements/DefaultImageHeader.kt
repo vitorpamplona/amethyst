@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
@@ -38,6 +37,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -84,11 +84,11 @@ fun BannerImage(
                 ),
             contentScale = ContentScale.Crop,
             modifier = modifier,
-            placeholder = painterResource(R.drawable.profile_banner),
+            placeholder = painterRes(R.drawable.profile_banner),
         )
     } else {
         Image(
-            painter = painterResource(R.drawable.profile_banner),
+            painter = painterRes(R.drawable.profile_banner),
             contentDescription = stringRes(R.string.profile_banner),
             contentScale = ContentScale.Crop,
             modifier = modifier,

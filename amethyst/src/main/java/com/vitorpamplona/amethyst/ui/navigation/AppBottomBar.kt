@@ -48,10 +48,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -185,7 +185,7 @@ private fun NotifiableIcon(
 ) {
     Box(route.notifSize) {
         Icon(
-            painter = painterResource(id = route.icon),
+            painter = painterRes(id = route.icon),
             contentDescription = stringRes(route.contentDescriptor),
             modifier = route.iconSize,
             tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,

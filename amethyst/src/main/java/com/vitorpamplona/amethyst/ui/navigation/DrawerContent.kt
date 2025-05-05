@@ -76,7 +76,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -102,6 +101,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRDialog
@@ -226,7 +226,7 @@ fun ProfileContentTemplate(
             )
         } else {
             Image(
-                painter = painterResource(R.drawable.profile_banner),
+                painter = painterRes(R.drawable.profile_banner),
                 contentDescription = stringRes(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
@@ -615,7 +615,7 @@ fun IconRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                painter = painterResource(icon),
+                painter = painterRes(icon),
                 contentDescription = stringRes(title),
                 modifier = Size22Modifier,
                 tint = tint,
@@ -683,7 +683,7 @@ fun IconRowRelays(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                painter = painterResource(R.drawable.relays),
+                painter = painterRes(R.drawable.relays),
                 null,
                 modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
@@ -761,7 +761,7 @@ fun BottomContent(
                 },
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_qrcode),
+                    painter = painterRes(R.drawable.ic_qrcode),
                     contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

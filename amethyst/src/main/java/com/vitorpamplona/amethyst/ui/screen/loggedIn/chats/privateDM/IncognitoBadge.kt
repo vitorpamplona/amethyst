@@ -24,9 +24,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.painterResource
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.incognitoIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 fun IncognitoBadge(baseNote: Note) {
     if (baseNote.event is NIP17Group) {
         Icon(
-            painter = painterResource(id = R.drawable.incognito),
+            painter = painterRes(id = R.drawable.incognito),
             null,
             modifier = incognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,
@@ -45,7 +45,7 @@ fun IncognitoBadge(baseNote: Note) {
         Spacer(modifier = StdHorzSpacer)
     } else if (baseNote.event is PrivateDmEvent) {
         Icon(
-            painter = painterResource(id = R.drawable.incognito_off),
+            painter = painterRes(id = R.drawable.incognito_off),
             null,
             modifier = incognitoIconModifier,
             tint = MaterialTheme.colorScheme.placeholderText,

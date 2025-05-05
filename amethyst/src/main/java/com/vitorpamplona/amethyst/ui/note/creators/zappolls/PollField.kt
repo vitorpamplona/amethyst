@@ -29,11 +29,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
 import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
@@ -65,7 +65,7 @@ fun PollField(postViewModel: NewPostViewModel) {
                 ),
         ) {
             Image(
-                painterResource(id = android.R.drawable.ic_input_add),
+                painterRes(id = android.R.drawable.ic_input_add),
                 contentDescription = "Add poll option button",
                 modifier = Size18Modifier,
             )

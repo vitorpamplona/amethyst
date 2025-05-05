@@ -39,10 +39,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -81,7 +81,7 @@ fun ErrorMessageDialog(
                 onClickStartMessage?.let {
                     TextButton(onClick = onClickStartMessage) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_dm),
+                            painter = painterRes(R.drawable.ic_dm),
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)
