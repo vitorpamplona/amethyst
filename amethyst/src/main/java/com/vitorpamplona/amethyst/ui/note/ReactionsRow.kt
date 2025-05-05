@@ -268,7 +268,7 @@ fun MoneroTippingReaction(
 
                     context.startActivity(sendIntent)
                 } catch (_: Exception) {
-                    accountViewModel.toastManager.toast("Monero wallet", "No monero wallet found")
+                    accountViewModel.toastManager.toast(context.getString(R.string.monero_wallet), context.getString(R.string.no_monero_wallet_found))
                 }
             }
         },
