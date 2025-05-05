@@ -54,15 +54,20 @@ class ChannelFinderFilterAssembler(
                 SincePerRelayFilter(
                     kinds = listOf(ChannelMetadataEvent.KIND),
                     tags = mapOf("e" to reactionsToWatch),
+                    limit = 3,
                 ),
         )
     }
 
     fun createLoadEventsIfNotLoadedFilter(keys: Set<ChannelFinderQueryState>): TypedFilter? {
-        val directEventsToLoad =
-            keys.filter { it.channel.notes.isEmpty() && it.channel is PublicChatChannel }
-
-        val interestedEvents = (directEventsToLoad).map { it.channel.idHex }.toSet()
+        val interestedEvents =
+            keys.mapNotNullTo(mutableSetOf()) {
+                if (it.channel is PublicChatChannel && it.channel.event == null) {
+                    it.channel.idHex
+                } else {
+                    null
+                }
+            }
 
         if (interestedEvents.isEmpty()) {
             return null
