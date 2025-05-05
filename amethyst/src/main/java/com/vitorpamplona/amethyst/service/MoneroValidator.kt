@@ -24,7 +24,7 @@ object MoneroValidator {
     fun isValidAddress(address: String): Boolean {
         val standardAddressRegex = Regex("^4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}$") // 95-char, starts with '4'
         val subAddressRegex = Regex("^8[0-9AB][1-9A-HJ-NP-Za-km-z]{93}$") // 95-char, starts with '8'
-        val integratedAddressRegex = Regex("^4[0-9AB][1-9A-HJ-NP-Za-km-z]{104}$") // 106-char, starts with '4'
+        val integratedAddressRegex = Regex("^([49])[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{105}$") // 106-char, starts with '4'
 
         return when {
             standardAddressRegex.matches(address) -> true
