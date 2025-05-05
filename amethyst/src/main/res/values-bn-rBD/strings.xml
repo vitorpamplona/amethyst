@@ -70,6 +70,7 @@
     <string name="thank_you_so_much">আপনাকে অনেক ধন্যবাদ!</string>
     <string name="amount_in_sats">স্যাটে মোট পরিমাণ</string>
     <string name="send_sats">স্যাট পাঠান</string>
+    <string name="secret_emoji_maker">সিক্রেট ইমোজি মেকার</string>
     <string name="error_parsing_preview_for">"এই দুইয়ের পূর্বরূপ দেখানো যাচ্ছে না %1$s : %2$s"</string>
     <string name="preview_card_image_for">"%1$s এর জন্য কার্ড ইমেজের পূর্বরূপ দেখুন"</string>
     <string name="new_channel">নতুন চ্যানেল</string>
