@@ -2522,11 +2522,7 @@ object LocalCache : ILocalCache {
                 }
             }
             is EphemeralChatEvent -> {
-                val room = draft.room()
-                val relay = draft.relay()
-                if (relay != null) {
-                    checkGetOrCreateChannel(RoomId(room, relay).toKey())?.addNote(note, null)
-                }
+                checkGetOrCreateChannel(draft.roomId().toKey())?.addNote(note, null)
             }
             is ChannelMessageEvent -> {
                 draft.channelId()?.let { channelId ->
@@ -2657,8 +2653,6 @@ object LocalCache : ILocalCache {
         event: Event,
         relay: RelayBriefInfoCache.RelayBriefInfo?,
     ) {
-        checkNotInMainThread()
-
         try {
             when (event) {
                 is AdvertisedRelayListEvent -> consume(event, relay)
