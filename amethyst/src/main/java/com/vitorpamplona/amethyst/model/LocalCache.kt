@@ -1831,7 +1831,11 @@ object LocalCache : ILocalCache {
         }
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event != null) {
+            val note = (note.event as? SealedRumorEvent)?.innerEventId?.let { getNoteIfExists(it) }
+            note?.event?.let { justConsumeInner(it, relay) }
+            return
+        }
 
         note.loadEvent(event, author, emptyList())
 
@@ -1851,7 +1855,10 @@ object LocalCache : ILocalCache {
         }
 
         // Already processed this event.
-        if (note.event != null) return
+        if (note.event != null) {
+            val note = (note.event as? GiftWrapEvent)?.innerEventId?.let { getNoteIfExists(it) }
+            note?.event?.let { justConsumeInner(it, relay) }
+        }
 
         note.loadEvent(event, author, emptyList())
 
