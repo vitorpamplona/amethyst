@@ -103,5 +103,5 @@ class RelaySubscriptionsCoordinator(
 
     fun destroy() = all.forEach { it.destroy() }
 
-    fun printCounters() = all.forEach { it.stats.printCounter() }
+    fun printCounters() = all.forEach { it.stats.printCounter("${it.javaClass.simpleName}") }
 }

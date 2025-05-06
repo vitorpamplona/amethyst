@@ -100,7 +100,6 @@ fun LongFormHeader(
         } ?: run {
             DefaultImageHeader(note, accountViewModel)
         }
-
         title?.let {
             Text(
                 text = it,
