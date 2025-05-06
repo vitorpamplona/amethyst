@@ -37,25 +37,37 @@ class NWCPaymentQueryState(
 class NWCPaymentFilterAssembler(
     client: NostrClient,
 ) : QueryBasedSubscriptionOrchestrator<NWCPaymentQueryState>(client) {
-    fun createAccountMetadataFilter(keys: Set<NWCPaymentQueryState>): TypedFilter =
-        TypedFilter(
+    fun createAccountMetadataFilter(keys: Set<NWCPaymentQueryState>): TypedFilter? {
+        val fromAuthors = keys.mapTo(mutableSetOf()) { it.fromServiceHex }
+        val replyingToPayments = keys.mapTo(mutableSetOf()) { it.replyingToHex }
+        val aboutUsers = keys.mapTo(mutableSetOf()) { it.toUserHex }
+
+        if (fromAuthors.isEmpty()) return null
+
+        return TypedFilter(
             types = setOf(FeedType.WALLET_CONNECT),
             filter =
                 SincePerRelayFilter(
                     kinds = listOf(LnZapPaymentResponseEvent.KIND),
-                    authors = keys.map { it.fromServiceHex },
+                    authors = fromAuthors.toList(),
                     tags =
                         mapOf(
-                            "e" to keys.map { it.replyingToHex },
-                            "p" to keys.map { it.toUserHex },
+                            "e" to replyingToPayments.toList(),
+                            "p" to aboutUsers.toList(),
                         ),
                     limit = 1,
                 ),
         )
+    }
 
     val channel = requestNewSubscription()
 
     override fun updateSubscriptions(keys: Set<NWCPaymentQueryState>) {
-        channel.typedFilters = listOf(createAccountMetadataFilter(keys))
+        val filter = createAccountMetadataFilter(keys)
+        if (filter != null) {
+            channel.typedFilters = listOf(filter)
+        } else {
+            channel.typedFilters = null
+        }
     }
 }
