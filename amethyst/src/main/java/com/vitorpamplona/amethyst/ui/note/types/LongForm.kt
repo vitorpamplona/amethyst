@@ -35,9 +35,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -83,21 +83,22 @@ fun LongFormHeader(
                     QuoteBorder,
                 ),
     ) {
-        if (accountViewModel.settings.showImages.value) {
-            image?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription =
-                        stringRes(
-                            R.string.preview_card_image_for,
-                            it,
-                        ),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } ?: run {
-                DefaultImageHeader(note, accountViewModel)
-            }
+        image?.let {
+            MyAsyncImage(
+                imageUrl = it,
+                contentDescription =
+                    stringRes(
+                        R.string.preview_card_image_for,
+                        it,
+                    ),
+                contentScale = ContentScale.FillWidth,
+                mainImageModifier = Modifier.fillMaxWidth(),
+                loadedImageModifier = Modifier,
+                accountViewModel = accountViewModel,
+                onError = { DefaultImageHeader(note, accountViewModel) },
+            )
+        } ?: run {
+            DefaultImageHeader(note, accountViewModel)
         }
 
         title?.let {

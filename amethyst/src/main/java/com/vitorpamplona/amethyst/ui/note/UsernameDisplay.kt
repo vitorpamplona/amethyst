@@ -70,7 +70,7 @@ fun WatchAuthor(
         inner(noteAuthor)
     } else {
         val authorState by observeNote(baseNote, accountViewModel)
-        authorState?.note?.author?.let {
+        authorState.note.author?.let {
             inner(it)
         }
     }

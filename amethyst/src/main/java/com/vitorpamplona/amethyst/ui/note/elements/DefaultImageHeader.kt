@@ -30,11 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -67,25 +67,35 @@ fun BannerImage(
 ) {
     val banner by observeUserBanner(author, accountViewModel)
 
-    BannerImage(banner, modifier)
+    BannerImage(banner, modifier, accountViewModel)
 }
 
 @Composable
 fun BannerImage(
     banner: String?,
     modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
 ) {
     if (!banner.isNullOrBlank()) {
-        AsyncImage(
-            model = banner,
+        MyAsyncImage(
+            imageUrl = banner,
             contentDescription =
                 stringRes(
                     R.string.preview_card_image_for,
                     banner,
                 ),
             contentScale = ContentScale.Crop,
-            modifier = modifier,
-            placeholder = painterRes(R.drawable.profile_banner),
+            mainImageModifier = Modifier,
+            loadedImageModifier = modifier,
+            accountViewModel = accountViewModel,
+            onError = {
+                Image(
+                    painter = painterRes(R.drawable.profile_banner),
+                    contentDescription = stringRes(R.string.profile_banner),
+                    contentScale = ContentScale.Crop,
+                    modifier = modifier,
+                )
+            },
         )
     } else {
         Image(

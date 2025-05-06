@@ -41,13 +41,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -131,15 +131,18 @@ fun VideoDisplay(
                     modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
                 ) {
                     image?.let {
-                        AsyncImage(
-                            model = it,
+                        MyAsyncImage(
+                            imageUrl = it,
                             contentDescription =
                                 stringRes(
                                     R.string.preview_card_image_for,
                                     it,
                                 ),
                             contentScale = ContentScale.FillWidth,
-                            modifier = MaterialTheme.colorScheme.imageModifier,
+                            mainImageModifier = Modifier,
+                            loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                            accountViewModel = accountViewModel,
+                            onError = { DefaultImageHeader(note, accountViewModel) },
                         )
                     } ?: run {
                         DefaultImageHeader(note, accountViewModel)

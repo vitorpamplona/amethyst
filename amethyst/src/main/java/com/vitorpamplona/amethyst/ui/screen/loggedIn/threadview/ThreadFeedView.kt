@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
@@ -504,7 +505,7 @@ private fun FullBleedNoteCompose(
 
         when (noteEvent) {
             is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
-            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent)
+            is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent, baseNote, accountViewModel)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)
         }
@@ -925,19 +926,28 @@ private fun RenderClassifiedsReaderForThread(
 }
 
 @Composable
-private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
+private fun RenderLongFormHeaderForThread(
+    noteEvent: LongTextNoteEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
     Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         noteEvent.image()?.let {
-            AsyncImage(
-                model = it,
+            MyAsyncImage(
+                imageUrl = it,
                 contentDescription =
                     stringRes(
                         R.string.preview_card_image_for,
                         it,
                     ),
                 contentScale = ContentScale.FillWidth,
-                modifier = MaterialTheme.colorScheme.imageModifier,
+                mainImageModifier = Modifier,
+                loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                accountViewModel = accountViewModel,
+                onError = { DefaultImageHeader(note, accountViewModel) },
             )
+        } ?: run {
+            DefaultImageHeader(note, accountViewModel)
         }
 
         noteEvent.title()?.let {

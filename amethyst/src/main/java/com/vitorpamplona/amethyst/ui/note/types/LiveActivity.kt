@@ -44,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -52,12 +51,14 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
@@ -220,7 +221,19 @@ fun RenderLiveActivityEventInner(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            AsyncImage(model = it, contentDescription = null, modifier = MaterialTheme.colorScheme.imageModifier)
+                            MyAsyncImage(
+                                imageUrl = it,
+                                contentDescription =
+                                    stringRes(
+                                        R.string.preview_card_image_for,
+                                        it,
+                                    ),
+                                contentScale = ContentScale.FillWidth,
+                                mainImageModifier = Modifier.fillMaxWidth(),
+                                loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
+                                accountViewModel = accountViewModel,
+                                onError = { DefaultImageHeader(baseNote, accountViewModel) },
+                            )
                         }
                     } ?: run { DisplayAuthorBanner(baseNote, accountViewModel) }
 
