@@ -1091,7 +1091,7 @@ class AccountViewModel(
             var note = checkGetOrCreateNote(event.id)
 
             if (note == null) {
-                LocalCache.verifyAndConsume(event, null)
+                LocalCache.justConsume(event, null)
                 note = checkGetOrCreateNote(event.id)
             }
 
@@ -1471,8 +1471,9 @@ class AccountViewModel(
                         unwrapIfNeeded(existingNote.event, onReady)
                     } else {
                         event.unwrap(account.signer) {
-                            LocalCache.verifyAndConsume(it, null)
-                            unwrapIfNeeded(it, onReady)
+                            if (LocalCache.justConsume(it, null)) {
+                                unwrapIfNeeded(it, onReady)
+                            }
                         }
                     }
                 } ?: run {
@@ -1481,8 +1482,9 @@ class AccountViewModel(
                         if (existingNote != null) {
                             unwrapIfNeeded(existingNote.event, onReady)
                         } else {
-                            LocalCache.verifyAndConsume(it, null)
-                            unwrapIfNeeded(it, onReady)
+                            if (LocalCache.justConsume(it, null)) {
+                                unwrapIfNeeded(it, onReady)
+                            }
                         }
                     }
                 }
@@ -1495,8 +1497,9 @@ class AccountViewModel(
                     } else {
                         event.unseal(account.signer) {
                             // this is not verifiable
-                            LocalCache.justConsume(it, null)
-                            unwrapIfNeeded(it, onReady)
+                            if (LocalCache.justConsume(it, null)) {
+                                unwrapIfNeeded(it, onReady)
+                            }
                         }
                     }
                 } ?: run {
@@ -1506,8 +1509,9 @@ class AccountViewModel(
                             unwrapIfNeeded(existingNote.event, onReady)
                         } else {
                             // this is not verifiable
-                            LocalCache.justConsume(it, null)
-                            unwrapIfNeeded(it, onReady)
+                            if (LocalCache.justConsume(it, null)) {
+                                unwrapIfNeeded(it, onReady)
+                            }
                         }
                     }
                 }
@@ -1755,7 +1759,7 @@ class AccountViewModel(
                                 val baseNote = LocalCache.getOrCreateNote(parsed.event)
                                 if (baseNote.event == null) {
                                     launch(Dispatchers.Default) {
-                                        LocalCache.verifyAndConsume(parsed.event, null)
+                                        LocalCache.justConsume(parsed.event, null)
                                     }
                                 }
 

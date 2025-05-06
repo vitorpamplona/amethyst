@@ -62,7 +62,6 @@ class EventNotificationConsumer(
 
     suspend fun consume(event: GiftWrapEvent) {
         Log.d(TAG, "New Notification Arrived")
-        if (!LocalCache.justVerify(event)) return
 
         // PushNotification Wraps don't include a receiver.
         // Test with all logged in accounts
@@ -108,9 +107,8 @@ class EventNotificationConsumer(
         account: AccountSettings,
     ) {
         val consumed = LocalCache.hasConsumed(notificationEvent)
-        val verified = LocalCache.justVerify(notificationEvent)
-        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed && verified= $verified")
-        if (!consumed && verified) {
+        Log.d(TAG, "New Notification ${notificationEvent.kind} ${notificationEvent.id} Arrived for ${signer.pubKey} consumed= $consumed")
+        if (!consumed) {
             Log.d(TAG, "New Notification was verified")
             unwrapAndConsume(notificationEvent, signer) { innerEvent ->
                 if (!notificationManager().areNotificationsEnabled()) return@unwrapAndConsume
@@ -135,8 +133,6 @@ class EventNotificationConsumer(
 
     suspend fun findAccountAndConsume(event: Event) {
         Log.d(TAG, "New Notification Arrived")
-        if (!LocalCache.justVerify(event)) return
-
         val users = event.taggedUserIds().map { LocalCache.getOrCreateUser(it) }
         val npubs = users.map { it.pubkeyNpub() }.toSet()
 
@@ -174,24 +170,27 @@ class EventNotificationConsumer(
         signer: NostrSigner,
         onReady: (Event) -> Unit,
     ) {
-        if (!LocalCache.justVerify(event)) return
         if (LocalCache.hasConsumed(event)) return
 
         when (event) {
             is GiftWrapEvent -> {
-                event.unwrap(signer) {
-                    unwrapAndConsume(it, signer, onReady)
-                    LocalCache.justConsume(event, null)
+                if (LocalCache.justConsume(event, null)) {
+                    // new event
+                    event.unwrap(signer) {
+                        unwrapAndConsume(it, signer, onReady)
+                    }
                 }
             }
             is SealedRumorEvent -> {
-                event.unseal(signer) {
-                    if (!LocalCache.hasConsumed(it)) {
+                if (LocalCache.justConsume(event, null)) {
+                    // new event
+                    event.unseal(signer) {
                         // this is not verifiable
-                        LocalCache.justConsume(it, null)
-                        onReady(it)
+                        if (!LocalCache.hasConsumed(it)) {
+                            LocalCache.justConsume(it, null)
+                            onReady(it)
+                        }
                     }
-                    LocalCache.justConsume(event, null)
                 }
             }
             else -> {

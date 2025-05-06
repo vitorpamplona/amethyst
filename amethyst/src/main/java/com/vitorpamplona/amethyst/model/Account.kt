@@ -2000,10 +2000,10 @@ class Account(
         if (!isWriteable()) return null
 
         Amethyst.instance.client.send(data, relayList = relayList)
-        LocalCache.consume(data, null)
+        LocalCache.justConsume(data, null)
 
         Amethyst.instance.client.send(signedEvent, relayList = relayList)
-        LocalCache.consume(signedEvent, null)
+        LocalCache.justConsume(signedEvent, null)
 
         return LocalCache.getNoteIfExists(signedEvent.id)
     }
@@ -2012,8 +2012,8 @@ class Account(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
     ): Note? {
-        LocalCache.consume(data, null)
-        LocalCache.consume(signedEvent, null)
+        LocalCache.justConsume(data, null)
+        LocalCache.justConsume(signedEvent, null)
 
         return LocalCache.getNoteIfExists(signedEvent.id)
     }
@@ -2695,7 +2695,7 @@ class Account(
                 LocalCache.justConsume(gift, null)
             }
 
-            LocalCache.consume(giftWrap, null)
+            LocalCache.justConsume(giftWrap, null)
         }
 
         val id = mine.firstOrNull()?.id
@@ -2839,7 +2839,7 @@ class Account(
             },
         ) {
             Amethyst.instance.client.send(it)
-            LocalCache.consume(it, null)
+            LocalCache.justConsume(it, null)
         }
     }
 
@@ -2996,7 +2996,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         } else {
             MuteListEvent.createListWithWord(
@@ -3005,7 +3005,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         }
     }
@@ -3020,7 +3020,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         }
 
@@ -3033,7 +3033,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         }
     }
@@ -3049,7 +3049,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         } else {
             MuteListEvent.createListWithUser(
@@ -3058,7 +3058,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         }
     }
@@ -3073,7 +3073,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         }
 
@@ -3086,7 +3086,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+                LocalCache.justConsume(it, null)
             }
         }
 
@@ -3709,25 +3709,25 @@ class Account(
             Log.d("AccountRegisterObservers", "Loading saved user metadata ${it.toJson()}")
 
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
         }
 
         settings.backupDMRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
         }
 
         settings.backupNIP65RelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved nip65 relay list ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
         }
 
         settings.backupSearchRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
         }
 
         settings.backupPrivateHomeRelayList?.let { event ->
@@ -3735,7 +3735,7 @@ class Account(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
-                    LocalCache.verifyAndConsume(event, null)
+                    LocalCache.justConsume(event, null)
                 }
             }
         }
@@ -3744,7 +3744,7 @@ class Account(
             Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                LocalCache.verifyAndConsume(event, null)
+                LocalCache.justConsume(event, null)
                 signer.decrypt(event.content, event.pubKey) { decrypted ->
                     try {
                         val syncedSettings = EventMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
@@ -3759,22 +3759,34 @@ class Account(
             }
         }
 
-        settings.backupMuteList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved mute list ${it.toJson()}")
+        settings.backupMuteList?.let { event ->
+            Log.d("AccountRegisterObservers", "Loading saved mute list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) {
+                event.privateTags(signer) {
+                    LocalCache.justConsume(event, null)
+                }
+            }
         }
 
-        settings.backupEphemeralChatList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list ${it.toJson()}")
+        settings.backupEphemeralChatList?.let { event ->
+            Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) {
+                event.privateTags(signer) {
+                    LocalCache.justConsume(event, null)
+                }
+            }
         }
 
-        settings.backupChannelList?.let {
-            Log.d("AccountRegisterObservers", "Loading saved channel list ${it.toJson()}")
+        settings.backupChannelList?.let { event ->
+            Log.d("AccountRegisterObservers", "Loading saved channel list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.verifyAndConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) {
+                event.privateTags(signer) {
+                    LocalCache.justConsume(event, null)
+                }
+            }
         }
 
         // saves contact list for the next time.

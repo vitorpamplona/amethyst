@@ -78,8 +78,7 @@ class PrecacheNewNotesProcessor(
                     val inner = event.innerEventId
                     if (inner == null) {
                         event.unwrap(account.signer) {
-                            if (cache.justVerify(it)) {
-                                cache.justConsume(it, null)
+                            if (cache.justConsume(it, null)) {
                                 cache.copyRelaysFromTo(note, it)
                                 consumeAlreadyVerified(it, note)
                             }

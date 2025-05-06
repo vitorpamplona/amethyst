@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip09Deletions
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.utils.LargeCache
 
 class DeletionIndex {
@@ -45,14 +46,24 @@ class DeletionIndex {
     // Anything newer than the date should not be deleted.
     private val deletedReferencesBefore = LargeCache<DeletionRequest, DeletionEvent>()
 
-    fun add(event: DeletionEvent): Boolean {
+    fun add(
+        event: DeletionEvent,
+        wasVerified: Boolean,
+    ): Boolean {
         var atLeastOne = false
+        var myWasVerified = wasVerified
 
-        event.tags.forEach {
-            if (it.size > 1 && (it[0] == "a" || it[0] == "e")) {
-                if (add(it[1], event.pubKey, event)) {
-                    atLeastOne = true
-                }
+        event.deleteEventIds().forEach { toDelete ->
+            if (add(toDelete, event.pubKey, event, myWasVerified)) {
+                myWasVerified = true
+                atLeastOne = true
+            }
+        }
+
+        event.deleteAddressIds().forEach { toDelete ->
+            if (add(toDelete, event.pubKey, event, myWasVerified)) {
+                myWasVerified = true
+                atLeastOne = true
             }
         }
 
@@ -63,13 +74,16 @@ class DeletionIndex {
         ref: String,
         byPubKey: HexKey,
         deletionEvent: DeletionEvent,
+        wasVerified: Boolean,
     ): Boolean {
         val key = DeletionRequest(ref, byPubKey)
         val previousDeletionEvent = deletedReferencesBefore.get(key)
 
         if (previousDeletionEvent == null || deletionEvent.createdAt > previousDeletionEvent.createdAt) {
-            deletedReferencesBefore.put(key, deletionEvent)
-            return true
+            if (wasVerified || deletionEvent.verify()) {
+                deletedReferencesBefore.put(key, deletionEvent)
+                return true
+            }
         }
         return false
     }

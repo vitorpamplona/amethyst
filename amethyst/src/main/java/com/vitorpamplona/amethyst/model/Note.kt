@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
@@ -448,7 +447,7 @@ open class Note(
         }
     }
 
-    fun hasRelay(relay: Relay) = relay.brief !in relays
+    fun hasRelay(relay: RelayBriefInfoCache.RelayBriefInfo) = relay !in relays
 
     fun addRelay(brief: RelayBriefInfoCache.RelayBriefInfo) {
         if (brief !in relays) {

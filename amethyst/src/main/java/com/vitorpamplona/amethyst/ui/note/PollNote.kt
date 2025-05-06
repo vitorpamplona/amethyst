@@ -155,7 +155,7 @@ fun PollNotePreview() {
         withContext(Dispatchers.IO) {
             LocalCache.justConsume(event, null)
             LocalCache.consume(zapVote.zapRequest!!)
-            LocalCache.consume(zapVote, null)
+            LocalCache.justConsume(zapVote, null)
             baseNote = LocalCache.getOrCreateNote("6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72")
         }
     }

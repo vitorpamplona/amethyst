@@ -33,7 +33,7 @@ class CacheClientConnector(
 ) {
     val receiver =
         EventCollector(client) { event, relay ->
-            cache.verifyAndConsume(event, relay)
+            cache.justConsume(event, relay)
         }
 
     val confirmationWatcher =
