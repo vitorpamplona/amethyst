@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -98,6 +99,7 @@ fun DiscoverScreen(
 ) {
     DiscoverScreen(
         discoveryFollowSetsFeedContentState = accountViewModel.feedStates.discoverFollowSets,
+        discoveryReadsFeedContentState = accountViewModel.feedStates.discoverReads,
         discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
         discoveryMarketplaceFeedContentState = accountViewModel.feedStates.discoverMarketplace,
         discoveryLiveFeedContentState = accountViewModel.feedStates.discoverLive,
@@ -112,6 +114,7 @@ fun DiscoverScreen(
 @Composable
 fun DiscoverScreen(
     discoveryFollowSetsFeedContentState: FeedContentState,
+    discoveryReadsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
     discoveryMarketplaceFeedContentState: FeedContentState,
     discoveryLiveFeedContentState: FeedContentState,
@@ -128,8 +131,15 @@ fun DiscoverScreen(
                         R.string.discover_follows,
                         discoveryFollowSetsFeedContentState,
                         "DiscoverFollowSets",
-                        ScrollStateKeys.DISCOVER_CONTENT,
+                        ScrollStateKeys.DISCOVER_FOLLOWS,
                         FollowListEvent.KIND,
+                    ),
+                    TabItem(
+                        R.string.discover_reads,
+                        discoveryReadsFeedContentState,
+                        "DiscoverReads",
+                        ScrollStateKeys.DISCOVER_READS,
+                        LongTextNoteEvent.KIND,
                     ),
                     TabItem(
                         R.string.discover_content,
@@ -175,6 +185,7 @@ fun DiscoverScreen(
 
     WatchAccountForDiscoveryScreen(
         discoveryFollowSetsFeedContentState = discoveryFollowSetsFeedContentState,
+        discoveryReadsFeedContentState = discoveryReadsFeedContentState,
         discoveryContentNIP89FeedContentState = discoveryContentNIP89FeedContentState,
         discoveryMarketplaceFeedContentState = discoveryMarketplaceFeedContentState,
         discoveryLiveFeedContentState = discoveryLiveFeedContentState,
@@ -184,6 +195,7 @@ fun DiscoverScreen(
     )
 
     WatchLifecycleAndUpdateModel(discoveryFollowSetsFeedContentState)
+    WatchLifecycleAndUpdateModel(discoveryReadsFeedContentState)
     WatchLifecycleAndUpdateModel(discoveryContentNIP89FeedContentState)
     WatchLifecycleAndUpdateModel(discoveryMarketplaceFeedContentState)
     WatchLifecycleAndUpdateModel(discoveryLiveFeedContentState)
@@ -379,6 +391,7 @@ private fun RenderDiscoverFeed(
 @Composable
 fun WatchAccountForDiscoveryScreen(
     discoveryFollowSetsFeedContentState: FeedContentState,
+    discoveryReadsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
     discoveryMarketplaceFeedContentState: FeedContentState,
     discoveryLiveFeedContentState: FeedContentState,
@@ -390,6 +403,7 @@ fun WatchAccountForDiscoveryScreen(
 
     LaunchedEffect(accountViewModel, listState) {
         discoveryFollowSetsFeedContentState.checkKeysInvalidateDataAndSendToTop()
+        discoveryReadsFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryContentNIP89FeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryMarketplaceFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryLiveFeedContentState.checkKeysInvalidateDataAndSendToTop()

@@ -18,13 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Card
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
+import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.note.types.LongFormHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
-val DefaultFeedOrder: Comparator<Note> =
-    compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex }
+@Composable
+fun RenderLongFormThumb(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent by observeNoteEvent<LongTextNoteEvent>(baseNote, accountViewModel)
 
-val DefaultFeedOrderCard: Comparator<Card> =
-    compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }
+    noteEvent?.let {
+        LongFormHeader(
+            it,
+            baseNote,
+            accountViewModel,
+        )
+    }
+}

@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.RenderLongFormThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderChannelThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.RenderFollowSetThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.RenderLiveActivityThumb
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.RenderCo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.RenderClassifiedsThumb
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -154,6 +156,7 @@ fun InnerChannelCardWithReactions(
         is ClassifiedsEvent -> InnerCardBox(baseNote, accountViewModel, nav)
         is AppDefinitionEvent -> InnerCardRow(baseNote, accountViewModel, nav)
         is FollowListEvent -> InnerCardRow(baseNote, accountViewModel, nav)
+        is LongTextNoteEvent -> InnerCardRow(baseNote, accountViewModel, nav)
     }
 }
 
@@ -200,20 +203,11 @@ private fun RenderNoteRow(
     nav: INav,
 ) {
     when (baseNote.event) {
-        is LiveActivitiesEvent -> {
-            RenderLiveActivityThumb(baseNote, accountViewModel, nav)
-        }
-        is CommunityDefinitionEvent -> {
-            RenderCommunitiesThumb(baseNote, accountViewModel, nav)
-        }
-        is ChannelCreateEvent -> {
-            RenderChannelThumb(baseNote, accountViewModel, nav)
-        }
-        is AppDefinitionEvent -> {
-            RenderContentDVMThumb(baseNote, accountViewModel, nav)
-        }
-        is FollowListEvent -> {
-            RenderFollowSetThumb(baseNote, accountViewModel, nav)
-        }
+        is LiveActivitiesEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
+        is CommunityDefinitionEvent -> RenderCommunitiesThumb(baseNote, accountViewModel, nav)
+        is ChannelCreateEvent -> RenderChannelThumb(baseNote, accountViewModel, nav)
+        is AppDefinitionEvent -> RenderContentDVMThumb(baseNote, accountViewModel, nav)
+        is FollowListEvent -> RenderFollowSetThumb(baseNote, accountViewModel, nav)
+        is LongTextNoteEvent -> RenderLongFormThumb(baseNote, accountViewModel, nav)
     }
 }

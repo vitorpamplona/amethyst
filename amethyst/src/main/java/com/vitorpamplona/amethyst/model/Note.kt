@@ -63,12 +63,15 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
@@ -94,12 +97,20 @@ class AddressableNote(
     override fun address() = address
 
     override fun createdAt(): Long? {
-        if (event == null) return null
+        val currentEvent = event
 
-        val publishedAt = (event as? LongTextNoteEvent)?.publishedAt() ?: Long.MAX_VALUE
-        val lastCreatedAt = event?.createdAt ?: Long.MAX_VALUE
+        if (currentEvent == null) return null
 
-        return minOf(publishedAt, lastCreatedAt)
+        val publishedAt =
+            when (currentEvent) {
+                is LongTextNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                is WikiNoteEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                is VideoEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                is ClassifiedsEvent -> currentEvent.publishedAt() ?: Long.MAX_VALUE
+                else -> Long.MAX_VALUE
+            }
+
+        return minOf(publishedAt, currentEvent.createdAt)
     }
 
     fun dTag(): String = address.dTag

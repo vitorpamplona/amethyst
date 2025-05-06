@@ -649,6 +649,7 @@
     <string name="relay_setup">Relays</string>
 
     <string name="discover_follows">Follow Packs</string>
+    <string name="discover_reads">Reads</string>
     <string name="discover_content">Feed Algorithms</string>
     <string name="discover_marketplace">Marketplace</string>
     <string name="discover_live">Live Streams</string>

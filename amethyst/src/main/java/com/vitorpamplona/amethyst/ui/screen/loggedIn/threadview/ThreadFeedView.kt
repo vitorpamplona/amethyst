@@ -162,7 +162,10 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.grayText
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
@@ -933,7 +936,7 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
                         it,
                     ),
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = MaterialTheme.colorScheme.imageModifier,
             )
         }
 
@@ -951,11 +954,12 @@ private fun RenderLongFormHeaderForThread(noteEvent: LongTextNoteEvent) {
             .summary()
             ?.ifBlank { null }
             ?.let {
-                Spacer(modifier = DoubleVertSpacer)
+                Spacer(modifier = StdVertSpacer)
                 Text(
                     text = it,
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
                 )
             }
     }

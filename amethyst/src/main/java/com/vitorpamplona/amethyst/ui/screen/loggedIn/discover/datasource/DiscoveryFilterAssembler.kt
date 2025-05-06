@@ -30,6 +30,7 @@ import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -251,7 +252,26 @@ class DiscoveryFilterAssembler(
                     SinceAuthorPerRelayFilter(
                         authors = follows,
                         kinds = listOf(FollowListEvent.KIND),
-                        limit = 500,
+                        limit = 300,
+                        since = since(key),
+                    ),
+            ),
+        )
+    }
+
+    fun createLongFormFilter(key: DiscoveryQueryState): List<TypedFilter> {
+        val follows =
+            key.account.liveDiscoveryListAuthorsPerRelay.value
+                ?.ifEmpty { null }
+
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.FOLLOWS),
+                filter =
+                    SinceAuthorPerRelayFilter(
+                        authors = follows,
+                        kinds = listOf(LongTextNoteEvent.KIND),
+                        limit = 300,
                         since = since(key),
                     ),
             ),
@@ -471,6 +491,7 @@ class DiscoveryFilterAssembler(
             .plus(createNIP89Filter(key))
             .plus(createPublicChatFilter(key))
             .plus(createFollowSetFilter(key))
+            .plus(createLongFormFilter(key))
             .plus(createMarketplaceFilter(key))
             .plus(
                 listOfNotNull(

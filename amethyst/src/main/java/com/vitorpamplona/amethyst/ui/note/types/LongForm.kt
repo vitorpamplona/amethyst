@@ -60,7 +60,7 @@ fun RenderLongFormContent(
 }
 
 @Composable
-private fun LongFormHeader(
+fun LongFormHeader(
     noteEvent: LongTextNoteEvent,
     note: Note,
     accountViewModel: AccountViewModel,
@@ -83,10 +83,7 @@ private fun LongFormHeader(
                     QuoteBorder,
                 ),
     ) {
-        val automaticallyShowUrlPreview =
-            remember { accountViewModel.settings.showImages.value }
-
-        if (automaticallyShowUrlPreview) {
+        if (accountViewModel.settings.showImages.value) {
             image?.let {
                 AsyncImage(
                     model = it,

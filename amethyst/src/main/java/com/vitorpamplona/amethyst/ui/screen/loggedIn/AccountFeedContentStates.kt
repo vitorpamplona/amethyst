@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.screen.FollowListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.DiscoverLongFormFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.DiscoverChatFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.DiscoverFollowSetsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.DiscoverLiveFeedFilter
@@ -55,6 +56,7 @@ class AccountFeedContentStates(
     val videoFeed = FeedContentState(VideoFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
 
     val discoverFollowSets = FeedContentState(DiscoverFollowSetsFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
+    val discoverReads = FeedContentState(DiscoverLongFormFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverMarketplace = FeedContentState(DiscoverMarketplaceFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverDVMs = FeedContentState(DiscoverNIP89FeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
     val discoverLive = FeedContentState(DiscoverLiveFeedFilter(accountViewModel.account), accountViewModel.viewModelScope)
@@ -84,6 +86,8 @@ class AccountFeedContentStates(
         videoFeed.updateFeedWith(newNotes)
 
         discoverMarketplace.updateFeedWith(newNotes)
+        discoverFollowSets.updateFeedWith(newNotes)
+        discoverReads.updateFeedWith(newNotes)
         discoverDVMs.updateFeedWith(newNotes)
         discoverLive.updateFeedWith(newNotes)
         discoverCommunities.updateFeedWith(newNotes)
@@ -105,6 +109,8 @@ class AccountFeedContentStates(
         videoFeed.destroy()
 
         discoverMarketplace.destroy()
+        discoverFollowSets.destroy()
+        discoverReads.destroy()
         discoverDVMs.destroy()
         discoverLive.destroy()
         discoverCommunities.destroy()
