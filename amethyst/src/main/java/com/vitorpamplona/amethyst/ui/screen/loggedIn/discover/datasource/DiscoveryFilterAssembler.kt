@@ -75,7 +75,6 @@ class DiscoveryFilterAssembler(
             relayUrl,
             time,
         )
-        invalidateFilters()
     }
 
     fun createMarketplaceFilter(key: DiscoveryQueryState): List<TypedFilter> {
