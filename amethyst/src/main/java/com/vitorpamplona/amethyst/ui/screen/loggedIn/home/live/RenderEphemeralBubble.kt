@@ -20,18 +20,17 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live
 
-import android.R.attr.onClick
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelNoteAuthors
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.Gallery
@@ -50,7 +49,7 @@ fun RenderEphemeralBubble(
             nav.nav { routeFor(channel) }
         },
     ) {
-        RenderUsers(channel, accountViewModel)
+        RenderUsers(channel, accountViewModel, nav)
         Spacer(StdHorzSpacer)
         Text(
             channel.toBestDisplayName(),
@@ -62,8 +61,9 @@ fun RenderEphemeralBubble(
 fun RenderUsers(
     channel: EphemeralChatChannel,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    val authors by observeChannelNoteAuthors(channel)
+    val authors by observeChannelNoteAuthors(channel, accountViewModel)
 
-    Gallery(authors, Modifier, accountViewModel, 3)
+    Gallery(authors, Modifier, accountViewModel, nav, 3)
 }

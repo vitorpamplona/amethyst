@@ -48,9 +48,9 @@ fun DefaultImageHeader(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    WatchAuthor(baseNote = note) {
+    WatchAuthor(baseNote = note, accountViewModel) {
         Box {
-            BannerImage(it, Modifier.fillMaxWidth().heightIn(max = 200.dp))
+            BannerImage(it, Modifier.fillMaxWidth().heightIn(max = 200.dp), accountViewModel)
 
             Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
                 BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
@@ -63,8 +63,9 @@ fun DefaultImageHeader(
 fun BannerImage(
     author: User,
     modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
 ) {
-    val banner by observeUserBanner(author)
+    val banner by observeUserBanner(author, accountViewModel)
 
     BannerImage(banner, modifier)
 }

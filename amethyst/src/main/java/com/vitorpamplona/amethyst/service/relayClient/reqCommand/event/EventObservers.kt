@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,9 +39,12 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.sample
 
 @Composable
-fun observeNote(note: Note): State<NoteState> {
+fun observeNote(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note
@@ -52,9 +56,12 @@ fun observeNote(note: Note): State<NoteState> {
 @Suppress("UNCHECKED_CAST")
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun <T : Event> observeNoteEvent(note: Note): State<T?> {
+fun <T : Event> observeNoteEvent(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<T?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -72,10 +79,11 @@ fun <T : Event> observeNoteEvent(note: Note): State<T?> {
 @Composable
 fun <T> observeNoteAndMap(
     note: Note,
+    accountViewModel: AccountViewModel,
     map: (Note) -> T,
 ): State<T> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     val flow =
         remember(note) {
@@ -96,10 +104,11 @@ fun <T> observeNoteAndMap(
 @Composable
 fun <T, U> observeNoteEventAndMap(
     note: Note,
+    accountViewModel: AccountViewModel,
     map: (T) -> U,
 ): State<U?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -118,9 +127,12 @@ fun <T, U> observeNoteEventAndMap(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeNoteHasEvent(note: Note): State<Boolean> {
+fun observeNoteHasEvent(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Boolean> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -136,9 +148,12 @@ fun observeNoteHasEvent(note: Note): State<Boolean> {
 }
 
 @Composable
-fun observeNoteReplies(note: Note): State<NoteState?> {
+fun observeNoteReplies(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note
@@ -149,9 +164,12 @@ fun observeNoteReplies(note: Note): State<NoteState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeNoteReplyCount(note: Note): State<Int> {
+fun observeNoteReplyCount(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -168,9 +186,12 @@ fun observeNoteReplyCount(note: Note): State<Int> {
 }
 
 @Composable
-fun observeNoteReactions(note: Note): State<NoteState?> {
+fun observeNoteReactions(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note
@@ -181,9 +202,12 @@ fun observeNoteReactions(note: Note): State<NoteState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeNoteReactionCount(note: Note): State<Int> {
+fun observeNoteReactionCount(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -202,9 +226,12 @@ fun observeNoteReactionCount(note: Note): State<Int> {
 }
 
 @Composable
-fun observeNoteZaps(note: Note): State<NoteState?> {
+fun observeNoteZaps(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note
@@ -214,9 +241,12 @@ fun observeNoteZaps(note: Note): State<NoteState?> {
 }
 
 @Composable
-fun observeNoteReposts(note: Note): State<NoteState?> {
+fun observeNoteReposts(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note
@@ -230,9 +260,10 @@ fun observeNoteReposts(note: Note): State<NoteState?> {
 fun observeNoteRepostsBy(
     note: Note,
     user: User,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -250,9 +281,12 @@ fun observeNoteRepostsBy(
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeNoteRepostCount(note: Note): State<Int> {
+fun observeNoteRepostCount(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -269,9 +303,12 @@ fun observeNoteRepostCount(note: Note): State<Int> {
 }
 
 @Composable
-fun observeNoteReferences(note: Note): State<Boolean> {
+fun observeNoteReferences(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<Boolean> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -289,9 +326,12 @@ fun observeNoteReferences(note: Note): State<Boolean> {
 }
 
 @Composable
-fun observeNoteOts(note: Note): State<NoteState?> {
+fun observeNoteOts(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note
@@ -302,9 +342,12 @@ fun observeNoteOts(note: Note): State<NoteState?> {
 }
 
 @Composable
-fun observeNoteEdits(note: Note): State<NoteState?> {
+fun observeNoteEdits(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
     // Subscribe in the relay for changes in this note.
-    EventFinderFilterAssemblerSubscription(note)
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return note

@@ -89,7 +89,7 @@ private fun LoggedInUserPictureDrawer(
     onClick: () -> Unit,
 ) {
     IconButton(onClick = onClick) {
-        val profilePicture by observeUserPicture(accountViewModel.userProfile())
+        val profilePicture by observeUserPicture(accountViewModel.userProfile(), accountViewModel)
 
         RobohashFallbackAsyncImage(
             robot = accountViewModel.userProfile().pubkeyHex,
@@ -107,6 +107,7 @@ private fun LoggedInUserPictureDrawer(
 fun FollowListWithRoutes(
     followListsModel: FollowListState,
     listName: String,
+    accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
     val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
@@ -116,6 +117,7 @@ fun FollowListWithRoutes(
         explainer = stringRes(R.string.select_list_to_filter),
         options = allLists,
         onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
+        accountViewModel = accountViewModel,
     )
 }
 
@@ -123,6 +125,7 @@ fun FollowListWithRoutes(
 fun FollowListWithoutRoutes(
     followListsModel: FollowListState,
     listName: String,
+    accountViewModel: AccountViewModel,
     onChange: (FeedDefinition) -> Unit,
 ) {
     val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
@@ -132,5 +135,6 @@ fun FollowListWithoutRoutes(
         explainer = stringRes(R.string.select_list_to_filter),
         options = allLists,
         onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
+        accountViewModel = accountViewModel,
     )
 }

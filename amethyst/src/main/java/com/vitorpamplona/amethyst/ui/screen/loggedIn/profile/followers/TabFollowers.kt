@@ -40,7 +40,7 @@ fun TabFollowers(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchFollowerChanges(baseUser, feedViewModel)
+    WatchFollowerChanges(baseUser, feedViewModel, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         RefreshingFeedUserFeedView(feedViewModel, accountViewModel, nav, enablePullRefresh = false)
@@ -51,8 +51,9 @@ fun TabFollowers(
 private fun WatchFollowerChanges(
     baseUser: User,
     feedViewModel: UserFeedViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-    val userState by observeUserFollowers(baseUser)
+    val userState by observeUserFollowers(baseUser, accountViewModel)
 
     LaunchedEffect(userState) { feedViewModel.invalidateData() }
 }

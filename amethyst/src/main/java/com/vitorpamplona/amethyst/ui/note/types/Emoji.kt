@@ -70,7 +70,7 @@ public fun RenderEmojiPack(
     accountViewModel: AccountViewModel,
     onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
-    val noteEvent by observeNoteEvent<EmojiPackEvent>(baseNote)
+    val noteEvent by observeNoteEvent<EmojiPackEvent>(baseNote, accountViewModel)
 
     noteEvent?.let {
         RenderEmojiPack(
@@ -179,7 +179,9 @@ private fun EmojiListOptions(
         accountViewModel,
     ) {
         it?.let { usersEmojiList ->
-            val hasAddedThis by observeNoteAndMap(usersEmojiList) { usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex) }
+            val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
+                usersEmojiList.event?.isTaggedAddressableNote(emojiPackNote.idHex)
+            }
 
             CrossfadeIfEnabled(targetState = hasAddedThis, label = "EmojiListOptions", accountViewModel = accountViewModel) {
                 if (it != true) {

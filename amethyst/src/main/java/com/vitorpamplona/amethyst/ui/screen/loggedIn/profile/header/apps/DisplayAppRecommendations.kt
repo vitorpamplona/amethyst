@@ -60,7 +60,7 @@ fun DisplayAppRecommendations(
                 Column {
                     Text(stringRes(id = R.string.recommended_apps))
 
-                    Recommends(state, nav)
+                    Recommends(state, accountViewModel, nav)
                 }
             }
             else -> {}
@@ -72,6 +72,7 @@ fun DisplayAppRecommendations(
 @OptIn(ExperimentalLayoutApi::class)
 fun Recommends(
     loaded: FeedState.Loaded,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
@@ -79,6 +80,6 @@ fun Recommends(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp),
     ) {
-        items.list.forEach { app -> WatchApp(app, nav) }
+        items.list.forEach { app -> WatchApp(app, accountViewModel, nav) }
     }
 }

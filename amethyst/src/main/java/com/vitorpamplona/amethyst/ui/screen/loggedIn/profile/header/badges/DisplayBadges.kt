@@ -75,12 +75,7 @@ fun DisplayBadges(
         accountViewModel,
     ) { note ->
         if (note != null) {
-            WatchAndRenderBadgeList(
-                note = note,
-                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                nav = nav,
-            )
+            WatchAndRenderBadgeList(note, accountViewModel, nav)
         }
     }
 }
@@ -88,38 +83,35 @@ fun DisplayBadges(
 @Composable
 private fun WatchAndRenderBadgeList(
     note: AddressableNote,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val badgeList by observeNoteEventAndMap(note) { event: BadgeProfilesEvent ->
+    val badgeList by observeNoteEventAndMap(note, accountViewModel) { event: BadgeProfilesEvent ->
         event.badgeAwardEvents().toImmutableList()
     }
 
-    badgeList?.let { list -> RenderBadgeList(list, loadProfilePicture, loadRobohash, nav) }
+    badgeList?.let { list -> RenderBadgeList(list, accountViewModel, nav) }
 }
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun RenderBadgeList(
     list: ImmutableList<ETag>,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     FlowRow(
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.padding(vertical = 5.dp),
     ) {
-        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, loadProfilePicture, loadRobohash, nav) }
+        list.forEach { badgeAwardEvent -> LoadAndRenderBadge(badgeAwardEvent, accountViewModel, nav) }
     }
 }
 
 @Composable
 private fun LoadAndRenderBadge(
     badgeAwardEvent: ETag,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     var baseNote by remember(badgeAwardEvent) { mutableStateOf(LocalCache.getNoteIfExists(badgeAwardEvent)) }
@@ -132,38 +124,35 @@ private fun LoadAndRenderBadge(
         }
     }
 
-    baseNote?.let { ObserveAndRenderBadge(it, loadProfilePicture, loadRobohash, nav) }
+    baseNote?.let { ObserveAndRenderBadge(it, accountViewModel, nav) }
 }
 
 @Composable
 private fun ObserveAndRenderBadge(
     it: Note,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val badgeAwardState by observeNote(it)
-    val baseBadgeDefinition = badgeAwardState?.note?.replyTo?.firstOrNull()
-    baseBadgeDefinition?.let { BadgeThumb(it, loadProfilePicture, loadRobohash, nav, Size35dp) }
+    val badgeAwardState by observeNote(it, accountViewModel)
+    val baseBadgeDefinition = badgeAwardState.note.replyTo?.firstOrNull()
+    baseBadgeDefinition?.let { BadgeThumb(it, accountViewModel, nav, Size35dp) }
 }
 
 @Composable
 fun BadgeThumb(
     note: Note,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     nav: INav,
     size: Dp,
     pictureModifier: Modifier = Modifier,
 ) {
-    BadgeThumb(note, loadProfilePicture, loadRobohash, size, pictureModifier) { nav.nav(Route.Note(note.idHex)) }
+    BadgeThumb(note, accountViewModel, size, pictureModifier) { nav.nav(Route.Note(note.idHex)) }
 }
 
 @Composable
 fun BadgeThumb(
     baseNote: Note,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
     size: Dp,
     pictureModifier: Modifier = Modifier,
     onClick: ((String) -> Unit)? = null,
@@ -175,25 +164,24 @@ fun BadgeThumb(
                 .height(size)
         },
     ) {
-        WatchAndRenderBadgeImage(baseNote, loadProfilePicture, loadRobohash, size, pictureModifier, onClick)
+        WatchAndRenderBadgeImage(baseNote, size, pictureModifier, accountViewModel, onClick)
     }
 }
 
 @Composable
 private fun WatchAndRenderBadgeImage(
     baseNote: Note,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
     size: Dp,
     pictureModifier: Modifier,
+    accountViewModel: AccountViewModel,
     onClick: ((String) -> Unit)?,
 ) {
-    val noteState by observeNote(baseNote)
+    val noteState by observeNote(baseNote, accountViewModel)
     val eventId = remember(noteState) { noteState?.note?.idHex } ?: return
     val image by
         remember(noteState) {
             derivedStateOf {
-                val event = noteState?.note?.event as? BadgeDefinitionEvent
+                val event = noteState.note.event as? BadgeDefinitionEvent
                 event?.thumb()?.ifBlank { null } ?: event?.image()?.ifBlank { null }
             }
         }
@@ -208,7 +196,7 @@ private fun WatchAndRenderBadgeImage(
                         .width(size)
                         .height(size)
                 },
-            loadRobohash = loadRobohash,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     } else {
         RobohashFallbackAsyncImage(
@@ -229,8 +217,8 @@ private fun WatchAndRenderBadgeImage(
                             }
                         }
                 },
-            loadProfilePicture = loadProfilePicture,
-            loadRobohash = loadRobohash,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
 }

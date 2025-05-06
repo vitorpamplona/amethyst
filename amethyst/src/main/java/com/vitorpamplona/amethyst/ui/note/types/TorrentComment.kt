@@ -223,7 +223,7 @@ fun ShortTorrentHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent by observeNoteEvent<TorrentEvent>(baseNote)
+    val noteEvent by observeNoteEvent<TorrentEvent>(baseNote, accountViewModel)
 
     ShortTorrentHeader(
         title = noteEvent?.title() ?: TorrentEvent.ALT_DESCRIPTION,

@@ -65,19 +65,19 @@ fun RenderInteractiveStory(
     val address = baseNote.address() ?: return
 
     // keep updating the root event with new versions
-    val note = observeNote(baseNote)
+    val note = observeNote(baseNote, accountViewModel)
     val rootEvent = note.value?.note?.event as? InteractiveStoryBaseEvent ?: return
 
     // keep updating the reading state event with new versions
     val readingStateNote = accountViewModel.getInteractiveStoryReadingState(address.toValue())
-    val readingState by observeNoteEvent<InteractiveStoryReadingStateEvent>(readingStateNote)
+    val readingState by observeNoteEvent<InteractiveStoryReadingStateEvent>(readingStateNote, accountViewModel)
 
     val currentScene = readingState?.currentScene()
 
     if (currentScene != null && currentScene != rootEvent.address()) {
         LoadAddressableNote(currentScene, accountViewModel) { currentSceneBaseNote ->
             currentSceneBaseNote?.let {
-                val currentSceneEvent by observeNoteEvent<InteractiveStoryBaseEvent>(it)
+                val currentSceneEvent by observeNoteEvent<InteractiveStoryBaseEvent>(it, accountViewModel)
 
                 currentSceneEvent?.let {
                     RenderInteractiveStory(
@@ -166,7 +166,7 @@ fun RenderInteractiveStory(
             options.forEach { opt ->
                 LoadAddressableNote(opt.address, accountViewModel) { note ->
                     if (note != null) {
-                        EventFinderFilterAssemblerSubscription(note)
+                        EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
                         OutlinedButton(
                             onClick = { onSelect(note) },

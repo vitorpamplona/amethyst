@@ -40,6 +40,7 @@ fun DiscoveryTopBar(
         FollowListWithoutRoutes(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
+            accountViewModel,
         ) { listName ->
             accountViewModel.account.settings.changeDefaultDiscoveryFollowList(listName.code)
         }

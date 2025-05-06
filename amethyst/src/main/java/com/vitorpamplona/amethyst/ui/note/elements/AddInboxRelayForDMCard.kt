@@ -106,7 +106,7 @@ fun ObserveRelayListForDMs(
         accountViewModel,
     ) { relayList ->
         if (relayList != null) {
-            val relayListEvent by observeNoteEvent<ChatMessageRelayListEvent>(relayList)
+            val relayListEvent by observeNoteEvent<ChatMessageRelayListEvent>(relayList, accountViewModel)
 
             inner(relayListEvent)
         }

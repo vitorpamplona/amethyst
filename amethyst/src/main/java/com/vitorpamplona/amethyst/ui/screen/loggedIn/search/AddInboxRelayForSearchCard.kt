@@ -105,7 +105,7 @@ fun ObserveRelayListForSearch(
         accountViewModel,
     ) { relayList ->
         if (relayList != null) {
-            val relayListEvent by observeNoteEvent<SearchRelayListEvent>(relayList)
+            val relayListEvent by observeNoteEvent<SearchRelayListEvent>(relayList, accountViewModel)
 
             inner(relayListEvent)
         }

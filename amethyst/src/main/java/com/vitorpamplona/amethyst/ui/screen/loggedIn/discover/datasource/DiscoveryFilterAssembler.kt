@@ -33,6 +33,7 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
@@ -235,6 +236,25 @@ class DiscoveryFilterAssembler(
             } else {
                 null
             },
+        )
+    }
+
+    fun createFollowSetFilter(key: DiscoveryQueryState): List<TypedFilter> {
+        val follows =
+            key.account.liveDiscoveryListAuthorsPerRelay.value
+                ?.ifEmpty { null }
+
+        return listOfNotNull(
+            TypedFilter(
+                types = setOf(FeedType.FOLLOWS),
+                filter =
+                    SinceAuthorPerRelayFilter(
+                        authors = follows,
+                        kinds = listOf(FollowListEvent.KIND),
+                        limit = 500,
+                        since = since(key),
+                    ),
+            ),
         )
     }
 
@@ -450,6 +470,7 @@ class DiscoveryFilterAssembler(
         createLiveStreamFilter(key)
             .plus(createNIP89Filter(key))
             .plus(createPublicChatFilter(key))
+            .plus(createFollowSetFilter(key))
             .plus(createMarketplaceFilter(key))
             .plus(
                 listOfNotNull(

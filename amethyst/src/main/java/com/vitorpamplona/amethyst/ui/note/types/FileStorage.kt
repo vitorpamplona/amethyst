@@ -67,7 +67,7 @@ private fun ObserverAndRenderNIP95(
 ) {
     val eventHeader = (header.event as? FileStorageHeaderEvent) ?: return
 
-    val noteState by observeNote(content)
+    val noteState by observeNote(content, accountViewModel)
 
     val content by
         remember(noteState) {

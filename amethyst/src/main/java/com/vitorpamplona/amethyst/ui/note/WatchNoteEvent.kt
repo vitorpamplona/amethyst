@@ -74,7 +74,7 @@ fun WatchNoteEvent(
         onNoteEventFound()
     } else {
         // avoid observing costs if already has an event.
-        val hasEvent by observeNoteHasEvent(baseNote)
+        val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
         CrossfadeIfEnabled(targetState = hasEvent, label = "Event presence", accountViewModel = accountViewModel) {
             if (it) {
                 onNoteEventFound()

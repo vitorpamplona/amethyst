@@ -597,7 +597,7 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
     author: User,
     accountViewModel: AccountViewModel,
 ) {
-    WatchUserMetadata(author) { baseUserPicture ->
+    WatchUserMetadata(author, accountViewModel) { baseUserPicture ->
         RobohashFallbackAsyncImage(
             robot = author.pubkeyHex,
             model = baseUserPicture,
@@ -621,9 +621,10 @@ fun WatchUserMetadataAndFollowsAndRenderUserProfilePicture(
 @Composable
 private fun WatchUserMetadata(
     author: User,
+    accountViewModel: AccountViewModel,
     onNewMetadata: @Composable (String?) -> Unit,
 ) {
-    val userProfile by observeUserPicture(author)
+    val userProfile by observeUserPicture(author, accountViewModel)
 
     onNewMetadata(userProfile)
 }

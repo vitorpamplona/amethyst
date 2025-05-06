@@ -188,7 +188,7 @@ fun ZapTheDevsCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val releaseNoteState by observeNote(baseNote)
+    val releaseNoteState by observeNote(baseNote, accountViewModel)
     val releaseNote = releaseNoteState?.note ?: return
 
     Row(modifier = Modifier.padding(start = Size10dp, end = Size10dp, bottom = Size10dp)) {

@@ -82,7 +82,7 @@ fun ShortEphemeralChatChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by observeChannel(baseChannel)
+    val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? EphemeralChatChannel ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -153,7 +153,7 @@ fun JoinEphemeralChatButtonIfNotAlreadyJoined(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel)
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (!isFollowing) {
         JoinChatButton(channel, accountViewModel, nav)

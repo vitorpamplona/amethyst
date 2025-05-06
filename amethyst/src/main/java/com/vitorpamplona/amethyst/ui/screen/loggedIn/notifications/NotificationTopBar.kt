@@ -40,6 +40,7 @@ fun NotificationTopBar(
         FollowListWithoutRoutes(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
+            accountViewModel,
         ) { listName ->
             accountViewModel.account.settings.changeDefaultNotificationFollowList(listName.code)
         }

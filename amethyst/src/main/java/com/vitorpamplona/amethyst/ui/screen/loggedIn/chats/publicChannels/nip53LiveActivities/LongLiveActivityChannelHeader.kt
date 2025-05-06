@@ -77,7 +77,7 @@ fun LongLiveActivityChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by observeChannel(baseChannel)
+    val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
 
     Row(
@@ -129,7 +129,7 @@ fun LongLiveActivityChannelHeader(
                     modifier = Modifier.width(75.dp),
                 )
                 Spacer(DoubleHorzSpacer)
-                NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
+                NoteAuthorPicture(note, Size25dp, accountViewModel = accountViewModel, nav = nav)
                 Spacer(DoubleHorzSpacer)
                 NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
             }

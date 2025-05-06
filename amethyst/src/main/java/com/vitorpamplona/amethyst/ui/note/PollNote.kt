@@ -264,7 +264,7 @@ fun PollNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchZapsAndUpdateTallies(baseNote, pollViewModel)
+    WatchZapsAndUpdateTallies(baseNote, pollViewModel, accountViewModel)
 
     pollViewModel.tallies.forEach { option ->
         OptionNote(
@@ -283,8 +283,9 @@ fun PollNote(
 private fun WatchZapsAndUpdateTallies(
     baseNote: Note,
     pollViewModel: PollNoteViewModel,
+    accountViewModel: AccountViewModel,
 ) {
-    val zapsState by observeNoteZaps(baseNote)
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     LaunchedEffect(key1 = zapsState) { pollViewModel.refreshTallies() }
 }

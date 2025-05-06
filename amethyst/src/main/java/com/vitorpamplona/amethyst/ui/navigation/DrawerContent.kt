@@ -157,7 +157,7 @@ fun DrawerContent(
                 EditStatusBoxes(accountViewModel.account.userProfile(), accountViewModel, nav)
             }
 
-            FollowingAndFollowerCounts(accountViewModel.account, onClickUser)
+            FollowingAndFollowerCounts(accountViewModel.account, accountViewModel, onClickUser)
 
             HorizontalDivider(
                 thickness = DividerThickness,
@@ -191,7 +191,7 @@ fun ProfileContent(
     accountViewModel: AccountViewModel,
     onClickUser: () -> Unit,
 ) {
-    val userInfo by observeUserInfo(baseAccountUser)
+    val userInfo by observeUserInfo(baseAccountUser, accountViewModel)
 
     ProfileContentTemplate(
         profilePubHex = baseAccountUser.pubkeyHex,
@@ -278,7 +278,7 @@ private fun EditStatusBoxes(
             StatusEditBar(accountViewModel = accountViewModel, nav = nav)
         } else {
             statuses.forEach {
-                val noteStatus by observeNote(it)
+                val noteStatus by observeNote(it, accountViewModel)
 
                 StatusEditBar(noteStatus.note.event?.content, it.address, accountViewModel, nav)
             }
@@ -387,13 +387,14 @@ fun UserStatusDeleteButton(onClick: () -> Unit) {
 @Composable
 private fun FollowingAndFollowerCounts(
     baseAccountUser: Account,
+    accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = drawerSpacing.clickable(onClick = onClick),
     ) {
         val followingCount = baseAccountUser.liveKind3Follows.collectAsStateWithLifecycle()
-        val followerCount by observeUserFollowerCount(baseAccountUser.userProfile())
+        val followerCount by observeUserFollowerCount(baseAccountUser.userProfile(), accountViewModel)
 
         Text(
             text =

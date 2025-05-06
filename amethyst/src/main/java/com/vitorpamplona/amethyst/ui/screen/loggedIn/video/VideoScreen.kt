@@ -313,7 +313,7 @@ private fun RenderAuthorInformation(
     accountViewModel: AccountViewModel,
 ) {
     Row(modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        NoteAuthorPicture(note, nav, accountViewModel, Size55dp)
+        NoteAuthorPicture(note, Size55dp, accountViewModel = accountViewModel, nav = nav)
 
         Spacer(modifier = DoubleHorzSpacer)
 

@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.screen.HashtagName
 import com.vitorpamplona.amethyst.ui.screen.Name
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -82,6 +83,7 @@ fun FeedFilterSpinner(
     options: ImmutableList<FeedDefinition>,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
 ) {
     var optionsShowing by remember { mutableStateOf(false) }
 
@@ -208,14 +210,17 @@ fun FeedFilterSpinner(
                     onSelect(it)
                 },
             ) {
-                RenderOption(it.name)
+                RenderOption(it.name, accountViewModel)
             }
         }
     }
 }
 
 @Composable
-fun RenderOption(option: Name) {
+fun RenderOption(
+    option: Name,
+    accountViewModel: AccountViewModel,
+) {
     when (option) {
         is GeoHashName -> {
             LoadCityName(option.geoHashTag) {
@@ -251,7 +256,7 @@ fun RenderOption(option: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                val noteState by observeNote(option.note)
+                val noteState by observeNote(option.note, accountViewModel)
 
                 val noteEvent = noteState.note.event
                 val name =
@@ -271,7 +276,7 @@ fun RenderOption(option: Name) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                val it by observeNote(option.note)
+                val it by observeNote(option.note, accountViewModel)
 
                 Text(text = "/n/${((it?.note as? AddressableNote)?.dTag() ?: "")}", color = MaterialTheme.colorScheme.onSurface)
             }

@@ -291,7 +291,7 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
@@ -331,7 +331,7 @@ fun AcceptableNote(
                         nav = nav,
                     )
                 }
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             else ->
                 LongPressToQuickAction(baseNote = baseNote, accountViewModel = accountViewModel) { showPopup ->
                     CheckNewAndRenderNote(
@@ -856,7 +856,7 @@ fun ObserveDraftEvent(
     accountViewModel: AccountViewModel,
     render: @Composable (Note) -> Unit,
 ) {
-    val noteEvent by observeNoteEvent<DraftEvent>(note)
+    val noteEvent by observeNoteEvent<DraftEvent>(note, accountViewModel)
 
     noteEvent?.let {
         val innerNote by produceCachedStateAsync(cache = accountViewModel.draftNoteCache, key = it)
@@ -1051,7 +1051,7 @@ fun FirstUserInfoRow(
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 
         if (showAuthorPicture) {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
+            NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
             Spacer(HalfPadding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else {
@@ -1116,7 +1116,7 @@ fun observeEdits(
             )
         }
 
-    val updatedNote by observeNoteEdits(baseNote)
+    val updatedNote by observeNoteEdits(baseNote, accountViewModel)
 
     LaunchedEffect(key1 = updatedNote) {
         updatedNote?.note?.let {
@@ -1167,10 +1167,10 @@ private fun RenderAuthorImages(
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
         } else {
-            NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
+            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
         }
     } else {
-        NoteAuthorPicture(baseNote, nav, accountViewModel, Size55dp)
+        NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
     }
 
     if (baseNote.event is ChannelMessageEvent) {
@@ -1179,8 +1179,7 @@ private fun RenderAuthorImages(
             LoadChannel(baseChannelHex, accountViewModel) { channel ->
                 ChannelNotePicture(
                     channel,
-                    loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
-                    loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                    accountViewModel,
                 )
             }
         }
@@ -1190,18 +1189,17 @@ private fun RenderAuthorImages(
 @Composable
 private fun ChannelNotePicture(
     baseChannel: Channel,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
 ) {
-    val model by observeChannelPicture(baseChannel)
+    val model by observeChannelPicture(baseChannel, accountViewModel)
 
     RobohashFallbackAsyncImage(
         robot = baseChannel.idHex,
         model = model,
         contentDescription = stringRes(R.string.group_picture),
         modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
 }
 
@@ -1216,17 +1214,17 @@ private fun RepostNoteAuthorPicture(
         baseAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseNote,
-                nav = nav,
-                accountViewModel = accountViewModel,
                 size = Size34dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         },
         repostAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseRepost,
-                nav = nav,
-                accountViewModel = accountViewModel,
                 size = Size34dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         },
     )

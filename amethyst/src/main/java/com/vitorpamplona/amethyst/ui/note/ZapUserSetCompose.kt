@@ -106,7 +106,7 @@ fun ZapUserSetCompose(
                     Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
                         Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user, accountViewModel = accountViewModel) }
 
-                        AboutDisplay(zapSetCard.user)
+                        AboutDisplay(zapSetCard.user, accountViewModel)
                     }
                 }
 

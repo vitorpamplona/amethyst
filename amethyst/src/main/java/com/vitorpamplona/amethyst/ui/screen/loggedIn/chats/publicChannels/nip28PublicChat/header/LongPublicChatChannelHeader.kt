@@ -73,7 +73,7 @@ fun LongPublicChatChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by observeChannel(baseChannel)
+    val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? PublicChatChannel ?: return
 
     Spacer(StdVertSpacer)
@@ -147,7 +147,7 @@ fun LongPublicChatChannelHeader(
                     modifier = Modifier.width(75.dp),
                 )
                 Spacer(DoubleHorzSpacer)
-                NoteAuthorPicture(note, nav, accountViewModel, Size25dp)
+                NoteAuthorPicture(note, Size25dp, accountViewModel = accountViewModel, nav = nav)
                 Spacer(DoubleHorzSpacer)
                 NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
             }
@@ -211,7 +211,7 @@ fun LeaveButtonIfFollowing(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel)
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (isFollowing) {
         LeaveChatButton(channel, accountViewModel, nav)

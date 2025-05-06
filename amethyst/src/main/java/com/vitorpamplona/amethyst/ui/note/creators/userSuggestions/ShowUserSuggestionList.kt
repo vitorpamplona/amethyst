@@ -55,7 +55,7 @@ fun ShowUserSuggestionList(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier.heightIn(0.dp, 200.dp),
 ) {
-    UserSearchDataSourceSubscription(userSuggestions)
+    UserSearchDataSourceSubscription(userSuggestions, accountViewModel)
 
     val listState = rememberLazyListState()
 
@@ -135,7 +135,7 @@ fun UserLine(
                 )
             }
 
-            AboutDisplay(baseUser)
+            AboutDisplay(baseUser, accountViewModel)
         }
     }
 }

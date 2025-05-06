@@ -130,7 +130,7 @@ fun RenderLiveActivityEventInner(
 ) {
     val noteEvent = baseNote.event as? LiveActivitiesEvent ?: return
 
-    val eventUpdates by observeNote(baseNote)
+    val eventUpdates by observeNote(baseNote, accountViewModel)
 
     val media = remember(eventUpdates) { noteEvent.streaming() }
     val cover = remember(eventUpdates) { noteEvent.image() }
@@ -222,7 +222,7 @@ fun RenderLiveActivityEventInner(
                         ) {
                             AsyncImage(model = it, contentDescription = null, modifier = MaterialTheme.colorScheme.imageModifier)
                         }
-                    } ?: run { DisplayAuthorBanner(baseNote) }
+                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel) }
 
                     Text(
                         text = stringRes(id = R.string.live_stream_has_ended),

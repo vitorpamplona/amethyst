@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun EventFinderFilterAssemblerSubscription(note: Note) = EventFinderFilterAssemblerSubscription(note, Amethyst.instance.sources.eventFinder)
+fun EventFinderFilterAssemblerSubscription(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) = EventFinderFilterAssemblerSubscription(note, accountViewModel.dataSources().eventFinder)
 
 @Composable
 fun EventFinderFilterAssemblerSubscription(

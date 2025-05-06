@@ -69,6 +69,7 @@ fun ReplyInformationChannel(
         ReplyInformationChannel(
             replyTo,
             sortedMentions,
+            accountViewModel = accountViewModel,
             onUserTagClick = { nav.nav(routeFor(it)) },
         )
         Spacer(modifier = StdVertSpacer)
@@ -81,6 +82,7 @@ fun ReplyInformationChannel(
     replyTo: ImmutableList<Note>?,
     mentions: ImmutableList<User>?,
     prefix: String = "",
+    accountViewModel: AccountViewModel,
     onUserTagClick: (User) -> Unit,
 ) {
     FlowRow {
@@ -93,7 +95,7 @@ fun ReplyInformationChannel(
                 )
 
                 mentions.forEachIndexed { idx, user ->
-                    ReplyInfoMention(user, prefix, onUserTagClick)
+                    ReplyInfoMention(user, prefix, accountViewModel, onUserTagClick)
 
                     if (idx < mentions.size - 2) {
                         Text(
@@ -118,9 +120,10 @@ fun ReplyInformationChannel(
 private fun ReplyInfoMention(
     user: User,
     prefix: String,
+    accountViewModel: AccountViewModel,
     onUserTagClick: (User) -> Unit,
 ) {
-    val innerUserState by observeUserInfo(user)
+    val innerUserState by observeUserInfo(user, accountViewModel)
 
     CreateClickableTextWithEmoji(
         clickablePart = "$prefix${innerUserState?.bestName()}",

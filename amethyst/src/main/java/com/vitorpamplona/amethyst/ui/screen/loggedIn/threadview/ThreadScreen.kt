@@ -58,7 +58,7 @@ fun ThreadScreen(
     LoadNote(noteId, accountViewModel) {
         if (it != null) {
             // this will force loading every post from this thread.
-            EventFinderFilterAssemblerSubscription(it)
+            EventFinderFilterAssemblerSubscription(it, accountViewModel)
         }
     }
 

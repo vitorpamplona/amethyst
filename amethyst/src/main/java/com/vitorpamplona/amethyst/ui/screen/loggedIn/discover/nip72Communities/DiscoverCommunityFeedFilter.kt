@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -38,13 +38,13 @@ open class DiscoverCommunityFeedFilter(
 
     override fun showHiddenKey(): Boolean =
         account.settings.defaultDiscoveryFollowList.value ==
-            PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
+            PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
             account.settings.defaultDiscoveryFollowList.value ==
-            MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+            MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val filterParams =
-            FilterByListParams.create(
+            FilterByListParams.Companion.create(
                 userHex = account.userProfile().pubkeyHex,
                 selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,
@@ -55,7 +55,7 @@ open class DiscoverCommunityFeedFilter(
         val notes =
             LocalCache.addressables.mapNotNullIntoSet { key, note ->
                 val noteEvent = note.event
-                if (noteEvent == null && shouldInclude(Address.parse(key), filterParams)) {
+                if (noteEvent == null && shouldInclude(Address.Companion.parse(key), filterParams)) {
                     // send unloaded communities to the screen
                     note
                 } else if (noteEvent is CommunityDefinitionEvent && filterParams.match(noteEvent)) {
@@ -73,7 +73,7 @@ open class DiscoverCommunityFeedFilter(
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // here, we need to look for CommunityDefinition in new collection AND new CommunityDefinition from Post Approvals
         val filterParams =
-            FilterByListParams.create(
+            FilterByListParams.Companion.create(
                 userHex = account.userProfile().pubkeyHex,
                 selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,
@@ -109,7 +109,7 @@ open class DiscoverCommunityFeedFilter(
     private fun shouldInclude(
         aTag: Address?,
         params: FilterByListParams,
-    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag)
+    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.Companion.KIND && params.match(aTag)
 
     override fun sort(collection: Set<Note>): List<Note> {
         val lastNote =

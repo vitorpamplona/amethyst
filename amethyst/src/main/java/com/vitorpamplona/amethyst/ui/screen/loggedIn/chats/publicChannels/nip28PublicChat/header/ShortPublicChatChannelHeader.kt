@@ -60,7 +60,7 @@ fun ShortPublicChatChannelHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by observeChannel(baseChannel)
+    val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? PublicChatChannel ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,7 +139,7 @@ fun JoinChatButtonIfNotAlreadyJoined(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel)
+    val isFollowing by observeUserIsFollowingChannel(accountViewModel.account, channel, accountViewModel)
 
     if (!isFollowing) {
         JoinChatButton(channel, accountViewModel, nav)

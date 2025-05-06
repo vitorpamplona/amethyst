@@ -402,6 +402,7 @@ private fun RenderScreen(
             CreateAndRenderTabs(
                 baseUser,
                 pagerState,
+                accountViewModel,
             )
         }
         HorizontalPager(
@@ -484,6 +485,7 @@ fun UpdateThreadsAndRepliesWhenBlockUnblock(
 private fun CreateAndRenderTabs(
     baseUser: User,
     pagerState: PagerState,
+    accountViewModel: AccountViewModel,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -493,13 +495,13 @@ private fun CreateAndRenderTabs(
             { Text(text = stringRes(R.string.replies)) },
             { Text(text = stringRes(R.string.mutual)) },
             { Text(text = stringRes(R.string.gallery)) },
-            { FollowTabHeader(baseUser) },
-            { FollowersTabHeader(baseUser) },
-            { ZapTabHeader(baseUser) },
-            { BookmarkTabHeader(baseUser) },
-            { FollowedTagsTabHeader(baseUser) },
-            { ReportsTabHeader(baseUser) },
-            { RelaysTabHeader(baseUser) },
+            { FollowTabHeader(baseUser, accountViewModel) },
+            { FollowersTabHeader(baseUser, accountViewModel) },
+            { ZapTabHeader(baseUser, accountViewModel) },
+            { BookmarkTabHeader(baseUser, accountViewModel) },
+            { FollowedTagsTabHeader(baseUser, accountViewModel) },
+            { ReportsTabHeader(baseUser, accountViewModel) },
+            { RelaysTabHeader(baseUser, accountViewModel) },
         )
 
     tabs.forEachIndexed { index, function ->

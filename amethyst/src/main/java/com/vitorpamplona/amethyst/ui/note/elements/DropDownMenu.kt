@@ -382,8 +382,8 @@ fun WatchBookmarksFollowsAndAccount(
     accountViewModel: AccountViewModel,
     onNew: (DropDownParams) -> Unit,
 ) {
-    val followState by observeUserFollows(accountViewModel.userProfile())
-    val bookmarkState by observeUserBookmarks(accountViewModel.userProfile())
+    val followState by observeUserFollows(accountViewModel.userProfile(), accountViewModel)
+    val bookmarkState by observeUserBookmarks(accountViewModel.userProfile(), accountViewModel)
     val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {

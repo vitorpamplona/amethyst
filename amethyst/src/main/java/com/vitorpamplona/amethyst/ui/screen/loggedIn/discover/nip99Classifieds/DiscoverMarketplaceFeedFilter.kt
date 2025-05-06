@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -37,8 +37,8 @@ open class DiscoverMarketplaceFeedFilter(
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
+            followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val params = buildFilterParams(account)
@@ -55,7 +55,7 @@ open class DiscoverMarketplaceFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.create(
+        FilterByListParams.Companion.create(
             account.userProfile().pubkeyHex,
             account.settings.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,

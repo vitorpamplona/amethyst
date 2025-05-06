@@ -111,7 +111,7 @@ fun SearchScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            SearchBar(searchBarViewModel, listState, nav)
+            SearchBar(searchBarViewModel, listState, accountViewModel, nav)
         },
         bottomBar = {
             AppBottomBar(Route.Search, accountViewModel) { route ->
@@ -134,9 +134,10 @@ fun SearchScreen(
 private fun SearchBar(
     searchBarViewModel: SearchBarViewModel,
     listState: LazyListState,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    TextSearchDataSourceSubscription(searchBarViewModel)
+    TextSearchDataSourceSubscription(searchBarViewModel, accountViewModel)
 
     LaunchedEffect(Unit) {
         LocalCache.live.newEventBundles.collect {

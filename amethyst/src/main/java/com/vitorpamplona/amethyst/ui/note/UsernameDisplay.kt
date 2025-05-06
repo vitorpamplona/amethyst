@@ -54,7 +54,7 @@ fun NoteUsernameDisplay(
     textColor: Color = Color.Unspecified,
     accountViewModel: AccountViewModel,
 ) {
-    WatchAuthor(baseNote) {
+    WatchAuthor(baseNote, accountViewModel) {
         UsernameDisplay(it, weight, textColor = textColor, accountViewModel = accountViewModel)
     }
 }
@@ -62,13 +62,14 @@ fun NoteUsernameDisplay(
 @Composable
 fun WatchAuthor(
     baseNote: Note,
+    accountViewModel: AccountViewModel,
     inner: @Composable (User) -> Unit,
 ) {
     val noteAuthor = baseNote.author
     if (noteAuthor != null) {
         inner(noteAuthor)
     } else {
-        val authorState by observeNote(baseNote)
+        val authorState by observeNote(baseNote, accountViewModel)
         authorState?.note?.author?.let {
             inner(it)
         }
@@ -86,7 +87,7 @@ fun WatchAuthorWithBlank(
     if (noteAuthor != null) {
         inner(noteAuthor)
     } else {
-        val authorState by observeNote(baseNote)
+        val authorState by observeNote(baseNote, accountViewModel)
         CrossfadeIfEnabled(targetState = authorState?.note?.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
             inner(newAuthor)
         }
@@ -101,7 +102,7 @@ fun UsernameDisplay(
     textColor: Color = Color.Unspecified,
     accountViewModel: AccountViewModel,
 ) {
-    val userMetadata by observeUserInfo(baseUser)
+    val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userMetadata, modifier = weight, label = "UsernameDisplay", accountViewModel = accountViewModel) {
         val name = it?.bestName()

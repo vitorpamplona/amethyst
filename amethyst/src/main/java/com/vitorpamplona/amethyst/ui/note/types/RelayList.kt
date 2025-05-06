@@ -278,7 +278,7 @@ private fun RelayOptionsAction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val isCurrentlyOnTheUsersList by observeUserRelayIntoList(accountViewModel.userProfile(), relay)
+    val isCurrentlyOnTheUsersList by observeUserRelayIntoList(accountViewModel.userProfile(), relay, accountViewModel)
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {

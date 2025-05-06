@@ -438,9 +438,9 @@ private fun FullBleedNoteCompose(
         ) {
             NoteAuthorPicture(
                 baseNote = baseNote,
-                nav = nav,
-                accountViewModel = accountViewModel,
                 size = Size55dp,
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -500,7 +500,7 @@ private fun FullBleedNoteCompose(
         Spacer(modifier = Modifier.height(10.dp))
 
         when (noteEvent) {
-            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote)
+            is BadgeDefinitionEvent -> BadgeDisplay(baseNote = baseNote, accountViewModel)
             is LongTextNoteEvent -> RenderLongFormHeaderForThread(noteEvent)
             is WikiNoteEvent -> RenderWikiHeaderForThread(noteEvent, accountViewModel, nav)
             is ClassifiedsEvent -> RenderClassifiedsReaderForThread(noteEvent, baseNote, accountViewModel, nav)

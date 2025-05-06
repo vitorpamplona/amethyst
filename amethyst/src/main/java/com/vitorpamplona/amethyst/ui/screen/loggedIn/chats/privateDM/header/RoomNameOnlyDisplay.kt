@@ -47,7 +47,7 @@ fun RoomNameOnlyDisplay(
     fontWeight: FontWeight = FontWeight.Bold,
     accountViewModel: AccountViewModel,
 ) {
-    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room)
+    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room, accountViewModel)
 
     CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
@@ -98,7 +98,7 @@ fun RoomNameDisplay(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room)
+    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room, accountViewModel)
 
     CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
@@ -158,7 +158,7 @@ fun ShortUsernameDisplay(
     fontWeight: FontWeight = FontWeight.Bold,
     accountViewModel: AccountViewModel,
 ) {
-    val userName by observeUserShortName(baseUser)
+    val userName by observeUserShortName(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = userName, modifier = weight, accountViewModel = accountViewModel) {
         CreateTextWithEmoji(

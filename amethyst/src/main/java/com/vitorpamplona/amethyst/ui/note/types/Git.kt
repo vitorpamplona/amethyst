@@ -100,7 +100,7 @@ private fun RenderShortRepositoryHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent by observeNoteEvent<GitRepositoryEvent>(baseNote)
+    val noteEvent by observeNoteEvent<GitRepositoryEvent>(baseNote, accountViewModel)
 
     Column(
         modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),

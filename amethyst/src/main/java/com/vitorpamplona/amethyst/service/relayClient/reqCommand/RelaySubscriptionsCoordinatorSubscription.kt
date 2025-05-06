@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun RelaySubscriptionsCoordinatorSubscription() = RelaySubscriptionsCoordinatorSubscription(Amethyst.instance.sources)
+fun RelaySubscriptionsCoordinatorSubscription(accountViewModel: AccountViewModel) = RelaySubscriptionsCoordinatorSubscription(accountViewModel.dataSources())
 
 @Composable
 fun RelaySubscriptionsCoordinatorSubscription(dataSource: RelaySubscriptionsCoordinator) {

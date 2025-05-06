@@ -34,8 +34,8 @@ fun DisplayFollowUnfollowButton(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val isLoggedInFollowingUser by observeUserIsFollowing(accountViewModel.account.userProfile(), baseUser)
-    val isUserFollowingLoggedIn by observeUserIsFollowing(baseUser, accountViewModel.account.userProfile())
+    val isLoggedInFollowingUser by observeUserIsFollowing(accountViewModel.account.userProfile(), baseUser, accountViewModel)
+    val isUserFollowingLoggedIn by observeUserIsFollowing(baseUser, accountViewModel.account.userProfile(), accountViewModel)
 
     if (isLoggedInFollowingUser) {
         UnfollowButton {

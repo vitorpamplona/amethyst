@@ -78,7 +78,7 @@ fun GalleryThumbnail(
     nav: INav,
     ratio: Float = 1.0f,
 ) {
-    val noteState by observeNote(baseNote)
+    val noteState by observeNote(baseNote, accountViewModel)
     val noteEvent = noteState?.note?.event ?: return
 
     val content =
@@ -147,14 +147,17 @@ fun InnerRenderGalleryThumb(
     if (content.isNotEmpty()) {
         GalleryContentView(content, accountViewModel, ratio = ratio)
     } else {
-        DisplayGalleryAuthorBanner(note)
+        DisplayGalleryAuthorBanner(note, accountViewModel)
     }
 }
 
 @Composable
-fun DisplayGalleryAuthorBanner(note: Note) {
-    WatchAuthor(note) { author ->
-        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder))
+fun DisplayGalleryAuthorBanner(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    WatchAuthor(note, accountViewModel) { author ->
+        BannerImage(author, Modifier.fillMaxSize().clip(QuoteBorder), accountViewModel)
     }
 }
 

@@ -227,7 +227,7 @@ class MarkdownMediaRenderer(
     ) {
         renderInvisible(richTextStringBuilder) {
             // Preloads note if not loaded yet.
-            EventFinderFilterAssemblerSubscription(baseNote)
+            EventFinderFilterAssemblerSubscription(baseNote, accountViewModel)
         }
     }
 

@@ -45,6 +45,7 @@ object ScrollStateKeys {
 
     const val DRAFTS = "DraftsFeed"
 
+    const val DISCOVER_FOLLOWS = "DiscoverFollowSetsFeed"
     const val DISCOVER_CONTENT = "DiscoverDiscoverContentFeed"
     const val DISCOVER_MARKETPLACE = "DiscoverMarketplaceFeed"
     const val DISCOVER_LIVE = "DiscoverLiveFeed"

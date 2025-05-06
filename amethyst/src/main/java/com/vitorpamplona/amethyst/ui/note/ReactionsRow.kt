@@ -202,7 +202,7 @@ private fun InnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
         one = {
-            WatchReactionsZapsBoostsAndDisplayIfExists(baseNote) {
+            WatchReactionsZapsBoostsAndDisplayIfExists(baseNote, accountViewModel) {
                 RenderShowIndividualReactionsButton(wantsToSeeReactions, accountViewModel)
             }
         },
@@ -345,7 +345,7 @@ fun RenderZapRaiser(
     details: Boolean,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by observeNoteZaps(baseNote)
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     var zapraiserStatus by remember { mutableStateOf(ZapraiserStatus(0F, "$zapraiserAmount")) }
 
@@ -393,9 +393,10 @@ fun RenderZapRaiser(
 @Composable
 private fun WatchReactionsZapsBoostsAndDisplayIfExists(
     baseNote: Note,
+    accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    val hasReactions by observeNoteReferences(baseNote)
+    val hasReactions by observeNoteReferences(baseNote, accountViewModel)
 
     if (hasReactions) {
         content()
@@ -434,7 +435,7 @@ private fun ReactionDetailGallery(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val backgroundColor = remember { mutableStateOf<Color>(defaultBackgroundColor) }
 
-    val hasReactions by observeNoteReferences(baseNote)
+    val hasReactions by observeNoteReferences(baseNote, accountViewModel)
 
     if (hasReactions) {
         Row(
@@ -456,7 +457,7 @@ private fun WatchBoostsAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val boostsEvents by observeNoteReposts(baseNote)
+    val boostsEvents by observeNoteReposts(baseNote, accountViewModel)
 
     boostsEvents?.let {
         if (it.note.boosts.isNotEmpty()) {
@@ -475,7 +476,7 @@ private fun WatchReactionsAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val reactionsState by observeNoteReactions(baseNote)
+    val reactionsState by observeNoteReactions(baseNote, accountViewModel)
     val reactionEvents = reactionsState?.note?.reactions ?: return
 
     if (reactionEvents.isNotEmpty()) {
@@ -498,7 +499,7 @@ private fun WatchZapAndRenderGallery(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    val zapsState by observeNoteZaps(baseNote)
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     var zapEvents by
         remember(zapsState) {
@@ -655,7 +656,7 @@ fun ReplyCounter(
     textColor: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val repliesState by observeNoteReplyCount(baseNote)
+    val repliesState by observeNoteReplyCount(baseNote, accountViewModel)
 
     SlidingAnimationCount(repliesState, textColor, accountViewModel)
 }
@@ -790,7 +791,7 @@ fun ObserveBoostIcon(
     accountViewModel: AccountViewModel,
     inner: @Composable (Boolean) -> Unit,
 ) {
-    val hasBoosted by observeNoteRepostsBy(baseNote, accountViewModel.userProfile())
+    val hasBoosted by observeNoteRepostsBy(baseNote, accountViewModel.userProfile(), accountViewModel)
 
     inner(hasBoosted)
 }
@@ -801,7 +802,7 @@ fun BoostText(
     grayTint: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val boostState by observeNoteRepostCount(baseNote)
+    val boostState by observeNoteRepostCount(baseNote, accountViewModel)
 
     SlidingAnimationCount(boostState, grayTint, accountViewModel)
 }
@@ -862,7 +863,7 @@ fun LikeReaction(
         }
     }
 
-    ObserveLikeText(baseNote) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
+    ObserveLikeText(baseNote, accountViewModel) { reactionCount -> SlidingAnimationCount(reactionCount, grayTint, accountViewModel) }
 }
 
 @Composable
@@ -871,7 +872,7 @@ fun ObserveLikeIcon(
     accountViewModel: AccountViewModel,
     inner: @Composable (String?) -> Unit,
 ) {
-    val reactionsState by observeNoteReactions(baseNote)
+    val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val reactionType by
@@ -926,9 +927,10 @@ private fun RenderReactionType(
 @Composable
 fun ObserveLikeText(
     baseNote: Note,
+    accountViewModel: AccountViewModel,
     inner: @Composable (Int) -> Unit,
 ) {
-    val reactionCount by observeNoteReactionCount(baseNote)
+    val reactionCount by observeNoteReactionCount(baseNote, accountViewModel)
 
     inner(reactionCount)
 }
@@ -1182,7 +1184,7 @@ fun ObserveZapIcon(
     val wasZappedByLoggedInUser = remember { mutableStateOf(false) }
 
     if (!wasZappedByLoggedInUser.value) {
-        val zapsState by observeNoteZaps(baseNote)
+        val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
         LaunchedEffect(key1 = zapsState) {
             if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
@@ -1204,7 +1206,7 @@ fun ObserveZapAmountText(
     accountViewModel: AccountViewModel,
     inner: @Composable (String) -> Unit,
 ) {
-    val zapsState by observeNoteZaps(baseNote)
+    val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
         @Suppress("ProduceStateDoesNotAssignValue")

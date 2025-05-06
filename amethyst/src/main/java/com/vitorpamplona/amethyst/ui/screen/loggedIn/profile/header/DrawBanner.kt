@@ -51,7 +51,7 @@ fun DrawBanner(
     baseUser: User,
     accountViewModel: AccountViewModel,
 ) {
-    val banner by observeUserBanner(baseUser)
+    val banner by observeUserBanner(baseUser, accountViewModel)
 
     DrawBanner(banner, accountViewModel)
 }

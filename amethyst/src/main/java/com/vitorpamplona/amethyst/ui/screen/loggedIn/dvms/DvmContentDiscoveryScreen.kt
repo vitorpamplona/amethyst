@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.DVMCard
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscoveryFeedViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -195,7 +195,7 @@ fun ObserverContentDiscoveryResponse(
 ) {
     val noteAuthor = appDefinition.author ?: return
 
-    EventFinderFilterAssemblerSubscription(dvmRequestId)
+    EventFinderFilterAssemblerSubscription(dvmRequestId, accountViewModel)
 
     val resultFlow =
         remember(dvmRequestId) {
@@ -321,7 +321,7 @@ fun FeedDVM(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val card = observeAppDefinition(appDefinitionNote)
+        val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
         card.cover?.let {
             AsyncImage(
@@ -333,7 +333,7 @@ fun FeedDVM(
                         .size(Size75dp)
                         .clip(QuoteBorder),
             )
-        } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
+        } ?: run { NoteAuthorPicture(appDefinitionNote, Size75dp, accountViewModel = accountViewModel, nav = nav) }
 
         Spacer(modifier = DoubleVertSpacer)
 
@@ -449,7 +449,7 @@ fun ZapDVMButton(
         }
 
     // Makes sure the user is loaded to get his ln address ahead of time.
-    UserFinderFilterAssemblerSubscription(noteAuthor)
+    UserFinderFilterAssemblerSubscription(noteAuthor, accountViewModel)
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -589,7 +589,7 @@ fun FeedEmptyWithStatus(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val card = observeAppDefinition(appDefinitionNote)
+        val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
         card.cover?.let {
             AsyncImage(
@@ -601,7 +601,7 @@ fun FeedEmptyWithStatus(
                         .size(Size75dp)
                         .clip(QuoteBorder),
             )
-        } ?: run { NoteAuthorPicture(appDefinitionNote, nav, accountViewModel, Size75dp) }
+        } ?: run { NoteAuthorPicture(appDefinitionNote, Size75dp, accountViewModel = accountViewModel, nav = nav) }
 
         Spacer(modifier = DoubleVertSpacer)
 
@@ -641,8 +641,11 @@ fun convertAppMetadataToCard(metadata: AppMetadata?): DVMCard {
 }
 
 @Composable
-fun observeAppDefinition(appDefinitionNote: Note): DVMCard {
-    val card by observeNoteAndMap(appDefinitionNote) {
+fun observeAppDefinition(
+    appDefinitionNote: Note,
+    accountViewModel: AccountViewModel,
+): DVMCard {
+    val card by observeNoteAndMap(appDefinitionNote, accountViewModel) {
         convertAppMetadataToCard((it.event as? AppDefinitionEvent)?.appMetaData())
     }
     return card

@@ -57,7 +57,7 @@ fun UserCompose(
                 UsernameDisplay(baseUser, accountViewModel = accountViewModel)
             }
 
-            AboutDisplay(baseUser)
+            AboutDisplay(baseUser, accountViewModel)
         }
 
         Column(modifier = remember { Modifier.padding(start = 10.dp) }) {

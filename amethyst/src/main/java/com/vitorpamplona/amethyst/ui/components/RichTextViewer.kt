@@ -777,7 +777,7 @@ private fun DisplayUserFromTag(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val meta by observeUserInfo(baseUser)
+    val meta by observeUserInfo(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(targetState = meta, label = "DisplayUserFromTag", accountViewModel = accountViewModel) {
         Row {

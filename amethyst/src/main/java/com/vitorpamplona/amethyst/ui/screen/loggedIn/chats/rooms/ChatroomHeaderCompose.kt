@@ -105,7 +105,7 @@ fun ChatroomHeaderCompose(
         if (baseNote.event != null) {
             ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
         } else {
-            val hasEvent by observeNoteHasEvent(baseNote)
+            val hasEvent by observeNoteHasEvent(baseNote, accountViewModel)
             if (hasEvent) {
                 ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
             } else {
@@ -186,8 +186,8 @@ private fun ChannelRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val authorName by observeUserName(note.author!!)
-    val channelState by observeChannel(channel)
+    val authorName by observeUserName(note.author!!, accountViewModel)
+    val channelState by observeChannel(channel, accountViewModel)
 
     val channelPicture = channelState?.channel?.profilePicture() ?: channel.profilePicture()
     val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()
@@ -227,8 +227,8 @@ private fun ChannelRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val authorName by observeUserName(note.author!!)
-    val channelState by observeChannel(channel)
+    val authorName by observeUserName(note.author!!, accountViewModel)
+    val channelState by observeChannel(channel, accountViewModel)
 
     val relayInfo = loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
     val info =

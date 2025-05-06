@@ -27,8 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ChannelState
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -41,8 +41,11 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 
 @Composable
-fun observeChannel(baseChannel: Channel): State<ChannelState?> {
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
+fun observeChannel(
+    baseChannel: Channel,
+    accountViewModel: AccountViewModel,
+): State<ChannelState?> {
+    ChannelFinderFilterAssemblerSubscription(baseChannel, accountViewModel)
 
     return baseChannel
         .flow()
@@ -52,8 +55,11 @@ fun observeChannel(baseChannel: Channel): State<ChannelState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeChannelNoteAuthors(baseChannel: Channel): State<ImmutableList<User>> {
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
+fun observeChannelNoteAuthors(
+    baseChannel: Channel,
+    accountViewModel: AccountViewModel,
+): State<ImmutableList<User>> {
+    ChannelFinderFilterAssemblerSubscription(baseChannel, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -80,9 +86,12 @@ fun observeChannelNoteAuthors(baseChannel: Channel): State<ImmutableList<User>> 
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeChannelPicture(baseChannel: Channel): State<String?> {
+fun observeChannelPicture(
+    baseChannel: Channel,
+    accountViewModel: AccountViewModel,
+): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
+    ChannelFinderFilterAssemblerSubscription(baseChannel, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -99,9 +108,12 @@ fun observeChannelPicture(baseChannel: Channel): State<String?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeChannelInfo(baseChannel: LiveActivitiesChannel): State<LiveActivitiesEvent?> {
+fun observeChannelInfo(
+    baseChannel: LiveActivitiesChannel,
+    accountViewModel: AccountViewModel,
+): State<LiveActivitiesEvent?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    ChannelFinderFilterAssemblerSubscription(baseChannel)
+    ChannelFinderFilterAssemblerSubscription(baseChannel, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =

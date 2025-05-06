@@ -648,10 +648,11 @@
 
     <string name="relay_setup">Relays</string>
 
-    <string name="discover_content">Note Discovery</string>
+    <string name="discover_follows">Follow Packs</string>
+    <string name="discover_content">Feed Algorithms</string>
     <string name="discover_marketplace">Marketplace</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Community</string>
+    <string name="discover_live">Live Streams</string>
+    <string name="discover_community">Communities</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Approved Posts</string>
 

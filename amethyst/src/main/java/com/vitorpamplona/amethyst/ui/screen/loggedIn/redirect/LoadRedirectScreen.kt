@@ -92,7 +92,7 @@ fun LoadRedirectScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(baseNote)
+    val noteState by observeNote(baseNote, accountViewModel)
 
     LaunchedEffect(key1 = noteState) {
         val note = noteState?.note ?: return@LaunchedEffect

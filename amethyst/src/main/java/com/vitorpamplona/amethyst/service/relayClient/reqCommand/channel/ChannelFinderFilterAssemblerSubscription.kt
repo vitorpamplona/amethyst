@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun ChannelFinderFilterAssemblerSubscription(channel: Channel) = ChannelFinderFilterAssemblerSubscription(channel, Amethyst.instance.sources.channelFinder)
+fun ChannelFinderFilterAssemblerSubscription(
+    channel: Channel,
+    accountViewModel: AccountViewModel,
+) = ChannelFinderFilterAssemblerSubscription(channel, accountViewModel.dataSources().channelFinder)
 
 @Composable
 fun ChannelFinderFilterAssemblerSubscription(

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
@@ -48,9 +49,12 @@ import kotlinx.coroutines.flow.sample
 import java.math.BigDecimal
 
 @Composable
-fun observeUser(user: User): State<UserState?> {
+fun observeUser(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return user
@@ -61,9 +65,12 @@ fun observeUser(user: User): State<UserState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserName(user: User): State<String> {
+fun observeUserName(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     val flow =
         remember(user) {
@@ -80,9 +87,12 @@ fun observeUserName(user: User): State<String> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserNip05(user: User): State<String?> {
+fun observeUserNip05(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     val flow =
         remember(user) {
@@ -99,9 +109,12 @@ fun observeUserNip05(user: User): State<String?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserAboutMe(user: User): State<String> {
+fun observeUserAboutMe(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -118,9 +131,12 @@ fun observeUserAboutMe(user: User): State<String> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserInfo(user: User): State<UserMetadata?> {
+fun observeUserInfo(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserMetadata?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -137,9 +153,12 @@ fun observeUserInfo(user: User): State<UserMetadata?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserBanner(user: User): State<String?> {
+fun observeUserBanner(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -156,9 +175,12 @@ fun observeUserBanner(user: User): State<String?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserPicture(user: User): State<String?> {
+fun observeUserPicture(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -175,9 +197,12 @@ fun observeUserPicture(user: User): State<String?> {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
-fun observeUserShortName(user: User): State<String> {
+fun observeUserShortName(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<String> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -193,9 +218,12 @@ fun observeUserShortName(user: User): State<String> {
 }
 
 @Composable
-fun observeUserFollows(user: User): State<UserState?> {
+fun observeUserFollows(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return user
@@ -206,9 +234,12 @@ fun observeUserFollows(user: User): State<UserState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserFollowCount(user: User): State<Int> {
+fun observeUserFollowCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -228,9 +259,12 @@ fun observeUserFollowCount(user: User): State<Int> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserTagFollows(user: User): State<Int> {
+fun observeUserTagFollows(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -249,9 +283,12 @@ fun observeUserTagFollows(user: User): State<Int> {
 }
 
 @Composable
-fun observeUserBookmarks(user: User): State<UserState?> {
+fun observeUserBookmarks(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return user
@@ -262,9 +299,12 @@ fun observeUserBookmarks(user: User): State<UserState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserBookmarkCount(user: User): State<Int> {
+fun observeUserBookmarkCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -283,9 +323,12 @@ fun observeUserBookmarkCount(user: User): State<Int> {
 }
 
 @Composable
-fun observeUserFollowers(user: User): State<UserState?> {
+fun observeUserFollowers(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return user
@@ -296,9 +339,12 @@ fun observeUserFollowers(user: User): State<UserState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserFollowerCount(user: User): State<Int> {
+fun observeUserFollowerCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -321,9 +367,10 @@ fun observeUserFollowerCount(user: User): State<Int> {
 fun observeUserIsFollowing(
     user1: User,
     user2: User,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user1)
+    UserFinderFilterAssemblerSubscription(user1, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -346,9 +393,10 @@ fun observeUserIsFollowing(
 fun observeUserIsFollowingHashtag(
     user: User,
     hashtag: String,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -371,9 +419,10 @@ fun observeUserIsFollowingHashtag(
 fun observeUserIsFollowingGeohash(
     user: User,
     geohash: String,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -396,9 +445,10 @@ fun observeUserIsFollowingGeohash(
 fun observeUserIsFollowingChannel(
     account: Account,
     channel: PublicChatChannel,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(account.userProfile())
+    UserFinderFilterAssemblerSubscription(account.userProfile(), accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -421,9 +471,10 @@ fun observeUserIsFollowingChannel(
 fun observeUserIsFollowingChannel(
     account: Account,
     channel: EphemeralChatChannel,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(account.userProfile())
+    UserFinderFilterAssemblerSubscription(account.userProfile(), accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -442,9 +493,12 @@ fun observeUserIsFollowingChannel(
 }
 
 @Composable
-fun observeUserZaps(user: User): State<UserState?> {
+fun observeUserZaps(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return user
@@ -455,9 +509,12 @@ fun observeUserZaps(user: User): State<UserState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserZapAmount(user: User): State<BigDecimal> {
+fun observeUserZapAmount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<BigDecimal> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -476,9 +533,12 @@ fun observeUserZapAmount(user: User): State<BigDecimal> {
 }
 
 @Composable
-fun observeUserReports(user: User): State<UserState?> {
+fun observeUserReports(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     return user
@@ -489,9 +549,12 @@ fun observeUserReports(user: User): State<UserState?> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserReportCount(user: User): State<Int> {
+fun observeUserReportCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -512,9 +575,12 @@ fun observeUserReportCount(user: User): State<Int> {
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserStatuses(user: User): State<ImmutableList<AddressableNote>> {
+fun observeUserStatuses(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<ImmutableList<AddressableNote>> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -538,9 +604,10 @@ fun observeUserStatuses(user: User): State<ImmutableList<AddressableNote>> {
 fun observeUserRelayIntoList(
     user: User,
     relayUrl: String,
+    accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -566,9 +633,10 @@ fun observeUserRelayIntoList(
 fun observeUserRoomSubject(
     user: User,
     room: ChatroomKey,
+    accountViewModel: AccountViewModel,
 ): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
@@ -594,9 +662,12 @@ data class RelayUsage(
 
 @OptIn(FlowPreview::class)
 @Composable
-fun observeUserRelaysUsing(user: User): State<RelayUsage> {
+fun observeUserRelaysUsing(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<RelayUsage> {
     // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user)
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =

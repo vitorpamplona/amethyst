@@ -42,7 +42,7 @@ fun ShowVideoStreaming(
     accountViewModel: AccountViewModel,
 ) {
     baseChannel.info?.let {
-        val streamingInfoEvent by observeChannelInfo(baseChannel)
+        val streamingInfoEvent by observeChannelInfo(baseChannel, accountViewModel)
         streamingInfoEvent?.let { event ->
             event.streaming()?.let { url ->
                 val zoomableUrlVideo =

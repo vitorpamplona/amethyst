@@ -80,7 +80,7 @@ fun DrawAdditionalInfo(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by observeUser(baseUser)
+    val userState by observeUser(baseUser, accountViewModel)
     val user = userState?.user ?: return
     val uri = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current

@@ -26,11 +26,15 @@ import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelaysUsing
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun RelaysTabHeader(baseUser: User) {
-    val userState by observeUserRelaysUsing(baseUser)
+fun RelaysTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val userState by observeUserRelaysUsing(baseUser, accountViewModel)
 
     Text(text = "${sizeAsString(userState.userRelayList.size)} / ${sizeAsString(userState.relays.size)} ${stringRes(R.string.relays)}")
 }

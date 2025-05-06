@@ -173,14 +173,10 @@ fun DisplayAccount(
                                 .width(55.dp)
                                 .padding(0.dp),
                     ) {
-                        AccountPicture(
-                            it,
-                            accountViewModel.settings.showProfilePictures.value,
-                            loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                        )
+                        AccountPicture(it, accountViewModel)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) { AccountName(acc, it) }
+                    Column(modifier = Modifier.weight(1f)) { AccountName(acc, it, accountViewModel) }
                     Column(modifier = Modifier.width(32.dp)) { ActiveMarker(acc, accountViewModel) }
                 }
             }
@@ -212,18 +208,17 @@ private fun ActiveMarker(
 @Composable
 private fun AccountPicture(
     user: User,
-    loadProfilePicture: Boolean,
-    loadRobohash: Boolean,
+    accountViewModel: AccountViewModel,
 ) {
-    val profilePicture by observeUserPicture(user)
+    val profilePicture by observeUserPicture(user, accountViewModel)
 
     RobohashFallbackAsyncImage(
         robot = user.pubkeyHex,
         model = profilePicture,
         contentDescription = stringRes(R.string.profile_image),
         modifier = AccountPictureModifier,
-        loadProfilePicture = loadProfilePicture,
-        loadRobohash = loadRobohash,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
     )
 }
 
@@ -231,8 +226,9 @@ private fun AccountPicture(
 private fun AccountName(
     acc: AccountInfo,
     user: User,
+    accountViewModel: AccountViewModel,
 ) {
-    val info by observeUserInfo(user)
+    val info by observeUserInfo(user, accountViewModel)
 
     info?.let {
         it.bestName()?.let { name ->

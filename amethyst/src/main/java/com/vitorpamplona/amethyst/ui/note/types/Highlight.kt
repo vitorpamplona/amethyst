@@ -236,7 +236,7 @@ fun DisplayEntryForUser(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userMetadata by observeUserInfo(baseUser)
+    val userMetadata by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
         clickablePart = userMetadata?.bestName() ?: baseUser.pubkeyDisplayHex(),
@@ -254,12 +254,12 @@ fun DisplayEntryForNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(note)
+    val noteState by observeNote(note, accountViewModel)
 
     val author = userBase ?: noteState?.note?.author
 
     if (author != null) {
-        RenderUserAsClickableText(author, null, nav)
+        RenderUserAsClickableText(author, null, accountViewModel, nav)
     }
 
     val noteEvent = noteState?.note?.event as? BaseThreadedEvent ?: return

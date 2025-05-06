@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
@@ -45,9 +46,10 @@ import kotlinx.coroutines.withContext
 @Composable
 fun WatchApp(
     baseApp: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val appState by observeNote(baseApp)
+    val appState by observeNote(baseApp, accountViewModel)
 
     var appLogo by remember(baseApp) { mutableStateOf<String?>(null) }
     var appName by remember(baseApp) { mutableStateOf<String?>(null) }

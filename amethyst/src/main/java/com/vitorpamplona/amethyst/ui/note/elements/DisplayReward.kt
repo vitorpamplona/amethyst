@@ -115,7 +115,7 @@ private fun RenderPledgeAmount(
     baseReward: Reward,
     accountViewModel: AccountViewModel,
 ) {
-    val repliesState by observeNoteReplies(baseNote)
+    val repliesState by observeNoteReplies(baseNote, accountViewModel)
     var reward by remember {
         mutableStateOf<String>(
             showAmount(baseReward.amount),

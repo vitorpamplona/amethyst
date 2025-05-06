@@ -37,14 +37,14 @@ fun WatchAndLoadMyEmojiList(accountViewModel: AccountViewModel) {
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMap(usersEmojiList) { event: EmojiPackSelectionEvent ->
+            val collections by observeNoteEventAndMap(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
                 event.taggedAddresses().toImmutableList()
             }
 
             collections?.forEach { address ->
                 LoadAddressableNote(address, accountViewModel) { note ->
                     if (note != null) {
-                        EventFinderFilterAssemblerSubscription(note)
+                        EventFinderFilterAssemblerSubscription(note, accountViewModel)
                     }
                 }
             }

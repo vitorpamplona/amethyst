@@ -120,7 +120,7 @@ fun RedirectableGalleryCard(
         ) {
             if (sourceNote != galleryNote) {
                 // preloads target note
-                EventFinderFilterAssemblerSubscription(sourceNote)
+                EventFinderFilterAssemblerSubscription(sourceNote, accountViewModel)
             }
 
             SensitivityWarning(

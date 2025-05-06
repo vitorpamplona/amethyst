@@ -26,11 +26,15 @@ import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBookmarkCount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun BookmarkTabHeader(baseUser: User) {
-    val userBookmarks by observeUserBookmarkCount(baseUser)
+fun BookmarkTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val userBookmarks by observeUserBookmarkCount(baseUser, accountViewModel)
 
     Text(text = "$userBookmarks ${stringRes(R.string.bookmarks)}")
 }

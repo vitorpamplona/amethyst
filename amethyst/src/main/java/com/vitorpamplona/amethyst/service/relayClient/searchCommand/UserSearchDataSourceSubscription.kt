@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun UserSearchDataSourceSubscription(userSuggestions: UserSuggestionState) = UserSearchDataSourceSubscription(userSuggestions, Amethyst.instance.sources.search)
+fun UserSearchDataSourceSubscription(
+    userSuggestions: UserSuggestionState,
+    accountViewModel: AccountViewModel,
+) = UserSearchDataSourceSubscription(userSuggestions, accountViewModel.dataSources().search)
 
 @Composable
 fun UserSearchDataSourceSubscription(

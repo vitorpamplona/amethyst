@@ -57,8 +57,11 @@ import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
 
 @Composable
-fun BadgeDisplay(baseNote: Note) {
-    val badgeData by observeNoteEvent<BadgeDefinitionEvent>(baseNote)
+fun BadgeDisplay(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val badgeData by observeNoteEvent<BadgeDefinitionEvent>(baseNote, accountViewModel)
 
     badgeData?.let {
         RenderBadge(
@@ -174,6 +177,6 @@ fun RenderBadgeAward(
     }
 
     note.replyTo?.firstOrNull()?.let {
-        BadgeDisplay(baseNote = it)
+        BadgeDisplay(baseNote = it, accountViewModel)
     }
 }

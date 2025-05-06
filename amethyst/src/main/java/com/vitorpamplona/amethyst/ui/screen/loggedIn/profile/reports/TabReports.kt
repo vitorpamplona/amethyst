@@ -37,7 +37,7 @@ fun TabReports(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchReportsAndUpdateFeed(baseUser, feedViewModel)
+    WatchReportsAndUpdateFeed(baseUser, feedViewModel, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         RefresheableFeedView(

@@ -147,8 +147,8 @@ fun HiddenNote(
                         NoteAuthorPicture(
                             baseNote = it,
                             size = Size35dp,
-                            nav = nav,
                             accountViewModel = accountViewModel,
+                            nav = nav,
                         )
                     }
                 }

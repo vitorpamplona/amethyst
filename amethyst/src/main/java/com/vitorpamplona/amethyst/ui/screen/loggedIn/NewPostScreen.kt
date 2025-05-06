@@ -329,7 +329,7 @@ fun NewPostScreen(
                         }
 
                         Row {
-                            Notifying(postViewModel.pTags?.toImmutableList()) {
+                            Notifying(postViewModel.pTags?.toImmutableList(), accountViewModel) {
                                 postViewModel.removeFromReplyList(it)
                             }
                         }
@@ -579,6 +579,7 @@ fun DisplayPreviews(
 @Composable
 fun Notifying(
     baseMentions: ImmutableList<User>?,
+    accountViewModel: AccountViewModel,
     onClick: (User) -> Unit,
 ) {
     val mentions = baseMentions?.toSet()
@@ -601,7 +602,7 @@ fun Notifying(
                         ),
                     onClick = { onClick(user) },
                 ) {
-                    DisplayUserNameWithDeleteMark(user)
+                    DisplayUserNameWithDeleteMark(user, accountViewModel)
                 }
             }
         }
@@ -609,8 +610,11 @@ fun Notifying(
 }
 
 @Composable
-private fun DisplayUserNameWithDeleteMark(user: User) {
-    val innerUserState by observeUser(user)
+private fun DisplayUserNameWithDeleteMark(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val innerUserState by observeUser(user, accountViewModel)
     innerUserState?.user?.let { myUser ->
         CreateTextWithEmoji(
             text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },

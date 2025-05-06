@@ -22,12 +22,15 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
-fun UserFinderFilterAssemblerSubscription(user: User) = UserFinderFilterAssemblerSubscription(user, Amethyst.instance.sources.userFinder)
+fun UserFinderFilterAssemblerSubscription(
+    user: User,
+    accountViewModel: AccountViewModel,
+) = UserFinderFilterAssemblerSubscription(user, accountViewModel.dataSources().userFinder)
 
 @Composable
 fun UserFinderFilterAssemblerSubscription(

@@ -40,6 +40,7 @@ fun HomeTopBar(
         FollowListWithRoutes(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
+            accountViewModel = accountViewModel,
         ) { listName ->
             if (listName.route != null) {
                 nav.nav(listName.route)

@@ -26,11 +26,15 @@ import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserReportCount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun ReportsTabHeader(baseUser: User) {
-    val reportCount by observeUserReportCount(baseUser)
+fun ReportsTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val reportCount by observeUserReportCount(baseUser, accountViewModel)
 
     if (reportCount > 0) {
         Text(text = stringRes(R.string.number_reports, reportCount))

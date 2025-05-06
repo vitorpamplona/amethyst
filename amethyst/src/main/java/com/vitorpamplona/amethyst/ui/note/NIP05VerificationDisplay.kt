@@ -123,7 +123,7 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchAuthor(baseNote = baseNote) {
+    WatchAuthor(baseNote = baseNote, accountViewModel) {
         ObserveDisplayNip05Status(it, columnModifier, accountViewModel, nav)
     }
 }
@@ -135,8 +135,8 @@ fun ObserveDisplayNip05Status(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val nip05 by observeUserNip05(baseUser)
-    val statuses by observeUserStatuses(baseUser)
+    val nip05 by observeUserNip05(baseUser, accountViewModel)
+    val statuses by observeUserStatuses(baseUser, accountViewModel)
 
     CrossfadeIfEnabled(
         targetState = nip05,
@@ -193,7 +193,7 @@ fun ObserveRotateStatuses(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses)
+    ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses, accountViewModel)
 
     RotateStatuses(
         statuses,
@@ -203,9 +203,12 @@ fun ObserveRotateStatuses(
 }
 
 @Composable
-fun ObserveAllStatusesToAvoidSwitchigAllTheTime(statuses: ImmutableList<AddressableNote>) {
+fun ObserveAllStatusesToAvoidSwitchigAllTheTime(
+    statuses: ImmutableList<AddressableNote>,
+    accountViewModel: AccountViewModel,
+) {
     statuses.map {
-        EventFinderFilterAssemblerSubscription(it)
+        EventFinderFilterAssemblerSubscription(it, accountViewModel)
     }
 }
 
@@ -246,7 +249,7 @@ fun DisplayStatus(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(addressableNote)
+    val noteState by observeNote(addressableNote, accountViewModel)
     val noteEvent = noteState?.note?.event as? StatusEvent ?: return
 
     DisplayStatus(noteEvent, accountViewModel, nav)

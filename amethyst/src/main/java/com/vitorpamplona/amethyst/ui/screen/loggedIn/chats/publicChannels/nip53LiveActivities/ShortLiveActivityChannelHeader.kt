@@ -48,7 +48,7 @@ fun ShortLiveActivityChannelHeader(
     nav: INav,
     showFlag: Boolean,
 ) {
-    val channelState by observeChannel(baseChannel)
+    val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
 
     Row(verticalAlignment = Alignment.CenterVertically) {

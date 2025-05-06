@@ -52,10 +52,10 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 @Composable
 fun NoteAuthorPicture(
     baseNote: Note,
-    nav: INav,
-    accountViewModel: AccountViewModel,
     size: Dp,
     pictureModifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
         nav.nav(routeFor(it))
@@ -304,7 +304,7 @@ fun BaseUserPicture(
     outerModifier: Modifier = Modifier.size(size),
 ) {
     Box(outerModifier, contentAlignment = Alignment.TopEnd) {
-        LoadUserProfilePicture(baseUser) { userProfilePicture, userName ->
+        LoadUserProfilePicture(baseUser, accountViewModel) { userProfilePicture, userName ->
             InnerUserPicture(
                 userHex = baseUser.pubkeyHex,
                 userPicture = userProfilePicture,
@@ -326,9 +326,10 @@ fun BaseUserPicture(
 @Composable
 fun LoadUserProfilePicture(
     baseUser: User,
+    accountViewModel: AccountViewModel,
     innerContent: @Composable (String?, String?) -> Unit,
 ) {
-    val userProfile by observeUserInfo(baseUser)
+    val userProfile by observeUserInfo(baseUser, accountViewModel)
 
     innerContent(userProfile?.profilePicture(), userProfile?.bestName())
 }

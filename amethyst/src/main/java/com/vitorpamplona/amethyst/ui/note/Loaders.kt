@@ -144,7 +144,7 @@ fun LoadStatuses(
     accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<AddressableNote>) -> Unit,
 ) {
-    val userStatuses by observeUserStatuses(user)
+    val userStatuses by observeUserStatuses(user, accountViewModel)
 
     content(userStatuses)
 }
@@ -158,7 +158,7 @@ fun LoadOts(
 ) {
     var earliestDate: GenericLoadable<Long> by remember { mutableStateOf(GenericLoadable.Loading()) }
 
-    val noteStatus by observeNoteOts(note)
+    val noteStatus by observeNoteOts(note, accountViewModel)
 
     LaunchedEffect(key1 = noteStatus) {
         accountViewModel.findOtsEventsForNote(noteStatus?.note ?: note) { newOts ->

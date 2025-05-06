@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.marketplace.NewProductScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen

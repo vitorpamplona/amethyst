@@ -52,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -73,7 +72,6 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.note.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.TabItem
@@ -84,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -98,6 +97,7 @@ fun DiscoverScreen(
     nav: INav,
 ) {
     DiscoverScreen(
+        discoveryFollowSetsFeedContentState = accountViewModel.feedStates.discoverFollowSets,
         discoveryContentNIP89FeedContentState = accountViewModel.feedStates.discoverDVMs,
         discoveryMarketplaceFeedContentState = accountViewModel.feedStates.discoverMarketplace,
         discoveryLiveFeedContentState = accountViewModel.feedStates.discoverLive,
@@ -111,6 +111,7 @@ fun DiscoverScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiscoverScreen(
+    discoveryFollowSetsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
     discoveryMarketplaceFeedContentState: FeedContentState,
     discoveryLiveFeedContentState: FeedContentState,
@@ -119,18 +120,17 @@ fun DiscoverScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
     val tabs by
-        remember(
-            discoveryContentNIP89FeedContentState,
-            discoveryLiveFeedContentState,
-            discoveryCommunityFeedContentState,
-            discoveryChatFeedContentState,
-            discoveryMarketplaceFeedContentState,
-        ) {
+        remember(accountViewModel) {
             mutableStateOf(
                 listOf(
+                    TabItem(
+                        R.string.discover_follows,
+                        discoveryFollowSetsFeedContentState,
+                        "DiscoverFollowSets",
+                        ScrollStateKeys.DISCOVER_CONTENT,
+                        FollowListEvent.KIND,
+                    ),
                     TabItem(
                         R.string.discover_content,
                         discoveryContentNIP89FeedContentState,
@@ -174,6 +174,7 @@ fun DiscoverScreen(
     val pagerState = rememberForeverPagerState(key = PagerStateKeys.DISCOVER_SCREEN) { tabs.size }
 
     WatchAccountForDiscoveryScreen(
+        discoveryFollowSetsFeedContentState = discoveryFollowSetsFeedContentState,
         discoveryContentNIP89FeedContentState = discoveryContentNIP89FeedContentState,
         discoveryMarketplaceFeedContentState = discoveryMarketplaceFeedContentState,
         discoveryLiveFeedContentState = discoveryLiveFeedContentState,
@@ -182,6 +183,7 @@ fun DiscoverScreen(
         accountViewModel = accountViewModel,
     )
 
+    WatchLifecycleAndUpdateModel(discoveryFollowSetsFeedContentState)
     WatchLifecycleAndUpdateModel(discoveryContentNIP89FeedContentState)
     WatchLifecycleAndUpdateModel(discoveryMarketplaceFeedContentState)
     WatchLifecycleAndUpdateModel(discoveryLiveFeedContentState)
@@ -376,6 +378,7 @@ private fun RenderDiscoverFeed(
 
 @Composable
 fun WatchAccountForDiscoveryScreen(
+    discoveryFollowSetsFeedContentState: FeedContentState,
     discoveryContentNIP89FeedContentState: FeedContentState,
     discoveryMarketplaceFeedContentState: FeedContentState,
     discoveryLiveFeedContentState: FeedContentState,
@@ -386,6 +389,7 @@ fun WatchAccountForDiscoveryScreen(
     val listState by accountViewModel.account.liveDiscoveryFollowLists.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState) {
+        discoveryFollowSetsFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryContentNIP89FeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryMarketplaceFeedContentState.checkKeysInvalidateDataAndSendToTop()
         discoveryLiveFeedContentState.checkKeysInvalidateDataAndSendToTop()

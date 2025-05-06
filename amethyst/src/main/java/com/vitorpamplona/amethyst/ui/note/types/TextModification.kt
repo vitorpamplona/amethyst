@@ -131,7 +131,7 @@ fun RenderTextModificationEvent(
             noteEvent.editedNote()?.let {
                 LoadNote(baseNoteHex = it.eventId, accountViewModel = accountViewModel) { baseNote ->
                     baseNote?.let {
-                        val noteState by observeNote(baseNote)
+                        val noteState by observeNote(baseNote, accountViewModel)
 
                         val editStateOriginalNote =
                             observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)

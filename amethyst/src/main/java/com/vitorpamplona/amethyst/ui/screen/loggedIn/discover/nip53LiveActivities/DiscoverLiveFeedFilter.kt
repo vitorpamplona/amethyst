@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -39,8 +39,8 @@ open class DiscoverLiveFeedFilter(
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        followList() == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            followList() == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
+            followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
         val allChannelNotes = LocalCache.channels.mapNotNull { _, channel -> LocalCache.getNoteIfExists(channel.idHex) }
@@ -55,7 +55,7 @@ open class DiscoverLiveFeedFilter(
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams =
-            FilterByListParams.create(
+            FilterByListParams.Companion.create(
                 userHex = account.userProfile().pubkeyHex,
                 selectedListName = account.settings.defaultDiscoveryFollowList.value,
                 followLists = account.liveDiscoveryFollowLists.value,

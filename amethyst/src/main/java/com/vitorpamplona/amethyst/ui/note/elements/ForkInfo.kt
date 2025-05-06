@@ -82,7 +82,7 @@ fun ForkInformationRowLightColor(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(originalVersion)
+    val noteState by observeNote(originalVersion, accountViewModel)
     val note = noteState?.note ?: return
     val author = note.author ?: return
     val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
@@ -105,7 +105,7 @@ fun ForkInformationRowLightColor(
                 overflow = TextOverflow.Visible,
             )
 
-            val userState by observeUser(author)
+            val userState by observeUser(author, accountViewModel)
             userState?.user?.toBestDisplayName()?.let {
                 CreateClickableTextWithEmoji(
                     clickablePart = it,
@@ -128,19 +128,19 @@ fun ForkInformationRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(originalVersion)
+    val noteState by observeNote(originalVersion, accountViewModel)
     val note = noteState?.note ?: return
     val route = remember(note) { routeFor(note, accountViewModel.userProfile()) }
 
     if (route != null) {
         Row(modifier) {
             val author = note.author ?: return
-            val meta by observeUserInfo(author)
+            val meta by observeUserInfo(author, accountViewModel)
 
             Text(stringRes(id = R.string.forked_from))
             Spacer(modifier = StdHorzSpacer)
 
-            val userMetadata by observeUserInfo(author)
+            val userMetadata by observeUserInfo(author, accountViewModel)
 
             CreateClickableTextWithEmoji(
                 clickablePart = remember(meta) { meta?.bestName() ?: author.pubkeyDisplayHex() },

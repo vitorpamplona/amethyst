@@ -119,7 +119,7 @@ fun LongCommunityHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote)
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
     Row(
         lineModifier,
@@ -195,7 +195,7 @@ fun LongCommunityHeader(
             modifier = Modifier.width(75.dp),
         )
         Spacer(DoubleHorzSpacer)
-        NoteAuthorPicture(baseNote, nav, accountViewModel, Size25dp)
+        NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
         Spacer(DoubleHorzSpacer)
         NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
     }
@@ -264,7 +264,7 @@ fun ShortCommunityHeader(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote)
+    val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         noteEvent?.image()?.let {

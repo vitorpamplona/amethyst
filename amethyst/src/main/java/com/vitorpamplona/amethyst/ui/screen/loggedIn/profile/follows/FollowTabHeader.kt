@@ -26,11 +26,15 @@ import androidx.compose.runtime.getValue
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowCount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
-fun FollowTabHeader(baseUser: User) {
-    val followCount by observeUserFollowCount(baseUser)
+fun FollowTabHeader(
+    baseUser: User,
+    accountViewModel: AccountViewModel,
+) {
+    val followCount by observeUserFollowCount(baseUser, accountViewModel)
 
     val text =
         if (followCount > 0) {

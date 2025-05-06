@@ -140,7 +140,7 @@ class ThreadDualAxisChartAssemblerTest {
 
             val account = Account(AccountSettings(KeyPair()), scope = CoroutineScope(Dispatchers.IO + SupervisorJob()))
             withContext(Dispatchers.Main) {
-                val user = account.userProfile().live()
+                val user = account.userProfile().flow()
             }
 
             val filter = ThreadFeedFilter(account, naddr.toTag())

@@ -40,6 +40,7 @@ fun StoriesTopBar(
         FollowListWithRoutes(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
+            accountViewModel = accountViewModel,
         ) { listName ->
             accountViewModel.account.settings.changeDefaultStoriesFollowList(listName.code)
         }

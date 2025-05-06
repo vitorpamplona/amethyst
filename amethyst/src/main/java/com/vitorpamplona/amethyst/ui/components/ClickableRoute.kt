@@ -192,7 +192,7 @@ private fun DisplayNoteLink(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteState by observeNote(it)
+    val noteState by observeNote(it, accountViewModel)
     val note = remember(noteState) { noteState?.note } ?: return
 
     val channelHex = remember(noteState) { note.channelHex() }
@@ -215,7 +215,7 @@ private fun DisplayNoteLink(
         )
     } else if (channelHex != null) {
         LoadChannel(baseChannelHex = channelHex, accountViewModel) { baseChannel ->
-            val channelState by observeChannel(baseChannel)
+            val channelState by observeChannel(baseChannel, accountViewModel)
             val channelDisplayName by
                 remember(channelState) {
                     derivedStateOf { channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote }
@@ -255,7 +255,7 @@ private fun DisplayAddress(
     }
 
     noteBase?.let {
-        val noteState by observeNote(it)
+        val noteState by observeNote(it, accountViewModel)
 
         val route = remember(noteState) { Route.Note(nip19.aTag()) }
         val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
@@ -303,7 +303,7 @@ fun DisplayUser(
         }
     }
 
-    userBase?.let { RenderUserAsClickableText(it, additionalChars, nav) }
+    userBase?.let { RenderUserAsClickableText(it, additionalChars, accountViewModel, nav) }
 
     if (userBase == null) {
         val uri = LocalUriHandler.current
@@ -323,9 +323,10 @@ fun DisplayUser(
 fun RenderUserAsClickableText(
     baseUser: User,
     additionalChars: String?,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by observeUserInfo(baseUser)
+    val userState by observeUserInfo(baseUser, accountViewModel)
 
     CreateClickableTextWithEmoji(
         clickablePart = "@" + (userState?.bestName() ?: baseUser.pubkeyDisplayHex()),

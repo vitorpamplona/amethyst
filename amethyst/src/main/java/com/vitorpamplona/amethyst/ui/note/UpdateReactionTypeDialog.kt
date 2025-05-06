@@ -385,7 +385,7 @@ private fun EmojiSelector(
         accountViewModel,
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMap(usersEmojiList) { event: EmojiPackSelectionEvent ->
+            val collections by observeNoteEventAndMap(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
                 event.emojiPackIds().toImmutableList()
             }
 

@@ -76,6 +76,7 @@ fun LoggedInPage(
                 AccountViewModel.Factory(
                     accountSettings,
                     sharedPreferencesViewModel.sharedPrefs,
+                    Amethyst.instance,
                 ),
         )
 
@@ -97,7 +98,7 @@ fun LoggedInPage(
     DiscoveryFilterAssemblerSubscription(accountViewModel)
 
     // TODO: Is this needed?
-    RelaySubscriptionsCoordinatorSubscription()
+    RelaySubscriptionsCoordinatorSubscription(accountViewModel)
 
     // Updates local cache of the anti-spam filter choice of this user.
     ObserveAntiSpamFilterSettings(accountViewModel)

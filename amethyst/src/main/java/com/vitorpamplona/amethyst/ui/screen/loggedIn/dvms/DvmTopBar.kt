@@ -49,7 +49,7 @@ fun DvmTopBar(
         title = {
             LoadNote(baseNoteHex = appDefinitionId, accountViewModel = accountViewModel) { appDefinitionNote ->
                 if (appDefinitionNote != null) {
-                    val card = observeAppDefinition(appDefinitionNote)
+                    val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
                     card.cover?.let {
                         AsyncImage(

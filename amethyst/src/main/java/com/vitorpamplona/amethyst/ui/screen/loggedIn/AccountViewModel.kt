@@ -151,6 +151,7 @@ import okhttp3.OkHttpClient
 class AccountViewModel(
     accountSettings: AccountSettings,
     val settings: SharedSettingsState,
+    val app: Amethyst,
 ) : ViewModel(),
     Dao {
     val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
@@ -1010,7 +1011,7 @@ class AccountViewModel(
                 .verifyNip05(
                     nip05,
                     okttpClient = {
-                        Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP05(it))
+                        app.okHttpClients.getHttpClient(account.shouldUseTorForNIP05(it))
                     },
                     onSuccess = {
                         // Marks user as verified
@@ -1196,15 +1197,15 @@ class AccountViewModel(
         onReady: (ImmutableList<User>) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
-            onReady(
-                hexList
-                    .mapNotNull { hex -> checkGetOrCreateUser(hex) }
-                    .sortedBy { account.isFollowing(it) }
-                    .reversed()
-                    .toImmutableList(),
-            )
+            onReady(loadUsersSync(hexList).toImmutableList())
         }
     }
+
+    fun loadUsersSync(hexList: List<String>): List<User> =
+        hexList
+            .mapNotNull { hex -> checkGetOrCreateUser(hex) }
+            .sortedBy { account.isFollowing(it) }
+            .reversed()
 
     fun loadUsers(
         event: GeneralListEvent,
@@ -1292,43 +1293,44 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             // Only restart relay connections if port or type changes
             if (account.settings.setTorSettings(newTorSettings)) {
-                Amethyst.instance.serviceManager.forceRestart()
+                app.serviceManager.forceRestart()
             }
         }
 
     fun forceRestartServices() =
         viewModelScope.launch(Dispatchers.IO) {
-            Amethyst.instance.serviceManager.setAccountAndRestart(account)
+            app.serviceManager.setAccountAndRestart(account)
         }
 
     fun justStart() =
         viewModelScope.launch(Dispatchers.IO) {
-            Amethyst.instance.serviceManager.justStartIfItHasAccount()
+            app.serviceManager.justStartIfItHasAccount()
         }
 
     fun justPause() =
         viewModelScope.launch(Dispatchers.IO) {
-            Amethyst.instance.serviceManager.cleanObservers()
-            Amethyst.instance.serviceManager.pauseForGood()
+            app.serviceManager.cleanObservers()
+            app.serviceManager.pauseForGood()
         }
 
     fun pauseAndLogOff() =
         viewModelScope.launch(Dispatchers.IO) {
-            Amethyst.instance.serviceManager.cleanObservers()
-            Amethyst.instance.serviceManager.pauseAndLogOff()
+            app.serviceManager.cleanObservers()
+            app.serviceManager.pauseAndLogOff()
         }
 
     fun changeProxyPort(port: Int) =
         viewModelScope.launch(Dispatchers.IO) {
-            Amethyst.instance.serviceManager.forceRestart()
+            app.serviceManager.forceRestart()
         }
 
     class Factory(
         val accountSettings: AccountSettings,
         val settings: SharedSettingsState,
+        val app: Amethyst,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings, app) as T
     }
 
     private var collectorJob: Job? = null
@@ -1537,23 +1539,23 @@ class AccountViewModel(
         }
     }
 
-    fun proxyPortFor(url: String): Int? = Amethyst.instance.okHttpClients.getCurrentProxyPort(account.shouldUseTorForVideoDownload(url))
+    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForNip96(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(url))
+    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(url))
 
-    fun okHttpClientForImage(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload(url))
+    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload(url))
 
-    fun okHttpClientForVideo(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForVideoDownload(url))
+    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForMoney(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForMoneyOperations(url))
+    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForMoneyOperations(url))
 
-    fun okHttpClientForPreview(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForPreviewUrl(url))
+    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForPreviewUrl(url))
 
-    fun okHttpClientForDirty(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(url))
+    fun okHttpClientForDirty(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForDirty(url))
 
-    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
+    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
 
-    fun dataSources() = Amethyst.instance.sources
+    fun dataSources() = app.sources
 
     suspend fun deleteDraft(draftTag: String) {
         account.deleteDraft(draftTag)
@@ -1699,7 +1701,7 @@ class AccountViewModel(
 
     suspend fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
 
-    fun relayStatusFlow() = Amethyst.instance.client.relayStatusFlow()
+    fun relayStatusFlow() = app.client.relayStatusFlow()
 
     fun allAccountsSync(): List<HexKey> =
         runBlocking {
@@ -1802,6 +1804,7 @@ fun mockAccountViewModel(): AccountViewModel {
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,
+        Amethyst(),
     )
 }
 
@@ -1819,5 +1822,6 @@ fun mockVitorAccountViewModel(): AccountViewModel {
                 ),
         ),
         sharedPreferencesViewModel.sharedPrefs,
+        Amethyst(),
     )
 }

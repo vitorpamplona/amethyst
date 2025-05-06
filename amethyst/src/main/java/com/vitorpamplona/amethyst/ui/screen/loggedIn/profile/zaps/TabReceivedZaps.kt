@@ -36,7 +36,7 @@ fun TabReceivedZaps(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel)
+    WatchZapsAndUpdateFeed(baseUser, zapFeedViewModel, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         LnZapFeedView(zapFeedViewModel, accountViewModel, nav)

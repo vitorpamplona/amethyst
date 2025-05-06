@@ -66,7 +66,7 @@ fun ZapNoteCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val baseNoteRequest by observeNote(baseReqResponse.zapRequest)
+    val baseNoteRequest by observeNote(baseReqResponse.zapRequest, accountViewModel)
 
     var baseAuthor by remember { mutableStateOf<User?>(null) }
 
@@ -115,14 +115,14 @@ private fun RenderZapNote(
             modifier = remember { Modifier.padding(start = 10.dp).weight(1f) },
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(baseAuthor, accountViewModel = accountViewModel) }
-            Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor) }
+            Row(verticalAlignment = Alignment.CenterVertically) { AboutDisplay(baseAuthor, accountViewModel) }
         }
 
         Column(
             modifier = remember { Modifier.padding(start = 10.dp) },
             verticalArrangement = Arrangement.Center,
         ) {
-            ZapAmount(zapNote)
+            ZapAmount(zapNote, accountViewModel)
         }
 
         Column(modifier = Modifier.padding(start = 10.dp)) {
@@ -132,8 +132,11 @@ private fun RenderZapNote(
 }
 
 @Composable
-private fun ZapAmount(zapEventNote: Note) {
-    val noteState by observeNote(zapEventNote)
+private fun ZapAmount(
+    zapEventNote: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val noteState by observeNote(zapEventNote, accountViewModel)
 
     var zapAmount by remember { mutableStateOf<String?>(null) }
 
@@ -174,7 +177,7 @@ fun ShowFollowingOrUnfollowingButton(
     baseAuthor: User,
     accountViewModel: AccountViewModel,
 ) {
-    var isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor)
+    var isFollowing = observeUserIsFollowing(accountViewModel.account.userProfile(), baseAuthor, accountViewModel)
 
     if (isFollowing.value) {
         UnfollowButton {
@@ -202,8 +205,11 @@ fun ShowFollowingOrUnfollowingButton(
 }
 
 @Composable
-fun AboutDisplay(baseAuthor: User) {
-    val aboutMe by observeUserAboutMe(baseAuthor)
+fun AboutDisplay(
+    baseAuthor: User,
+    accountViewModel: AccountViewModel,
+) {
+    val aboutMe by observeUserAboutMe(baseAuthor, accountViewModel)
 
     Text(
         aboutMe,

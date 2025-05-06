@@ -55,7 +55,7 @@ private fun WatchAndDisplayUser(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userState by observeUserInfo(author)
+    val userState by observeUserInfo(author, accountViewModel)
 
     UserDisplayNameLayout(
         picture = {
