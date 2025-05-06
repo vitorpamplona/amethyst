@@ -109,7 +109,7 @@ fun <T> Transition<T>.MyCrossfade(
                     animateFloat(transitionSpec = { animationSpec }) {
                         if (it == stateForContent) 1f else 0f
                     }
-                Box(Modifier.graphicsLayer { this.alpha = alpha }) { content(stateForContent) }
+                Box(Modifier.graphicsLayer { this.alpha = alpha }, contentAlignment) { content(stateForContent) }
             }
         }
     }
