@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
+import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -62,6 +63,28 @@ class UserProfileQueryState(
 class UserProfileFilterAssembler(
     client: NostrClient,
 ) : QueryBasedSubscriptionOrchestrator<UserProfileQueryState>(client) {
+    val list = "A"
+    val latestEOSEs = EOSEAccount()
+
+    fun since(key: UserProfileQueryState) =
+        latestEOSEs.users[key.user]
+            ?.followList
+            ?.get(list)
+            ?.relayList
+
+    fun newEose(
+        key: UserProfileQueryState,
+        relayUrl: String,
+        time: Long,
+    ) {
+        latestEOSEs.addOrUpdate(
+            key.user,
+            list,
+            relayUrl,
+            time,
+        )
+    }
+
     fun createUserInfoFilter(keys: List<UserProfileQueryState>) =
         keys.map { state ->
             TypedFilter(
@@ -71,6 +94,7 @@ class UserProfileFilterAssembler(
                         kinds = listOf(MetadataEvent.KIND),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 1,
+                        since = since(state),
                     ),
             )
         }
@@ -96,6 +120,7 @@ class UserProfileFilterAssembler(
                             ),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 200,
+                        since = since(state),
                     ),
             )
         }
@@ -115,6 +140,7 @@ class UserProfileFilterAssembler(
                             ),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 50,
+                        since = since(state),
                     ),
             )
         }
@@ -128,6 +154,7 @@ class UserProfileFilterAssembler(
                         kinds = listOf(LnZapEvent.KIND),
                         tags = mapOf("p" to listOf(state.user.pubkeyHex)),
                         limit = 200,
+                        since = since(state),
                     ),
             )
         }
@@ -141,6 +168,7 @@ class UserProfileFilterAssembler(
                         kinds = listOf(ContactListEvent.KIND),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 1,
+                        since = since(state),
                     ),
             )
         }
@@ -153,6 +181,7 @@ class UserProfileFilterAssembler(
                     SincePerRelayFilter(
                         kinds = listOf(ContactListEvent.KIND),
                         tags = mapOf("p" to listOf(state.user.pubkeyHex)),
+                        since = since(state),
                     ),
             )
         }
@@ -166,6 +195,7 @@ class UserProfileFilterAssembler(
                         kinds = listOf(BadgeProfilesEvent.KIND),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 1,
+                        since = since(state),
                     ),
             )
         }
@@ -185,6 +215,7 @@ class UserProfileFilterAssembler(
                             ),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 100,
+                        since = since(state),
                     ),
             )
         }
@@ -204,6 +235,7 @@ class UserProfileFilterAssembler(
                             ),
                         authors = listOf(state.user.pubkeyHex),
                         limit = 1000,
+                        since = since(state),
                     ),
             )
         }
@@ -217,11 +249,17 @@ class UserProfileFilterAssembler(
                         kinds = listOf(BadgeAwardEvent.KIND),
                         tags = mapOf("p" to listOf(state.user.pubkeyHex)),
                         limit = 20,
+                        since = since(state),
                     ),
             )
         }
 
-    val userInfoChannel = requestNewSubscription()
+    val userInfoChannel =
+        requestNewSubscription { time, relayUrl ->
+            forEachSubscriber {
+                newEose(it, relayUrl, time)
+            }
+        }
 
     override fun updateSubscriptions(keys1: Set<UserProfileQueryState>) {
         if (keys1.isEmpty()) return
