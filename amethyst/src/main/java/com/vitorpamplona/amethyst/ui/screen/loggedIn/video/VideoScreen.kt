@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.RenderAllRelayList
@@ -97,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.VideoReactionColumnPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
@@ -448,6 +450,14 @@ fun ReactionsColumn(
             heartSizeModifier = Size35Modifier,
             iconFontSize = 28.sp,
         )
+        MoneroTippingReaction(
+            note = baseNote,
+            grayTint = MaterialTheme.colorScheme.onBackground,
+            accountViewModel = accountViewModel,
+            iconSize = Size40dp,
+            iconSizeModifier = Size40Modifier,
+        )
+        Spacer(StdVertSpacer)
         ZapReaction(
             baseNote = baseNote,
             grayTint = MaterialTheme.colorScheme.onBackground,

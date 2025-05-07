@@ -90,7 +90,9 @@
     <string name="note_to_receiver">Note to Receiver</string>
     <string name="thank_you_so_much">Thank you so much!</string>
     <string name="amount_in_sats">Amount in Sats</string>
+    <string name="amount">Amount</string>
     <string name="send_sats">Send Sats</string>
+    <string name="send_monero">Send Monero</string>
 
     <string name="secret_emoji_maker">Secret Emoji Maker</string>
     <string name="secret_emoji_maker_explainer">Add an emoji with hidden message to post</string>
@@ -1184,7 +1186,7 @@
     <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
 
     <string name="monero">Monero</string>
-    <string name="monero_template">8... or 4...</string>
+    <string name="monero_template">8… or 4…</string>
     <string name="invalid_monero_address">Invalid monero address</string>
     <string name="monero_wallet">Monero wallet</string>
     <string name="no_monero_wallet_found">No monero wallet found</string>
@@ -1192,5 +1194,9 @@
     <string name="no_tip_amount_setup_long_press_to_change">No Tip Amount Setup. Long Press to change</string>
     <string name="it_s_not_possible_to_tip_to_a_draft_note">It\'s not possible to tip a draft note</string>
     <string name="new_amount">New amount</string>
+    <string name="both">Both</string>
+    <string name="monero_tips">Monero Tips</string>
+    <string name="tips">Tips</string>
+    <string name="tips_description">Both, Lightning or Monero</string>
 
 </resources>

@@ -36,7 +36,17 @@ data class Settings(
     val dontAskForNotificationPermissions: Boolean = false,
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
+    val tipsType: TipsType = TipsType.BOTH,
 )
+
+enum class TipsType(
+    val screenCode: Int,
+    val resourceId: Int,
+) {
+    BOTH(0, R.string.both),
+    LIGHTNING(1, R.string.lightning_tips),
+    MONERO(2, R.string.monero_tips),
+}
 
 enum class ThemeType(
     val screenCode: Int,
@@ -120,6 +130,15 @@ fun parseGalleryType(screenCode: Int): ProfileGalleryType =
         ProfileGalleryType.MODERN.screenCode -> ProfileGalleryType.MODERN
         else -> {
             ProfileGalleryType.CLASSIC
+        }
+    }
+
+fun parseTipsType(screenCode: Int): TipsType =
+    when (screenCode) {
+        TipsType.LIGHTNING.screenCode -> TipsType.LIGHTNING
+        TipsType.MONERO.screenCode -> TipsType.MONERO
+        else -> {
+            TipsType.BOTH
         }
     }
 

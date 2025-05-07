@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.model.TipsType
 
 @Stable
 class SharedSettingsState {
@@ -54,6 +55,7 @@ class SharedSettingsState {
 
     var windowSizeClass = mutableStateOf<WindowSizeClass?>(null)
     var displayFeatures = mutableStateOf<List<DisplayFeature>>(emptyList())
+    var tipsType by mutableStateOf(TipsType.BOTH)
 
     val showProfilePictures =
         derivedStateOf {

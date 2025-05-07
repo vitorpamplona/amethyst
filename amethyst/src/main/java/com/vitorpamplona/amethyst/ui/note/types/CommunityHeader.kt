@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -326,6 +327,12 @@ private fun ShortCommunityActionOptions(
             nav = nav,
         )
     }
+    Spacer(modifier = StdHorzSpacer)
+    MoneroTippingReaction(
+        note = note,
+        grayTint = MaterialTheme.colorScheme.onSurface,
+        accountViewModel = accountViewModel,
+    )
     Spacer(modifier = StdHorzSpacer)
     ZapReaction(
         baseNote = note,

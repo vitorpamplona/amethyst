@@ -677,7 +677,7 @@ class AccountViewModel(
         onError: (String, String, User?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            TipPaymentHandler(account)
+            TipPaymentHandler
                 .tip(
                     note = note,
                     amount = amount,

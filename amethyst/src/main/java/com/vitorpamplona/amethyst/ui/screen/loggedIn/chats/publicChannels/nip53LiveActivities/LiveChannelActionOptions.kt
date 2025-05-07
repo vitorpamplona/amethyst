@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
@@ -66,6 +67,12 @@ fun LiveChannelActionOptions(
                 nav,
             )
         }
+        Spacer(modifier = StdHorzSpacer)
+        MoneroTippingReaction(
+            note = it,
+            grayTint = MaterialTheme.colorScheme.onSurface,
+            accountViewModel = accountViewModel,
+        )
         Spacer(modifier = StdHorzSpacer)
         ZapReaction(
             baseNote = it,

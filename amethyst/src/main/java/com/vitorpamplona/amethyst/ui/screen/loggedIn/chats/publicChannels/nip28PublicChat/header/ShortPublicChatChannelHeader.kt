@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.JoinChatButton
@@ -119,12 +120,20 @@ fun ShortChannelActionOptions(
                     accountViewModel = accountViewModel,
                     nav,
                 )
+                Spacer(modifier = StdHorzSpacer)
+                MoneroTippingReaction(
+                    note = it,
+                    grayTint = MaterialTheme.colorScheme.onSurface,
+                    accountViewModel = accountViewModel,
+                )
+
                 ZapReaction(
                     baseNote = it,
                     grayTint = MaterialTheme.colorScheme.onSurface,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+
                 Spacer(modifier = StdHorzSpacer)
             }
         }

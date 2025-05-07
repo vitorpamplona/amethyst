@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
@@ -181,6 +182,12 @@ fun RenderFollowSetThumb(
                 grayTint = MaterialTheme.colorScheme.onSurface,
                 accountViewModel = accountViewModel,
                 nav,
+            )
+            Spacer(modifier = StdHorzSpacer)
+            MoneroTippingReaction(
+                note = baseNote,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
             )
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(

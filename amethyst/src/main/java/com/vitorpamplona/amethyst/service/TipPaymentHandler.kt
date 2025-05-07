@@ -25,13 +25,10 @@ import android.content.Intent
 import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 
-class TipPaymentHandler(
-    val account: Account,
-) {
+object TipPaymentHandler {
     @Immutable
     data class Payable(
         val user: User?,
@@ -56,6 +53,26 @@ class TipPaymentHandler(
             } catch (_: Exception) {
                 onError(context.getString(R.string.monero_wallet), context.getString(R.string.no_monero_wallet_found), null)
             }
+        }
+    }
+
+    fun tip(
+        address: String,
+        amount: Double,
+        context: Context,
+        onSuccess: () -> Unit,
+        onError: (String, String, User?) -> Unit,
+    ) {
+        if (!MoneroValidator.isValidAddress(address)) {
+            onError(context.getString(R.string.monero), context.getString(R.string.invalid_monero_address), null)
+            return
+        }
+        try {
+            val sendIntent = Intent(Intent.ACTION_VIEW, "monero:$address?amount=$amount".toUri())
+            context.startActivity(sendIntent)
+            onSuccess()
+        } catch (_: Exception) {
+            onError(context.getString(R.string.monero_wallet), context.getString(R.string.no_monero_wallet_found), null)
         }
     }
 }
