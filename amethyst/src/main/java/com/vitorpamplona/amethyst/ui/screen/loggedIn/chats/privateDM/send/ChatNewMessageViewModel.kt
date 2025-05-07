@@ -37,11 +37,13 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.dal.TextGenerationDVMFeedFilter
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -86,6 +88,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.ImmutableList
@@ -94,6 +97,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 @Stable
 class ChatNewMessageViewModel :
@@ -103,6 +108,10 @@ class ChatNewMessageViewModel :
     IZapField,
     IZapRaiser {
     val draftTag = DraftTagState()
+
+    // DVM functionality
+    var showDvmSelectionDialog by mutableStateOf(false)
+    var availableDvms by mutableStateOf<List<DvmInfo>>(emptyList())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -347,6 +356,19 @@ class ChatNewMessageViewModel :
 
     fun sendPost(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Check if this is a DVM conversation and force non-NIP-17
+            if (isDvmConversation()) {
+                // Format message as a NIP-90 request if sending to a DVM
+                val originalMessage = message.text
+                val formattedMessage = formatTextGenerationRequest(originalMessage)
+                message = TextFieldValue(formattedMessage)
+
+                // Force regular DM (type 4) for DVM conversations
+                nip17 = false
+
+                Log.d("DVM", "Sending NIP-90 formatted request: $formattedMessage")
+            }
+
             sendPostSync()
             onDone()
         }
@@ -724,4 +746,194 @@ class ChatNewMessageViewModel :
     }
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
+
+    fun fetchTextGenerationDvms() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val account = account ?: return@launch
+
+            Log.d("DVM", "Starting to fetch Text Generation DVMs")
+
+            try {
+                // First, explicitly request text generation DVMs from NostrDiscoveryDataSource
+                NostrDiscoveryDataSource.requestTextGenerationDVMs()
+
+                // Give relays a short time to respond
+                delay(500)
+            } catch (e: Exception) {
+                Log.e("DVM", "Error requesting DVMs: ${e.message}", e)
+            }
+
+            // Use the dedicated method to find Text Generation DVMs
+            val dvmInfoList = getKind5050DVMs()
+
+            Log.d("DVM", "Found ${dvmInfoList.size} Text Generation DVMs")
+
+            availableDvms = dvmInfoList
+            showDvmSelectionDialog = true
+        }
+    }
+
+    fun onDvmSelected(pubkey: String) {
+        val user = LocalCache.getOrCreateUser(pubkey)
+
+        // Set the room for communication with the DVM
+        room = ChatroomKey(setOf(pubkey))
+
+        // Update the To field with the DVM's npub
+        toUsers = TextFieldValue("@${Hex.decode(pubkey).toNpub()}")
+
+        // Enable NIP17 for DVM communication
+        nip17 = true
+        requiresNIP17 = false
+
+        showDvmSelectionDialog = false
+
+        // Update the room status for proper messaging
+        updateNIP17StatusFromRoom()
+    }
+
+    fun dismissDvmDialog() {
+        showDvmSelectionDialog = false
+    }
+
+    private fun isDvmConversation(): Boolean {
+        // First check if any user in the room matches a known DVM
+        val isExistingDvm =
+            room?.users?.any { userPubkey ->
+                availableDvms.any { dvm -> dvm.pubkey == userPubkey }
+            } ?: false
+
+        // Then check if the To field contains a DVM
+        val isNewDvm =
+            !availableDvms.isEmpty() &&
+                availableDvms.any { dvm ->
+                    toUsers.text.contains(dvm.pubkey) ||
+                        toUsers.text.contains(
+                            com.vitorpamplona.quartz.utils.Hex
+                                .decode(dvm.pubkey)
+                                .toNpub(),
+                        )
+                }
+
+        return isExistingDvm || isNewDvm
+    }
+
+    private fun formatTextGenerationRequest(message: String): String {
+        // If not talking to a DVM, return the original message
+        if (!isDvmConversation()) return message
+
+        try {
+            // Create a NIP-90 kind:5050 formatted request
+            val requestObject = JSONObject()
+
+            // Add input data as text
+            val inputTags = JSONArray()
+            val inputTag = JSONArray()
+            inputTag.put("i")
+            inputTag.put(message)
+            inputTag.put("text")
+            inputTags.put(inputTag)
+
+            // Add basic params
+            val paramTags = JSONArray()
+
+            // Add model param if you want to specify a model
+            val modelParam = JSONArray()
+            modelParam.put("param")
+            modelParam.put("model")
+            modelParam.put("default") // You could let user customize this
+            paramTags.put(modelParam)
+
+            // Create the request object
+            requestObject.put("kind", 5050)
+            requestObject.put("tags", inputTags)
+            requestObject.put("content", "")
+
+            return requestObject.toString(2)
+        } catch (e: Exception) {
+            Log.e("DVM", "Error formatting text generation request", e)
+            return message
+        }
+    }
+
+    fun getKind5050DVMs(): List<DvmInfo> {
+        val account = account ?: return emptyList()
+
+        // Get DVM notes using two approaches for redundancy
+        var dvmNotes = emptyList<Note>()
+
+        try {
+            // Try using the specialized filter first
+            val feed = TextGenerationDVMFeedFilter(account)
+            dvmNotes = feed.feed()
+            Log.d("DVM", "Filter found ${dvmNotes.size} DVM notes")
+        } catch (e: Exception) {
+            Log.e("DVM", "Error using filter for DVMs: ${e.message}", e)
+        }
+
+        // If filter returns no results, fall back to direct cache lookup
+        if (dvmNotes.isEmpty()) {
+            Log.d("DVM", "Falling back to direct cache scan for DVMs")
+            val appDefinitions = mutableListOf<Note>()
+
+            // Directly scan LocalCache for AppDefinitionEvents supporting kind 5050
+            LocalCache.notes.forEach { _, note ->
+                if (note.event is AppDefinitionEvent &&
+                    (note.event as AppDefinitionEvent).supportedKinds().contains(5050)
+                ) {
+                    appDefinitions.add(note)
+                }
+            }
+
+            dvmNotes = appDefinitions.sortedByDescending { it.createdAt() ?: 0L }
+            Log.d("DVM", "Direct cache scan found ${dvmNotes.size} DVM notes")
+        }
+
+        // First, collect all DVM info
+        val allDvmInfo =
+            dvmNotes.mapNotNull { note ->
+                val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
+                val metadata = appDef.appMetaData() ?: return@mapNotNull null
+                val supportedKinds = appDef.supportedKinds()
+                val pubkey = note.author?.pubkeyHex ?: return@mapNotNull null
+                val supportsTextGeneration = supportedKinds.contains(5050)
+
+                // Log every DVM found
+                Log.d(
+                    "DVM",
+                    "Found DVM: id=${note.idHex.take(8)}, " +
+                        "name=${metadata.name ?: "unnamed"}, " +
+                        "pubkey=${pubkey.take(8)}, " +
+                        "createdAt=${note.createdAt() ?: 0L}, " +
+                        "kinds=${supportedKinds.joinToString()}, " +
+                        "supports5050=$supportsTextGeneration",
+                )
+
+                // Only include DVMs that support kind 5050
+                if (supportsTextGeneration) {
+                    DvmInfo(
+                        pubkey = pubkey,
+                        name = metadata.name,
+                        supportedKinds = supportedKinds.toSet(),
+                        description = metadata.about,
+                    )
+                } else {
+                    Log.d("DVM", "Skipping DVM that doesn't support kind 5050: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
+                    null
+                }
+            }
+
+        // Then deduplicate by pubkey, taking the most recent for each
+        val uniqueDvms = mutableMapOf<String, DvmInfo>()
+
+        // Add all DVMs with kind 5050
+        allDvmInfo.forEach { dvm ->
+            uniqueDvms[dvm.pubkey] = dvm
+            Log.d("DVM", "Added Text Generation DVM: ${dvm.name ?: "unnamed"} (${dvm.pubkey.take(8)})")
+        }
+
+        val result = uniqueDvms.values.toList()
+        Log.d("DVM", "Returning ${result.size} unique Text Generation DVMs")
+        return result
+    }
 }
