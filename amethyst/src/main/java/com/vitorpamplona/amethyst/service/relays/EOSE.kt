@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relays
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 
@@ -59,7 +60,7 @@ class EOSEFollowList(
 }
 
 class EOSEAccount(
-    var users: Map<User, EOSEFollowList> = emptyMap(),
+    var users: LruCache<User, EOSEFollowList> = LruCache<User, EOSEFollowList>(20),
 ) {
     fun addOrUpdate(
         user: User,
@@ -70,14 +71,14 @@ class EOSEAccount(
         val followList = users[user]
         if (followList == null) {
             val newList = EOSEFollowList()
+            users.put(user, newList)
             newList.addOrUpdate(listCode, relayUrl, time)
-            users = users + mapOf(user to newList)
         } else {
             followList.addOrUpdate(listCode, relayUrl, time)
         }
     }
 
     fun removeDataFor(user: User) {
-        users = users.minus(user)
+        users.remove(user)
     }
 }
