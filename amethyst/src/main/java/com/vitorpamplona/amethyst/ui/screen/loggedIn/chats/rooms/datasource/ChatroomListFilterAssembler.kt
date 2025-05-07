@@ -49,37 +49,48 @@ class ChatroomListFilterAssembler(
     val latestEOSEs = EOSEAccount()
     val chatRoomListKey = "ChatroomList"
 
-    fun createMessagesToMeFilter(account: Account) =
+    fun since(key: ChatroomListState) =
+        latestEOSEs.users[key.account.userProfile()]
+            ?.followList
+            ?.get(chatRoomListKey)
+            ?.relayList
+
+    fun newEose(
+        key: ChatroomListState,
+        relayUrl: String,
+        time: Long,
+    ) {
+        latestEOSEs.addOrUpdate(
+            key.account.userProfile(),
+            chatRoomListKey,
+            relayUrl,
+            time,
+        )
+    }
+
+    fun createMessagesToMeFilter(key: ChatroomListState) =
         TypedFilter(
             types = setOf(FeedType.PRIVATE_DMS),
             filter =
                 SincePerRelayFilter(
                     kinds = listOf(PrivateDmEvent.KIND),
-                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(chatRoomListKey)
-                            ?.relayList,
+                    tags = mapOf("p" to listOf(key.account.userProfile().pubkeyHex)),
+                    since = since(key),
                 ),
         )
 
-    fun createMessagesFromMeFilter(account: Account) =
+    fun createMessagesFromMeFilter(key: ChatroomListState) =
         TypedFilter(
             types = setOf(FeedType.PRIVATE_DMS),
             filter =
                 SincePerRelayFilter(
                     kinds = listOf(PrivateDmEvent.KIND),
-                    authors = listOf(account.userProfile().pubkeyHex),
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(chatRoomListKey)
-                            ?.relayList,
+                    authors = listOf(key.account.userProfile().pubkeyHex),
+                    since = since(key),
                 ),
         )
 
-    fun createChannelsCreatedbyMeFilter(account: Account) =
+    fun createChannelsCreatedbyMeFilter(key: ChatroomListState) =
         TypedFilter(
             types = setOf(FeedType.PUBLIC_CHATS),
             filter =
@@ -89,17 +100,13 @@ class ChatroomListFilterAssembler(
                             ChannelCreateEvent.KIND,
                             ChannelMetadataEvent.KIND,
                         ),
-                    authors = listOf(account.userProfile().pubkeyHex),
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(chatRoomListKey)
-                            ?.relayList,
+                    authors = listOf(key.account.userProfile().pubkeyHex),
+                    since = since(key),
                 ),
         )
 
-    fun createMyChannelsFilter(account: Account): TypedFilter? {
-        val followingEvents = account.publicChatList.livePublicChatEventIdSet.value
+    fun createMyChannelsFilter(key: ChatroomListState): TypedFilter? {
+        val followingEvents = key.account.publicChatList.livePublicChatEventIdSet.value
 
         if (followingEvents.isEmpty()) return null
 
@@ -110,18 +117,14 @@ class ChatroomListFilterAssembler(
                 SincePerRelayFilter(
                     kinds = listOf(ChannelCreateEvent.KIND),
                     ids = followingEvents.toList(),
-                    since =
-                        latestEOSEs.users[account.userProfile()]
-                            ?.followList
-                            ?.get(chatRoomListKey)
-                            ?.relayList,
+                    since = since(key),
                 ),
         )
     }
 
-    fun createLastChannelInfoFilter(account: Account): List<TypedFilter>? {
+    fun createLastChannelInfoFilter(key: ChatroomListState): List<TypedFilter>? {
         val followingEvents =
-            account.publicChatList.livePublicChatEventIdSet.value
+            key.account.publicChatList.livePublicChatEventIdSet.value
 
         if (followingEvents.isEmpty()) return null
 
@@ -133,15 +136,16 @@ class ChatroomListFilterAssembler(
                     SincePerRelayFilter(
                         kinds = listOf(ChannelMetadataEvent.KIND),
                         tags = mapOf("e" to listOf(it)),
+                        since = since(key),
                         limit = 1,
                     ),
             )
         }
     }
 
-    fun createLastMessageOfEachChannelFilter(account: Account): List<TypedFilter>? {
+    fun createLastMessageOfEachChannelFilter(key: ChatroomListState): List<TypedFilter>? {
         val followingEvents =
-            account.publicChatList.livePublicChatEventIdSet.value
+            key.account.publicChatList.livePublicChatEventIdSet.value
 
         if (followingEvents.isEmpty()) return null
 
@@ -152,11 +156,7 @@ class ChatroomListFilterAssembler(
                     SincePerRelayFilter(
                         kinds = listOf(ChannelMessageEvent.KIND),
                         tags = mapOf("e" to listOf(it)),
-                        since =
-                            latestEOSEs.users[account.userProfile()]
-                                ?.followList
-                                ?.get(chatRoomListKey)
-                                ?.relayList,
+                        since = since(key),
                         // Remember to consider spam that is being removed from the UI
                         limit = 50,
                     ),
@@ -164,9 +164,9 @@ class ChatroomListFilterAssembler(
         }
     }
 
-    fun createLastMessageOfEachEphemeralChatFilter(account: Account): List<TypedFilter>? {
+    fun createLastMessageOfEachEphemeralChatFilter(key: ChatroomListState): List<TypedFilter>? {
         val followingEvents =
-            account.ephemeralChatList.liveEphemeralChatList.value
+            key.account.ephemeralChatList.liveEphemeralChatList.value
                 .map { it.id }
 
         if (followingEvents.isEmpty()) return null
@@ -179,11 +179,7 @@ class ChatroomListFilterAssembler(
                     SincePerRelayFilter(
                         kinds = listOf(EphemeralChatEvent.KIND),
                         tags = mapOf("d" to followingEvents),
-                        since =
-                            latestEOSEs.users[account.userProfile()]
-                                ?.followList
-                                ?.get(chatRoomListKey)
-                                ?.relayList,
+                        since = since(key),
                         // Remember to consider spam that is being removed from the UI
                         limit = 50,
                     ),
@@ -191,21 +187,21 @@ class ChatroomListFilterAssembler(
         )
     }
 
-    fun mergeAllFilters(account: Account): List<TypedFilter>? =
+    fun mergeAllFilters(key: ChatroomListState): List<TypedFilter>? =
         listOfNotNull(
             listOfNotNull(
-                createMessagesToMeFilter(account),
-                createMessagesFromMeFilter(account),
-                createMyChannelsFilter(account),
+                createMessagesToMeFilter(key),
+                createMessagesFromMeFilter(key),
+                createMyChannelsFilter(key),
             ),
-            createLastChannelInfoFilter(account),
-            createLastMessageOfEachChannelFilter(account),
-            createLastMessageOfEachEphemeralChatFilter(account),
+            createLastChannelInfoFilter(key),
+            createLastMessageOfEachChannelFilter(key),
+            createLastMessageOfEachEphemeralChatFilter(key),
         ).flatten().ifEmpty { null }
 
     fun newSub(key: ChatroomListState): Subscription =
         requestNewSubscription { time, relayUrl ->
-            latestEOSEs.addOrUpdate(key.account.userProfile(), chatRoomListKey, relayUrl, time)
+            newEose(key, relayUrl, time)
         }
 
     val userSubscriptionMap = mutableMapOf<User, String>()
@@ -228,7 +224,7 @@ class ChatroomListFilterAssembler(
         uniqueSubscribedAccounts.forEach {
             val user = it.account.userProfile()
             val sub = findOrCreateSubFor(it)
-            sub.typedFilters = mergeAllFilters(it.account)
+            sub.typedFilters = mergeAllFilters(it)
 
             updated.add(user)
         }
