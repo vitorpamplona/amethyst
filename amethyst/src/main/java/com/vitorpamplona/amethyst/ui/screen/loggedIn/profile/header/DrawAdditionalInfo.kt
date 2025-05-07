@@ -189,6 +189,7 @@ fun DrawAdditionalInfo(
     val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
     val pubkeyHex = remember { baseUser.pubkeyHex }
     DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
+    DisplayMoneroTipping(user.info?.moneroAddress(), pubkeyHex, accountViewModel, nav)
 
     val identities = user.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {
