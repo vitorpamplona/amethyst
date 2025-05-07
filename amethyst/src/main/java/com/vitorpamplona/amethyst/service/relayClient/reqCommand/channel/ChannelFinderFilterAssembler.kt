@@ -28,6 +28,7 @@ import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.NormalFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -40,23 +41,25 @@ class ChannelFinderQueryState(
 class ChannelFinderFilterAssembler(
     client: NostrClient,
 ) : QueryBasedSubscriptionOrchestrator<ChannelFinderQueryState>(client) {
-    private fun createMetadataChangeFilter(keys: Set<ChannelFinderQueryState>): TypedFilter? {
-        val reactionsToWatch = keys.filter { it.channel is PublicChatChannel }.map { it.channel.idHex }
+    private fun createMetadataChangeFilter(keys: Set<ChannelFinderQueryState>): List<TypedFilter> {
+        val channelsToWatch = keys.filter { it.channel is PublicChatChannel }
 
-        if (reactionsToWatch.isEmpty()) {
-            return null
+        if (channelsToWatch.isEmpty()) {
+            return emptyList()
         }
 
         // downloads all the reactions to a given event.
-        return TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ChannelMetadataEvent.KIND),
-                    tags = mapOf("e" to reactionsToWatch),
-                    limit = 3,
-                ),
-        )
+        return channelsToWatch.map {
+            TypedFilter(
+                types = setOf(FeedType.PUBLIC_CHATS),
+                filter =
+                    NormalFilter(
+                        kinds = listOf(ChannelMetadataEvent.KIND),
+                        tags = mapOf("e" to listOf(it.channel.idHex)),
+                        since = it.channel.updatedMetadataAt + 1,
+                    ),
+            )
+        }
     }
 
     fun createLoadEventsIfNotLoadedFilter(keys: Set<ChannelFinderQueryState>): TypedFilter? {
@@ -84,7 +87,7 @@ class ChannelFinderFilterAssembler(
         )
     }
 
-    fun createLoadStreamingIfNotLoadedFilter(keys: Set<ChannelFinderQueryState>): List<TypedFilter>? {
+    fun createLoadStreamingIfNotLoadedFilter(keys: Set<ChannelFinderQueryState>): List<TypedFilter> {
         val directEventsToLoad =
             keys.mapNotNull {
                 if (it.channel is LiveActivitiesChannel && it.channel.info == null) {
@@ -97,7 +100,7 @@ class ChannelFinderFilterAssembler(
         val interestedEvents = directEventsToLoad.map { it.idHex }.toSet()
 
         if (interestedEvents.isEmpty()) {
-            return null
+            return emptyList()
         }
 
         // downloads linked events to this event.
@@ -119,10 +122,10 @@ class ChannelFinderFilterAssembler(
     val singleChannelChannel = requestNewSubscription()
 
     override fun updateSubscriptions(keys: Set<ChannelFinderQueryState>) {
-        val reactions = createMetadataChangeFilter(keys)
         val missing = createLoadEventsIfNotLoadedFilter(keys)
         val missingStreaming = createLoadStreamingIfNotLoadedFilter(keys)
+        val metadataWatcher = createMetadataChangeFilter(keys)
 
-        singleChannelChannel.typedFilters = ((listOfNotNull(reactions, missing)) + (missingStreaming ?: emptyList())).ifEmpty { null }
+        singleChannelChannel.typedFilters = (listOfNotNull(missing) + missingStreaming + metadataWatcher).ifEmpty { null }
     }
 }
