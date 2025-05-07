@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
+import com.vitorpamplona.amethyst.service.relays.EOSEFollowList
 import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -56,7 +57,31 @@ class ChannelFilterAssembler(
             )
     }
 
-    private val latestEOSEs = EOSEAccount()
+    private val latestEOSEPerAccount = EOSEAccount()
+    private val latestEOSEPerChannel = EOSEFollowList()
+
+    fun sinceUser(key: ChannelQueryState) =
+        latestEOSEPerAccount.users[key.account.userProfile()]
+            ?.followList
+            ?.get(key.channel.idHex)
+            ?.relayList
+
+    fun since(key: ChannelQueryState) = latestEOSEPerChannel.followList.get(key.channel.idHex)?.relayList
+
+    fun newEose(
+        key: ChannelQueryState,
+        relayUrl: String,
+        time: Long,
+    ) {
+        latestEOSEPerAccount.addOrUpdate(
+            key.account.userProfile(),
+            key.channel.idHex,
+            relayUrl,
+            time,
+        )
+
+        latestEOSEPerChannel.addOrUpdate(key.channel.idHex, relayUrl, time)
+    }
 
     fun createMessagesByMeToChannelFilter(key: ChannelQueryState): TypedFilter? =
         when (key.channel) {
@@ -68,6 +93,7 @@ class ChannelFilterAssembler(
                             kinds = listOf(ChannelMessageEvent.KIND),
                             authors = listOf(key.account.userProfile().pubkeyHex),
                             limit = 50,
+                            since = sinceUser(key),
                         ),
                 )
             is LiveActivitiesChannel ->
@@ -78,6 +104,7 @@ class ChannelFilterAssembler(
                             kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                             authors = listOf(key.account.userProfile().pubkeyHex),
                             limit = 50,
+                            since = sinceUser(key),
                         ),
                 )
             is EphemeralChatChannel ->
@@ -99,6 +126,7 @@ class ChannelFilterAssembler(
                             kinds = listOf(ChannelMessageEvent.KIND),
                             tags = mapOf("e" to listOfNotNull(channel.idHex)),
                             limit = 200,
+                            since = since(key),
                         ),
                 )
             is LiveActivitiesChannel ->
@@ -109,6 +137,7 @@ class ChannelFilterAssembler(
                             kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                             tags = mapOf("a" to listOfNotNull(channel.idHex)),
                             limit = 200,
+                            since = since(key),
                         ),
                 )
             is EphemeralChatChannel -> {
@@ -129,6 +158,7 @@ class ChannelFilterAssembler(
                                     mapOf("d" to listOfNotNull(channel.roomId.id))
                                 },
                             limit = 200,
+                            since = since(key),
                         ),
                 )
             }
@@ -147,7 +177,7 @@ class ChannelFilterAssembler(
 
     fun newSub(key: ChannelQueryState): Subscription =
         requestNewSubscription { time, relayUrl ->
-            latestEOSEs.addOrUpdate(key.account.userProfile(), key.channel.idHex, relayUrl, time)
+            newEose(key, relayUrl, time)
         }
 
     val userSubscriptionMap = mutableMapOf<User, String>()
