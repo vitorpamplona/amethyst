@@ -93,6 +93,20 @@ open class DiscoverNIP89FeedFilter(
 class TextGenerationDVMFeedFilter(
     account: Account,
 ) : DiscoverNIP89FeedFilter(account) {
+    override fun feed(): List<Note> {
+        val notes =
+            LocalCache.addressables.filterIntoSet { _, it ->
+                acceptDVM(it)
+            }
+
+        return sort(notes)
+    }
+
+    override fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
+        collection.filterTo(HashSet()) {
+            acceptDVM(it)
+        }
+
     override fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
         val filterParams = buildFilterParams(account)
 
@@ -102,7 +116,7 @@ class TextGenerationDVMFeedFilter(
 
         // Log for debugging
         android.util.Log.d(
-            "DVM-Filter",
+            "DVM",
             "Checking DVM with id=${noteEvent.id.take(8)}, " +
                 "kinds=${supportedKinds.joinToString()}, " +
                 "supports5050=$supportsTextGeneration",

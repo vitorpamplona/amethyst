@@ -452,4 +452,40 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                 ).toList()
                 .ifEmpty { null }
     }
+
+    // Add dedicated method to request only NIP89 events with specific kinds
+    fun requestNIP89Kinds(): List<TypedFilter>? {
+        val subscription =
+            requestNewChannel { time, relayUrl ->
+                latestEOSEs.addOrUpdate(
+                    account.userProfile(),
+                    account.settings.defaultDiscoveryFollowList.value,
+                    relayUrl,
+                    time,
+                )
+            }
+
+        // Always include 5050 for text generation DVMs
+        val filters = createNIP89Filter(listOf("5300", "5050"))
+        subscription.typedFilters = filters
+        return filters
+    }
+
+    // Start DVMs separately when needed
+    fun requestTextGenerationDVMs(): List<TypedFilter>? {
+        val subscription =
+            requestNewChannel { time, relayUrl ->
+                latestEOSEs.addOrUpdate(
+                    account.userProfile(),
+                    account.settings.defaultDiscoveryFollowList.value,
+                    relayUrl,
+                    time,
+                )
+            }
+
+        // Use a dedicated filter just for kind 5050 (text generation)
+        val filters = createNIP89Filter(listOf("5050"))
+        subscription.typedFilters = filters
+        return filters
+    }
 }

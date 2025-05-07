@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.NostrSearchEventOrUserDataSource
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
@@ -755,6 +756,16 @@ class ChatNewMessageViewModel :
 
             Log.d("DVM", "Starting to fetch Text Generation DVMs")
 
+            try {
+                // First, explicitly request text generation DVMs from NostrDiscoveryDataSource
+                NostrDiscoveryDataSource.requestTextGenerationDVMs()
+
+                // Give relays a short time to respond
+                delay(500)
+            } catch (e: Exception) {
+                Log.e("DVM", "Error requesting DVMs: ${e.message}", e)
+            }
+
             // Use the dedicated method to find Text Generation DVMs
             val dvmInfoList = getKind5050DVMs()
 
@@ -851,11 +862,35 @@ class ChatNewMessageViewModel :
     fun getKind5050DVMs(): List<DvmInfo> {
         val account = account ?: return emptyList()
 
-        // Use our specialized filter for Text Generation DVMs
-        val feed = TextGenerationDVMFeedFilter(account)
-        val dvmNotes = feed.feed()
+        // Get DVM notes using two approaches for redundancy
+        var dvmNotes = emptyList<Note>()
 
-        Log.d("DVM", "Found ${dvmNotes.size} DVM notes before processing")
+        try {
+            // Try using the specialized filter first
+            val feed = TextGenerationDVMFeedFilter(account)
+            dvmNotes = feed.feed()
+            Log.d("DVM", "Filter found ${dvmNotes.size} DVM notes")
+        } catch (e: Exception) {
+            Log.e("DVM", "Error using filter for DVMs: ${e.message}", e)
+        }
+
+        // If filter returns no results, fall back to direct cache lookup
+        if (dvmNotes.isEmpty()) {
+            Log.d("DVM", "Falling back to direct cache scan for DVMs")
+            val appDefinitions = mutableListOf<Note>()
+
+            // Directly scan LocalCache for AppDefinitionEvents supporting kind 5050
+            LocalCache.notes.forEach { _, note ->
+                if (note.event is AppDefinitionEvent &&
+                    (note.event as AppDefinitionEvent).supportedKinds().contains(5050)
+                ) {
+                    appDefinitions.add(note)
+                }
+            }
+
+            dvmNotes = appDefinitions.sortedByDescending { it.createdAt() ?: 0L }
+            Log.d("DVM", "Direct cache scan found ${dvmNotes.size} DVM notes")
+        }
 
         // First, collect all DVM info
         val allDvmInfo =
@@ -868,7 +903,7 @@ class ChatNewMessageViewModel :
 
                 // Log every DVM found
                 Log.d(
-                    "DVM-All",
+                    "DVM",
                     "Found DVM: id=${note.idHex.take(8)}, " +
                         "name=${metadata.name ?: "unnamed"}, " +
                         "pubkey=${pubkey.take(8)}, " +
@@ -886,7 +921,7 @@ class ChatNewMessageViewModel :
                         description = metadata.about,
                     )
                 } else {
-                    Log.d("DVM-Filter", "Skipping DVM that doesn't support kind 5050: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
+                    Log.d("DVM", "Skipping DVM that doesn't support kind 5050: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
                     null
                 }
             }
@@ -897,7 +932,7 @@ class ChatNewMessageViewModel :
         // Add all DVMs with kind 5050
         allDvmInfo.forEach { dvm ->
             uniqueDvms[dvm.pubkey] = dvm
-            Log.d("DVM-Filter", "Added Text Generation DVM: ${dvm.name ?: "unnamed"} (${dvm.pubkey.take(8)})")
+            Log.d("DVM", "Added Text Generation DVM: ${dvm.name ?: "unnamed"} (${dvm.pubkey.take(8)})")
         }
 
         val result = uniqueDvms.values.toList()
