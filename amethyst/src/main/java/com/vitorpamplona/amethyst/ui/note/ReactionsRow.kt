@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TipsType
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
@@ -198,11 +199,8 @@ private fun InnerReactionRow(
     nav: INav,
 ) {
     GenericInnerReactionRow(
-        showTipping =
-            baseNote.author
-                ?.info
-                ?.moneroAddress()
-                ?.isNotBlank() == true,
+        showLightning = accountViewModel.settings.tipsType != TipsType.MONERO,
+        showTipping = accountViewModel.settings.tipsType != TipsType.LIGHTNING,
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
         one = {
@@ -256,70 +254,72 @@ fun MoneroTippingReaction(
     iconSize: Dp = Size20dp,
     accountViewModel: AccountViewModel,
 ) {
-    val context = LocalContext.current
-    var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-    var wantsToTip by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    if (accountViewModel.settings.tipsType != TipsType.LIGHTNING) {
+        val context = LocalContext.current
+        var wantsToChangeZapAmount by remember { mutableStateOf(false) }
+        var wantsToTip by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
 
-    Row(
-        iconSizeModifier.combinedClickable(
-            role = Role.Button,
-            interactionSource = remember { MutableInteractionSource() },
-            indication = ripple24dp,
-            onClick = {
-                scope.launch {
-                    tipClick(
-                        note,
-                        accountViewModel,
-                        context,
-                        onMultipleChoices = {
-                            scope.launch {
-                                wantsToTip = true
-                            }
-                        },
-                        onError = { _, message, user ->
-                            scope.launch {
-                                accountViewModel.toastManager.toast(R.string.error_dialog_tip_error, message, user)
-                            }
-                        },
-                    )
-                }
-            },
-            onLongClick = {
-                wantsToChangeZapAmount = true
-            },
-        ),
-    ) {
-        if (wantsToTip) {
-            TipAmountChoicePopup(
-                baseNote = note,
-                popupYOffset = iconSize,
-                accountViewModel = accountViewModel,
-                onDismiss = {
-                    wantsToTip = false
-                },
-                onChangeAmount = {
+        Row(
+            iconSizeModifier.combinedClickable(
+                role = Role.Button,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple24dp,
+                onClick = {
                     scope.launch {
+                        tipClick(
+                            note,
+                            accountViewModel,
+                            context,
+                            onMultipleChoices = {
+                                scope.launch {
+                                    wantsToTip = true
+                                }
+                            },
+                            onError = { _, message, user ->
+                                scope.launch {
+                                    accountViewModel.toastManager.toast(R.string.error_dialog_tip_error, message, user)
+                                }
+                            },
+                        )
+                    }
+                },
+                onLongClick = {
+                    wantsToChangeZapAmount = true
+                },
+            ),
+        ) {
+            if (wantsToTip) {
+                TipAmountChoicePopup(
+                    baseNote = note,
+                    popupYOffset = iconSize,
+                    accountViewModel = accountViewModel,
+                    onDismiss = {
                         wantsToTip = false
-                        wantsToChangeZapAmount = true
-                    }
-                },
-                onError = { _, message, user ->
-                    scope.launch {
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
-                    }
-                },
-            )
-        }
+                    },
+                    onChangeAmount = {
+                        scope.launch {
+                            wantsToTip = false
+                            wantsToChangeZapAmount = true
+                        }
+                    },
+                    onError = { _, message, user ->
+                        scope.launch {
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        }
+                    },
+                )
+            }
 
-        if (wantsToChangeZapAmount) {
-            UpdateTipAmountDialog(
-                onClose = { wantsToChangeZapAmount = false },
-                accountViewModel = accountViewModel,
-            )
-        }
+            if (wantsToChangeZapAmount) {
+                UpdateTipAmountDialog(
+                    onClose = { wantsToChangeZapAmount = false },
+                    accountViewModel = accountViewModel,
+                )
+            }
 
-        MoneroIcon(iconSizeModifier, grayTint)
+            MoneroIcon(iconSizeModifier, grayTint)
+        }
     }
 }
 
@@ -365,6 +365,7 @@ private fun GenericInnerReactionRow(
     showReactionDetail: Boolean,
     addPadding: Boolean,
     showTipping: Boolean,
+    showLightning: Boolean,
     one: @Composable () -> Unit,
     two: @Composable () -> Unit,
     three: @Composable () -> Unit,
@@ -397,7 +398,9 @@ private fun GenericInnerReactionRow(
             Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { five() }
         }
 
-        Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { six() }
+        if (showLightning) {
+            Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { six() }
+        }
 
         Row(verticalAlignment = CenterVertically, modifier = Modifier) { seven() }
     }
@@ -1037,155 +1040,157 @@ fun ZapReaction(
     animationSize: Dp = Size14dp,
     nav: INav,
 ) {
-    var wantsToZap by remember { mutableStateOf(false) }
-    var wantsToChangeZapAmount by remember { mutableStateOf(false) }
-    var wantsToSetCustomZap by remember { mutableStateOf(false) }
-    var wantsToPay by
-        remember(baseNote) {
-            mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
-                persistentListOf(),
-            )
-        }
+    if (accountViewModel.settings.tipsType != TipsType.MONERO) {
+        var wantsToZap by remember { mutableStateOf(false) }
+        var wantsToChangeZapAmount by remember { mutableStateOf(false) }
+        var wantsToSetCustomZap by remember { mutableStateOf(false) }
+        var wantsToPay by
+            remember(baseNote) {
+                mutableStateOf<ImmutableList<ZapPaymentHandler.Payable>>(
+                    persistentListOf(),
+                )
+            }
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
 
-    var zappingProgress by remember { mutableFloatStateOf(0f) }
+        var zappingProgress by remember { mutableFloatStateOf(0f) }
 
-    Row(
-        verticalAlignment = CenterVertically,
-        modifier =
-            iconSizeModifier.combinedClickable(
-                role = Role.Button,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple24dp,
-                onClick = {
-                    scope.launch {
-                        zapClick(
-                            baseNote,
-                            accountViewModel,
-                            context,
-                            onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
-                            onMultipleChoices = {
-                                scope.launch {
-                                    wantsToZap = true
-                                }
-                            },
-                            onError = { _, message, user ->
-                                scope.launch {
-                                    zappingProgress = 0f
-                                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
-                                }
-                            },
-                            onPayViaIntent = { wantsToPay = it },
-                        )
-                    }
-                },
-                onLongClick = { wantsToChangeZapAmount = true },
-                onDoubleClick = { wantsToSetCustomZap = true },
-            ),
-    ) {
-        if (wantsToZap) {
-            ZapAmountChoicePopup(
-                baseNote = baseNote,
-                popupYOffset = iconSize,
-                accountViewModel = accountViewModel,
-                onDismiss = {
-                    wantsToZap = false
-                    zappingProgress = 0f
-                },
-                onChangeAmount = {
-                    scope.launch {
+        Row(
+            verticalAlignment = CenterVertically,
+            modifier =
+                iconSizeModifier.combinedClickable(
+                    role = Role.Button,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple24dp,
+                    onClick = {
+                        scope.launch {
+                            zapClick(
+                                baseNote,
+                                accountViewModel,
+                                context,
+                                onZappingProgress = { progress: Float -> scope.launch { zappingProgress = progress } },
+                                onMultipleChoices = {
+                                    scope.launch {
+                                        wantsToZap = true
+                                    }
+                                },
+                                onError = { _, message, user ->
+                                    scope.launch {
+                                        zappingProgress = 0f
+                                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                                    }
+                                },
+                                onPayViaIntent = { wantsToPay = it },
+                            )
+                        }
+                    },
+                    onLongClick = { wantsToChangeZapAmount = true },
+                    onDoubleClick = { wantsToSetCustomZap = true },
+                ),
+        ) {
+            if (wantsToZap) {
+                ZapAmountChoicePopup(
+                    baseNote = baseNote,
+                    popupYOffset = iconSize,
+                    accountViewModel = accountViewModel,
+                    onDismiss = {
                         wantsToZap = false
-                        wantsToChangeZapAmount = true
-                    }
-                },
-                onError = { _, message, user ->
-                    scope.launch {
                         zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
-                    }
-                },
-                onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                onPayViaIntent = { wantsToPay = it },
-            )
-        }
+                    },
+                    onChangeAmount = {
+                        scope.launch {
+                            wantsToZap = false
+                            wantsToChangeZapAmount = true
+                        }
+                    },
+                    onError = { _, message, user ->
+                        scope.launch {
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        }
+                    },
+                    onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
+                    onPayViaIntent = { wantsToPay = it },
+                )
+            }
 
-        if (wantsToChangeZapAmount) {
-            UpdateZapAmountDialog(
-                onClose = { wantsToChangeZapAmount = false },
-                accountViewModel = accountViewModel,
-            )
-        }
+            if (wantsToChangeZapAmount) {
+                UpdateZapAmountDialog(
+                    onClose = { wantsToChangeZapAmount = false },
+                    accountViewModel = accountViewModel,
+                )
+            }
 
-        if (wantsToPay.isNotEmpty()) {
-            PayViaIntentDialog(
-                payingInvoices = wantsToPay,
-                accountViewModel = accountViewModel,
-                onClose = { wantsToPay = persistentListOf() },
-                onError = {
-                    wantsToPay = persistentListOf()
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
-                justShowError = {
-                    scope.launch {
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
-                    }
-                },
-            )
-        }
+            if (wantsToPay.isNotEmpty()) {
+                PayViaIntentDialog(
+                    payingInvoices = wantsToPay,
+                    accountViewModel = accountViewModel,
+                    onClose = { wantsToPay = persistentListOf() },
+                    onError = {
+                        wantsToPay = persistentListOf()
+                        scope.launch {
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
+                        }
+                    },
+                    justShowError = {
+                        scope.launch {
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, it)
+                        }
+                    },
+                )
+            }
 
-        if (wantsToSetCustomZap) {
-            ZapCustomDialog(
-                onClose = { wantsToSetCustomZap = false },
-                onError = { _, message, user ->
-                    scope.launch {
-                        zappingProgress = 0f
-                        accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
-                    }
-                },
-                onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
-                onPayViaIntent = { wantsToPay = it },
-                accountViewModel = accountViewModel,
-                baseNote = baseNote,
-            )
-        }
+            if (wantsToSetCustomZap) {
+                ZapCustomDialog(
+                    onClose = { wantsToSetCustomZap = false },
+                    onError = { _, message, user ->
+                        scope.launch {
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        }
+                    },
+                    onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
+                    onPayViaIntent = { wantsToPay = it },
+                    accountViewModel = accountViewModel,
+                    baseNote = baseNote,
+                )
+            }
 
-        if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
-            Spacer(ModifierWidth3dp)
+            if (zappingProgress > 0.00001 && zappingProgress < 0.99999) {
+                Spacer(ModifierWidth3dp)
 
-            val animatedProgress by animateFloatAsState(
-                targetValue = zappingProgress,
-                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
-                label = "ZapIconIndicator",
-            )
+                val animatedProgress by animateFloatAsState(
+                    targetValue = zappingProgress,
+                    animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                    label = "ZapIconIndicator",
+                )
 
-            CircularProgressIndicator(
-                progress = { animatedProgress },
-                modifier = remember { Modifier.size(animationSize) },
-                strokeWidth = 2.dp,
-            )
-        } else {
-            ObserveZapIcon(
-                baseNote,
-                accountViewModel,
-            ) { wasZappedByLoggedInUser ->
-                CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
-                    if (it) {
-                        ZappedIcon(iconSizeModifier)
-                    } else {
-                        OutlinedZapIcon(iconSizeModifier, grayTint)
+                CircularProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = remember { Modifier.size(animationSize) },
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                ObserveZapIcon(
+                    baseNote,
+                    accountViewModel,
+                ) { wasZappedByLoggedInUser ->
+                    CrossfadeIfEnabled(targetState = wasZappedByLoggedInUser.value, label = "ZapIcon", accountViewModel = accountViewModel) {
+                        if (it) {
+                            ZappedIcon(iconSizeModifier)
+                        } else {
+                            OutlinedZapIcon(iconSizeModifier, grayTint)
+                        }
                     }
                 }
             }
         }
-    }
 
-    ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
-        SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+        ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
+            SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+        }
     }
 }
 
