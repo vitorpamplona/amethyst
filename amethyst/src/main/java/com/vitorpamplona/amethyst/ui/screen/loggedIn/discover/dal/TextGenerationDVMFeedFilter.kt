@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Filter specifically for identifying DVMs that support Text Generation (kind 5050)
+ * and are active within the past week based on their NIP89 advertisement timestamps
  */
 class TextGenerationDVMFeedFilter(
     account: Account,
@@ -75,11 +76,13 @@ class TextGenerationDVMFeedFilter(
             // Check if it passes our filter parameters
             val passesFilter = filterParams.match(noteEvent)
 
-            // Check if it was created in the last 30 days
-            val thirtyDaysAgo = TimeUtils.now() - (30 * 24 * 60 * 60)
-            val isRecent = noteEvent.createdAt > thirtyDaysAgo
+            // Check if it's specifically for kind 5050
+            val isKind5050 = noteEvent.includeKind(5050)
 
-            return isValidDvm && passesFilter && isRecent
+            // Check if it was created in the last week (7 days)
+            val isRecentlyActive = noteEvent.createdAt > TimeUtils.oneWeekAgo()
+
+            return isValidDvm && passesFilter && isKind5050 && isRecentlyActive
         } catch (e: Exception) {
             return false
         }

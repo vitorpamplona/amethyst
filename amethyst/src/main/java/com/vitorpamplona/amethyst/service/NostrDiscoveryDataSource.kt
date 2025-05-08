@@ -29,6 +29,7 @@ import com.vitorpamplona.ammolite.relays.FeedType
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.datasources.NostrDataSource
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -41,6 +42,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -504,7 +506,10 @@ object NostrDiscoveryDataSource : NostrDataSource(Amethyst.instance.client) {
                 Log.d(TAG, "EOSE received for Text Generation DVMs subscription: $subId")
             }
 
-        // Use a dedicated filter just for kind 5050 (text generation) with broader discovery
+        // Create map for since parameter with empty string as key for all relays
+        val sinceMap = mapOf<String, EOSETime>("" to EOSETime(TimeUtils.oneWeekAgo()))
+
+        // Use a dedicated filter just for kind 5050 (text generation) with focus on recent activity
         val filters =
             listOf(
                 TypedFilter(
@@ -512,9 +517,9 @@ object NostrDiscoveryDataSource : NostrDataSource(Amethyst.instance.client) {
                     filter =
                         SincePerRelayFilter(
                             kinds = listOf(AppDefinitionEvent.KIND),
-                            limit = 1000,
+                            limit = 300,
                             tags = mapOf("k" to listOf("5050")),
-                            since = null, // Don't limit by EOSE to get full history
+                            since = sinceMap, // Only fetch from the last week
                         ),
                 ),
                 TypedFilter(
@@ -522,7 +527,8 @@ object NostrDiscoveryDataSource : NostrDataSource(Amethyst.instance.client) {
                     filter =
                         SincePerRelayFilter(
                             kinds = listOf(AppDefinitionEvent.KIND),
-                            limit = 500,
+                            limit = 200,
+                            since = sinceMap, // Only fetch from the last week
                         ),
                 ),
             )

@@ -832,9 +832,8 @@ class ChatNewMessageViewModel :
                     // Only include DVMs that support kind 5050 (text generation)
                     if (!supportedKinds.contains(5050)) return@mapNotNull null
 
-                    // Only include recently active DVMs
-                    val twoWeeksAgo = TimeUtils.now() - (14 * 24 * 60 * 60)
-                    if ((note.createdAt() ?: 0L) < twoWeeksAgo) return@mapNotNull null
+                    // Only include DVMs active within the past week
+                    if ((note.createdAt() ?: 0L) < TimeUtils.oneWeekAgo()) return@mapNotNull null
 
                     DvmInfo(
                         pubkey = pubkey,
