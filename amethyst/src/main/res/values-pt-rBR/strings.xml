@@ -216,6 +216,13 @@
     <string name="unfollow">Desseguir</string>
     <string name="channel_created">Canal criado</string>
     <string name="channel_information_changed_to">"Informação do canal mudou para"</string>
+    <string name="ephemeral_relay_chat">Chat Desaparecendo</string>
+    <string name="relay_chat">Chat Relé</string>
+    <string name="relay_chat_title">Chat Relés</string>
+    <string name="relay_chat_explainer">Chat Relés são grupos de chat controlados por seu relé de origem.
+         Eles são visíveis para todos no Nostr e qualquer pessoa pode participar.
+         São ótimos para comunidades abertas em torno de tópicos específicos. Alguns desses grupos são efêmeros,
+    portanto, as mensagens desaparecem com o tempo</string>
     <string name="public_chat">Chat público</string>
     <string name="public_chat_title">Metadados do Chat Público</string>
     <string name="public_chat_explainer">Os chats públicos são visíveis para todos no Nostr, e qualquer pessoa
@@ -541,6 +548,8 @@
     <string name="are_you_sure_you_want_to_log_out">Sair exclui todas as suas informações locais. Certifique-se de fazer backup de suas chaves privadas para evitar a perda de sua conta. Você quer continuar?</string>
     <string name="followed_tags">Tags Seguidas</string>
     <string name="relay_setup">Relés</string>
+    <string name="discover_follows">Pacotes Seguir</string>
+    <string name="discover_reads">Leituras</string>
     <string name="discover_content">Descoberta de Notas</string>
     <string name="discover_marketplace">Mercado</string>
     <string name="discover_live">Ao vivo</string>
@@ -604,6 +613,7 @@
     <string name="new_feature_nip17_activate">Ativar</string>
     <string name="messages_create_public_chat">Público</string>
     <string name="messages_create_public_private_chat_description">Novo Grupo Público ou Privado</string>
+    <string name="messages_relay_based">Relé</string>
     <string name="messages_new_message">Privado</string>
     <string name="messages_new_message_to">Para</string>
     <string name="messages_new_message_subject">Assunto</string>
@@ -946,4 +956,6 @@
     <string name="select_list_to_filter">Selecione uma lista para filtrar o feed</string>
     <string name="temporary_account">Terminar sessão no bloqueio do dispositivo</string>
     <string name="private_message">Mensagem Privada</string>
+    <string name="group_relay">Relé de chat</string>
+    <string name="group_relay_explanation">O relé a qual todos os usuários deste chat se conectam</string>
 </resources>
