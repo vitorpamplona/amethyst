@@ -35,8 +35,6 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import kotlinx.coroutines.flow.toList
-import kotlin.collections.flatten
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChatroomListState(
