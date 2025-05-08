@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal
 
-import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -34,97 +33,54 @@ class TextGenerationDVMFeedFilter(
     account: Account,
 ) : DiscoverNIP89FeedFilter(account) {
     override fun feed(): List<Note> {
-        Log.d("DVM", "TextGenerationDVMFeedFilter.feed() running...")
         try {
-            // Get all notes that match our DVM criteria
+            // Get all AppDefinition notes that include kind 5050
             val notes =
-                LocalCache.addressables.filterIntoSet { _, it ->
+                LocalCache.addressables.filterIntoSet { _, note ->
                     try {
-                        acceptDVM(it)
+                        val event = note.event
+                        if (event is AppDefinitionEvent) {
+                            // Direct check for kind 5050 support
+                            event.includeKind(5050) && acceptDVM(event)
+                        } else {
+                            false
+                        }
                     } catch (e: Exception) {
-                        Log.e("DVM", "Error checking DVM acceptance: ${e.message}")
                         false
                     }
                 }
 
-            // Add additional scan for pure kinds
-            val additionalNotes = HashSet<Note>()
-            LocalCache.notes.forEach { _, note ->
-                try {
-                    if (note.event is AppDefinitionEvent) {
-                        val appDef = note.event as AppDefinitionEvent
-                        val includesKind = appDef.includeKind(5050)
-                        if (includesKind) {
-                            Log.d("DVM", "Additional scan found DVM with ID: ${note.idHex.take(8)}")
-                            additionalNotes.add(note)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("DVM", "Error in additional scan: ${e.message}")
-                }
-            }
-
-            val combined = HashSet<Note>()
-            combined.addAll(notes)
-            combined.addAll(additionalNotes)
-
-            val result = sort(combined)
-            Log.d("DVM", "TextGenerationDVMFeedFilter found ${result.size} DVMs (${notes.size} primary, ${additionalNotes.size} additional)")
-
-            return result
+            return sort(notes)
         } catch (e: Exception) {
-            Log.e("DVM", "Error in TextGenerationDVMFeedFilter.feed(): ${e.message}", e)
             return emptyList()
         }
     }
 
-    override fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        Log.d("DVM", "TextGenerationDVMFeedFilter.innerApplyFilter running with ${collection.size} notes")
-        return collection.filterTo(HashSet()) {
+    override fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
+        collection.filterTo(HashSet()) { note ->
             try {
-                acceptDVM(it)
+                acceptDVM(note)
             } catch (e: Exception) {
-                Log.e("DVM", "Error in innerApplyFilter: ${e.message}")
                 false
             }
         }
-    }
 
     override fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
         try {
             val filterParams = buildFilterParams(account)
 
-            // Include only DVMs that explicitly support kind 5050 (Text Generation)
-            val supportedKinds = noteEvent.supportedKinds()
-            val supportsTextGeneration = noteEvent.includeKind(5050)
+            // Check if it's a valid DVM and not a subscription
+            val isValidDvm = noteEvent.appMetaData()?.subscription != true
 
-            // Get metadata for better logging
-            val metadata = noteEvent.appMetaData()
-            val name = metadata?.name ?: "unnamed"
+            // Check if it passes our filter parameters
+            val passesFilter = filterParams.match(noteEvent)
 
-            // Log for debugging
-            Log.d(
-                "DVM",
-                "Checking DVM $name with id=${noteEvent.id.take(8)}, " +
-                    "kinds=${supportedKinds.joinToString()}, " +
-                    "supports5050=$supportsTextGeneration",
-            )
+            // Check if it was created in the last 30 days
+            val thirtyDaysAgo = TimeUtils.now() - (30 * 24 * 60 * 60)
+            val isRecent = noteEvent.createdAt > thirtyDaysAgo
 
-            // Only include DVMs active in the past 3 months
-            val threeMonthsAgo = TimeUtils.now() - (90 * 24 * 60 * 60)
-            val result =
-                noteEvent.appMetaData()?.subscription != true &&
-                    filterParams.match(noteEvent) &&
-                    supportsTextGeneration &&
-                    noteEvent.createdAt > threeMonthsAgo
-
-            if (result) {
-                Log.d("DVM", "Accepted DVM: $name")
-            }
-
-            return result
+            return isValidDvm && passesFilter && isRecent
         } catch (e: Exception) {
-            Log.e("DVM", "Error in acceptDVM: ${e.message}")
             return false
         }
     }

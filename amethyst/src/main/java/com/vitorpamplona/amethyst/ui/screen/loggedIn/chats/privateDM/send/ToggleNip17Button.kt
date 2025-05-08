@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,43 +51,59 @@ fun ToggleNip17Button(
 ) {
     var wantsToActivateNIP17 by remember { mutableStateOf(false) }
 
-    // First, ensure we have DVMs loaded
-    val dvmList =
-        remember(channelScreenModel.room) {
-            if (channelScreenModel.availableDvms.isEmpty()) {
-                channelScreenModel.getKind5050DVMs()
-            } else {
-                channelScreenModel.availableDvms
-            }
-        }
+    // We'll use this to decide if we need to load DVMs
+    val toFieldText = channelScreenModel.toUsers.text
+    val roomUsers = channelScreenModel.room?.users ?: emptySet()
 
-    // Store the list if empty
-    if (channelScreenModel.availableDvms.isEmpty() && dvmList.isNotEmpty()) {
-        channelScreenModel.availableDvms = dvmList
-    }
-
-    // Check if this is a new DVM conversation by looking at the To field
-    val isDvmInToField =
-        channelScreenModel.availableDvms.any { dvm ->
-            channelScreenModel.toUsers.text.contains(dvm.pubkey) ||
-                channelScreenModel.toUsers.text.contains(
-                    com.vitorpamplona.quartz.utils.Hex
-                        .decode(dvm.pubkey)
-                        .toNpub(),
-                )
-        }
+    // Only check for cached DVMs - don't trigger discovery yet
+    val potentialDvmInToField =
+        toFieldText.isNotBlank() &&
+            (
+                channelScreenModel.availableDvms.isNotEmpty() &&
+                    channelScreenModel.availableDvms.any { dvm ->
+                        toFieldText.contains(dvm.pubkey) ||
+                            toFieldText.contains(
+                                com.vitorpamplona.quartz.utils.Hex
+                                    .decode(dvm.pubkey)
+                                    .toNpub(),
+                            )
+                    }
+            )
 
     // Check if this is an existing DVM conversation by looking at room users
     val isExistingDvmConversation =
-        channelScreenModel.room?.let { room ->
-            // Check if any user in the room is a known DVM
-            room.users.any { userPubkey ->
+        roomUsers.isNotEmpty() &&
+            channelScreenModel.availableDvms.isNotEmpty() &&
+            roomUsers.any { userPubkey ->
                 channelScreenModel.availableDvms.any { dvm -> dvm.pubkey == userPubkey }
             }
-        } ?: false
 
     // Combined check for any DVM involvement
-    val isDvmConversation = isDvmInToField || isExistingDvmConversation
+    val isDvmConversation = potentialDvmInToField || isExistingDvmConversation
+
+    // When component is first created, check if room contains DVMs
+    // and ensure NIP17 is disabled for DVM conversations
+    LaunchedEffect(roomUsers) {
+        // If there are room users to check and DVM list is empty, try to load DVMs
+        if (roomUsers.isNotEmpty() && channelScreenModel.availableDvms.isEmpty()) {
+            // Load DVMs to check if this is a DVM conversation
+            val dvms = channelScreenModel.getKind5050DVMs()
+            if (dvms.isNotEmpty()) {
+                channelScreenModel.availableDvms = dvms
+
+                // Check if any room user is a DVM
+                val isDvm =
+                    roomUsers.any { userPubkey ->
+                        dvms.any { dvm -> dvm.pubkey == userPubkey }
+                    }
+
+                // If DVM conversation, force NIP17 to false
+                if (isDvm && channelScreenModel.nip17) {
+                    channelScreenModel.nip17 = false
+                }
+            }
+        }
+    }
 
     // If this is a DVM conversation, force nip17 to false to maintain consistency
     if (isDvmConversation && channelScreenModel.nip17) {
@@ -101,9 +118,26 @@ fun ToggleNip17Button(
         )
     }
 
+    // Coroutine scope for async DVM loading
+    val coroutineScope = rememberCoroutineScope()
+
     IconButton(
         modifier = Modifier.width(30.dp),
         onClick = {
+            // Handle DVM check if needed
+            if (toFieldText.isNotBlank() &&
+                channelScreenModel.availableDvms.isEmpty() &&
+                !isDvmConversation
+            ) {
+                // Load DVMs in background to check if we're talking to a DVM
+                coroutineScope.launch {
+                    val dvms = channelScreenModel.getKind5050DVMs()
+                    if (dvms.isNotEmpty()) {
+                        channelScreenModel.availableDvms = dvms
+                    }
+                }
+            }
+
             // Only allow toggle if not a DVM conversation
             if (isDvmConversation) {
                 // If DVM conversation, show toast explaining why NIP-17 is disabled

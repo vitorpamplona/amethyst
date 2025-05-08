@@ -522,6 +522,13 @@ fun SendDirectMessageTo(
 ) {
     // Track if user clicked the DVM button
     var isClicked by remember { mutableStateOf(false) }
+
+    // Add state for DVM discovery tracking
+    var initiatedDvmDiscovery by remember { mutableStateOf(false) }
+
+    // Create a coroutine scope for async operations
+    val coroutineScope = rememberCoroutineScope()
+
     val toFieldText = postViewModel.toUsers.text
 
     // Reset highlight when no DVM NPUB in To field
@@ -602,10 +609,37 @@ fun SendDirectMessageTo(
                 onClick = {
                     // Highlight immediately when clicked
                     isClicked = true
-                    val dvmList = postViewModel.getKind5050DVMs()
-                    updateDvmList(dvmList)
-                    postViewModel.availableDvms = dvmList
-                    showDvmDialog(true)
+
+                    // If we have DVMs already cached, use them
+                    if (postViewModel.availableDvms.isNotEmpty()) {
+                        updateDvmList(postViewModel.availableDvms)
+                        showDvmDialog(true)
+                        return@IconButton
+                    }
+
+                    // If we haven't started discovery yet, do it now
+                    if (!initiatedDvmDiscovery) {
+                        initiatedDvmDiscovery = true
+
+                        // Show dialog immediately with empty list to avoid delay
+                        updateDvmList(emptyList())
+                        showDvmDialog(true)
+
+                        // Start discovery in background
+                        coroutineScope.launch {
+                            val dvmList = postViewModel.getKind5050DVMs()
+
+                            // Update the dialog with results when available
+                            if (dvmList.isNotEmpty()) {
+                                updateDvmList(dvmList)
+                                postViewModel.availableDvms = dvmList
+                            }
+                        }
+                    } else {
+                        // We've already initiated discovery, just show what we have
+                        updateDvmList(postViewModel.availableDvms)
+                        showDvmDialog(true)
+                    }
                 },
             ) {
                 // Highlight when clicked or when a DVM NPUB is in the To field

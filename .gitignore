@@ -42,6 +42,7 @@ out/
 # Gradle files
 .gradle
 .gradle/
+gradle.properties.local
 build/
 .kotlin/
 
