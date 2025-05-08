@@ -220,6 +220,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="unfollow">Entfolgen</string>
     <string name="channel_created">Kanal erstellt</string>
     <string name="channel_information_changed_to">"Kanalinformationen geändert in"</string>
+    <string name="ephemeral_relay_chat">Verschwindender Chat</string>
+    <string name="relay_chat">Relay-Chat</string>
+    <string name="relay_chat_title">Relay-Chats</string>
+    <string name="relay_chat_explainer">Relaischats sind Chatgruppen, die von ihrem Home-Relais gesteuert werden.
+        Sie sind für jeden auf Nostr sichtbar und jeder kann an ihnen teilnehmen.
+        Sie eignen sich hervorragend für offene Communities rund um bestimmte Themen. Einige dieser Gruppen sind kurzsichtig
+    und daher verschwinden Chat-Nachrichten im Laufe der Zeit</string>
     <string name="public_chat">Öffentlicher Chat</string>
     <string name="public_chat_title">Öffentliche Chat Metadaten</string>
     <string name="public_chat_explainer">Öffentliche Chats sind für jeden auf Nostr sichtbar und jeder
@@ -546,6 +553,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="are_you_sure_you_want_to_log_out">Das Abmelden löscht alle Ihre lokalen Informationen. Stellen Sie sicher, dass Sie Ihre privaten Schlüssel gesichert haben, um einen Kontoverlust zu vermeiden. Möchten Sie fortfahren?</string>
     <string name="followed_tags">Gefolgte Tags</string>
     <string name="relay_setup">Relais</string>
+    <string name="discover_follows">Folge Paketen</string>
+    <string name="discover_reads">Lesungen</string>
     <string name="discover_content">Notizen Entdeckung</string>
     <string name="discover_marketplace">Marktplatz</string>
     <string name="discover_live">Live</string>
@@ -609,6 +618,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="new_feature_nip17_activate">Aktivieren</string>
     <string name="messages_create_public_chat">Öffentlich</string>
     <string name="messages_create_public_private_chat_description">Neue öffentliche oder private Gruppe</string>
+    <string name="messages_relay_based">Relais</string>
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">An</string>
     <string name="messages_new_message_subject">Betreff</string>
@@ -951,4 +961,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
     <string name="private_message">Private Nachricht</string>
+    <string name="group_relay">Chat-Relais</string>
+    <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
 </resources>
