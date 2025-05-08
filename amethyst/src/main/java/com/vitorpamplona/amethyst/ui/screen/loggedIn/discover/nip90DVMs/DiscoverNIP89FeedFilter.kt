@@ -56,7 +56,7 @@ open class DiscoverNIP89FeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
+        FilterByListParams.create(
             account.userProfile().pubkeyHex,
             account.settings.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,
@@ -72,12 +72,13 @@ open class DiscoverNIP89FeedFilter(
         }
     }
 
-    fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
+    open fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
         val filterParams = buildFilterParams(account)
+        // only include DVM definitions (kind 5300) announced within the lastAnnounced period (1 year)
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent) &&
             noteEvent.includeKind(5300) &&
-            noteEvent.createdAt > TimeUtils.now() - lastAnnounced // && params.match(noteEvent)
+            noteEvent.createdAt > TimeUtils.now() - lastAnnounced
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =

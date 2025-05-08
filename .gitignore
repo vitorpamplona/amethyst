@@ -42,6 +42,7 @@ out/
 # Gradle files
 .gradle
 .gradle/
+gradle.properties.local
 build/
 .kotlin/
 
@@ -133,3 +134,7 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# Other IDEs
+settings.json
+.cursor/

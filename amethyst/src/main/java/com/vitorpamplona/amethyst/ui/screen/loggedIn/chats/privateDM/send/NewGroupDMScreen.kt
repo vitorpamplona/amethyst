@@ -41,6 +41,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -128,6 +130,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -158,7 +162,6 @@ fun NewGroupDMScreen(
     postViewModel.init(accountViewModel)
 
     val context = LocalContext.current
-
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -174,6 +177,20 @@ fun NewGroupDMScreen(
     }
 
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    // DVM dialog state
+    var showDvmDialog by remember { mutableStateOf(false) }
+    var dvmListState by remember { mutableStateOf<List<DvmInfo>>(emptyList()) }
+
+    if (showDvmDialog) {
+        DvmSelectionDialog(
+            dvmList = dvmListState,
+            onDismissRequest = { showDvmDialog = false },
+            onDvmSelected = { selectedPubkey ->
+                postViewModel.onDvmSelected(selectedPubkey)
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -220,7 +237,15 @@ fun NewGroupDMScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            GroupDMScreenContent(postViewModel, accountViewModel, nav)
+            // Pass dialog visibility flag so we can reset icon on cancel
+            GroupDMScreenContent(
+                postViewModel = postViewModel,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                isDvmDialogVisible = showDvmDialog,
+                showDvmDialog = { show -> showDvmDialog = show },
+                updateDvmList = { list -> dvmListState = list },
+            )
         }
     }
 }
@@ -250,6 +275,9 @@ fun GroupDMScreenContent(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
+    isDvmDialogVisible: Boolean,
+    showDvmDialog: (Boolean) -> Unit,
+    updateDvmList: (List<DvmInfo>) -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -260,7 +288,14 @@ fun GroupDMScreenContent(
                 Modifier.fillMaxWidth().verticalScroll(scrollState),
                 verticalArrangement = spacedBy(Size10dp),
             ) {
-                SendDirectMessageTo(postViewModel, accountViewModel)
+                // Propagate dialog visibility to reset icon on cancel
+                SendDirectMessageTo(
+                    postViewModel = postViewModel,
+                    accountViewModel = accountViewModel,
+                    isDialogVisible = isDvmDialogVisible,
+                    showDvmDialog = showDvmDialog,
+                    updateDvmList = updateDvmList,
+                )
 
                 MessageFieldRow(postViewModel, accountViewModel)
 
@@ -345,7 +380,7 @@ fun GroupDMScreenContent(
             )
         }
 
-        BottomRowActions(postViewModel, accountViewModel)
+        BottomRowActions(postViewModel, accountViewModel, showDvmDialog, updateDvmList)
     }
 }
 
@@ -395,6 +430,8 @@ fun DisplayPreviews(
 private fun BottomRowActions(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
+    showDvmDialog: (Boolean) -> Unit,
+    updateDvmList: (List<DvmInfo>) -> Unit,
 ) {
     val scrollState = rememberScrollState()
     Row(
@@ -479,7 +516,45 @@ private fun BottomRowActions(
 fun SendDirectMessageTo(
     postViewModel: ChatNewMessageViewModel,
     accountViewModel: AccountViewModel,
+    isDialogVisible: Boolean,
+    showDvmDialog: (Boolean) -> Unit,
+    updateDvmList: (List<DvmInfo>) -> Unit,
 ) {
+    // Track if user clicked the DVM button
+    var isClicked by remember { mutableStateOf(false) }
+
+    // Add state for DVM discovery tracking
+    var initiatedDvmDiscovery by remember { mutableStateOf(false) }
+
+    // Create a coroutine scope for async operations
+    val coroutineScope = rememberCoroutineScope()
+
+    val toFieldText = postViewModel.toUsers.text
+
+    // Reset highlight when no DVM NPUB in To field
+    LaunchedEffect(toFieldText) {
+        val hasDvmInput =
+            postViewModel.availableDvms.any { dvm ->
+                toFieldText.contains(Hex.decode(dvm.pubkey).toNpub())
+            }
+        if (!hasDvmInput) {
+            isClicked = false
+        }
+    }
+
+    // Reset when dialog closes with no DVM selection
+    LaunchedEffect(isDialogVisible) {
+        if (!isDialogVisible) {
+            val hasDvmInput =
+                postViewModel.availableDvms.any { dvm ->
+                    toFieldText.contains(Hex.decode(dvm.pubkey).toNpub())
+                }
+            if (!hasDvmInput) {
+                isClicked = false
+            }
+        }
+    }
+
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -529,6 +604,56 @@ fun SendDirectMessageTo(
                         focusedBorderColor = Color.Transparent,
                     ),
             )
+
+            IconButton(
+                onClick = {
+                    // Highlight immediately when clicked
+                    isClicked = true
+
+                    // If we have DVMs already cached, use them
+                    if (postViewModel.availableDvms.isNotEmpty()) {
+                        updateDvmList(postViewModel.availableDvms)
+                        showDvmDialog(true)
+                        return@IconButton
+                    }
+
+                    // If we haven't started discovery yet, do it now
+                    if (!initiatedDvmDiscovery) {
+                        initiatedDvmDiscovery = true
+
+                        // Show dialog immediately with empty list to avoid delay
+                        updateDvmList(emptyList())
+                        showDvmDialog(true)
+
+                        // Start discovery in background
+                        coroutineScope.launch {
+                            val dvmList = postViewModel.getKind5050DVMs()
+
+                            // Update the dialog with results when available
+                            if (dvmList.isNotEmpty()) {
+                                updateDvmList(dvmList)
+                                postViewModel.availableDvms = dvmList
+                            }
+                        }
+                    } else {
+                        // We've already initiated discovery, just show what we have
+                        updateDvmList(postViewModel.availableDvms)
+                        showDvmDialog(true)
+                    }
+                },
+            ) {
+                // Highlight when clicked or when a DVM NPUB is in the To field
+                val hasDvmInput =
+                    postViewModel.availableDvms.any { dvm ->
+                        toFieldText.contains(Hex.decode(dvm.pubkey).toNpub())
+                    }
+                val isDvmSelected = isClicked || hasDvmInput
+                Icon(
+                    imageVector = Icons.Outlined.SmartToy,
+                    contentDescription = stringRes(id = R.string.select_dvm),
+                    tint = if (isDvmSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.placeholderText,
+                )
+            }
 
             ToggleNip17Button(postViewModel, accountViewModel)
         }

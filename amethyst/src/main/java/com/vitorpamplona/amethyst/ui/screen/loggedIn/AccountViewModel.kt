@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
+import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -1338,6 +1339,11 @@ class AccountViewModel(
 
     init {
         Log.d("Init", "AccountViewModel")
+
+        // Initialize NostrDiscoveryDataSource with the current account
+        NostrDiscoveryDataSource.account = account
+        NostrDiscoveryDataSource.start()
+
         collectorJob =
             viewModelScope.launch(Dispatchers.Default) {
                 feedStates.init()
@@ -1363,6 +1369,10 @@ class AccountViewModel(
         feedStates.destroy()
         bundlerInsert.cancel()
         collectorJob?.cancel()
+
+        // Stop NostrDiscoveryDataSource when the account is cleared
+        NostrDiscoveryDataSource.stop()
+
         super.onCleared()
     }
 

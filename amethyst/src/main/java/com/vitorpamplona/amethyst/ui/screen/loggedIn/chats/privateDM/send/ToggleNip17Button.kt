@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,6 +51,65 @@ fun ToggleNip17Button(
 ) {
     var wantsToActivateNIP17 by remember { mutableStateOf(false) }
 
+    // We'll use this to decide if we need to load DVMs
+    val toFieldText = channelScreenModel.toUsers.text
+    val roomUsers = channelScreenModel.room?.users ?: emptySet()
+
+    // Only check for cached DVMs - don't trigger discovery yet
+    val potentialDvmInToField =
+        toFieldText.isNotBlank() &&
+            (
+                channelScreenModel.availableDvms.isNotEmpty() &&
+                    channelScreenModel.availableDvms.any { dvm ->
+                        toFieldText.contains(dvm.pubkey) ||
+                            toFieldText.contains(
+                                com.vitorpamplona.quartz.utils.Hex
+                                    .decode(dvm.pubkey)
+                                    .toNpub(),
+                            )
+                    }
+            )
+
+    // Check if this is an existing DVM conversation by looking at room users
+    val isExistingDvmConversation =
+        roomUsers.isNotEmpty() &&
+            channelScreenModel.availableDvms.isNotEmpty() &&
+            roomUsers.any { userPubkey ->
+                channelScreenModel.availableDvms.any { dvm -> dvm.pubkey == userPubkey }
+            }
+
+    // Combined check for any DVM involvement
+    val isDvmConversation = potentialDvmInToField || isExistingDvmConversation
+
+    // When component is first created, check if room contains DVMs
+    // and ensure NIP17 is disabled for DVM conversations
+    LaunchedEffect(roomUsers) {
+        // If there are room users to check and DVM list is empty, try to load DVMs
+        if (roomUsers.isNotEmpty() && channelScreenModel.availableDvms.isEmpty()) {
+            // Load DVMs to check if this is a DVM conversation
+            val dvms = channelScreenModel.getKind5050DVMs()
+            if (dvms.isNotEmpty()) {
+                channelScreenModel.availableDvms = dvms
+
+                // Check if any room user is a DVM
+                val isDvm =
+                    roomUsers.any { userPubkey ->
+                        dvms.any { dvm -> dvm.pubkey == userPubkey }
+                    }
+
+                // If DVM conversation, force NIP17 to false
+                if (isDvm && channelScreenModel.nip17) {
+                    channelScreenModel.nip17 = false
+                }
+            }
+        }
+    }
+
+    // If this is a DVM conversation, force nip17 to false to maintain consistency
+    if (isDvmConversation && channelScreenModel.nip17) {
+        channelScreenModel.nip17 = false
+    }
+
     if (wantsToActivateNIP17) {
         NewFeatureNIP17AlertDialog(
             accountViewModel = accountViewModel,
@@ -57,10 +118,34 @@ fun ToggleNip17Button(
         )
     }
 
+    // Coroutine scope for async DVM loading
+    val coroutineScope = rememberCoroutineScope()
+
     IconButton(
         modifier = Modifier.width(30.dp),
         onClick = {
-            if (
+            // Handle DVM check if needed
+            if (toFieldText.isNotBlank() &&
+                channelScreenModel.availableDvms.isEmpty() &&
+                !isDvmConversation
+            ) {
+                // Load DVMs in background to check if we're talking to a DVM
+                coroutineScope.launch {
+                    val dvms = channelScreenModel.getKind5050DVMs()
+                    if (dvms.isNotEmpty()) {
+                        channelScreenModel.availableDvms = dvms
+                    }
+                }
+            }
+
+            // Only allow toggle if not a DVM conversation
+            if (isDvmConversation) {
+                // If DVM conversation, show toast explaining why NIP-17 is disabled
+                accountViewModel.toastManager.toast(
+                    R.string.dvm_nip17_disabled_title,
+                    R.string.dvm_nip17_disabled_message,
+                )
+            } else if (
                 !accountViewModel.account.settings.hideNIP17WarningDialog &&
                 !channelScreenModel.nip17 &&
                 !channelScreenModel.requiresNIP17
@@ -71,7 +156,7 @@ fun ToggleNip17Button(
             }
         },
     ) {
-        if (channelScreenModel.nip17) {
+        if (channelScreenModel.nip17 && !isDvmConversation) {
             IncognitoIconOn(
                 modifier =
                     Modifier
@@ -85,7 +170,12 @@ fun ToggleNip17Button(
                     Modifier
                         .padding(top = 2.dp)
                         .size(20.dp),
-                tint = MaterialTheme.colorScheme.placeholderText,
+                tint =
+                    if (isDvmConversation) {
+                        MaterialTheme.colorScheme.placeholderText.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.placeholderText
+                    },
             )
         }
     }
