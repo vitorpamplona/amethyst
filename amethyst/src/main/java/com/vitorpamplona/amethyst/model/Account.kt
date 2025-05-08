@@ -167,6 +167,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -3100,6 +3101,38 @@ class Account(
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
         NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer) {
+            val relayList =
+                (
+                    LocalCache
+                        .getAddressableNoteIfExists(
+                            AdvertisedRelayListEvent.createAddressTag(dvmPublicKey),
+                        )?.event as? AdvertisedRelayListEvent
+                )?.readRelays()?.ifEmpty { null }?.map {
+                    val normalizedUrl = RelayUrlFormatter.normalize(it)
+                    RelaySetupInfoToConnect(
+                        normalizedUrl,
+                        shouldUseTorForClean(normalizedUrl),
+                        true,
+                        true,
+                        setOf(FeedType.GLOBAL),
+                    )
+                }
+
+            if (relayList != null) {
+                Amethyst.instance.client.sendPrivately(it, relayList)
+            } else {
+                Amethyst.instance.client.send(it)
+            }
+            LocalCache.justConsume(it, null)
+            onReady(it)
+        }
+    }
+
+    fun requestTextGenerationDVMContentDiscovery(
+        dvmPublicKey: String,
+        onReady: (event: NIP90TextGenDiscoveryRequestEvent) -> Unit,
+    ) {
+        NIP90TextGenDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer) {
             val relayList =
                 (
                     LocalCache

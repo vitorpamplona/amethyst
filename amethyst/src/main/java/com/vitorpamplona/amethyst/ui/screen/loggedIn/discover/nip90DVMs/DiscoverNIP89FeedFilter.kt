@@ -34,6 +34,7 @@ open class DiscoverNIP89FeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     val lastAnnounced = 365 * 24 * 60 * 60 // 365 Days ago
+    val lastAnnouncedTextGen = 30 * 24 * 60 * 60 // 30 Days ago for text generation DVMs
     // TODO better than announced would be last active, as this requires the DVM provider to regularly update the NIP89 announcement
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
@@ -74,11 +75,14 @@ open class DiscoverNIP89FeedFilter(
 
     open fun acceptDVM(noteEvent: AppDefinitionEvent): Boolean {
         val filterParams = buildFilterParams(account)
-        // only include DVM definitions (kind 5300) announced within the lastAnnounced period (1 year)
+        // Include regular DVMs (kind 5300) announced within the last year
+        // OR text generation DVMs (kind 5050) announced within the last month
         return noteEvent.appMetaData()?.subscription != true &&
             filterParams.match(noteEvent) &&
-            noteEvent.includeKind(5300) &&
-            noteEvent.createdAt > TimeUtils.now() - lastAnnounced
+            (
+                (noteEvent.includeKind(5300) && noteEvent.createdAt > TimeUtils.now() - lastAnnounced) ||
+                    (noteEvent.includeKind(5050) && noteEvent.createdAt > TimeUtils.now() - lastAnnouncedTextGen)
+            )
     }
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> =

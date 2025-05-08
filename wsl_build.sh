@@ -5,7 +5,7 @@
 # =============================================================================
 
 # Logcat filter
-LOGCAT_FILTER="DVM"
+LOGCAT_FILTER="DVM_DEBUG"
 
 # Function to print section headers
 print_header() {

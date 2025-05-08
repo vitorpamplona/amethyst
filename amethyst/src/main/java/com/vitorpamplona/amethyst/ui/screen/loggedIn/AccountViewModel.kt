@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -122,6 +121,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1340,10 +1340,6 @@ class AccountViewModel(
     init {
         Log.d("Init", "AccountViewModel")
 
-        // Initialize NostrDiscoveryDataSource with the current account
-        NostrDiscoveryDataSource.account = account
-        NostrDiscoveryDataSource.start()
-
         collectorJob =
             viewModelScope.launch(Dispatchers.Default) {
                 feedStates.init()
@@ -1369,9 +1365,6 @@ class AccountViewModel(
         feedStates.destroy()
         bundlerInsert.cancel()
         collectorJob?.cancel()
-
-        // Stop NostrDiscoveryDataSource when the account is cleared
-        NostrDiscoveryDataSource.stop()
 
         super.onCleared()
     }
@@ -1603,6 +1596,17 @@ class AccountViewModel(
         }
     }
 
+    fun requestTextGenerationDVMContentDiscovery(
+        dvmPublicKey: String,
+        onReady: (event: Note) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            account.requestTextGenerationDVMContentDiscovery(dvmPublicKey) {
+                onReady(LocalCache.getOrCreateNote(it.id))
+            }
+        }
+    }
+
     suspend fun cachedDVMContentDiscovery(pubkeyHex: String): Note? =
         withContext(Dispatchers.IO) {
             val fifteenMinsAgo = TimeUtils.fifteenMinutesAgo()
@@ -1611,10 +1615,14 @@ class AccountViewModel(
                 LocalCache.notes.maxOrNullOf(
                     filter = { key, note ->
                         val noteEvent = note.event
-                        noteEvent is NIP90ContentDiscoveryResponseEvent &&
-                            noteEvent.pubKey == pubkeyHex &&
-                            noteEvent.isTaggedUser(account.signer.pubKey) &&
-                            noteEvent.createdAt > fifteenMinsAgo
+                        (
+                            noteEvent is NIP90ContentDiscoveryResponseEvent ||
+                                noteEvent is NIP90TextGenDiscoveryResponseEvent ||
+                                noteEvent?.kind == 5050
+                        ) &&
+                            noteEvent?.pubKey == pubkeyHex &&
+                            noteEvent?.isTaggedUser(account.signer.pubKey) == true &&
+                            noteEvent?.createdAt ?: 0 > fifteenMinsAgo
                     },
                     comparator = CreatedAtComparator,
                 )

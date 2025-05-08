@@ -82,9 +82,9 @@ fun DvmSelectionDialog(
         )
 
     // Log the DVMs being displayed
-    Log.d("DVM", "Displaying ${sortedDvmList.size} unique Text Generation DVMs in dialog")
+    Log.d("DVM_DEBUG", "Displaying ${sortedDvmList.size} unique Text Generation DVMs in dialog")
     sortedDvmList.forEachIndexed { index, dvm ->
-        Log.d("DVM", "Dialog item $index: name=${dvm.name ?: "unnamed"}, pubkey=${dvm.pubkey.take(8)}")
+        Log.d("DVM_DEBUG", "Dialog item $index: name=${dvm.name ?: "unnamed"}, pubkey=${dvm.pubkey.take(8)}")
     }
 
     AlertDialog(
