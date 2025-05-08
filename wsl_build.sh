@@ -4,6 +4,9 @@
 # Amethyst Build Script
 # =============================================================================
 
+# Logcat filter
+LOGCAT_FILTER="DVM"
+
 # Function to print section headers
 print_header() {
     echo -e "\n\033[1;36m=== $1 ===\033[0m"
@@ -424,14 +427,14 @@ launch_app() {
 show_logs() {
     if [ "$SHOW_LOGS" = true ]; then
         echo "Automatically showing logs (press Ctrl+C to stop)..."
-        adb logcat *:D | grep -i "com..*\.amethyst"
+        adb logcat *:D | grep -i -E "$LOGCAT_FILTER"
     else
         echo "Would you like to view device logs? (y/n)"
         read logs
         
         if [[ "$logs" == "y" ]]; then
             echo "Showing logs (press Ctrl+C to stop)..."
-            adb logcat *:D | grep -i "com..*\.amethyst"
+            adb logcat *:D | grep -i -E "$LOGCAT_FILTER"
         fi
     fi
 }
@@ -499,7 +502,7 @@ if [[ "$COMMAND" == "debug" ]]; then
     echo "Quick reference:"
     echo "- Launch with debugging: adb shell am start -D -n com.vitorpamplona.amethyst.debug/com.vitorpamplona.amethyst.ui.MainActivity"
     echo "- Launch normally: adb shell am start -n com.vitorpamplona.amethyst.debug/com.vitorpamplona.amethyst.ui.MainActivity"
-    echo "- View logs: adb logcat *:D | grep -i \"com..*\.amethyst\""
+    echo "- View logs: adb logcat *:D | grep -i -E '$LOGCAT_FILTER'"
     echo "- Reinstall app: ./gradlew installFdroidDebug"
     
     exit 0

@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.dal.TextGenerationDVMFeedFilter
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
@@ -59,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.TextGenerationDVMFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -91,6 +91,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -753,24 +754,172 @@ class ChatNewMessageViewModel :
 
             Log.d("DVM", "Starting to fetch Text Generation DVMs")
 
-            try {
-                // First, explicitly request text generation DVMs from NostrDiscoveryDataSource
-                NostrDiscoveryDataSource.requestTextGenerationDVMs()
+            // First attempt to find DVMs already in the cache
+            var dvmInfoList = getKind5050DVMs()
 
-                // Give relays a short time to respond
-                delay(500)
-            } catch (e: Exception) {
-                Log.e("DVM", "Error requesting DVMs: ${e.message}", e)
+            // If none found in cache, request from relays and wait
+            if (dvmInfoList.isEmpty()) {
+                try {
+                    // Request text generation DVMs using NostrDiscoveryDataSource
+                    com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource.account = account
+                    com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
+                        .createNIP89Filter(listOf("5050"))
+                    Log.d("DVM", "Requested Text Generation DVMs")
+
+                    // Also request generic NIP89 info which might include DVMs
+                    com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
+                        .createNIP89Filter(emptyList())
+                    Log.d("DVM", "Requested general NIP89")
+
+                    // Give relays time to respond (increased to 3000ms)
+                    Log.d("DVM", "Waiting for relay responses...")
+                    delay(3000)
+
+                    // Try again after waiting
+                    dvmInfoList = getKind5050DVMs()
+
+                    // If still empty, wait more and try once more
+                    if (dvmInfoList.isEmpty()) {
+                        Log.d("DVM", "Still no DVMs found, waiting longer...")
+                        delay(2000)
+                        dvmInfoList = getKind5050DVMs()
+                    }
+                } catch (e: Exception) {
+                    Log.e("DVM", "Error requesting DVMs: ${e.message}", e)
+                }
             }
-
-            // Use the dedicated method to find Text Generation DVMs
-            val dvmInfoList = getKind5050DVMs()
 
             Log.d("DVM", "Found ${dvmInfoList.size} Text Generation DVMs")
 
+            // Update UI even if the list is empty
             availableDvms = dvmInfoList
             showDvmSelectionDialog = true
         }
+    }
+
+    fun getKind5050DVMs(): List<DvmInfo> {
+        val account = account ?: return emptyList()
+
+        Log.d("DVM", "Starting DVM discovery process")
+
+        // Get DVM notes using multiple approaches for maximum reliability
+        var dvmNotes = emptyList<Note>()
+
+        try {
+            // Try using the specialized filter first
+            val feed = TextGenerationDVMFeedFilter(account)
+            dvmNotes = feed.feed()
+            Log.d("DVM", "Filter found ${dvmNotes.size} DVM notes")
+        } catch (e: Exception) {
+            Log.e("DVM", "Error using filter for DVMs: ${e.message}", e)
+        }
+
+        // If filter returns no results, do a thorough scan of the cache
+        if (dvmNotes.isEmpty()) {
+            Log.d("DVM", "Performing direct cache scan for DVMs")
+            val appDefinitions = mutableListOf<Note>()
+
+            // Search by event kind
+            LocalCache.notes.forEach { _, note ->
+                try {
+                    // First check if this is an AppDefinition event
+                    val eventObj = note.event
+                    if (eventObj is AppDefinitionEvent) {
+                        // Check if it supports kind 5050 (text generation)
+                        val supportsTextGeneration = eventObj.supportedKinds().contains(5050)
+                        if (supportsTextGeneration) {
+                            val metadata = eventObj.appMetaData()
+                            Log.d("DVM", "Direct scan found DVM: ${metadata?.name ?: "unnamed"} with id=${note.idHex.take(8)}")
+                            appDefinitions.add(note)
+                        }
+
+                        // Also check if it has a k tag with 5050
+                        val tags = eventObj.tags
+                        val kTags = tags.filter { it.size > 1 && it[0] == "k" }
+
+                        if (kTags.any { it.size > 1 && it[1] == "5050" }) {
+                            Log.d("DVM", "Found DVM with explicit k=5050 tag: id=${note.idHex.take(8)}")
+                            if (!appDefinitions.contains(note)) {
+                                appDefinitions.add(note)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore any errors in processing individual notes
+                    Log.d("DVM", "Error processing note: ${e.message}")
+                }
+            }
+
+            dvmNotes = appDefinitions.sortedByDescending { it.createdAt() ?: 0L }
+            Log.d("DVM", "Direct cache scan found ${dvmNotes.size} DVM notes")
+        }
+
+        // If still no results, log the error and return empty list
+        if (dvmNotes.isEmpty()) {
+            Log.e("DVM", "No DVMs found through any discovery method!")
+            return emptyList()
+        }
+
+        // First, collect all DVM info
+        val allDvmInfo =
+            dvmNotes.mapNotNull { note ->
+                try {
+                    val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
+                    val metadata = appDef.appMetaData() ?: return@mapNotNull null
+                    val supportedKinds = appDef.supportedKinds()
+                    val pubkey = note.author?.pubkeyHex ?: return@mapNotNull null
+                    val supportsTextGeneration = supportedKinds.contains(5050)
+
+                    // Only include DVMs active in the past week (7 days)
+                    val oneWeekAgo = TimeUtils.now() - (7 * 24 * 60 * 60)
+                    val isRecentlyActive = note.createdAt() ?: 0L > oneWeekAgo
+
+                    // Log every DVM found
+                    Log.d(
+                        "DVM",
+                        "Found DVM: id=${note.idHex.take(8)}, " +
+                            "name=${metadata.name ?: "unnamed"}, " +
+                            "pubkey=${pubkey.take(8)}, " +
+                            "createdAt=${note.createdAt() ?: 0L}, " +
+                            "isActive=$isRecentlyActive, " +
+                            "kinds=${supportedKinds.joinToString()}, " +
+                            "supports5050=$supportsTextGeneration",
+                    )
+
+                    // Only include DVMs that support kind 5050 and are active in the past week
+                    if (supportsTextGeneration && isRecentlyActive) {
+                        DvmInfo(
+                            pubkey = pubkey,
+                            name = metadata.name,
+                            supportedKinds = supportedKinds.toSet(),
+                            description = metadata.about,
+                        )
+                    } else {
+                        if (!isRecentlyActive) {
+                            Log.d("DVM", "Skipping inactive DVM: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
+                        } else {
+                            Log.d("DVM", "Skipping DVM that doesn't support kind 5050: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
+                        }
+                        null
+                    }
+                } catch (e: Exception) {
+                    Log.e("DVM", "Error processing DVM note: ${e.message}", e)
+                    null
+                }
+            }
+
+        // Then deduplicate by pubkey, taking the most recent for each
+        val uniqueDvms = mutableMapOf<String, DvmInfo>()
+
+        // Add all DVMs with kind 5050
+        allDvmInfo.forEach { dvm ->
+            uniqueDvms[dvm.pubkey] = dvm
+            Log.d("DVM", "Added Text Generation DVM: ${dvm.name ?: "unnamed"} (${dvm.pubkey.take(8)})")
+        }
+
+        val result = uniqueDvms.values.toList()
+        Log.d("DVM", "Returning ${result.size} unique Text Generation DVMs from the past week")
+        return result
     }
 
     fun onDvmSelected(pubkey: String) {
@@ -854,86 +1003,5 @@ class ChatNewMessageViewModel :
             Log.e("DVM", "Error formatting text generation request", e)
             return message
         }
-    }
-
-    fun getKind5050DVMs(): List<DvmInfo> {
-        val account = account ?: return emptyList()
-
-        // Get DVM notes using two approaches for redundancy
-        var dvmNotes = emptyList<Note>()
-
-        try {
-            // Try using the specialized filter first
-            val feed = TextGenerationDVMFeedFilter(account)
-            dvmNotes = feed.feed()
-            Log.d("DVM", "Filter found ${dvmNotes.size} DVM notes")
-        } catch (e: Exception) {
-            Log.e("DVM", "Error using filter for DVMs: ${e.message}", e)
-        }
-
-        // If filter returns no results, fall back to direct cache lookup
-        if (dvmNotes.isEmpty()) {
-            Log.d("DVM", "Falling back to direct cache scan for DVMs")
-            val appDefinitions = mutableListOf<Note>()
-
-            // Directly scan LocalCache for AppDefinitionEvents supporting kind 5050
-            LocalCache.notes.forEach { _, note ->
-                if (note.event is AppDefinitionEvent &&
-                    (note.event as AppDefinitionEvent).supportedKinds().contains(5050)
-                ) {
-                    appDefinitions.add(note)
-                }
-            }
-
-            dvmNotes = appDefinitions.sortedByDescending { it.createdAt() ?: 0L }
-            Log.d("DVM", "Direct cache scan found ${dvmNotes.size} DVM notes")
-        }
-
-        // First, collect all DVM info
-        val allDvmInfo =
-            dvmNotes.mapNotNull { note ->
-                val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
-                val metadata = appDef.appMetaData() ?: return@mapNotNull null
-                val supportedKinds = appDef.supportedKinds()
-                val pubkey = note.author?.pubkeyHex ?: return@mapNotNull null
-                val supportsTextGeneration = supportedKinds.contains(5050)
-
-                // Log every DVM found
-                Log.d(
-                    "DVM",
-                    "Found DVM: id=${note.idHex.take(8)}, " +
-                        "name=${metadata.name ?: "unnamed"}, " +
-                        "pubkey=${pubkey.take(8)}, " +
-                        "createdAt=${note.createdAt() ?: 0L}, " +
-                        "kinds=${supportedKinds.joinToString()}, " +
-                        "supports5050=$supportsTextGeneration",
-                )
-
-                // Only include DVMs that support kind 5050
-                if (supportsTextGeneration) {
-                    DvmInfo(
-                        pubkey = pubkey,
-                        name = metadata.name,
-                        supportedKinds = supportedKinds.toSet(),
-                        description = metadata.about,
-                    )
-                } else {
-                    Log.d("DVM", "Skipping DVM that doesn't support kind 5050: ${metadata.name ?: "unnamed"} (${pubkey.take(8)})")
-                    null
-                }
-            }
-
-        // Then deduplicate by pubkey, taking the most recent for each
-        val uniqueDvms = mutableMapOf<String, DvmInfo>()
-
-        // Add all DVMs with kind 5050
-        allDvmInfo.forEach { dvm ->
-            uniqueDvms[dvm.pubkey] = dvm
-            Log.d("DVM", "Added Text Generation DVM: ${dvm.name ?: "unnamed"} (${dvm.pubkey.take(8)})")
-        }
-
-        val result = uniqueDvms.values.toList()
-        Log.d("DVM", "Returning ${result.size} unique Text Generation DVMs")
-        return result
     }
 }

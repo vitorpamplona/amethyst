@@ -20,13 +20,18 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.EOSEAccount
 import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.datasources.NostrDataSource
 import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -40,13 +45,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
+object NostrDiscoveryDataSource : NostrDataSource(Amethyst.instance.client) {
     lateinit var account: Account
 
     val scope = Amethyst.instance.applicationIOScope
     val latestEOSEs = EOSEAccount()
 
     var job: Job? = null
+
+    private val TAG = "NostrDiscoveryDataSource"
 
     override fun start() {
         job?.cancel()
@@ -64,6 +71,35 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
     override fun stop() {
         super.stop()
         job?.cancel()
+    }
+
+    override fun updateSubscriptions() {
+        if (!this::account.isInitialized) return
+
+        Log.d(TAG, "Updating subscriptions")
+
+        val subscription =
+            requestNewSubscription { timestamp, subId ->
+                Log.d(TAG, "Received EOSE for subscription $subId")
+            }
+
+        subscription.typedFilters =
+            createLiveStreamFilter()
+                .plus(createNIP89Filter(listOf("5300", "5050")))
+                .plus(createPublicChatFilter())
+                .plus(createMarketplaceFilter())
+                .plus(
+                    listOfNotNull(
+                        createLiveStreamTagsFilter(),
+                        createLiveStreamGeohashesFilter(),
+                        createCommunitiesFilter(),
+                        createCommunitiesTagsFilter(),
+                        createCommunitiesGeohashesFilter(),
+                        createPublicChatsTagsFilter(),
+                        createPublicChatsGeohashesFilter(),
+                    ),
+                ).toList()
+                .ifEmpty { null }
     }
 
     fun createMarketplaceFilter(): List<TypedFilter> {
@@ -138,14 +174,15 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         )
     }
 
-    fun createNIP89Filter(kTags: List<String>): List<TypedFilter> =
-        listOfNotNull(
+    fun createNIP89Filter(kTags: List<String>): List<TypedFilter> {
+        Log.d(TAG, "Creating NIP89Filter for tags: $kTags")
+        return listOfNotNull(
             TypedFilter(
                 types = setOf(FeedType.GLOBAL),
                 filter =
                     SincePerRelayFilter(
                         kinds = listOf(AppDefinitionEvent.KIND),
-                        limit = 300,
+                        limit = 500, // Increased limit for better discovery
                         tags = mapOf("k" to kTags),
                         since =
                             latestEOSEs.users[account.userProfile()]
@@ -154,7 +191,23 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
                                 ?.relayList,
                     ),
             ),
+            // Add a filter without tags for global discovery
+            if (kTags.contains("5050")) {
+                TypedFilter(
+                    types = setOf(FeedType.GLOBAL),
+                    filter =
+                        SincePerRelayFilter(
+                            kinds = listOf(AppDefinitionEvent.KIND),
+                            limit = 300,
+                            // No tag filter - find all AppDefinitionEvents regardless of k tag
+                            since = null, // Don't use EOSE for this to get full history
+                        ),
+                )
+            } else {
+                null
+            },
         )
+    }
 
     fun createLiveStreamFilter(): List<TypedFilter> {
         val follows =
@@ -423,46 +476,15 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
         )
     }
 
-    val discoveryFeedChannel =
-        requestNewChannel { time, relayUrl ->
-            latestEOSEs.addOrUpdate(
-                account.userProfile(),
-                account.settings.defaultDiscoveryFollowList.value,
-                relayUrl,
-                time,
-            )
-        }
-
-    override fun updateChannelFilters() {
-        discoveryFeedChannel.typedFilters =
-            createLiveStreamFilter()
-                .plus(createNIP89Filter(listOf("5300", "5050")))
-                .plus(createPublicChatFilter())
-                .plus(createMarketplaceFilter())
-                .plus(
-                    listOfNotNull(
-                        createLiveStreamTagsFilter(),
-                        createLiveStreamGeohashesFilter(),
-                        createCommunitiesFilter(),
-                        createCommunitiesTagsFilter(),
-                        createCommunitiesGeohashesFilter(),
-                        createPublicChatsTagsFilter(),
-                        createPublicChatsGeohashesFilter(),
-                    ),
-                ).toList()
-                .ifEmpty { null }
-    }
-
     // Add dedicated method to request only NIP89 events with specific kinds
     fun requestNIP89Kinds(): List<TypedFilter>? {
+        if (!this::account.isInitialized) return null
+
+        Log.d(TAG, "Requesting NIP89 events for kinds 5300, 5050")
+
         val subscription =
-            requestNewChannel { time, relayUrl ->
-                latestEOSEs.addOrUpdate(
-                    account.userProfile(),
-                    account.settings.defaultDiscoveryFollowList.value,
-                    relayUrl,
-                    time,
-                )
+            requestNewSubscription { timestamp, subId ->
+                Log.d(TAG, "EOSE received for NIP89 kinds subscription: $subId")
             }
 
         // Always include 5050 for text generation DVMs
@@ -473,19 +495,89 @@ object NostrDiscoveryDataSource : AmethystNostrDataSource("DiscoveryFeed") {
 
     // Start DVMs separately when needed
     fun requestTextGenerationDVMs(): List<TypedFilter>? {
+        if (!this::account.isInitialized) return null
+
+        Log.d(TAG, "Requesting Text Generation DVMs (kind 5050) from relays")
+
         val subscription =
-            requestNewChannel { time, relayUrl ->
-                latestEOSEs.addOrUpdate(
-                    account.userProfile(),
-                    account.settings.defaultDiscoveryFollowList.value,
-                    relayUrl,
-                    time,
-                )
+            requestNewSubscription { timestamp, subId ->
+                Log.d(TAG, "EOSE received for Text Generation DVMs subscription: $subId")
             }
 
-        // Use a dedicated filter just for kind 5050 (text generation)
-        val filters = createNIP89Filter(listOf("5050"))
+        // Use a dedicated filter just for kind 5050 (text generation) with broader discovery
+        val filters =
+            listOf(
+                TypedFilter(
+                    types = setOf(FeedType.GLOBAL),
+                    filter =
+                        SincePerRelayFilter(
+                            kinds = listOf(AppDefinitionEvent.KIND),
+                            limit = 1000,
+                            tags = mapOf("k" to listOf("5050")),
+                            since = null, // Don't limit by EOSE to get full history
+                        ),
+                ),
+                TypedFilter(
+                    types = setOf(FeedType.GLOBAL),
+                    filter =
+                        SincePerRelayFilter(
+                            kinds = listOf(AppDefinitionEvent.KIND),
+                            limit = 500,
+                        ),
+                ),
+            )
+
         subscription.typedFilters = filters
         return filters
+    }
+
+    override fun consume(
+        event: Event,
+        relay: Relay,
+    ) {
+        try {
+            if (event is AppDefinitionEvent) {
+                // Check if it's a Text Generation DVM (supports kind 5050)
+                val isTextGen = event.includeKind(5050)
+                val supportedKinds = event.supportedKinds()
+
+                if (isTextGen) {
+                    val metadata = event.appMetaData()
+                    val name = metadata?.name ?: "unnamed"
+
+                    Log.d(
+                        TAG,
+                        "Received DVM definition for $name: id=${event.id.take(8)} with " +
+                            "supported kinds: ${supportedKinds.joinToString()}, " +
+                            "from relay: ${relay.url}",
+                    )
+                }
+
+                // Process all AppDefinition events
+                LocalCache.consume(event, relay)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error consuming event: ${e.message}", e)
+        }
+    }
+
+    override fun markAsEOSE(
+        subscriptionId: String,
+        relay: Relay,
+    ) {
+        super.markAsEOSE(subscriptionId, relay)
+        Log.d(TAG, "Marked as EOSE for subscription $subscriptionId on relay ${relay.url}")
+    }
+
+    override fun markAsSeenOnRelay(
+        eventId: String,
+        relay: Relay,
+    ) {
+        super.markAsSeenOnRelay(eventId, relay)
+        // No need to log this as it would be too verbose
+    }
+
+    fun resetFilters() {
+        invalidateFilters()
     }
 }
