@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -31,39 +32,62 @@ class NIP90TextGenDVMFeedFilter(
     account: Account,
 ) : DiscoverNIP89FeedFilter(account) {
     companion object {
-        const val KIND_REQUEST_DVM_TEXT = 5050
+        const val KIND_REQUEST_DVM_TEXT = DiscoverNIP89FeedFilter.TEXT_GENERATION_KIND
     }
 
     override fun feed(): List<Note> {
         try {
+            Log.d("DVM_DEBUG", "NIP90TextGenDVMFeedFilter.feed(): Searching for AppDefinition events in cache")
+
             // First, get all AppDefinition events in the cache
             val allAppDefinitions =
                 LocalCache.addressables.filterIntoSet { _, note ->
                     try {
-                        note.event is AppDefinitionEvent
+                        val isAppDef = note.event is AppDefinitionEvent
+                        if (isAppDef) {
+                            val event = note.event as AppDefinitionEvent
+                            Log.d("DVM_DEBUG", "Found AppDefinition: ${event.appMetaData()?.name ?: "unnamed"}, pubkey: ${note.author?.pubkeyHex?.take(8) ?: "unknown"}")
+                        }
+                        isAppDef
                     } catch (e: Exception) {
                         false
                     }
                 }
+
+            Log.d("DVM_DEBUG", "Found ${allAppDefinitions.size} total AppDefinition events in cache")
 
             // Then filter them specifically for kind:5050 support
             val textGenerationDVMs =
                 allAppDefinitions.filter { note ->
                     try {
                         val event = note.event as? AppDefinitionEvent ?: return@filter false
+                        val metadata = event.appMetaData()
                         val supportsKind5050 = acceptDVM(event)
-                        val isValidDvm = event.appMetaData()?.subscription != true
+                        val isValidDvm = metadata?.subscription != true
                         val passesFilter = buildFilterParams(account).match(event)
                         val isRecentlyActive = event.createdAt > TimeUtils.oneWeekAgo()
 
+                        Log.d(
+                            "DVM_DEBUG",
+                            "Filtering AppDef [${metadata?.name ?: "unnamed"}]: " +
+                                "supports5050=$supportsKind5050, " +
+                                "isValidDvm=$isValidDvm, " +
+                                "passesFilter=$passesFilter, " +
+                                "isRecentlyActive=$isRecentlyActive",
+                        )
+
                         supportsKind5050 && isValidDvm && passesFilter && isRecentlyActive
                     } catch (e: Exception) {
+                        Log.e("DVM_DEBUG", "Error filtering AppDefinition: ${e.message}")
                         false
                     }
                 }
 
+            Log.d("DVM_DEBUG", "Found ${textGenerationDVMs.size} text generation DVMs after filtering")
+
             return sort(textGenerationDVMs.toSet())
         } catch (e: Exception) {
+            Log.e("DVM_DEBUG", "Error in NIP90TextGenDVMFeedFilter.feed(): ${e.message}", e)
             return emptyList()
         }
     }
@@ -92,22 +116,28 @@ class NIP90TextGenDVMFeedFilter(
         try {
             // Check if this is a kind 5050 Text Generation DVM
             if (noteEvent.includeKind(KIND_REQUEST_DVM_TEXT)) {
+                Log.d("DVM_DEBUG", "DVM supports kind 5050 through direct kind tag")
                 return true
             }
 
             // Also check kind in tags - more permissive to catch DVMs with different tagging styles
             val hasTextGenerationKind =
                 noteEvent.tags.any { tag ->
-                    tag.size >= 2 &&
-                        (
-                            (tag[0] == "k" && tag[1] == "5050") ||
-                                (tag[0] == "kind" && tag[1] == "5050") ||
-                                (tag[0] == "kinds" && tag[1].contains("5050")) ||
-                                // Some DVMs use comma-separated lists
-                                (tag[0] == "k" && tag.drop(1).any { it.split(",").contains("5050") }) ||
-                                // Some DVMs use spaces to separate in a single field
-                                (tag[0] == "k" && tag.drop(1).any { it.split(" ").contains("5050") })
-                        )
+                    val result =
+                        tag.size >= 2 &&
+                            (
+                                (tag[0] == "k" && tag[1] == "5050") ||
+                                    (tag[0] == "kind" && tag[1] == "5050") ||
+                                    (tag[0] == "kinds" && tag[1].contains("5050")) ||
+                                    // Some DVMs use comma-separated lists
+                                    (tag[0] == "k" && tag.drop(1).any { it.split(",").contains("5050") }) ||
+                                    // Some DVMs use spaces to separate in a single field
+                                    (tag[0] == "k" && tag.drop(1).any { it.split(" ").contains("5050") })
+                            )
+                    if (result) {
+                        Log.d("DVM_DEBUG", "DVM supports kind 5050 through tag format: ${tag.joinToString(",")}")
+                    }
+                    result
                 }
             if (hasTextGenerationKind) {
                 return true
@@ -117,6 +147,9 @@ class NIP90TextGenDVMFeedFilter(
             val nip89Data = noteEvent.appMetaData() ?: return false
             val about = nip89Data.about?.lowercase() ?: ""
             val name = nip89Data.name?.lowercase() ?: ""
+
+            // Log metadata for debugging
+            Log.d("DVM_DEBUG", "Checking metadata for DVM: name='$name', about='${about.take(50)}...'")
 
             // Look for specific text generation terms in metadata
             val isTextGeneration =
@@ -129,12 +162,20 @@ class NIP90TextGenDVMFeedFilter(
                     about.contains("text generation") ||
                     about.contains("ai assistant") ||
                     about.contains("chatbot") ||
-                    name.contains("text") && name.contains("generat") ||
-                    name.contains("ai") && name.contains("assistant") ||
-                    name.contains("chat") && (name.contains("bot") || name.contains("gpt"))
+                    name.contains("text") &&
+                    name.contains("generat") ||
+                    name.contains("ai") &&
+                    name.contains("assistant") ||
+                    name.contains("chat") &&
+                    (name.contains("bot") || name.contains("gpt"))
+
+            if (isTextGeneration) {
+                Log.d("DVM_DEBUG", "DVM identified as text generation through metadata")
+            }
 
             return isTextGeneration
         } catch (e: Exception) {
+            Log.e("DVM_DEBUG", "Error in acceptDVM check: ${e.message}", e)
             return false
         }
     }

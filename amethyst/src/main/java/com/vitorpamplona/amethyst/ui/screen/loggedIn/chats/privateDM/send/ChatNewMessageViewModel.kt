@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
-import com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UserSuggestionAnchor
@@ -59,7 +58,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.ChatFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.dal.TextGenerationDVMFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -89,18 +87,15 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.coroutines.runBlocking
 
 @Stable
 class ChatNewMessageViewModel :
@@ -175,13 +170,6 @@ class ChatNewMessageViewModel :
 
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
-
-    // Static cache for DVMs to avoid redundant discoveries
-    companion object {
-        private var cachedDvmList: List<DvmInfo>? = null
-        private var lastDiscoveryTime: Long = 0
-        private const val CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
-    }
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -369,13 +357,13 @@ class ChatNewMessageViewModel :
             if (isDvmConversation()) {
                 // Format message as a NIP-90 request if sending to a DVM
                 val originalMessage = message.text
-                val formattedMessage = formatTextGenerationRequest(originalMessage)
+                val formattedMessage = NIP90TextGenUtil.formatTextGenerationRequest(originalMessage, true)
                 message = TextFieldValue(formattedMessage)
 
                 // Force regular DM (type 4) for DVM conversations
                 nip17 = false
 
-                Log.d("DVM", "Sending NIP-90 formatted request: $formattedMessage")
+                Log.d("DVM_DEBUG", "Sending NIP-90 formatted request: $formattedMessage")
             }
 
             sendPostSync()
@@ -760,121 +748,29 @@ class ChatNewMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val account = account ?: return@launch
 
-            // Check if we have a valid cached list first
-            val currentTime = System.currentTimeMillis()
-            if (cachedDvmList != null && (currentTime - lastDiscoveryTime < CACHE_TTL)) {
-                Log.d("DVM", "Using cached DVM list (${cachedDvmList!!.size} DVMs)")
-                availableDvms = cachedDvmList!!
-                showDvmSelectionDialog = true
-                return@launch
-            }
-
-            Log.d("DVM", "Starting DVM discovery process")
-
             try {
-                // Request text generation DVMs from the network once
-                com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource.account = account
-                com.vitorpamplona.amethyst.service.NostrDiscoveryDataSource
-                    .createNIP89Filter(listOf("5050"))
-
-                // Allow short time for relay responses
+                // Use the utility class to get Text Generation DVMs
+                // Add a delay to allow relays to respond
+                Log.d("DVM_DEBUG", "Starting TextGen DVM discovery in ChatNewMessageViewModel...")
                 delay(1000)
 
-                // Get DVMs using the filter
-                val feed = TextGenerationDVMFeedFilter(account)
-                val dvmNotes = feed.feed()
+                val dvmList = NIP90TextGenUtil.getTextGenerationDVMs(account)
 
-                if (dvmNotes.isEmpty()) {
-                    Log.d("DVM", "No DVMs found")
-                    cachedDvmList = emptyList()
-                    availableDvms = emptyList()
-                    showDvmSelectionDialog = true
-                    lastDiscoveryTime = currentTime
-                    return@launch
+                // Log the discovered DVMs
+                Log.d("DVM_DEBUG", "Found ${dvmList.size} text generation DVMs")
+                dvmList.forEach { dvm ->
+                    Log.d("DVM_DEBUG", "DVM: ${dvm.name ?: "unnamed"}, pubkey: ${dvm.pubkey.take(8)}")
                 }
 
-                // Process the DVMs
-                val result = processDiscoveredDVMs(dvmNotes)
-
-                // Cache the results
-                cachedDvmList = result
-                lastDiscoveryTime = currentTime
-
-                // Update UI
-                availableDvms = result
+                // Update UI with results
+                availableDvms = dvmList
                 showDvmSelectionDialog = true
-
-                Log.d("DVM", "DVM discovery complete, found ${result.size} DVMs")
             } catch (e: Exception) {
-                Log.e("DVM", "Error discovering DVMs: ${e.message}")
-                // If we have no cache yet, create an empty one
-                if (cachedDvmList == null) {
-                    cachedDvmList = emptyList()
-                }
-
-                // Use whatever we have
-                availableDvms = cachedDvmList ?: emptyList()
+                Log.e("DVM_DEBUG", "Error discovering DVMs: ${e.message}", e)
+                availableDvms = emptyList()
                 showDvmSelectionDialog = true
             }
         }
-    }
-
-    // Process the discovered DVMs into a clean list
-    private fun processDiscoveredDVMs(dvmNotes: List<Note>): List<DvmInfo> {
-        // Extract DVMs that match our criteria
-        val dvmInfo =
-            dvmNotes.mapNotNull { note ->
-                try {
-                    val appDef = note.event as? AppDefinitionEvent ?: return@mapNotNull null
-                    val metadata = appDef.appMetaData() ?: return@mapNotNull null
-                    val supportedKinds = appDef.supportedKinds()
-                    val pubkey = note.author?.pubkeyHex ?: return@mapNotNull null
-
-                    // Only include DVMs that support kind 5050 (text generation)
-                    if (!supportedKinds.contains(5050)) return@mapNotNull null
-
-                    // Only include DVMs active within the past week
-                    if ((note.createdAt() ?: 0L) < TimeUtils.oneWeekAgo()) return@mapNotNull null
-
-                    DvmInfo(
-                        pubkey = pubkey,
-                        name = metadata.name,
-                        supportedKinds = supportedKinds.toSet(),
-                        description = metadata.about,
-                    )
-                } catch (e: Exception) {
-                    null
-                }
-            }
-
-        // Deduplicate by pubkey
-        val uniqueDvms = mutableMapOf<String, DvmInfo>()
-        dvmInfo.forEach { dvm -> uniqueDvms[dvm.pubkey] = dvm }
-
-        return uniqueDvms.values.toList()
-    }
-
-    fun onDvmSelected(pubkey: String) {
-        val user = LocalCache.getOrCreateUser(pubkey)
-
-        // Set the room for communication with the DVM
-        room = ChatroomKey(setOf(pubkey))
-
-        // Update the To field with the DVM's npub
-        toUsers = TextFieldValue("@${Hex.decode(pubkey).toNpub()}")
-
-        // Enable NIP17 for DVM communication
-        nip17 = true
-        requiresNIP17 = false
-
-        showDvmSelectionDialog = false
-
-        // Update the room status for proper messaging
-        updateNIP17StatusFromRoom()
-    }
-
-    fun dismissDvmDialog() {
-        showDvmSelectionDialog = false
     }
 
     private fun isDvmConversation(): Boolean {
@@ -899,68 +795,41 @@ class ChatNewMessageViewModel :
         return isExistingDvm || isNewDvm
     }
 
-    private fun formatTextGenerationRequest(message: String): String {
-        // If not talking to a DVM, return the original message
-        if (!isDvmConversation()) return message
+    private fun formatTextGenerationRequest(message: String): String = NIP90TextGenUtil.formatTextGenerationRequest(message, isDvmConversation())
 
-        try {
-            // Create a NIP-90 kind:5050 formatted request
-            val requestObject = JSONObject()
+    fun getKind5050DVMs(): List<DvmInfo> {
+        val account = account ?: return emptyList()
 
-            // Add input data as text
-            val inputTags = JSONArray()
-            val inputTag = JSONArray()
-            inputTag.put("i")
-            inputTag.put(message)
-            inputTag.put("text")
-            inputTags.put(inputTag)
-
-            // Add basic params
-            val paramTags = JSONArray()
-
-            // Add model param if you want to specify a model
-            val modelParam = JSONArray()
-            modelParam.put("param")
-            modelParam.put("model")
-            modelParam.put("default") // You could let user customize this
-            paramTags.put(modelParam)
-
-            // Create the request object
-            requestObject.put("kind", 5050)
-            requestObject.put("tags", inputTags)
-            requestObject.put("content", "")
-
-            return requestObject.toString(2)
-        } catch (e: Exception) {
-            Log.e("DVM", "Error formatting text generation request", e)
-            return message
+        return runBlocking {
+            try {
+                NIP90TextGenUtil.getTextGenerationDVMs(account)
+            } catch (e: Exception) {
+                Log.e("DVM_DEBUG", "Error in getKind5050DVMs: ${e.message}", e)
+                emptyList()
+            }
         }
     }
 
-    fun getKind5050DVMs(): List<DvmInfo> {
-        // Check if we have a valid cached list first
-        val currentTime = System.currentTimeMillis()
-        if (cachedDvmList != null && (currentTime - lastDiscoveryTime < CACHE_TTL)) {
-            return cachedDvmList!!
-        }
+    fun onDvmSelected(pubkey: String) {
+        val user = LocalCache.getOrCreateUser(pubkey)
 
-        // If no cache or expired, fetch new data
-        val account = account ?: return emptyList()
+        // Set the room for communication with the DVM
+        room = ChatroomKey(setOf(pubkey))
 
-        try {
-            // Get DVMs using the filter
-            val feed = TextGenerationDVMFeedFilter(account)
-            val dvmNotes = feed.feed()
+        // Update the To field with the DVM's npub
+        toUsers = TextFieldValue("@${Hex.decode(pubkey).toNpub()}")
 
-            // Process and cache the results
-            val result = processDiscoveredDVMs(dvmNotes)
-            cachedDvmList = result
-            lastDiscoveryTime = currentTime
+        // Enable NIP17 for DVM communication
+        nip17 = true
+        requiresNIP17 = false
 
-            return result
-        } catch (e: Exception) {
-            // Return empty list if there's an error
-            return emptyList()
-        }
+        showDvmSelectionDialog = false
+
+        // Update the room status for proper messaging
+        updateNIP17StatusFromRoom()
+    }
+
+    fun dismissDvmDialog() {
+        showDvmSelectionDialog = false
     }
 }

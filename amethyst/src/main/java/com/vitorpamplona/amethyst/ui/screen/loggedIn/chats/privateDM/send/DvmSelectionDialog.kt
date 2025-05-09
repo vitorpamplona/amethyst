@@ -43,7 +43,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
 
-// Create a standalone DvmInfo data class
+/**
+ * Data class representing information about a Distributed Verification Machine (DVM)
+ * for use in the UI, particularly for text generation capabilities.
+ *
+ * This class is populated from NIP90TextGenDVMFeedFilter results.
+ */
 data class DvmInfo(
     val pubkey: String,
     val name: String?,

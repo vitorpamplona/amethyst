@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -627,12 +628,25 @@ fun SendDirectMessageTo(
 
                         // Start discovery in background
                         coroutineScope.launch {
-                            val dvmList = postViewModel.getKind5050DVMs()
+                            try {
+                                // Add a delay to allow DVMs to be discovered
+                                Log.d("DVM_DEBUG", "Starting DVM discovery in SendDirectMessageTo dialog...")
+                                delay(100)
+                                val dvmList = NIP90TextGenUtil.getTextGenerationDVMs(accountViewModel.account)
 
-                            // Update the dialog with results when available
-                            if (dvmList.isNotEmpty()) {
-                                updateDvmList(dvmList)
-                                postViewModel.availableDvms = dvmList
+                                // Log the discovered DVMs
+                                Log.d("DVM_DEBUG", "Found ${dvmList.size} text generation DVMs in SendDirectMessageTo")
+                                dvmList.forEach { dvm ->
+                                    Log.d("DVM_DEBUG", "DVM in Dialog: ${dvm.name ?: "unnamed"}, pubkey: ${dvm.pubkey.take(8)}")
+                                }
+
+                                // Update the dialog with results when available
+                                if (dvmList.isNotEmpty()) {
+                                    updateDvmList(dvmList)
+                                    postViewModel.availableDvms = dvmList
+                                }
+                            } catch (e: Exception) {
+                                Log.e("DVM_DEBUG", "Error discovering DVMs in dialog: ${e.message}", e)
                             }
                         }
                     } else {

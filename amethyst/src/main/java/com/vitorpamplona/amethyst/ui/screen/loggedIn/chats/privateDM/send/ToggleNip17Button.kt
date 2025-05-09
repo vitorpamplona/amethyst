@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @Composable
@@ -86,21 +88,32 @@ fun ToggleNip17Button(
     LaunchedEffect(roomUsers) {
         // If there are room users to check and DVM list is empty, try to load DVMs
         if (roomUsers.isNotEmpty() && channelScreenModel.availableDvms.isEmpty()) {
-            // Load DVMs to check if this is a DVM conversation
-            val dvms = channelScreenModel.getKind5050DVMs()
-            if (dvms.isNotEmpty()) {
-                channelScreenModel.availableDvms = dvms
+            try {
+                Log.d("DVM_DEBUG", "Loading DVMs in ToggleNip17Button LaunchedEffect...")
+                // Load DVMs to check if this is a DVM conversation - use async/await to handle suspend function
+                val dvmsDeferred = async { NIP90TextGenUtil.getTextGenerationDVMs(accountViewModel.account) }
+                val dvms = dvmsDeferred.await()
 
-                // Check if any room user is a DVM
-                val isDvm =
-                    roomUsers.any { userPubkey ->
-                        dvms.any { dvm -> dvm.pubkey == userPubkey }
+                // Log discovered DVMs
+                Log.d("DVM_DEBUG", "Found ${dvms.size} text generation DVMs in ToggleNip17Button")
+
+                if (dvms.isNotEmpty()) {
+                    channelScreenModel.availableDvms = dvms
+
+                    // Check if any room user is a DVM
+                    val isDvm =
+                        roomUsers.any { userPubkey ->
+                            dvms.any { dvm -> dvm.pubkey == userPubkey }
+                        }
+
+                    // If DVM conversation, force NIP17 to false
+                    if (isDvm && channelScreenModel.nip17) {
+                        Log.d("DVM_DEBUG", "Found DVM in conversation, disabling NIP17")
+                        channelScreenModel.nip17 = false
                     }
-
-                // If DVM conversation, force NIP17 to false
-                if (isDvm && channelScreenModel.nip17) {
-                    channelScreenModel.nip17 = false
                 }
+            } catch (e: Exception) {
+                Log.e("DVM_DEBUG", "Error loading DVMs in ToggleNip17Button: ${e.message}", e)
             }
         }
     }
@@ -131,9 +144,19 @@ fun ToggleNip17Button(
             ) {
                 // Load DVMs in background to check if we're talking to a DVM
                 coroutineScope.launch {
-                    val dvms = channelScreenModel.getKind5050DVMs()
-                    if (dvms.isNotEmpty()) {
-                        channelScreenModel.availableDvms = dvms
+                    try {
+                        // Use async-await to handle suspend function
+                        val dvmsDeferred = async { NIP90TextGenUtil.getTextGenerationDVMs(accountViewModel.account) }
+                        val dvms = dvmsDeferred.await()
+
+                        // Log discovered DVMs
+                        Log.d("DVM_DEBUG", "Button click: Found ${dvms.size} text generation DVMs")
+
+                        if (dvms.isNotEmpty()) {
+                            channelScreenModel.availableDvms = dvms
+                        }
+                    } catch (e: Exception) {
+                        Log.e("DVM_DEBUG", "Error loading DVMs on button click: ${e.message}", e)
                     }
                 }
             }
