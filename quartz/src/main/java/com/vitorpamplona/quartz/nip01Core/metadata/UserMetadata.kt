@@ -50,6 +50,9 @@ class UserMetadata {
 
     var twitter: String? = null
 
+    @JsonProperty("cryptocurrency_addresses")
+    var cryptoAddresses: Map<String, String>? = null
+
     @Transient
     var tags: ImmutableListOfLists<String>? = null
 
@@ -67,6 +70,8 @@ class UserMetadata {
     fun nip05(): String? = nip05
 
     fun profilePicture(): String? = picture
+
+    fun moneroAddress(): String? = cryptoAddresses?.get("monero")
 
     fun cleanBlankNames() {
         if (pronouns == "null") pronouns = null
@@ -96,5 +101,6 @@ class UserMetadata {
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
+        if (cryptoAddresses?.isEmpty() == true) cryptoAddresses = null
     }
 }

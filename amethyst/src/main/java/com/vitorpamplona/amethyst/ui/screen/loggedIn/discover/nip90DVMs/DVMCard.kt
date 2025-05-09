@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -129,6 +130,12 @@ fun RenderContentDVMThumb(
                     nav,
                 )
             }
+            Spacer(modifier = StdHorzSpacer)
+            MoneroTippingReaction(
+                note = baseNote,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+            )
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(
                 baseNote = baseNote,

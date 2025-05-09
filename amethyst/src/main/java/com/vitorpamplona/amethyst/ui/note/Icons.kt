@@ -49,6 +49,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
@@ -248,6 +250,7 @@ fun ReactionRowIconPreview() {
         OutlinedZapIcon(Size20Modifier)
         ZapIcon(Size20Modifier)
         ZappedIcon(Size20Modifier)
+        MoneroIcon(Size20Modifier)
         ShareIcon(Size20Modifier, Color.Unspecified)
     }
 }
@@ -277,6 +280,19 @@ fun OutlinedZapIcon(
         contentDescription = stringRes(contentDescriptor),
         tint = tint,
         modifier = modifier,
+    )
+}
+
+@Composable
+fun MoneroIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = ImageVector.vectorResource(R.drawable.monero),
+        modifier = modifier,
+        contentDescription = stringRes(R.string.share_or_save),
+        tint = tint,
     )
 }
 

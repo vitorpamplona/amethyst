@@ -38,6 +38,8 @@ val DefaultReactions =
 
 val DefaultZapAmounts = listOf(100L, 500L, 1000L)
 
+val DefaultTipAmounts = listOf(0.1, 0.5, 1.0)
+
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
     val codedList = mutableSetOf<String>()
@@ -52,10 +54,15 @@ class AccountSyncedSettingsInternal(
     val zaps: AccountZapPreferencesInternal = AccountZapPreferencesInternal(),
     val languages: AccountLanguagePreferencesInternal = AccountLanguagePreferencesInternal(),
     val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
+    val tips: AccountTipPreferencesInternal = AccountTipPreferencesInternal(),
 )
 
 class AccountReactionPreferencesInternal(
     var reactionChoices: List<String> = DefaultReactions,
+)
+
+class AccountTipPreferencesInternal(
+    var tipAmountChoices: List<Double> = DefaultTipAmounts,
 )
 
 class AccountZapPreferencesInternal(

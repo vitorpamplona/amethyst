@@ -8,6 +8,11 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="nostrsigner" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="monero" />
+        </intent>
     </queries>
 
     <!-- Doesn't require a camera -->

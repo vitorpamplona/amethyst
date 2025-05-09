@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.MoneroValidator
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -63,9 +64,27 @@ class NewUserMetadataViewModel : ViewModel() {
     val twitter = mutableStateOf("")
     val github = mutableStateOf("")
     val mastodon = mutableStateOf("")
+    val moneroAddress = mutableStateOf("")
 
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
+
+    fun checkData(
+        onSuccess: () -> Unit,
+        onError: (resId: Int) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (moneroAddress.value.isNotBlank()) {
+                if (!isValidMoneroAddress()) {
+                    onError(R.string.invalid_monero_address)
+                    return@launch
+                }
+            }
+            onSuccess()
+        }
+    }
+
+    fun isValidMoneroAddress(): Boolean = MoneroValidator.isValidAddress(moneroAddress.value)
 
     fun load(account: Account) {
         this.account = account
@@ -81,6 +100,7 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info?.nip05 ?: ""
             lnAddress.value = it.info?.lud16 ?: ""
             lnURL.value = it.info?.lud06 ?: ""
+            moneroAddress.value = it.info?.moneroAddress() ?: ""
 
             twitter.value = ""
             github.value = ""
@@ -113,6 +133,7 @@ class NewUserMetadataViewModel : ViewModel() {
                 twitter = twitter.value,
                 mastodon = mastodon.value,
                 github = github.value,
+                moneroAddress = moneroAddress.value,
             )
             clear()
         }
@@ -131,6 +152,7 @@ class NewUserMetadataViewModel : ViewModel() {
         twitter.value = ""
         github.value = ""
         mastodon.value = ""
+        moneroAddress.value = ""
     }
 
     fun uploadForPicture(
