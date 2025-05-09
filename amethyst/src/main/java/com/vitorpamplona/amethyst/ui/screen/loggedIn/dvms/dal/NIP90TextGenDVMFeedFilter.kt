@@ -21,10 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal
 
 import android.util.Log
+import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.DiscoverNIP89FeedFilter
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -43,12 +46,9 @@ class NIP90TextGenDVMFeedFilter(
             val allAppDefinitions =
                 LocalCache.addressables.filterIntoSet { _, note ->
                     try {
-                        val isAppDef = note.event is AppDefinitionEvent
-                        if (isAppDef) {
-                            val event = note.event as AppDefinitionEvent
-                        }
-                        isAppDef
+                        note.event is AppDefinitionEvent
                     } catch (e: Exception) {
+                        Log.w("DVM_DEBUG", "Error checking if event is AppDefinitionEvent: ${e.message}", e)
                         false
                     }
                 }
@@ -141,23 +141,50 @@ class NIP90TextGenDVMFeedFilter(
             // Log metadata for debugging
             Log.d("DVM_DEBUG", "Checking metadata for DVM: name='$name', about='${about.take(50)}...'")
 
-            // Look for specific text generation terms in metadata
-            val isTextGeneration =
-                about.contains("text generation") ||
-                    about.contains("ai assistant") ||
-                    about.contains("language model") ||
-                    about.contains("large language model") ||
-                    about.contains("llm") ||
-                    about.contains("gpt") ||
-                    about.contains("text generation") ||
-                    about.contains("ai assistant") ||
-                    about.contains("chatbot") ||
-                    name.contains("text") &&
-                    name.contains("generat") ||
-                    name.contains("ai") &&
-                    name.contains("assistant") ||
-                    name.contains("chat") &&
-                    (name.contains("bot") || name.contains("gpt"))
+            // Define term patterns to check for text generation capabilities
+            val singleTerms: List<String> =
+                listOf(
+                    stringRes(Amethyst.instance, R.string.text_gen_term_language_model),
+                    stringRes(Amethyst.instance, R.string.text_gen_term_llm),
+                    stringRes(Amethyst.instance, R.string.text_gen_term_gpt),
+                    stringRes(Amethyst.instance, R.string.text_gen_term_ai_assistant),
+                )
+
+            val combinedTerms: List<Pair<String, List<String>>> =
+                listOf(
+                    Pair(
+                        stringRes(Amethyst.instance, R.string.text_gen_term_chat),
+                        listOf(
+                            stringRes(Amethyst.instance, R.string.text_gen_term_bot),
+                            stringRes(Amethyst.instance, R.string.text_gen_term_gpt),
+                        ),
+                    ),
+                    Pair(
+                        stringRes(Amethyst.instance, R.string.text_gen_term_text),
+                        listOf(stringRes(Amethyst.instance, R.string.text_gen_term_generat)),
+                    ),
+                    Pair(
+                        stringRes(Amethyst.instance, R.string.text_gen_term_ai),
+                        listOf(stringRes(Amethyst.instance, R.string.text_gen_term_assistant)),
+                    ),
+                )
+
+            // Check single terms in about
+            val hasAboutSingleTerm = singleTerms.any { term: String -> about.contains(term) }
+
+            // Check term combinations in about
+            val hasAboutCombination =
+                combinedTerms.any { pair: Pair<String, List<String>> ->
+                    about.contains(pair.first) && pair.second.any { secondTerm: String -> about.contains(secondTerm) }
+                }
+
+            // Check term combinations in name
+            val hasNameCombination =
+                combinedTerms.any { pair: Pair<String, List<String>> ->
+                    name.contains(pair.first) && pair.second.any { secondTerm: String -> name.contains(secondTerm) }
+                }
+
+            val isTextGeneration = hasAboutSingleTerm || hasAboutCombination || hasNameCombination
 
             if (isTextGeneration) {
                 Log.d("DVM_DEBUG", "DVM identified as text generation through metadata")

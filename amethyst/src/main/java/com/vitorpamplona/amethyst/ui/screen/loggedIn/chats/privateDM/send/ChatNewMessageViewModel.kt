@@ -95,7 +95,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 @Stable
 class ChatNewMessageViewModel :
@@ -744,35 +743,6 @@ class ChatNewMessageViewModel :
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
 
-    fun fetchTextGenerationDvms() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val account = account ?: return@launch
-
-            try {
-                // Use the utility class to get Text Generation DVMs
-                // Add a delay to allow relays to respond
-                Log.d("DVM_DEBUG", "Starting TextGen DVM discovery in ChatNewMessageViewModel...")
-                delay(1000)
-
-                val dvmList = NIP90TextGenUtil.getTextGenerationDVMs(account)
-
-                // Log the discovered DVMs
-                Log.d("DVM_DEBUG", "Found ${dvmList.size} text generation DVMs")
-                dvmList.forEach { dvm ->
-                    Log.d("DVM_DEBUG", "DVM: ${dvm.name ?: "unnamed"}, pubkey: ${dvm.pubkey.take(8)}")
-                }
-
-                // Update UI with results
-                availableDvms = dvmList
-                showDvmSelectionDialog = true
-            } catch (e: Exception) {
-                Log.e("DVM_DEBUG", "Error discovering DVMs: ${e.message}", e)
-                availableDvms = emptyList()
-                showDvmSelectionDialog = true
-            }
-        }
-    }
-
     private fun isDvmConversation(): Boolean {
         // First check if any user in the room matches a known DVM
         val isExistingDvm =
@@ -795,21 +765,6 @@ class ChatNewMessageViewModel :
         return isExistingDvm || isNewDvm
     }
 
-    private fun formatTextGenerationRequest(message: String): String = NIP90TextGenUtil.formatTextGenerationRequest(message, isDvmConversation())
-
-    fun getKind5050DVMs(): List<DvmInfo> {
-        val account = account ?: return emptyList()
-
-        return runBlocking {
-            try {
-                NIP90TextGenUtil.getTextGenerationDVMs(account)
-            } catch (e: Exception) {
-                Log.e("DVM_DEBUG", "Error in getKind5050DVMs: ${e.message}", e)
-                emptyList()
-            }
-        }
-    }
-
     fun onDvmSelected(pubkey: String) {
         val user = LocalCache.getOrCreateUser(pubkey)
 
@@ -827,9 +782,5 @@ class ChatNewMessageViewModel :
 
         // Update the room status for proper messaging
         updateNIP17StatusFromRoom()
-    }
-
-    fun dismissDvmDialog() {
-        showDvmSelectionDialog = false
     }
 }

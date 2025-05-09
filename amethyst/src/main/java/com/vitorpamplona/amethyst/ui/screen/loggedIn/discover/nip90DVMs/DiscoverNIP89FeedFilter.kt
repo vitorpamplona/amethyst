@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 open class DiscoverNIP89FeedFilter(
     val account: Account,
@@ -53,17 +54,18 @@ open class DiscoverNIP89FeedFilter(
         const val CONTENT_DISCOVERY_KIND = 5300
 
         // Track time of last DVM request to avoid excessive relay traffic
-        private var lastDvmRequestTime: Long = 0
+        private val lastDvmRequestTime = AtomicLong(0)
         private const val DVM_REQUEST_COOLDOWN = 60 * 1000 // 1 minute cooldown
 
         /**
          * Request DVM-related events from relays to ensure our cache has them
+         * @param forceRefresh If true, bypass the cooldown check (for TextGen DVMs)
          */
-        suspend fun requestDVMEvents(account: Account) {
+        suspend fun requestDVMEvents(forceRefresh: Boolean = false) {
             val currentTime = System.currentTimeMillis()
 
-            // Check if we've requested recently
-            if (currentTime - lastDvmRequestTime < DVM_REQUEST_COOLDOWN) {
+            // Check if we've requested recently (skip check if forceRefresh is true)
+            if (!forceRefresh && currentTime - lastDvmRequestTime.get() < DVM_REQUEST_COOLDOWN) {
                 Log.d("DVM_DEBUG", "Skipping DVM request - on cooldown")
                 return
             }
@@ -92,7 +94,7 @@ open class DiscoverNIP89FeedFilter(
                 Amethyst.instance.client.close(subscriptionId)
 
                 // Update last request time
-                lastDvmRequestTime = currentTime
+                lastDvmRequestTime.set(currentTime)
 
                 Log.d("DVM_DEBUG", "Completed DVM events request")
 
@@ -102,6 +104,7 @@ open class DiscoverNIP89FeedFilter(
                         try {
                             note.event is AppDefinitionEvent
                         } catch (e: Exception) {
+                            Log.w("DVM_DEBUG", "Error checking if event is AppDefinitionEvent: ${e.message}", e)
                             false
                         }
                     }
@@ -124,7 +127,13 @@ open class DiscoverNIP89FeedFilter(
     override fun feed(): List<Note> {
         // Launch a request for DVM events in background - non-blocking
         CoroutineScope(Dispatchers.IO).launch {
-            requestDVMEvents(account)
+            // We'll check if this filter cares about TextGen DVMs
+            val includesTextGen =
+                this@DiscoverNIP89FeedFilter.javaClass.name.contains("TextGen") ||
+                    this@DiscoverNIP89FeedFilter.javaClass.name.contains("Text")
+
+            // Pass forceRefresh=true for TextGen DVM filters
+            requestDVMEvents(forceRefresh = includesTextGen)
         }
 
         val notes =

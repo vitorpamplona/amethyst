@@ -46,9 +46,6 @@ object NIP90TextGenUtil {
     // Kind for text generation DVMs
     const val KIND_TEXT_GENERATION = DiscoverNIP89FeedFilter.TEXT_GENERATION_KIND
 
-    // Kind for App Definition
-    const val KIND_APP_DEFINITION = DiscoverNIP89FeedFilter.APP_DEFINITION_KIND
-
     /**
      * Retrieves text generation DVMs using NIP90TextGenDVMFeedFilter.
      * Uses cached results if available and not expired.
@@ -65,7 +62,8 @@ object NIP90TextGenUtil {
             Log.d("DVM_DEBUG", "Starting NIP90 DVM discovery process")
 
             // First, request DVM events from relays to ensure our cache has the latest
-            DiscoverNIP89FeedFilter.requestDVMEvents(account)
+            // Pass forceRefresh=true to bypass the cooldown for TextGen DVMs
+            DiscoverNIP89FeedFilter.requestDVMEvents(forceRefresh = true)
 
             // Allow time for relay responses and processing
             delay(1000)

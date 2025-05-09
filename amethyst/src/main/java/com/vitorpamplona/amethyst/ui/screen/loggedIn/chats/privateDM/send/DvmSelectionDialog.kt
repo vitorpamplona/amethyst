@@ -116,6 +116,9 @@ fun DvmSelectionDialog(
                 }
             },
             confirmButton = {
+                // Empty confirm button - required param
+            },
+            dismissButton = {
                 Text(
                     stringResource(id = R.string.cancel),
                     modifier =
@@ -239,6 +242,9 @@ fun DvmSelectionDialog(
             }
         },
         confirmButton = {
+            // Empty confirm button - required param
+        },
+        dismissButton = {
             Text(stringResource(id = R.string.cancel), modifier = Modifier.clickable { onDismissRequest() }.padding(10.dp))
         },
         properties = DialogProperties(usePlatformDefaultWidth = false),

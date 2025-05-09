@@ -29,15 +29,13 @@ import com.vitorpamplona.amethyst.ui.screen.FeedViewModel
 @Stable
 class NIP90TextGenDiscoveryFeedViewModel(
     val account: Account,
-    dvmKey: String,
     requestId: String,
-) : FeedViewModel(NIP90TextGenDiscoveryResponseFilter(account, dvmKey, requestId)) {
+) : FeedViewModel(NIP90TextGenDiscoveryResponseFilter(account, requestId)) {
     class Factory(
         val account: Account,
-        val dvmKey: String,
         val requestId: String,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = NIP90TextGenDiscoveryFeedViewModel(account, dvmKey, requestId) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = NIP90TextGenDiscoveryFeedViewModel(account, requestId) as T
     }
 } 

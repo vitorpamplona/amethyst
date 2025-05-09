@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryResponseEvent
 
 open class NIP90TextGenDiscoveryResponseFilter(
     val account: Account,
-    val dvmkey: String,
     val request: String,
 ) : AdditiveFeedFilter<Note>() {
     companion object {
@@ -56,8 +55,6 @@ open class NIP90TextGenDiscoveryResponseFilter(
     }
 
     override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
-
         latestNote =
             LocalCache.notes.maxOrNullOf(
                 filter = { idHex: String, note: Note ->
@@ -84,8 +81,6 @@ open class NIP90TextGenDiscoveryResponseFilter(
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        // val params = buildFilterParams(account)
-
         val maxNote = collection.filter { acceptableEvent(it) }.maxByOrNull { it.createdAt() ?: 0 } ?: return emptySet()
 
         if ((maxNote.createdAt() ?: 0) > (latestNote?.createdAt() ?: 0)) {
@@ -101,7 +96,5 @@ open class NIP90TextGenDiscoveryResponseFilter(
             }.toSet()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.toList() // collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.toList()
 } 

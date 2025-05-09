@@ -97,7 +97,5 @@ open class NIP90ContentDiscoveryResponseFilter(
             }.toSet()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.toList() // collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
-    }
+    override fun sort(collection: Set<Note>): List<Note> = collection.toList()
 }

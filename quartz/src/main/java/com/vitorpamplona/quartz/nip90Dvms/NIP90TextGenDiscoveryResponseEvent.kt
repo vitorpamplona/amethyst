@@ -41,10 +41,10 @@ class NIP90TextGenDiscoveryResponseEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var events: List<HexKey>? = null
+    @Transient private var cachedEvents: List<HexKey>? = null
 
     override fun countMemory(): Long {
-        val eventsSize = events?.size ?: 0
+        val eventsSize = innerTags().size
         return super.countMemory() + 8 + (eventsSize * 32)
     }
 
@@ -53,12 +53,12 @@ class NIP90TextGenDiscoveryResponseEvent(
             return listOf()
         }
 
-        events?.let {
+        cachedEvents?.let {
             return it
         }
 
         try {
-            events =
+            cachedEvents =
                 EventMapper.mapper.readValue<Array<Array<String>>>(content).mapNotNull {
                     if (it.size > 1 && it[0] == "e") {
                         it[1]
@@ -70,7 +70,7 @@ class NIP90TextGenDiscoveryResponseEvent(
             Log.w("NIP90TextGenDiscoveryResponseEvent", "Error parsing the JSON ${e.message}")
         }
 
-        return events ?: listOf()
+        return cachedEvents ?: listOf()
     }
 
     companion object {

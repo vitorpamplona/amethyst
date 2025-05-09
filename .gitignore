@@ -135,6 +135,7 @@ lint/outputs/
 lint/tmp/
 # lint/reports/
 
-# Other IDEs
-settings.json
+# Other IDEs stuff
 .cursor/
+.vscode/
+wsl_build.sh
