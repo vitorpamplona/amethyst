@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.ChatroomHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NIP90TextGenUtil
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -88,6 +89,12 @@ fun RenderPrivateMessage(
     val withMe = remember { noteEvent.with(accountViewModel.userProfile().pubkeyHex) }
     if (withMe) {
         LoadDecryptedContent(note, accountViewModel) { eventContent ->
+            // Parse NIP90 messages to extract readable text
+            val parsedContent =
+                remember(eventContent) {
+                    NIP90TextGenUtil.parseTextFromNIP90Message(eventContent)
+                }
+
             val modifier = remember(note.event?.id) { Modifier.fillMaxWidth() }
             val isAuthorTheLoggedUser =
                 remember(note.event?.id) { accountViewModel.isLoggedUser(note.author) }
@@ -97,7 +104,7 @@ fun RenderPrivateMessage(
 
             if (makeItShort && isAuthorTheLoggedUser) {
                 Text(
-                    text = eventContent,
+                    text = parsedContent,
                     color = MaterialTheme.colorScheme.placeholderText,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -110,7 +117,7 @@ fun RenderPrivateMessage(
                     accountViewModel = accountViewModel,
                 ) {
                     TranslatableRichTextViewer(
-                        content = eventContent,
+                        content = parsedContent,
                         canPreview = canPreview && !makeItShort,
                         quotesLeft = quotesLeft,
                         modifier = modifier,
@@ -124,7 +131,7 @@ fun RenderPrivateMessage(
                 }
 
                 if (noteEvent.hasHashtags()) {
-                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
+                    DisplayUncitedHashtags(noteEvent, parsedContent, callbackUri, nav)
                 }
             }
         }

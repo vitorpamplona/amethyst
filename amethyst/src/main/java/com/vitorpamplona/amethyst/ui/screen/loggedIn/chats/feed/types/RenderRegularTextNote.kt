@@ -32,10 +32,10 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NIP90TextGenUtil
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import org.json.JSONObject
 
 @Composable
 fun RenderRegularTextNote(
@@ -53,27 +53,12 @@ fun RenderRegularTextNote(
                 accountViewModel = accountViewModel,
             ) {
                 val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
-                // If this is a NIP-90 JSON (kind:5050), extract the "i" tag text only
+                // Parse NIP90 messages to extract readable text
                 val displayContent =
                     remember(eventContent) {
-                        try {
-                            val json = JSONObject(eventContent)
-                            if (json.optInt("kind") == 5050) {
-                                val tagsArr = json.optJSONArray("tags")
-                                if (tagsArr != null) {
-                                    for (i in 0 until tagsArr.length()) {
-                                        val arr = tagsArr.optJSONArray(i)
-                                        if (arr != null && arr.length() >= 3 && arr.optString(0) == "i" && arr.optString(2) == "text") {
-                                            return@remember arr.optString(1)
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            // not valid JSON or missing fields
-                        }
-                        eventContent
+                        NIP90TextGenUtil.parseTextFromNIP90Message(eventContent)
                     }
+
                 TranslatableRichTextViewer(
                     content = displayContent,
                     canPreview = canPreview,

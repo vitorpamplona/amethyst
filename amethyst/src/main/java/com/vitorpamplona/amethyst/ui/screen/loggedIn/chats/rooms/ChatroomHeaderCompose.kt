@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NIP90TextGenUtil
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
@@ -328,8 +329,14 @@ private fun UserRoomCompose(
         secondRow = {
             LoadDecryptedContentOrNull(note, accountViewModel) { content ->
                 if (content != null) {
+                    // Parse NIP90 messages to extract readable text for preview
+                    val displayContent =
+                        remember(content) {
+                            NIP90TextGenUtil.parseTextFromNIP90Message(content)
+                        }
+
                     Text(
-                        content,
+                        displayContent,
                         color = MaterialTheme.colorScheme.grayText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

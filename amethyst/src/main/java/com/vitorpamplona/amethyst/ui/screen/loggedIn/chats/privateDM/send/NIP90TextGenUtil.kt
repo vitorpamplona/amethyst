@@ -198,4 +198,52 @@ object NIP90TextGenUtil {
             return message
         }
     }
+
+    /**
+     * Parses a text response from a NIP-90 message.
+     * This function handles both request (kind 5050) and response (kind 6050) formats.
+     *
+     * If the content is valid JSON in NIP-90 format, it extracts the actual text content.
+     * If not a valid NIP-90 JSON or not JSON at all, returns the original message.
+     */
+    fun parseTextFromNIP90Message(message: String): String {
+        if (message.isBlank()) return message
+
+        // Check if it looks like JSON
+        if (!message.trim().startsWith("{")) return message
+
+        try {
+            val jsonObject = JSONObject(message)
+
+            // Check if this is a NIP-90 request message (kind 5050)
+            if (jsonObject.optInt("kind") == KIND_TEXT_GENERATION) {
+                // Extract input text from request tags
+                val tagsArr = jsonObject.optJSONArray("tags")
+                if (tagsArr != null) {
+                    for (i in 0 until tagsArr.length()) {
+                        val tag = tagsArr.optJSONArray(i)
+                        if (tag != null &&
+                            tag.length() >= 3 &&
+                            tag.optString(0) == "i" &&
+                            tag.optString(2) == "text"
+                        ) {
+                            return tag.optString(1, message)
+                        }
+                    }
+                }
+            }
+
+            // Check if this is a NIP-90 response (has content field)
+            val content = jsonObject.optString("content", "")
+            if (content.isNotBlank()) {
+                return content
+            }
+
+            // If it's JSON but not in expected format, just return original
+            return message
+        } catch (e: Exception) {
+            Log.d("DVM_DEBUG", "Not a valid NIP90 JSON: ${e.message}")
+            return message
+        }
+    }
 } 
