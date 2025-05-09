@@ -46,7 +46,6 @@ class NIP90TextGenDVMFeedFilter(
                         val isAppDef = note.event is AppDefinitionEvent
                         if (isAppDef) {
                             val event = note.event as AppDefinitionEvent
-                            Log.d("DVM_DEBUG", "Found AppDefinition: ${event.appMetaData()?.name ?: "unnamed"}, pubkey: ${note.author?.pubkeyHex?.take(8) ?: "unknown"}")
                         }
                         isAppDef
                     } catch (e: Exception) {
@@ -66,15 +65,6 @@ class NIP90TextGenDVMFeedFilter(
                         val isValidDvm = metadata?.subscription != true
                         val passesFilter = buildFilterParams(account).match(event)
                         val isRecentlyActive = event.createdAt > TimeUtils.oneWeekAgo()
-
-                        Log.d(
-                            "DVM_DEBUG",
-                            "Filtering AppDef [${metadata?.name ?: "unnamed"}]: " +
-                                "supports5050=$supportsKind5050, " +
-                                "isValidDvm=$isValidDvm, " +
-                                "passesFilter=$passesFilter, " +
-                                "isRecentlyActive=$isRecentlyActive",
-                        )
 
                         supportsKind5050 && isValidDvm && passesFilter && isRecentlyActive
                     } catch (e: Exception) {

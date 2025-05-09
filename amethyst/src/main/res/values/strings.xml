@@ -1162,6 +1162,7 @@
     
     <string name="select_dvm">Select Data Vending Machine</string>
     <string name="no_dvms_found">No Text Generation DVMs found</string>
+    <string name="loading_dvms">Loading text generation services…</string>
     
     <string name="dvm_nip17_disabled_title">Private Messages Disabled for DVMs</string>
     <string name="dvm_nip17_disabled_message">Private messages (NIP-17) are disabled in DVM conversations, as not all DVMs support them.</string>

@@ -118,7 +118,16 @@ object NIP90TextGenUtil {
                     val supportedKinds = appDef.supportedKinds()
                     val pubkey = note.author?.pubkeyHex ?: return@mapNotNull null
 
-                    Log.d("DVM_DEBUG", "Processing DVM: ${metadata.name ?: "unnamed"}, pubkey: ${pubkey.take(8)}, kinds: $supportedKinds")
+                    // Get picture URL directly from NIP89 metadata instead of author profile
+                    val pictureUrl = metadata.picture
+
+                    // Simply log the raw JSON content without parsing
+                    try {
+                        val rawContent = appDef.content
+                        Log.d("DVM_DEBUG", "Raw NIP89 metadata for ${metadata.name ?: "unnamed"}: $rawContent")
+                    } catch (e: Exception) {
+                        Log.d("DVM_DEBUG", "Could not log raw metadata: ${e.message}")
+                    }
 
                     // Only include DVMs that support kind 5050 (text generation)
                     if (!supportedKinds.contains(KIND_TEXT_GENERATION)) {
@@ -137,6 +146,7 @@ object NIP90TextGenUtil {
                         name = metadata.name,
                         supportedKinds = supportedKinds.toSet(),
                         description = metadata.about,
+                        picture = pictureUrl,
                     )
                 } catch (e: Exception) {
                     Log.e("DVM_DEBUG", "Error processing DVM note: ${e.message}")
