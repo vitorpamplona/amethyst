@@ -352,28 +352,36 @@ class ChatNewMessageViewModel :
 
     fun sendPost(onDone: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Check if this is a DVM conversation and force non-NIP-17
+            var contentToSend = message.text
+            var wasDvmConversation = false // Flag to remember if it was a DVM message
+
             if (isDvmConversation()) {
-                // Format message as a NIP-90 request if sending to a DVM
                 val originalMessage = message.text
                 val formattedMessage = NIP90TextGenUtil.formatTextGenerationRequest(originalMessage, true)
-                message = TextFieldValue(formattedMessage)
-
-                // Force regular DM (type 4) for DVM conversations
-                nip17 = false
-
-                Log.d("DVM_DEBUG", "Sending NIP-90 formatted request: $formattedMessage")
+                contentToSend = formattedMessage
+                wasDvmConversation = true // Set the flag
+                // nip17 = false // REMOVED from here
+                Log.d("DVM_DEBUG", "Sending NIP-90 formatted request for DVM: $formattedMessage")
             }
 
-            sendPostSync()
+            sendPostSync(contentToSend, wasDvmConversation) // Pass the DVM flag
+
+            // After sendPostSync (which includes cancel()), then update nip17 state if needed
+            if (wasDvmConversation) {
+                nip17 = false // Update the ViewModel state for UI consistency
+            }
+
             onDone()
         }
     }
 
-    suspend fun sendPostSync() {
-        innerSendPost(null)
+    suspend fun sendPostSync(
+        contentToSend: String,
+        isDvmMessage: Boolean,
+    ) { // Added isDvmMessage
+        innerSendPost(null, contentToSend, isDvmMessage) // Pass DVM flag
         accountViewModel?.deleteDraft(draftTag.current)
-        cancel()
+        cancel() // Clears message field, etc.
     }
 
     fun sendDraft() {
@@ -386,7 +394,9 @@ class ChatNewMessageViewModel :
         if (message.text.isBlank()) {
             account?.deleteDraft(draftTag.current)
         } else {
-            innerSendPost(draftTag.current)
+            // Drafts should save based on current nip17 state, not force NIP-04 for DVMs.
+            // So, isDvmMessage is effectively false here for draft saving purposes.
+            innerSendPost(draftTag.current, message.text, false)
         }
     }
 
@@ -449,29 +459,42 @@ class ChatNewMessageViewModel :
         }
     }
 
-    private fun innerSendPost(dTag: String?) {
+    private fun innerSendPost(
+        dTag: String?,
+        messageContent: String,
+        isDvmMessage: Boolean, // Added DVM flag
+    ) {
         val room = room ?: return
         val accountViewModel = accountViewModel ?: return
 
-        val urls = findURLs(message.text)
+        val urls = findURLs(messageContent)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
-        val emojis = findEmoji(message.text, accountViewModel.account.emoji.myEmojis.value)
+        val emojis = findEmoji(messageContent, accountViewModel.account.emoji.myEmojis.value)
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
-        val message = message.text
 
         val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
-        if (nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group) {
+        // Determine if NIP-17 should be used
+        // If it's a DVM message, it should NOT use NIP-17 (i.e., use NIP-04).
+        // Otherwise, base it on current `nip17` state, room size, or reply type.
+        val shouldUseNip17 =
+            if (isDvmMessage) {
+                false // DVMs always use NIP-04 equivalent
+            } else {
+                nip17 || room.users.size > 1 || replyTo.value?.event is NIP17Group
+            }
+
+        if (shouldUseNip17) {
             val replyHint = replyTo.value?.toEventHint<BaseDMGroupEvent>()
 
             val template =
                 if (replyHint == null) {
-                    ChatMessageEvent.build(message, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
-                        hashtags(findHashtags(message))
-                        references(findURLs(message))
-                        quotes(findNostrEventUris(message))
+                    ChatMessageEvent.build(messageContent, room.users.map { LocalCache.getOrCreateUser(it).toPTag() }) {
+                        hashtags(findHashtags(messageContent))
+                        references(findURLs(messageContent))
+                        quotes(findNostrEventUris(messageContent))
 
                         geoHash?.let { geohash(it) }
                         localZapRaiserAmount?.let { zapraiser(it) }
@@ -482,10 +505,10 @@ class ChatNewMessageViewModel :
                         imetas(usedAttachments)
                     }
                 } else {
-                    ChatMessageEvent.reply(message, replyHint) {
-                        hashtags(findHashtags(message))
-                        references(findURLs(message))
-                        quotes(findNostrEventUris(message))
+                    ChatMessageEvent.reply(messageContent, replyHint) {
+                        hashtags(findHashtags(messageContent))
+                        references(findURLs(messageContent))
+                        quotes(findNostrEventUris(messageContent))
 
                         geoHash?.let { geohash(it) }
                         localZapRaiserAmount?.let { zapraiser(it) }
@@ -499,17 +522,18 @@ class ChatNewMessageViewModel :
 
             accountViewModel.account.sendNIP17PrivateMessage(template, dTag)
         } else {
+            // NIP-04 (PrivateDmEvent) path
             accountViewModel.account.sendPrivateMessage(
-                message = message,
+                message = messageContent,
                 toUser = room.users.first().let { LocalCache.getOrCreateUser(it).toPTag() },
                 replyingTo = replyTo.value,
-                contentWarningReason = null,
+                contentWarningReason = null, // NIP-04 path in original code passed null here
                 imetas = usedAttachments,
                 draftTag = dTag,
             )
         }
 
-        if (dTag == null) {
+        if (dTag == null) { // This is for when not saving a draft, i.e., sending immediately
             ChatFileSender(room, accountViewModel.account).sendAll(uploadsWaitingToBeSent)
         }
     }

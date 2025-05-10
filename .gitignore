@@ -139,3 +139,4 @@ lint/tmp/
 .cursor/
 .vscode/
 wsl_build.sh
+tools/*

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -63,6 +64,8 @@ open class NIP90TextGenDiscoveryResponseFilter(
                 comparator = CreatedAtComparator,
             )
 
+        if (!validateLatestNote()) return listOf()
+
         val noteEvent = latestNote?.event as? NIP90TextGenDiscoveryResponseEvent ?: return listOf()
 
         return noteEvent.innerTags().mapNotNull {
@@ -87,6 +90,8 @@ open class NIP90TextGenDiscoveryResponseFilter(
             latestNote = maxNote
         }
 
+        if (!validateLatestNote()) return emptySet()
+
         val noteEvent = latestNote?.event as? NIP90TextGenDiscoveryResponseEvent ?: return setOf()
 
         return noteEvent
@@ -94,6 +99,20 @@ open class NIP90TextGenDiscoveryResponseFilter(
             .mapNotNull {
                 LocalCache.checkGetOrCreateNote(it)
             }.toSet()
+    }
+
+    /**
+     * Validates that latestNote contains a NIP90TextGenDiscoveryResponseEvent.
+     * If not, logs an error and resets latestNote to null.
+     * @return true if latestNote is valid, false otherwise
+     */
+    private fun validateLatestNote(): Boolean {
+        if (latestNote != null && latestNote?.event !is NIP90TextGenDiscoveryResponseEvent) {
+            Log.e("DVM_DEBUG", "latestNote's event is not a NIP90TextGenDiscoveryResponseEvent: ${latestNote?.event?.javaClass?.simpleName}")
+            latestNote = null
+            return false
+        }
+        return true
     }
 
     override fun sort(collection: Set<Note>): List<Note> = collection.toList()
