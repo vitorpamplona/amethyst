@@ -216,6 +216,13 @@
     <string name="unfollow">Přestat sledovat</string>
     <string name="channel_created">Kanál vytvořen</string>
     <string name="channel_information_changed_to">"Informace kanálu změněna na"</string>
+    <string name="ephemeral_relay_chat">Mizící chat</string>
+    <string name="relay_chat">Relé chat</string>
+    <string name="relay_chat_title">Relé chaty</string>
+    <string name="relay_chat_explainer">Relay chaty jsou chatové skupiny ovládané jejich domácí relé.
+        Jsou viditelné pro všechny na Nostru a každý se jich může zúčastnit.
+        Jsou skvělé pro otevřené komunity kolem konkrétních témat. Některé z těchto skupin jsou efemérní
+    a proto zprávy časem mizí</string>
     <string name="public_chat">Veřejný chat</string>
     <string name="public_chat_title">Metadata veřejného chatu</string>
     <string name="public_chat_explainer">Veřejné konverzace jsou viditelné pro všechny na Nostru a kdokoli
@@ -541,7 +548,9 @@
     <string name="are_you_sure_you_want_to_log_out">Odhlášení vymaže všechny vaše místní informace. Ujistěte se, že máte zálohované své privátní klíče, abyste se vyhnuli ztrátě účtu. Chcete pokračovat?</string>
     <string name="followed_tags">Sledované značky</string>
     <string name="relay_setup">Rele</string>
-    <string name="discover_content">Objevování poznámek</string>
+    <string name="discover_follows">Balíčky Sledování</string>
+    <string name="discover_reads">Přečtené</string>
+    <string name="discover_content">Algoritmy kanálu</string>
     <string name="discover_marketplace">Trh</string>
     <string name="discover_live">Živě</string>
     <string name="discover_community">Komunita</string>
@@ -604,6 +613,7 @@
     <string name="new_feature_nip17_activate">Aktivovat</string>
     <string name="messages_create_public_chat">Veřejné</string>
     <string name="messages_create_public_private_chat_description">Nová veřejná nebo soukromá skupina</string>
+    <string name="messages_relay_based">Relé</string>
     <string name="messages_new_message">Soukromé</string>
     <string name="messages_new_message_to">Pro</string>
     <string name="messages_new_message_subject">Předmět</string>
@@ -946,4 +956,6 @@
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
     <string name="private_message">Soukromá zpráva</string>
+    <string name="group_relay">Relé chatu</string>
+    <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
 </resources>
