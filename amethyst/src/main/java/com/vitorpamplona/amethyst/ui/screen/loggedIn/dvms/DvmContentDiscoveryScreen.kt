@@ -95,6 +95,7 @@ import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -151,7 +152,10 @@ fun DvmContentDiscoveryScreen(
         }
 
     val onRefresh = {
-        accountViewModel.requestDVMContentDiscovery(noteAuthor.pubkeyHex) {
+        accountViewModel.requestDVMContentDiscoveryGeneric(
+            noteAuthor.pubkeyHex,
+            NIP90ContentDiscoveryRequestEvent::create,
+        ) {
             requestEventID = it
         }
     }

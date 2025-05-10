@@ -42,6 +42,7 @@ out/
 # Gradle files
 .gradle
 .gradle/
+gradle.properties.local
 build/
 .kotlin/
 
@@ -133,3 +134,9 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# Other IDEs stuff
+.cursor/
+.vscode/
+wsl_build.sh
+tools/*

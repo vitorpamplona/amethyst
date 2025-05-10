@@ -9,6 +9,16 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler) apply false
 }
 
+// Load local properties if they exist
+def localPropertiesFile = file("gradle.properties.local")
+if (localPropertiesFile.exists()) {
+    def localProperties = new Properties()
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+    localProperties.each { prop ->
+        project.ext.set(prop.key, prop.value)
+    }
+}
+
 allprojects {
     apply plugin: 'com.diffplug.spotless'
 

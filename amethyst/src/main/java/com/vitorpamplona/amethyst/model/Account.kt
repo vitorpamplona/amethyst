@@ -166,7 +166,6 @@ import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -181,6 +180,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -3095,11 +3095,19 @@ class Account(
         }
     }
 
-    fun requestDVMContentDiscovery(
+    fun <T : Event> requestDVMContentDiscoveryGeneric(
         dvmPublicKey: String,
-        onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
+        createEvent: (
+            dvmPublicKey: HexKey,
+            forUser: HexKey,
+            relays: Set<String>,
+            signer: NostrSigner,
+            createdAt: Long,
+            onReady: (T) -> Unit,
+        ) -> Unit,
+        onReady: (event: T) -> Unit,
     ) {
-        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer) {
+        createEvent(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer, TimeUtils.now()) { event ->
             val relayList =
                 (
                     LocalCache
@@ -3118,12 +3126,12 @@ class Account(
                 }
 
             if (relayList != null) {
-                Amethyst.instance.client.sendPrivately(it, relayList)
+                Amethyst.instance.client.sendPrivately(event, relayList)
             } else {
-                Amethyst.instance.client.send(it)
+                Amethyst.instance.client.send(event)
             }
-            LocalCache.justConsume(it, null)
-            onReady(it)
+            LocalCache.justConsume(event, null)
+            onReady(event)
         }
     }
 

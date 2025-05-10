@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContentOrNull
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NIP90TextGenUtil
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
@@ -52,9 +53,14 @@ fun RenderRegularTextNote(
                 accountViewModel = accountViewModel,
             ) {
                 val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+                // Parse NIP90 messages to extract readable text
+                val displayContent =
+                    remember(eventContent) {
+                        NIP90TextGenUtil.parseTextFromNIP90Message(eventContent)
+                    }
 
                 TranslatableRichTextViewer(
-                    content = eventContent,
+                    content = displayContent,
                     canPreview = canPreview,
                     quotesLeft = if (innerQuote) 0 else 1,
                     modifier = Modifier,
