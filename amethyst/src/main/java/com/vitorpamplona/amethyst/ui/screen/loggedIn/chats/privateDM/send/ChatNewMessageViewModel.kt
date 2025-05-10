@@ -743,7 +743,7 @@ class ChatNewMessageViewModel :
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager
 
-    private fun isDvmConversation(): Boolean {
+    fun isDvmConversation(): Boolean {
         // First check if any user in the room matches a known DVM
         val isExistingDvm =
             room?.users?.any { userPubkey ->

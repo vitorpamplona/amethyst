@@ -411,13 +411,19 @@ fun DisplayPreviews(
     if (postViewModel.uploadsWaitingToBeSent.isNotEmpty() || urlPreviews.isNotEmpty()) {
         Row(modifier = Modifier.padding(vertical = Size5dp)) {
             LazyRow(modifier = Modifier.height(100.dp)) {
-                items(postViewModel.uploadsWaitingToBeSent) {
+                items(
+                    items = postViewModel.uploadsWaitingToBeSent,
+                    key = { it.result.url },
+                ) {
                     Box(modifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)) {
                         ShowImageUploadGallery(it, accountViewModel)
                     }
                 }
 
-                items(urlPreviews) {
+                items(
+                    items = urlPreviews,
+                    key = { it },
+                ) {
                     Box(modifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)) {
                         PreviewUrl(it, accountViewModel, nav)
                     }
@@ -527,6 +533,9 @@ fun SendDirectMessageTo(
     // Add state for DVM discovery tracking
     var initiatedDvmDiscovery by remember { mutableStateOf(false) }
 
+    // Add loading state to prevent dialog from closing/reopening
+    var isLoadingDvms by remember { mutableStateOf(false) }
+
     // Create a coroutine scope for async operations
     val coroutineScope = rememberCoroutineScope()
 
@@ -552,6 +561,11 @@ fun SendDirectMessageTo(
                 }
             if (!hasDvmInput) {
                 isClicked = false
+            }
+
+            // Reset loading state when dialog is closed
+            if (!isDialogVisible) {
+                isLoadingDvms = false
             }
         }
     }
@@ -618,20 +632,27 @@ fun SendDirectMessageTo(
                         return@IconButton
                     }
 
+                    // If discovery is already in progress, just show dialog with current state
+                    if (NIP90TextGenUtil.isDiscoveryInProgress()) {
+                        updateDvmList(emptyList())
+                        showDvmDialog(true)
+                        isLoadingDvms = true
+                        return@IconButton
+                    }
+
                     // If we haven't started discovery yet, do it now
                     if (!initiatedDvmDiscovery) {
                         initiatedDvmDiscovery = true
+                        isLoadingDvms = true
 
-                        // Show dialog immediately with empty list to avoid delay
+                        // Show dialog with empty list and loading state
                         updateDvmList(emptyList())
                         showDvmDialog(true)
 
                         // Start discovery in background
                         coroutineScope.launch {
                             try {
-                                // Add a delay to allow DVMs to be discovered
                                 Log.d("DVM_DEBUG", "Starting DVM discovery in SendDirectMessageTo dialog...")
-                                delay(100)
                                 val dvmList = NIP90TextGenUtil.getTextGenerationDVMs(accountViewModel.account)
 
                                 // Log the discovered DVMs
@@ -642,11 +663,15 @@ fun SendDirectMessageTo(
 
                                 // Update the dialog with results when available
                                 if (dvmList.isNotEmpty()) {
-                                    updateDvmList(dvmList)
                                     postViewModel.availableDvms = dvmList
+                                    updateDvmList(dvmList)
                                 }
+
+                                // Mark loading as complete
+                                isLoadingDvms = false
                             } catch (e: Exception) {
                                 Log.e("DVM_DEBUG", "Error discovering DVMs in dialog: ${e.message}", e)
+                                isLoadingDvms = false
                             }
                         }
                     } else {

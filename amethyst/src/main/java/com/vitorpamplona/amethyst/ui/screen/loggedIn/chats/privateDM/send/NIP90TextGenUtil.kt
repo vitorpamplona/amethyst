@@ -43,8 +43,17 @@ object NIP90TextGenUtil {
     private var lastDiscoveryTime: Long = 0
     private const val CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
 
+    // Flag to track if discovery is in progress
+    private var isDiscoveryInProgress = false
+
     // Kind for text generation DVMs
     const val KIND_TEXT_GENERATION = DiscoverNIP89FeedFilter.TEXT_GENERATION_KIND
+
+    /**
+     * Checks if DVM discovery is currently in progress.
+     * Use this to prevent multiple simultaneous discovery attempts.
+     */
+    fun isDiscoveryInProgress(): Boolean = isDiscoveryInProgress
 
     /**
      * Retrieves text generation DVMs using NIP90TextGenDVMFeedFilter.
@@ -59,16 +68,25 @@ object NIP90TextGenUtil {
                 return@withContext cachedDvmList!!
             }
 
-            Log.d("DVM_DEBUG", "Starting NIP90 DVM discovery process")
+            // If discovery is already in progress, wait a bit and return whatever we have
+            if (isDiscoveryInProgress) {
+                Log.d("DVM_DEBUG", "DVM discovery already in progress, waiting...")
+                delay(500) // Wait a bit to see if discovery completes
 
-            // First, request DVM events from relays to ensure our cache has the latest
-            // Pass forceRefresh=true to bypass the cooldown for TextGen DVMs
-            DiscoverNIP89FeedFilter.requestDVMEvents(forceRefresh = true)
-
-            // Allow time for relay responses and processing
-            delay(1000)
+                return@withContext cachedDvmList ?: emptyList()
+            }
 
             try {
+                isDiscoveryInProgress = true
+                Log.d("DVM_DEBUG", "Starting NIP90 DVM discovery process")
+
+                // First, request DVM events from relays to ensure our cache has the latest
+                // Pass forceRefresh=true to bypass the cooldown for TextGen DVMs
+                DiscoverNIP89FeedFilter.requestDVMEvents(forceRefresh = true)
+
+                // Allow time for relay responses and processing
+                delay(1000)
+
                 // Get DVMs using NIP90TextGenDVMFeedFilter
                 val feed = NIP90TextGenDVMFeedFilter(account)
                 val dvmNotes = feed.feed()
@@ -99,6 +117,8 @@ object NIP90TextGenUtil {
                     lastDiscoveryTime = currentTime
                 }
                 return@withContext cachedDvmList ?: emptyList()
+            } finally {
+                isDiscoveryInProgress = false
             }
         }
 

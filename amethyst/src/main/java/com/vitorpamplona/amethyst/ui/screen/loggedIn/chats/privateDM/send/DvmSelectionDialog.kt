@@ -81,12 +81,19 @@ fun DvmSelectionDialog(
     // Just log the number of DVMs found
     Log.d("DVM_DEBUG", "Found ${dvmList.size} DVMs to display in selection dialog")
 
-    if (dvmList.isEmpty()) {
-        // Show loading dialog
-        AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = { Text(text = stringResource(id = R.string.select_dvm)) },
-            text = {
+    // Sort DVMs alphabetically by name (with nulls last)
+    val sortedDvmList =
+        dvmList.sortedWith(
+            compareBy<DvmInfo> { it.name == null }
+                .thenBy { it.name?.lowercase() ?: "" },
+        )
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(text = stringResource(id = R.string.select_dvm)) },
+        text = {
+            if (dvmList.isEmpty()) {
+                // Show loading UI
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -114,127 +121,103 @@ fun DvmSelectionDialog(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-            },
-            confirmButton = {
-                // Empty confirm button - required param
-            },
-            dismissButton = {
-                Text(
-                    stringResource(id = R.string.cancel),
-                    modifier =
-                        Modifier
-                            .clickable { onDismissRequest() }
-                            .padding(10.dp),
-                )
-            },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            modifier = Modifier.fillMaxWidth(0.9f),
-        )
-        return
-    }
-
-    // Sort DVMs alphabetically by name (with nulls last)
-    val sortedDvmList =
-        dvmList.sortedWith(
-            compareBy<DvmInfo> { it.name == null }
-                .thenBy { it.name?.lowercase() ?: "" },
-        )
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text(text = stringResource(id = R.string.select_dvm)) },
-        text = {
-            LazyColumn {
-                items(sortedDvmList) { dvmInfo ->
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onDvmSelected(dvmInfo.pubkey)
-                                    onDismissRequest()
-                                }.padding(vertical = 8.dp, horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // DVM Profile Image or Fallback
-                        if (dvmInfo.picture != null) {
-                            // Use SubcomposeAsyncImage for proper error handling
-                            Box(
-                                modifier = Modifier.padding(end = 12.dp),
-                            ) {
-                                SubcomposeAsyncImage(
-                                    model = dvmInfo.picture,
-                                    contentDescription = dvmInfo.name ?: "DVM",
-                                    contentScale = ContentScale.Crop,
-                                    modifier =
-                                        Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape),
+            } else {
+                // Show DVM list
+                LazyColumn {
+                    items(
+                        items = sortedDvmList,
+                        key = { it.pubkey }, // Use pubkey as a unique identifier
+                    ) { dvmInfo ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onDvmSelected(dvmInfo.pubkey)
+                                        onDismissRequest()
+                                    }.padding(vertical = 8.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // DVM Profile Image or Fallback
+                            if (dvmInfo.picture != null) {
+                                // Use SubcomposeAsyncImage for proper error handling
+                                Box(
+                                    modifier = Modifier.padding(end = 12.dp),
                                 ) {
-                                    val state by painter.state.collectAsState()
-                                    when (state) {
-                                        is AsyncImagePainter.State.Loading -> {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                color = MaterialTheme.colorScheme.primary,
-                                                strokeWidth = 2.dp,
-                                            )
-                                        }
-                                        is AsyncImagePainter.State.Error -> {
-                                            DvmInitialsFallback(dvmInfo.name)
-                                        }
-                                        is AsyncImagePainter.State.Success -> {
-                                            SubcomposeAsyncImageContent()
-                                        }
-                                        else -> {
-                                            DvmInitialsFallback(dvmInfo.name)
+                                    SubcomposeAsyncImage(
+                                        model = dvmInfo.picture,
+                                        contentDescription = dvmInfo.name ?: "DVM",
+                                        contentScale = ContentScale.Crop,
+                                        modifier =
+                                            Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape),
+                                    ) {
+                                        val state by painter.state.collectAsState()
+                                        when (state) {
+                                            is AsyncImagePainter.State.Loading -> {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    strokeWidth = 2.dp,
+                                                )
+                                            }
+                                            is AsyncImagePainter.State.Error -> {
+                                                DvmInitialsFallback(dvmInfo.name)
+                                            }
+                                            is AsyncImagePainter.State.Success -> {
+                                                SubcomposeAsyncImageContent()
+                                            }
+                                            else -> {
+                                                DvmInitialsFallback(dvmInfo.name)
+                                            }
                                         }
                                     }
                                 }
+                            } else {
+                                // Use fallback with initial or 'D' letter
+                                Box(
+                                    modifier = Modifier.padding(end = 12.dp),
+                                ) {
+                                    DvmInitialsFallback(dvmInfo.name)
+                                }
                             }
-                        } else {
-                            // Use fallback with initial or 'D' letter
-                            Box(
-                                modifier = Modifier.padding(end = 12.dp),
+
+                            // DVM Info
+                            Column(
+                                modifier = Modifier.weight(1f),
                             ) {
-                                DvmInitialsFallback(dvmInfo.name)
-                            }
-                        }
-
-                        // DVM Info
-                        Column(
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            // DVM Name
-                            Text(
-                                text = dvmInfo.name ?: Hex.decode(dvmInfo.pubkey).toNpub(),
-                                fontWeight = FontWeight.Bold,
-                            )
-
-                            // DVM Description if available
-                            dvmInfo.description?.let {
+                                // DVM Name
                                 Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
+                                    text = dvmInfo.name ?: Hex.decode(dvmInfo.pubkey).toNpub(),
+                                    fontWeight = FontWeight.Bold,
                                 )
-                            }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                                // DVM Description if available
+                                dvmInfo.description?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
 
-                            // Supported kinds
-                            val displayKinds =
-                                dvmInfo.supportedKinds
-                                    .filter { it in 5000..7000 }
-                                    .joinToString(", ") { "kind:$it" }
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                            if (displayKinds.isNotEmpty()) {
-                                Text(
-                                    text = "Text Generation DVM ($displayKinds)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
+                                // Supported kinds
+                                val displayKinds =
+                                    dvmInfo.supportedKinds
+                                        .filter { it in 5000..7000 }
+                                        .joinToString(", ") { "kind:$it" }
+
+                                if (displayKinds.isNotEmpty()) {
+                                    Text(
+                                        text = "Text Generation DVM ($displayKinds)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                             }
                         }
                     }
@@ -245,7 +228,10 @@ fun DvmSelectionDialog(
             // Empty confirm button - required param
         },
         dismissButton = {
-            Text(stringResource(id = R.string.cancel), modifier = Modifier.clickable { onDismissRequest() }.padding(10.dp))
+            Text(
+                stringResource(id = R.string.cancel),
+                modifier = Modifier.clickable { onDismissRequest() }.padding(10.dp),
+            )
         },
         properties = DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.fillMaxWidth(0.9f),
