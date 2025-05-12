@@ -36,8 +36,7 @@ object ShareHelper {
     fun getSharableUriFromUrl(
         context: Context,
         imageUrl: String,
-        mimeType: String,
-    ): Uri {
+    ): Pair<Uri, String> {
         try {
             // Safely get snapshot and file
             val snapshot =
@@ -53,7 +52,7 @@ object ShareHelper {
                 val fileCopy = prepareSharableImageFile(context, file, fileExtension)
 
                 // Return sharable uri
-                return getSharableUri(context, fileCopy)
+                return Pair(getSharableUri(context, fileCopy), fileExtension)
             }
         } catch (e: IOException) {
             Log.e("ShareHelper", "Error sharing image", e)
@@ -61,7 +60,7 @@ object ShareHelper {
         }
     }
 
-    private fun getImageExtension(file: File): String =
+    fun getImageExtension(file: File): String =
         try {
             FileInputStream(file).use { inputStream ->
                 val header = ByteArray(12)

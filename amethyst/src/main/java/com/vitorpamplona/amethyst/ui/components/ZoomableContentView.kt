@@ -685,6 +685,7 @@ fun ShareImageAction(
             hash = content.hash,
             mimeType = content.mimeType,
             onDismiss = onDismiss,
+            content = content,
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
@@ -713,6 +714,7 @@ fun ShareImageAction(
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,
+    content: BaseMediaContent? = null,
 ) {
     DropdownMenu(
         expanded = popupExpanded.value,
@@ -757,16 +759,20 @@ fun ShareImageAction(
             )
         }
 
-        mimeType?.let {
-            if (mimeType.startsWith("image")) {
+        content?.let {
+            if (content is MediaUrlImage) {
                 val context = LocalContext.current
                 videoUri?.let {
                     if (videoUri.isNotEmpty()) {
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.share_image)) },
                             onClick = {
-                                val uri = ShareHelper.getSharableUriFromUrl(context, videoUri, mimeType)
-                                shareMediaFile(context, uri, mimeType)
+                                val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
+                                if (mimeType == null) {
+                                    shareMediaFile(context, uri, "image/$fileExtension")
+                                } else {
+                                    shareMediaFile(context, uri, mimeType)
+                                }
                                 onDismiss()
                             },
                         )
@@ -780,7 +786,7 @@ fun ShareImageAction(
 private fun shareMediaFile(
     context: Context,
     uri: Uri,
-    mimeType: String = "image/*",
+    mimeType: String,
 ) {
     val shareIntent =
         Intent(Intent.ACTION_SEND).apply {
@@ -790,7 +796,7 @@ private fun shareMediaFile(
         }
     // TODO is this the right scope to avoid leaks?
     CoroutineScope(Dispatchers.Main).launch {
-        context.startActivity(Intent.createChooser(shareIntent, "Share Image"))
+        context.startActivity(Intent.createChooser(shareIntent, null))
     }
 }
 
