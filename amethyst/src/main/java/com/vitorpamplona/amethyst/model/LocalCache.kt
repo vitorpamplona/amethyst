@@ -2535,7 +2535,6 @@ object LocalCache : ILocalCache {
             noteEvent.tippedAuthor().forEach {
                 val author = getUserIfExists(it)
                 author?.removeTip(note)
-                author?.clearEOSE()
             }
         }
         if (noteEvent is LnZapEvent) {

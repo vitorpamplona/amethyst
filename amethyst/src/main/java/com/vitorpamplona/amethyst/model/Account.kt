@@ -1199,10 +1199,15 @@ class Account(
         }
     }
 
-    fun updateTipAmounts(amountSet: List<Double>) {
+    fun updateTipAmounts(
+        amountSet: List<Double>,
+        tipType: TipEvent.TipType,
+    ) {
         var changed = false
 
         if (settings.changeTipAmounts(amountSet)) changed = true
+
+        if (settings.changeDefaultTipType(tipType)) changed = true
 
         if (changed) {
             sendNewAppSpecificData()
