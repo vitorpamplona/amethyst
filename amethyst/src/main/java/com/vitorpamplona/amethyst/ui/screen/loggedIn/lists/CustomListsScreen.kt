@@ -30,15 +30,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,12 +64,12 @@ import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -95,21 +101,43 @@ fun ListsScreen(
 
     val followSetsFlow by followSetsViewModel.feedContent.collectAsStateWithLifecycle()
 
+    val followSets by produceState<FollowSetState>(initialValue = FollowSetState.Loading) {
+        followSetsViewModel.feedContent.collectLatest { value = it }
+    }
+
+    // TODO: Replace this with nav-based solution.
+    val isFollowSetSelected = remember { mutableStateOf(false) }
+    val selectedFollowListWithIndex = remember { mutableStateOf<Pair<Int, FollowSet>?>(null) }
+
     CustomListsScreen(
-        followSetsFlow,
+        followSets,
         refresh = {
             followSetsViewModel.invalidateData()
         },
+        addItem = { title: String, description: String?, listType: ListVisibility ->
+            followSetsViewModel.addFollowSet(
+                setName = title,
+                setDescription = description,
+                setType = listType,
+            )
+        },
         openItem = {
-            currentCoroutineScope.launch(Dispatchers.IO) {
-                val note = followSetsViewModel.getFollowSetAddressable(it, accountViewModel.account)
-                if (note != null) {
-                    val event = note.event as PeopleListEvent
-                    println("Found list, with title: ${event.nameOrTitle()}")
-                } else {
-                    println("No corresponding note found for this list.")
-                }
+            val selectedFollowSet = followSetsViewModel.findFollowSet(identifier = it)
+            if (selectedFollowSet != null) {
+                selectedFollowListWithIndex.value = selectedFollowSet
+                isFollowSetSelected.value = true
+            } else {
+                println("This list has not been found. Could it not have been added/deleted properly?")
             }
+//            currentCoroutineScope.launch(Dispatchers.IO) {
+//                val note = followSetsViewModel.getFollowSetAddressable(it, accountViewModel.account)
+//                if (note != null) {
+//                    val event = note.event as PeopleListEvent
+//                    println("Found list, with title: ${event.nameOrTitle()}")
+//                } else {
+//                    println("No corresponding note found for this list.")
+//                }
+//            }
         },
         renameItem = { index, newValue ->
             followSetsViewModel.renameFollowSet(newName = newValue, setIndex = index)
@@ -120,12 +148,41 @@ fun ListsScreen(
         accountViewModel,
         nav,
     )
+
+    // TODO: Replace this with nav-based solution.
+    if (isFollowSetSelected.value && selectedFollowListWithIndex.value != null) {
+        val leFollowSetIndex = selectedFollowListWithIndex.value!!.first
+        FollowSetScreen(
+            onClose = {
+                isFollowSetSelected.value = false
+                selectedFollowListWithIndex.value = null
+            },
+            accountViewModel = accountViewModel,
+            navigator = nav,
+            selectedSet = selectedFollowListWithIndex.value!!.second,
+            onProfileRemove = {
+                val newSet = followSetsViewModel.removeUserFromSet(it, leFollowSetIndex)
+                selectedFollowListWithIndex.value = Pair(leFollowSetIndex, newSet)
+            },
+            onListSave = {
+                accountViewModel.toastManager.toast("List Changes", "Changes already saved.")
+            },
+            onListBroadcast = {
+                accountViewModel.toastManager.toast("List Status", "List has been broadcast.")
+            },
+            onListDelete = {
+                isFollowSetSelected.value = false
+                followSetsViewModel.deleteFollowSet(leFollowSetIndex)
+            },
+        )
+    }
 }
 
 @Composable
 fun CustomListsScreen(
     followSetState: FollowSetState,
     refresh: () -> Unit,
+    addItem: (title: String, description: String?, listType: ListVisibility) -> Unit,
     openItem: (identifier: String) -> Unit,
     renameItem: (Int, String) -> Unit,
     deleteItem: (Int) -> Unit,
@@ -168,7 +225,14 @@ fun CustomListsScreen(
         },
         floatingButton = {
             // TODO: Show components based on current tab
-            FollowSetFabsAndMenu()
+            FollowSetFabsAndMenu(
+                onAddPrivateList = { name: String, description: String? ->
+                    addItem(name, description, ListVisibility.Private)
+                },
+                onAddPublicList = { name: String, description: String? ->
+                    addItem(name, description, ListVisibility.Public)
+                },
+            )
         },
     ) {
         Column(
@@ -196,13 +260,22 @@ fun CustomListsScreen(
 }
 
 @Composable
-fun FollowSetFabsAndMenu(modifier: Modifier = Modifier) {
+fun FollowSetFabsAndMenu(
+    modifier: Modifier = Modifier,
+    onAddPrivateList: (name: String, description: String?) -> Unit,
+    onAddPublicList: (name: String, description: String?) -> Unit,
+) {
+    val isListAdditionDialogOpen = remember { mutableStateOf(false) }
+    val isPrivateOptionTapped = remember { mutableStateOf(false) }
+
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         FloatingActionButton(
             onClick = {
                 println("The private list addition...")
+                isPrivateOptionTapped.value = true
+                isListAdditionDialogOpen.value = true
             },
             shape = CircleShape,
             containerColor = MaterialTheme.colorScheme.primary,
@@ -216,6 +289,7 @@ fun FollowSetFabsAndMenu(modifier: Modifier = Modifier) {
         FloatingActionButton(
             onClick = {
                 println("The public list creation...")
+                isListAdditionDialogOpen.value = true
             },
             shape = CircleShape,
             containerColor = MaterialTheme.colorScheme.primary,
@@ -227,6 +301,102 @@ fun FollowSetFabsAndMenu(modifier: Modifier = Modifier) {
             )
         }
     }
+
+    if (isListAdditionDialogOpen.value) {
+        NewListCreationDialog(
+            onDismiss = {
+                isListAdditionDialogOpen.value = false
+                isPrivateOptionTapped.value = false
+            },
+            shouldBePrivate = isPrivateOptionTapped.value,
+            onCreateList = { name, description ->
+                if (isPrivateOptionTapped.value) {
+                    onAddPrivateList(name, description)
+                } else {
+                    onAddPublicList(name, description)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+fun NewListCreationDialog(
+    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit,
+    shouldBePrivate: Boolean,
+    onCreateList: (name: String, description: String?) -> Unit,
+) {
+    val newListName = remember { mutableStateOf("") }
+    val newListDescription = remember { mutableStateOf<String?>(null) }
+
+    val listTypeText =
+        when (shouldBePrivate) {
+            true -> "Private"
+            false -> "Public"
+        }
+
+    val listTypeIcon =
+        when (shouldBePrivate) {
+            true -> R.drawable.lock
+            false -> R.drawable.ic_public
+        }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Icon(
+                    painter = painterResource(listTypeIcon),
+                    contentDescription = null,
+                )
+                Text(
+                    text = "New $listTypeText List",
+                )
+            }
+        },
+        text = {
+            Column {
+                // For the new list name
+                TextField(
+                    value = newListName.value,
+                    onValueChange = { newListName.value = it },
+                    label = {
+                        Text("List name")
+                    },
+                )
+                Spacer(modifier = StdVertSpacer)
+                // For the list description
+                TextField(
+                    value =
+                        (
+                            if (newListDescription.value != null) newListDescription.value else ""
+                        ).toString(),
+                    onValueChange = { newListDescription.value = it },
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onCreateList(newListName.value, newListDescription.value)
+                    onDismiss()
+                },
+            ) {
+                Text("Create list")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+            ) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable
