@@ -752,17 +752,21 @@ fun ShareImageAction(
             )
         }
 
-        val context = LocalContext.current
-        videoUri?.let {
-            if (videoUri.isNotEmpty()) {
-                DropdownMenuItem(
-                    text = { Text("Share media...") },
-                    onClick = {
-                        ShareHelper.shareImageFromUrl(context, videoUri)
+        mimeType?.let {
+            if (mimeType.startsWith("image")) {
+                val context = LocalContext.current
+                videoUri?.let {
+                    if (videoUri.isNotEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text("Share image...") },
+                            onClick = {
+                                ShareHelper.shareImageFromUrl(context, videoUri)
 
-                        onDismiss()
-                    },
-                )
+                                onDismiss()
+                            },
+                        )
+                    }
+                }
             }
         }
     }
