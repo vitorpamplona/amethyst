@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.CoroutineScope
@@ -37,55 +38,60 @@ object ShareHelper {
         context: Context,
         imageUrl: String,
     ) {
-        // get snapshot
-        val snapShot = Amethyst.instance.diskCache.openSnapshot(imageUrl)
+        try {
+            // Safely get snapshot and file
+            val snapshot =
+                Amethyst.instance.diskCache.openSnapshot(imageUrl)
+                    ?: throw IOException("Unable to open snapshot for: $imageUrl")
 
-        // get file from snapshot
-        val file = snapShot?.data?.toFile()
+            snapshot.use { snapshot ->
+                val file =
+                    snapshot.data.toFile()
 
-        if (file != null) {
-            // get file extension
-            val fileExtension = getImageExtension(file)
+                // Determine file extension and prepare sharable file
+                val fileExtension = getImageExtension(file)
+                val fileCopy = prepareSharableImageFile(context, file, fileExtension)
 
-            // copy to local file with correct extension
-            val fileCopy = prepareSharableImageFile(context, file, fileExtension)
-
-            // share with intent
-            shareMediaFile(context, getSharableUri(context, fileCopy), "image/*")
-        } else {
-            throw IOException("Image file does not exist at path: $imageUrl")
-        }
-
-        // close snapshot
-        snapShot.close()
-    }
-
-    private fun getImageExtension(file: File): String {
-        val header = ByteArray(12)
-        FileInputStream(file).use {
-            it.read(header)
-        }
-
-        return when {
-            // JPEG magic number: FF D8 FF
-            header[0] == 0xFF.toByte() && header[1] == 0xD8.toByte() -> "jpg"
-
-            // PNG magic number: 89 50 4E 47
-            header[0] == 0x89.toByte() &&
-                header[1] == 0x50.toByte() &&
-                header[2] == 0x4E.toByte() &&
-                header[3] == 0x47.toByte() -> "png"
-
-            // WEBP magic number: "RIFF....WEBP"
-            header[0] == 'R'.code.toByte() &&
-                header[1] == 'I'.code.toByte() &&
-                header[2] == 'F'.code.toByte() &&
-                header[3] == 'F'.code.toByte() &&
-                header.sliceArray(8..11).contentEquals("WEBP".toByteArray()) -> "webp"
-
-            else -> "jpg" // default fallback
+                // Share the file
+                shareMediaFile(context, getSharableUri(context, fileCopy), "image/*")
+            }
+        } catch (e: IOException) {
+            Log.e("ShareHelper", "Error sharing image", e)
+            throw e
         }
     }
+
+    private fun getImageExtension(file: File): String =
+        try {
+            FileInputStream(file).use { inputStream ->
+                val header = ByteArray(12)
+                inputStream.read(header)
+
+                when {
+                    // JPEG magic number: FF D8 FF
+                    header.sliceArray(0..1).contentEquals(byteArrayOf(0xFF.toByte(), 0xD8.toByte())) -> "jpg"
+
+                    // PNG magic number: 89 50 4E 47
+                    header.sliceArray(0..3).contentEquals(
+                        byteArrayOf(
+                            0x89.toByte(),
+                            0x50.toByte(),
+                            0x4E.toByte(),
+                            0x47.toByte(),
+                        ),
+                    ) -> "png"
+
+                    // WEBP magic number: "RIFF....WEBP"
+                    header.sliceArray(0..3).contentEquals("RIFF".toByteArray()) &&
+                        header.sliceArray(8..11).contentEquals("WEBP".toByteArray()) -> "webp"
+
+                    else -> "jpg" // default fallback
+                }
+            }
+        } catch (e: IOException) {
+            Log.w("ShareHelper", "Could not determine image type, defaulting to jpg", e)
+            "jpg"
+        }
 
     private fun prepareSharableImageFile(
         context: Context,
