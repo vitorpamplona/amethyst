@@ -1198,5 +1198,8 @@
     <string name="monero_tips">Monero Tips</string>
     <string name="tips">Tips</string>
     <string name="tips_description">Both, Lightning or Monero</string>
+    <string name="tip_type_nontip">Non-Tip</string>
+    <string name="tip_type_nontip_explainer">No trace in Nostr, only in Monero</string>
+    <string name="tip_type_explainer">Tip Type for all options</string>
 
 </resources>

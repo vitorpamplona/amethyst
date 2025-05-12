@@ -31,6 +31,7 @@ import com.vitorpamplona.ammolite.relays.Constants
 import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -176,6 +177,15 @@ class AccountSettings(
     fun changeDefaultZapType(zapType: LnZapEvent.ZapType): Boolean {
         if (syncedSettings.zaps.defaultZapType.value != zapType) {
             syncedSettings.zaps.defaultZapType.tryEmit(zapType)
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeDefaultTipType(tipType: TipEvent.TipType): Boolean {
+        if (syncedSettings.tips.defaultTipType.value != tipType) {
+            syncedSettings.tips.defaultTipType.tryEmit(tipType)
             saveAccountSettings()
             return true
         }

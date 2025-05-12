@@ -1009,6 +1009,8 @@ class AccountViewModel(
 
     fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
 
+    fun defaultTipType() = account.settings.syncedSettings.tips.defaultTipType.value
+
     fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
 
     fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
