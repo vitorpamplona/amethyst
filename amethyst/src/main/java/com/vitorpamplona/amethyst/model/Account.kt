@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -1488,6 +1489,13 @@ class Account(
             myNip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
 
         zapResponseEvent.response(signer, onReady)
+    }
+
+    fun calculateIfNoteWasTippedByAccount(
+        tippedNote: Note?,
+        onWasTipped: () -> Unit,
+    ) {
+        tippedNote?.isTippedBy(userProfile(), onWasTipped)
     }
 
     suspend fun calculateIfNoteWasZappedByAccount(
@@ -3508,6 +3516,30 @@ class Account(
         val result = (nip96servers + blossomServers).ifEmpty { DEFAULT_MEDIA_SERVERS }
 
         return result + ServerName("NIP95", "", ServerType.NIP95)
+    }
+
+    fun sendTip(
+        tipType: TipEvent.TipType,
+        event: Event?,
+        amount: Double,
+        message: String,
+        user: User,
+    ) {
+        if (tipType == TipEvent.TipType.NONTIP) return
+
+        val template =
+            TipEvent.build(
+                event = event,
+                amount = amount,
+                users = listOf(user.toPTag()),
+                message = message,
+            )
+
+        val localSigner = if (tipType == TipEvent.TipType.PUBLIC) signer else NostrSignerInternal(KeyPair())
+        localSigner.sign(template) {
+            Amethyst.instance.client.send(it)
+            LocalCache.justConsume(it, null)
+        }
     }
 
     fun sendFileServersList(servers: List<String>) {

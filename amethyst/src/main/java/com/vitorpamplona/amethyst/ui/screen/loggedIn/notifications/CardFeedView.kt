@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.ui.note.BadgeCompose
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.TipUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.elements.ZapTheDevsCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -240,6 +241,14 @@ private fun RenderCardItem(
             )
         is ZapUserSetCard ->
             ZapUserSetCompose(
+                item,
+                isInnerNote = false,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = routeForLastRead,
+            )
+        is TipUserSetCard ->
+            TipUserSetCompose(
                 item,
                 isInnerNote = false,
                 accountViewModel = accountViewModel,

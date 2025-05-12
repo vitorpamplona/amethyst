@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReposts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteTips
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
@@ -261,33 +262,35 @@ fun MoneroTippingReaction(
         val scope = rememberCoroutineScope()
 
         Row(
-            iconSizeModifier.combinedClickable(
-                role = Role.Button,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple24dp,
-                onClick = {
-                    scope.launch {
-                        tipClick(
-                            note,
-                            accountViewModel,
-                            context,
-                            onMultipleChoices = {
-                                scope.launch {
-                                    wantsToTip = true
-                                }
-                            },
-                            onError = { _, message, user ->
-                                scope.launch {
-                                    accountViewModel.toastManager.toast(R.string.error_dialog_tip_error, message, user)
-                                }
-                            },
-                        )
-                    }
-                },
-                onLongClick = {
-                    wantsToChangeZapAmount = true
-                },
-            ),
+            verticalAlignment = CenterVertically,
+            modifier =
+                iconSizeModifier.combinedClickable(
+                    role = Role.Button,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple24dp,
+                    onClick = {
+                        scope.launch {
+                            tipClick(
+                                note,
+                                accountViewModel,
+                                context,
+                                onMultipleChoices = {
+                                    scope.launch {
+                                        wantsToTip = true
+                                    }
+                                },
+                                onError = { _, message, user ->
+                                    scope.launch {
+                                        accountViewModel.toastManager.toast(R.string.error_dialog_tip_error, message, user)
+                                    }
+                                },
+                            )
+                        }
+                    },
+                    onLongClick = {
+                        wantsToChangeZapAmount = true
+                    },
+                ),
         ) {
             if (wantsToTip) {
                 TipAmountChoicePopup(
@@ -318,7 +321,16 @@ fun MoneroTippingReaction(
                 )
             }
 
-            MoneroIcon(iconSizeModifier, grayTint)
+            ObserveTipIcon(note, accountViewModel) {
+                if (it.value) {
+                    TippedMoneroIcon(iconSizeModifier)
+                } else {
+                    MoneroIcon(iconSizeModifier, grayTint)
+                }
+            }
+        }
+        ObserveTipAmountText(note, accountViewModel) { zapAmountTxt ->
+            SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
         }
     }
 }
@@ -395,7 +407,7 @@ private fun GenericInnerReactionRow(
         Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { four() }
 
         if (showTipping) {
-            Row(verticalAlignment = CenterVertically, horizontalArrangement = RowColSpacing, modifier = Modifier.weight(1f)) { five() }
+            Row(verticalAlignment = CenterVertically, modifier = Modifier.weight(1f)) { five() }
         }
 
         if (showLightning) {
@@ -535,6 +547,7 @@ private fun ReactionDetailGallery(
         ) {
             Column {
                 WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchTipAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
                 WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
             }
@@ -606,6 +619,36 @@ private fun WatchZapAndRenderGallery(
     if (zapEvents.isNotEmpty()) {
         RenderZapGallery(
             zapEvents,
+            backgroundColor,
+            accountViewModel,
+            nav,
+        )
+    }
+}
+
+@Composable
+private fun WatchTipAndRenderGallery(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    nav: INav,
+    accountViewModel: AccountViewModel,
+) {
+    val tipState by observeNoteTips(baseNote, accountViewModel)
+
+    var tipEvents by
+        remember(tipState) {
+            mutableStateOf(
+                accountViewModel.tippedAmount(baseNote),
+            )
+        }
+
+    LaunchedEffect(key1 = tipState) {
+        tipEvents = accountViewModel.tippedAmount(baseNote)
+    }
+
+    if (tipEvents.isNotEmpty()) {
+        RenderTipGallery(
+            tipEvents,
             backgroundColor,
             accountViewModel,
             nav,
@@ -1227,6 +1270,7 @@ fun tipClick(
             choices.first(),
             context,
             onError = onError,
+            tipType = accountViewModel.account.settings.syncedSettings.tips.defaultTipType.value,
         )
     } else if (choices.size > 1) {
         onMultipleChoices()
@@ -1304,6 +1348,31 @@ fun ObserveZapIcon(
 }
 
 @Composable
+fun ObserveTipIcon(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    inner: @Composable (MutableState<Boolean>) -> Unit,
+) {
+    val wasTippedByLoggedInUser = remember { mutableStateOf(false) }
+
+    if (!wasTippedByLoggedInUser.value) {
+        val tipState by observeNoteZaps(baseNote, accountViewModel)
+
+        LaunchedEffect(key1 = tipState) {
+            if (tipState?.note?.tips?.isNotEmpty() == true) {
+                accountViewModel.calculateIfNoteWasTippedByAccount(baseNote) { newWasTipped ->
+                    if (wasTippedByLoggedInUser.value != newWasTipped) {
+                        wasTippedByLoggedInUser.value = newWasTipped
+                    }
+                }
+            }
+        }
+    }
+
+    inner(wasTippedByLoggedInUser)
+}
+
+@Composable
 fun ObserveZapAmountText(
     baseNote: Note,
     accountViewModel: AccountViewModel,
@@ -1327,6 +1396,37 @@ fun ObserveZapAmountText(
         inner(zapAmountTxt)
     } else {
         inner(showAmount(zapsState?.note?.zapsAmount))
+    }
+}
+
+@Composable
+fun ObserveTipAmountText(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+    inner: @Composable (String) -> Unit,
+) {
+    val tipState by observeNoteTips(baseNote, accountViewModel)
+
+    if (tipState?.note?.tips?.isNotEmpty() == true) {
+        @Suppress("ProduceStateDoesNotAssignValue")
+        val tipAmountTxt by
+            produceState(initialValue = baseNote.tipsAmount.toString(), key1 = tipState) {
+                tipState?.note?.let {
+                    accountViewModel.calculateTipAmount(it) { newTipAmount ->
+                        if (value != newTipAmount) {
+                            value = newTipAmount
+                        }
+                    }
+                }
+            }
+
+        if (tipAmountTxt != "0") {
+            inner(tipAmountTxt)
+        }
+    } else {
+        if (tipState?.note?.tipsAmount?.toString() != "0") {
+            inner(tipState?.note?.tipsAmount.toString())
+        }
     }
 }
 
@@ -1821,6 +1921,7 @@ fun TipAmountChoicePopup(
                                 amount,
                                 context,
                                 onError,
+                                tipType = accountViewModel.account.settings.syncedSettings.tips.defaultTipType.value,
                             )
                             visibilityState.targetState = false
                         },
@@ -1842,6 +1943,7 @@ fun TipAmountChoicePopup(
                                             amount,
                                             context,
                                             onError,
+                                            tipType = accountViewModel.account.settings.syncedSettings.tips.defaultTipType.value,
                                         )
                                         visibilityState.targetState = false
                                     },

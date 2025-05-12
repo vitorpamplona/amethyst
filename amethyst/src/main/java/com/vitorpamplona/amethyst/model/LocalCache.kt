@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.checkSignature
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -755,7 +756,9 @@ object LocalCache : ILocalCache {
 
             is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             is ChatMessageEncryptedFileHeaderEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
-
+            is TipEvent ->
+                event.tippedPost().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             is LnZapEvent ->
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
@@ -2178,7 +2181,8 @@ object LocalCache : ILocalCache {
                 note.event is ReactionEvent ||
                 note.event is LnZapEvent ||
                 note.event is LnZapRequestEvent ||
-                note.event is FileHeaderEvent
+                note.event is FileHeaderEvent ||
+                note.event is TipEvent
         )
 
     fun findNotesStartingWith(
@@ -2486,6 +2490,7 @@ object LocalCache : ILocalCache {
                         note.event is ReactionEvent ||
                         note.event is LnZapEvent ||
                         note.event is LnZapRequestEvent ||
+                        note.event is TipEvent ||
                         note.event is ReportEvent ||
                         note.event is GenericRepostEvent
                 ) &&
@@ -2519,11 +2524,19 @@ object LocalCache : ILocalCache {
             masterNote.removeBoost(note)
             masterNote.removeReaction(note)
             masterNote.removeZap(note)
+            masterNote.removeTip(note)
             masterNote.removeReport(note)
         }
 
         val noteEvent = note.event
 
+        if (noteEvent is TipEvent) {
+            noteEvent.tippedAuthor().forEach {
+                val author = getUserIfExists(it)
+                author?.removeTip(note)
+                author?.clearEOSE()
+            }
+        }
         if (noteEvent is LnZapEvent) {
             noteEvent.zappedAuthor().forEach {
                 val author = getUserIfExists(it)
