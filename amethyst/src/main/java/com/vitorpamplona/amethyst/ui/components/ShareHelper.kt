@@ -21,26 +21,23 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
-// TODO use passed in context type rather than hard coding
+// TODO use passed in mime type rather than hard coding
 // TODO Add unit tests for sharehelper
-// TODO Move intent sharing back to ZoomableContentView for coroutine management?
+// TODO Rely on passed in mime type for image type?
 object ShareHelper {
-    fun shareImageFromUrl(
+    fun getSharableUriFromUrl(
         context: Context,
         imageUrl: String,
-    ) {
+        mimeType: String,
+    ): Uri {
         try {
             // Safely get snapshot and file
             val snapshot =
@@ -55,8 +52,8 @@ object ShareHelper {
                 val fileExtension = getImageExtension(file)
                 val fileCopy = prepareSharableImageFile(context, file, fileExtension)
 
-                // Share the file
-                shareMediaFile(context, getSharableUri(context, fileCopy), "image/*")
+                // Return sharable uri
+                return getSharableUri(context, fileCopy)
             }
         } catch (e: IOException) {
             Log.e("ShareHelper", "Error sharing image", e)
@@ -115,20 +112,4 @@ object ShareHelper {
             "${context.packageName}.provider",
             file,
         )
-
-    private fun shareMediaFile(
-        context: Context,
-        uri: Uri,
-        mimeType: String = "image/*",
-    ) {
-        val shareIntent =
-            Intent(Intent.ACTION_SEND).apply {
-                type = mimeType
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-        CoroutineScope(Dispatchers.Main).launch {
-            context.startActivity(Intent.createChooser(shareIntent, "Share Image"))
-        }
-    }
 }

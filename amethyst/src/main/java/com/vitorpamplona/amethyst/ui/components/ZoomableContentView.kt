@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -102,8 +105,10 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -758,10 +763,11 @@ fun ShareImageAction(
                 videoUri?.let {
                     if (videoUri.isNotEmpty()) {
                         DropdownMenuItem(
+                            // TODO localise
                             text = { Text("Share image...") },
                             onClick = {
-                                ShareHelper.shareImageFromUrl(context, videoUri)
-
+                                val uri = ShareHelper.getSharableUriFromUrl(context, videoUri, mimeType)
+                                shareMediaFile(context, uri, mimeType)
                                 onDismiss()
                             },
                         )
@@ -769,6 +775,23 @@ fun ShareImageAction(
                 }
             }
         }
+    }
+}
+
+private fun shareMediaFile(
+    context: Context,
+    uri: Uri,
+    mimeType: String = "image/*",
+) {
+    val shareIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    // TODO is this the right scope to avoid leaks?
+    CoroutineScope(Dispatchers.Main).launch {
+        context.startActivity(Intent.createChooser(shareIntent, "Share Image"))
     }
 }
 
