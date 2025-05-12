@@ -958,4 +958,5 @@
     <string name="private_message">Mensagem Privada</string>
     <string name="group_relay">Relé de chat</string>
     <string name="group_relay_explanation">O relé a qual todos os usuários deste chat se conectam</string>
+    <string name="share_image">Compartilhar imagem…</string>
 </resources>

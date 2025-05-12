@@ -763,8 +763,7 @@ fun ShareImageAction(
                 videoUri?.let {
                     if (videoUri.isNotEmpty()) {
                         DropdownMenuItem(
-                            // TODO localise
-                            text = { Text("Share image...") },
+                            text = { Text(stringRes(R.string.share_image)) },
                             onClick = {
                                 val uri = ShareHelper.getSharableUriFromUrl(context, videoUri, mimeType)
                                 shareMediaFile(context, uri, mimeType)
