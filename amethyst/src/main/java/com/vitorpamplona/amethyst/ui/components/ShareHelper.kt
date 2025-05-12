@@ -29,86 +29,100 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
-// TODO use passed in mime type rather than hard coding
-// TODO Add unit tests for sharehelper
-// TODO Rely on passed in mime type for image type?
 object ShareHelper {
+    private const val TAG = "ShareHelper"
+    private const val DEFAULT_EXTENSION = "jpg"
+    private const val SHARED_FILE_PREFIX = "shared_media"
+
+    // Media type magic numbers
+    private val JPEG_MAGIC = byteArrayOf(0xFF.toByte(), 0xD8.toByte())
+    private val PNG_MAGIC = byteArrayOf(0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte())
+    private val WEBP_HEADER_START = "RIFF".toByteArray()
+    private val WEBP_HEADER_END = "WEBP".toByteArray()
+
     fun getSharableUriFromUrl(
         context: Context,
         imageUrl: String,
     ): Pair<Uri, String> {
-        try {
-            // Safely get snapshot and file
-            val snapshot =
-                Amethyst.instance.diskCache.openSnapshot(imageUrl)
-                    ?: throw IOException("Unable to open snapshot for: $imageUrl")
+        // Safely get snapshot and file
+        Amethyst.instance.diskCache.openSnapshot(imageUrl)?.use { snapshot ->
+            val file = snapshot.data.toFile()
 
-            snapshot.use { snapshot ->
-                val file =
-                    snapshot.data.toFile()
+            // Determine file extension and prepare sharable file
+            val fileExtension = getImageExtension(file)
+            val fileCopy = prepareSharableFile(context, file, fileExtension)
 
-                // Determine file extension and prepare sharable file
-                val fileExtension = getImageExtension(file)
-                val fileCopy = prepareSharableImageFile(context, file, fileExtension)
-
-                // Return sharable uri
-                return Pair(getSharableUri(context, fileCopy), fileExtension)
-            }
-        } catch (e: IOException) {
-            Log.e("ShareHelper", "Error sharing image", e)
-            throw e
-        }
+            // Return sharable uri
+            return Pair(
+                FileProvider.getUriForFile(context, "${context.packageName}.provider", fileCopy),
+                fileExtension,
+            )
+        } ?: throw IOException("Unable to open snapshot for: $imageUrl")
     }
 
-    fun getImageExtension(file: File): String =
+    private fun getImageExtension(file: File): String =
         try {
             FileInputStream(file).use { inputStream ->
                 val header = ByteArray(12)
-                inputStream.read(header)
+                val bytesRead = inputStream.read(header)
+
+                if (bytesRead < 4) {
+                    // If we couldn't read at least 4 bytes, default to jpg
+                    return DEFAULT_EXTENSION
+                }
 
                 when {
-                    // JPEG magic number: FF D8 FF
-                    header.sliceArray(0..1).contentEquals(byteArrayOf(0xFF.toByte(), 0xD8.toByte())) -> "jpg"
+                    // JPEG: Check first 2 bytes
+                    matchesMagicNumbers(header, 0, JPEG_MAGIC) -> "jpg"
 
-                    // PNG magic number: 89 50 4E 47
-                    header.sliceArray(0..3).contentEquals(
-                        byteArrayOf(
-                            0x89.toByte(),
-                            0x50.toByte(),
-                            0x4E.toByte(),
-                            0x47.toByte(),
-                        ),
-                    ) -> "png"
+                    // PNG: Check first 4 bytes
+                    matchesMagicNumbers(header, 0, PNG_MAGIC) -> "png"
 
-                    // WEBP magic number: "RIFF....WEBP"
-                    header.sliceArray(0..3).contentEquals("RIFF".toByteArray()) &&
-                        header.sliceArray(8..11).contentEquals("WEBP".toByteArray()) -> "webp"
+                    // WEBP: Check "RIFF" (bytes 0-3) and "WEBP" (bytes 8-11)
+                    matchesMagicNumbers(header, 0, WEBP_HEADER_START) &&
+                        bytesRead >= 12 &&
+                        matchesMagicNumbers(header, 8, WEBP_HEADER_END) -> "webp"
 
-                    else -> "jpg" // default fallback
+                    else -> DEFAULT_EXTENSION
                 }
             }
         } catch (e: IOException) {
-            Log.w("ShareHelper", "Could not determine image type, defaulting to jpg", e)
-            "jpg"
+            Log.w(TAG, "Could not determine image type for ${file.name}, defaulting to $DEFAULT_EXTENSION", e)
+            DEFAULT_EXTENSION
         }
 
-    private fun prepareSharableImageFile(
+    private fun matchesMagicNumbers(
+        data: ByteArray,
+        offset: Int,
+        magicBytes: ByteArray,
+    ): Boolean {
+        if (offset + magicBytes.size > data.size) {
+            return false
+        }
+
+        for (i in magicBytes.indices) {
+            if (data[offset + i] != magicBytes[i]) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun prepareSharableFile(
         context: Context,
         originalFile: File,
         extension: String,
     ): File {
-        val sharableFile = File(context.cacheDir, "shared_image.$extension")
-        originalFile.copyTo(sharableFile, overwrite = true)
+        val timestamp = System.currentTimeMillis()
+        val sharableFile = File(context.cacheDir, "${SHARED_FILE_PREFIX}_$timestamp.$extension")
+
+        try {
+            originalFile.copyTo(sharableFile, overwrite = true)
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to copy file for sharing", e)
+            throw e
+        }
+
         return sharableFile
     }
-
-    private fun getSharableUri(
-        context: Context,
-        file: File,
-    ): Uri =
-        FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.provider",
-            file,
-        )
 }

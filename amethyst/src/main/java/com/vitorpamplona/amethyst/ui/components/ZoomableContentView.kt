@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -767,12 +766,7 @@ fun ShareImageAction(
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.share_image)) },
                             onClick = {
-                                val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
-                                if (mimeType == null) {
-                                    shareMediaFile(context, uri, "image/$fileExtension")
-                                } else {
-                                    shareMediaFile(context, uri, mimeType)
-                                }
+                                shareImageFile(context, videoUri, mimeType)
                                 onDismiss()
                             },
                         )
@@ -783,14 +777,21 @@ fun ShareImageAction(
     }
 }
 
-private fun shareMediaFile(
+private fun shareImageFile(
     context: Context,
-    uri: Uri,
-    mimeType: String,
+    videoUri: String,
+    mimeType: String?,
 ) {
+    // Get sharable URI and file extension
+    val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
+
+    // Determine mime type, use provided or derive from extension
+    val determinedMimeType = mimeType ?: "image/$fileExtension"
+
+    // Create share intent
     val shareIntent =
         Intent(Intent.ACTION_SEND).apply {
-            type = mimeType
+            type = determinedMimeType
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
