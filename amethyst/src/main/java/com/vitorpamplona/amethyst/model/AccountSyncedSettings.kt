@@ -65,6 +65,7 @@ class AccountSyncedSettings(
             tips =
                 AccountTipPreferencesInternal(
                     tips.tipAmountChoices.value,
+                    tips.defaultTipType.value,
                 ),
             languages =
                 AccountLanguagePreferencesInternal(
