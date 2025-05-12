@@ -47,7 +47,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,7 +104,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -755,15 +753,13 @@ fun ShareImageAction(
         }
 
         val context = LocalContext.current
-        val scope = rememberCoroutineScope()
         videoUri?.let {
             if (videoUri.isNotEmpty()) {
                 DropdownMenuItem(
                     text = { Text("Share media...") },
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            ShareHelper.shareImageFromUrl(context, videoUri)
-                        }
+                        ShareHelper.shareImageFromUrl(context, videoUri)
+
                         onDismiss()
                     },
                 )
