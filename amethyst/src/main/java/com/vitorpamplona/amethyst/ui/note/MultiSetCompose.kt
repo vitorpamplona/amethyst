@@ -81,8 +81,10 @@ import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.MultiSetCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Tip
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
+import com.vitorpamplona.amethyst.ui.theme.MoneroOrange
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifier
 import com.vitorpamplona.amethyst.ui.theme.NotificationIconModifierSmaller
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -176,6 +178,10 @@ private fun Galeries(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    if (multiSetCard.tipEvents.isNotEmpty()) {
+        DecryptAndRenderTipGallery(multiSetCard, backgroundColor, accountViewModel, nav)
+    }
+
     if (multiSetCard.zapEvents.isNotEmpty()) {
         DecryptAndRenderZapGallery(multiSetCard, backgroundColor, accountViewModel, nav)
     }
@@ -313,6 +319,22 @@ fun DecryptAndRenderZapGallery(
 }
 
 @Composable
+fun DecryptAndRenderTipGallery(
+    multiSetCard: MultiSetCard,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val tipEvents by
+        produceState(initialValue = accountViewModel.tippedAmount(multiSetCard.tipEvents)) {
+            accountViewModel.tippedAmount(multiSetCard.tipEvents) { value = it }
+        }
+
+    RenderTipGallery(tipEvents, backgroundColor, accountViewModel, nav)
+}
+
+@Composable
 fun RenderZapGallery(
     zapEvents: ImmutableList<ZapAmountCommentNotification>,
     backgroundColor: MutableState<Color>,
@@ -329,6 +351,27 @@ fun RenderZapGallery(
         }
 
         AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
+    }
+}
+
+@Composable
+fun RenderTipGallery(
+    tipEvents: ImmutableList<ZapAmountCommentNotification>,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(Modifier.fillMaxWidth()) {
+        Box(
+            modifier = WidthAuthorPictureModifier,
+        ) {
+            MoneroIcon(
+                modifier = remember { Modifier.size(Size25dp).align(Alignment.TopEnd) },
+                tint = MoneroOrange,
+            )
+        }
+
+        AuthorGalleryZaps(tipEvents, backgroundColor, nav, accountViewModel)
     }
 }
 
@@ -372,6 +415,19 @@ fun RenderBoostGallery(
 
         AuthorGallery(noteToGetBoostEvents, nav, accountViewModel)
     }
+}
+
+@Composable
+fun MapTips(
+    tips: ImmutableList<Tip>,
+    content: @Composable (ImmutableList<ZapAmountCommentNotification>) -> Unit,
+) {
+    var zapEvents by
+        remember(tips) {
+            mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+        }
+
+    content(zapEvents)
 }
 
 @Composable
