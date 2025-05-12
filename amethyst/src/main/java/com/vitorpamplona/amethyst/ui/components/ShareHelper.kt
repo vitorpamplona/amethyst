@@ -23,55 +23,78 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.core.content.FileProvider
-import coil3.imageLoader
-import coil3.request.ImageRequest
-import coil3.request.SuccessResult
-import coil3.request.allowHardware
-import coil3.size.Size
+import com.vitorpamplona.amethyst.Amethyst
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 
 object ShareHelper {
-    suspend fun shareImageFromUrl(
+    fun shareImageFromUrl(
         context: Context,
         imageUrl: String,
     ) {
-        val file = getCachedFileForUrl(context, imageUrl)
+        // get snapshot
+        val snapShot = Amethyst.instance.diskCache.openSnapshot(imageUrl)
+
+        // get file from snapshot
+        val file = snapShot?.data?.toFile()
 
         if (file != null) {
-            shareMediaFile(context, getSharableUri(context, file), "image/*")
+            // get file extension
+            val fileExtension = getImageExtension(file)
+
+            // copy to local file with correct extension
+            val fileCopy = prepareSharableImageFile(context, file, fileExtension)
+
+            // share with intent
+            shareMediaFile(context, getSharableUri(context, fileCopy), "image/*")
         } else {
             throw IOException("Image file does not exist at path: $imageUrl")
         }
+
+        // close snapshot
+        snapShot.close()
     }
 
-    private suspend fun getCachedFileForUrl(
-        context: Context,
-        url: String,
-    ): File? {
-        val loader = context.imageLoader
-        val request =
-            ImageRequest
-                .Builder(context)
-                .data(url)
-                .size(Size.ORIGINAL)
-                .allowHardware(true)
-                .build()
-
-        val result = loader.execute(request)
-        if (result is SuccessResult) {
-            val diskCacheKey = result.diskCacheKey ?: return null
-            val snapshot = loader.diskCache?.openSnapshot(diskCacheKey)
-            return snapshot?.data?.toFile()
-        } else {
-            Log.d("ShareHelper", "Failed to get cached file for URL: $url")
-            return null
+    private fun getImageExtension(file: File): String {
+        val header = ByteArray(12)
+        FileInputStream(file).use {
+            it.read(header)
         }
+
+        return when {
+            // JPEG magic number: FF D8 FF
+            header[0] == 0xFF.toByte() && header[1] == 0xD8.toByte() -> "jpg"
+
+            // PNG magic number: 89 50 4E 47
+            header[0] == 0x89.toByte() &&
+                header[1] == 0x50.toByte() &&
+                header[2] == 0x4E.toByte() &&
+                header[3] == 0x47.toByte() -> "png"
+
+            // WEBP magic number: "RIFF....WEBP"
+            header[0] == 'R'.code.toByte() &&
+                header[1] == 'I'.code.toByte() &&
+                header[2] == 'F'.code.toByte() &&
+                header[3] == 'F'.code.toByte() &&
+                header.sliceArray(8..11).contentEquals("WEBP".toByteArray()) -> "webp"
+
+            else -> "jpg" // default fallback
+        }
+    }
+
+    private fun prepareSharableImageFile(
+        context: Context,
+        originalFile: File,
+        extension: String,
+    ): File {
+        val sharableFile = File(context.cacheDir, "shared_image.$extension")
+        originalFile.copyTo(sharableFile, overwrite = true)
+        return sharableFile
     }
 
     private fun getSharableUri(
