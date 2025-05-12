@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -34,7 +35,7 @@ class AccountSyncedSettings(
     internalSettings: AccountSyncedSettingsInternal,
 ) {
     val reactions = AccountReactionPreferences(MutableStateFlow(internalSettings.reactions.reactionChoices.toImmutableList()))
-    val tips = AccountTipPreferences(MutableStateFlow(internalSettings.tips.tipAmountChoices.toImmutableList()))
+    val tips = AccountTipPreferences(MutableStateFlow(internalSettings.tips.tipAmountChoices.toImmutableList()), MutableStateFlow(internalSettings.tips.defaultTipType))
     val zaps =
         AccountZapPreferences(
             MutableStateFlow(internalSettings.zaps.zapAmountChoices.toImmutableList()),
@@ -95,6 +96,10 @@ class AccountSyncedSettings(
             tips.tipAmountChoices.tryEmit(newTipChoices)
         }
 
+        if (tips.defaultTipType.value != syncedSettingsInternal.tips.defaultTipType) {
+            tips.defaultTipType.tryEmit(syncedSettingsInternal.tips.defaultTipType)
+        }
+
         if (zaps.defaultZapType.value != syncedSettingsInternal.zaps.defaultZapType) {
             zaps.defaultZapType.tryEmit(syncedSettingsInternal.zaps.defaultZapType)
         }
@@ -137,6 +142,7 @@ class AccountReactionPreferences(
 @Stable
 class AccountTipPreferences(
     var tipAmountChoices: MutableStateFlow<ImmutableList<Double>>,
+    var defaultTipType: MutableStateFlow<TipEvent.TipType>,
 )
 
 @Stable

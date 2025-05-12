@@ -67,6 +67,9 @@ class User(
     var zaps = mapOf<Note, Note?>()
         private set
 
+    var tips = listOf<Note>()
+        private set
+
     var relaysBeingUsed = mapOf<String, RelayInfo>()
         private set
 
@@ -199,6 +202,32 @@ class User(
         var amount = BigDecimal.ZERO
         zaps.forEach {
             val itemValue = (it.value?.event as? LnZapEvent)?.amount
+            if (itemValue != null) {
+                amount += itemValue
+            }
+        }
+
+        return amount
+    }
+
+    fun addTip(tip: Note) {
+        if (tip !in tips) {
+            tips = tips + tip
+            flowSet?.tips?.invalidateData()
+        }
+    }
+
+    fun removeTip(tip: Note) {
+        if (tip in tips) {
+            tips = tips.minus(tip)
+            flowSet?.tips?.invalidateData()
+        }
+    }
+
+    fun tippedAmount(): BigDecimal {
+        var amount = BigDecimal.ZERO
+        tips.forEach {
+            val itemValue = (it.event as? TipEvent)?.amount
             if (itemValue != null) {
                 amount += itemValue
             }
@@ -427,6 +456,7 @@ class UserFlowSet(
     val messages = UserBundledRefresherFlow(u)
     val relayInfo = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
+    val tips = UserBundledRefresherFlow(u)
     val bookmarks = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
 
@@ -439,6 +469,7 @@ class UserFlowSet(
             messages.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
+            tips.hasObservers() ||
             bookmarks.hasObservers() ||
             statuses.hasObservers()
 }

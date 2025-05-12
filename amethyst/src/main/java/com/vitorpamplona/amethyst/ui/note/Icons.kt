@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.MoneroOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -280,6 +281,14 @@ fun OutlinedZapIcon(
         tint = tint,
         modifier = modifier,
     )
+}
+
+@Composable
+fun TippedMoneroIcon(
+    modifier: Modifier,
+    tint: Color = MoneroOrange,
+) {
+    MoneroIcon(modifier, tint)
 }
 
 @Composable

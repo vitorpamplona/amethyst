@@ -37,8 +37,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.TipUserSetCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ZapUserSetCard
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.MoneroOrange
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
@@ -107,6 +109,80 @@ fun ZapUserSetCompose(
                         Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(zapSetCard.user, accountViewModel = accountViewModel) }
 
                         AboutDisplay(zapSetCard.user, accountViewModel)
+                    }
+                }
+
+                Spacer(DoubleVertSpacer)
+            }
+        }
+    }
+}
+
+@Composable
+fun TipUserSetCompose(
+    tipSetCard: TipUserSetCard,
+    isInnerNote: Boolean = false,
+    routeForLastRead: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val backgroundColor =
+        calculateBackgroundColor(
+            createdAt = tipSetCard.createdAt,
+            routeForLastRead = routeForLastRead,
+            accountViewModel = accountViewModel,
+        )
+
+    Column(
+        modifier =
+            Modifier.background(backgroundColor.value).clickable {
+                nav.nav(routeFor(tipSetCard.user))
+            },
+    ) {
+        Row(
+            modifier =
+                Modifier.padding(
+                    start = if (!isInnerNote) 12.dp else 0.dp,
+                    end = if (!isInnerNote) 12.dp else 0.dp,
+                    top = 10.dp,
+                ),
+        ) {
+            // Draws the like picture outside the boosted card.
+            if (!isInnerNote) {
+                Box(
+                    modifier = Size55Modifier,
+                ) {
+                    MoneroIcon(
+                        remember { Modifier.size(Size25dp).align(Alignment.TopEnd) },
+                        tint = MoneroOrange,
+                    )
+                }
+            }
+
+            Column(modifier = Modifier) {
+                Row(Modifier.fillMaxWidth()) {
+                    MapTips(tipSetCard.tipEvents) {
+                        AuthorGalleryZaps(it, backgroundColor, nav, accountViewModel)
+                    }
+                }
+
+                Spacer(DoubleVertSpacer)
+
+                Row(
+                    Modifier.padding(start = if (!isInnerNote) 10.dp else 0.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    UserPicture(
+                        tipSetCard.user,
+                        Size55dp,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+
+                    Column(modifier = remember { Modifier.padding(start = 10.dp).weight(1f) }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) { UsernameDisplay(tipSetCard.user, accountViewModel = accountViewModel) }
+
+                        AboutDisplay(tipSetCard.user, accountViewModel)
                     }
                 }
 

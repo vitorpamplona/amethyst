@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.feeds.LoadedFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -161,6 +162,10 @@ class CardFeedContentState(
         // val reactionCards = reactionsPerEvent.map { LikeSetCard(it.key, it.value) }
         val zapsPerUser = mutableMapOf<User, MutableList<CombinedZap>>()
         val zapsPerEvent = mutableMapOf<Note, MutableList<CombinedZap>>()
+
+        val tipsPerUser = mutableMapOf<User, MutableList<Tip>>()
+        val tipsPerEvent = mutableMapOf<Note, MutableList<Tip>>()
+
         notes
             .filter { it.event is LnZapEvent }
             .forEach { zapEvent ->
@@ -199,6 +204,36 @@ class CardFeedContentState(
                 }
             }
 
+        notes
+            .filter { it.event is TipEvent }
+            .forEach { tipEvent ->
+                val tippedEvent = tipEvent.replyTo?.lastOrNull()
+                if (tippedEvent != null) {
+                    val tip =
+                        tippedEvent.tips.firstOrNull { it == tipEvent }
+                    if (tip != null) {
+                        tipsPerEvent
+                            .getOrPut(tippedEvent, { mutableListOf() })
+                            .add(Tip(tipEvent))
+                    }
+                } else {
+                    val event = (tipEvent.event as TipEvent)
+                    val author =
+                        event.tippedAuthor().firstNotNullOfOrNull {
+                            LocalCache.getUserIfExists(it) // don't create user if it doesn't exist
+                        }
+                    if (author != null) {
+                        val tip =
+                            author.tips.firstOrNull { it == tipEvent }
+                        if (tip != null) {
+                            tipsPerUser
+                                .getOrPut(author, { mutableListOf() })
+                                .add(Tip(tipEvent))
+                        }
+                    }
+                }
+            }
+
         val boostsPerEvent = mutableMapOf<Note, MutableList<Note>>()
         notes
             .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
@@ -221,9 +256,10 @@ class CardFeedContentState(
                     val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
                     val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
                     val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
+                    val tipsInCard = tipsPerEvent[baseNote] ?: emptyList()
 
                     val singleList =
-                        (boostsInCard + zapsInCard.map { it.response } + reactionsInCard).groupBy {
+                        (boostsInCard + zapsInCard.map { it.response } + reactionsInCard + tipsInCard.map { it.tip }).groupBy {
                             sdf.format(
                                 Instant
                                     .ofEpochSecond(it.createdAt() ?: 0)
@@ -248,6 +284,7 @@ class CardFeedContentState(
                                     boostsInCard.filter { it in chunk }.toImmutableList(),
                                     reactionsInCard.filter { it in chunk }.toImmutableList(),
                                     zapsInCard.filter { it.response in chunk }.toImmutableList(),
+                                    tipsInCard.filter { it.tip in chunk }.toImmutableList(),
                                 )
                             }
                         }.flatten()
@@ -277,13 +314,38 @@ class CardFeedContentState(
                     }
                 }.flatten()
 
+        val userTips =
+            tipsPerUser
+                .map { user ->
+                    val byDay =
+                        user.value.groupBy {
+                            sdf.format(
+                                Instant
+                                    .ofEpochSecond(it.createdAt() ?: 0)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDateTime(),
+                            )
+                        }
+
+                    byDay.values.map {
+                        TipUserSetCard(
+                            user.key,
+                            it
+                                .sortedWith(compareBy({ it.createdAt() }, { it.idHex() }))
+                                .reversed()
+                                .toImmutableList(),
+                        )
+                    }
+                }.flatten()
+
         val textNoteCards =
             notes
                 .filter {
                     it.event !is ReactionEvent &&
                         it.event !is RepostEvent &&
                         it.event !is GenericRepostEvent &&
-                        it.event !is LnZapEvent
+                        it.event !is LnZapEvent &&
+                        it.event !is TipEvent
                 }.map {
                     if (it.event is PrivateDmEvent || it.event is NIP17Group) {
                         MessageSetCard(it)
@@ -294,7 +356,7 @@ class CardFeedContentState(
                     }
                 }
 
-        return (multiCards + textNoteCards + userZaps)
+        return (multiCards + textNoteCards + userZaps + userTips)
             .sortedWith(compareBy({ it.createdAt() }, { it.id() }))
             .reversed()
     }
@@ -440,6 +502,15 @@ fun <T> equalImmutableLists(
         }
     }
     return true
+}
+
+@Immutable
+data class Tip(
+    val tip: Note,
+) {
+    fun createdAt() = tip.createdAt()
+
+    fun idHex() = tip.idHex
 }
 
 @Immutable

@@ -241,6 +241,21 @@ fun observeNoteZaps(
 }
 
 @Composable
+fun observeNoteTips(
+    note: Note,
+    accountViewModel: AccountViewModel,
+): State<NoteState?> {
+    // Subscribe in the relay for changes in this note.
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return note
+        .flow()
+        .tips.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
 fun observeNoteReposts(
     note: Note,
     accountViewModel: AccountViewModel,
@@ -317,7 +332,8 @@ fun observeNoteReferences(
                 note.flow().zaps.stateFlow,
                 note.flow().boosts.stateFlow,
                 note.flow().reactions.stateFlow,
-            ) { zapState, boostState, reactionState ->
+                note.flow().tips.stateFlow,
+            ) { zapState, boostState, reactionState, tipState ->
                 zapState.note.hasZapsBoostsOrReactions()
             }.distinctUntilChanged()
         }

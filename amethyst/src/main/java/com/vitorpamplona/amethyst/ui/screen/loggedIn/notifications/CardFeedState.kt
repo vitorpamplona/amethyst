@@ -70,17 +70,31 @@ class ZapUserSetCard(
 }
 
 @Immutable
+class TipUserSetCard(
+    val user: User,
+    val tipEvents: ImmutableList<Tip>,
+) : Card() {
+    val createdAt = tipEvents.maxOf { it.createdAt() ?: 0 }
+
+    override fun createdAt(): Long = createdAt
+
+    override fun id() = user.pubkeyHex + "U" + createdAt
+}
+
+@Immutable
 class MultiSetCard(
     val note: Note,
     val boostEvents: ImmutableList<Note>,
     val likeEvents: ImmutableList<Note>,
     val zapEvents: ImmutableList<CombinedZap>,
+    val tipEvents: ImmutableList<Tip>,
 ) : Card() {
     val maxCreatedAt =
         maxOf(
             zapEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
             likeEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
             boostEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
+            tipEvents.maxOfOrNull { it.createdAt() ?: 0 } ?: 0,
         )
 
     val minCreatedAt =
@@ -88,6 +102,7 @@ class MultiSetCard(
             zapEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
             likeEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
             boostEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
+            tipEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
         )
 
     val likeEventsByType =

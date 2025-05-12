@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
 import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -121,6 +122,7 @@ class NotificationFeedFilter(
             it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
+            (it.event is TipEvent || notifAuthor != loggedInUserHex) &&
             (filterParams.isGlobal || filterParams.followLists?.authors?.contains(notifAuthor) == true) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
