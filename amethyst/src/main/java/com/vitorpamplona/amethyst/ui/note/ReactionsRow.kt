@@ -1386,7 +1386,7 @@ fun ObserveTipIcon(
     val wasTippedByLoggedInUser = remember { mutableStateOf(false) }
 
     if (!wasTippedByLoggedInUser.value) {
-        val tipState by observeNoteZaps(baseNote, accountViewModel)
+        val tipState by observeNoteTips(baseNote, accountViewModel)
 
         LaunchedEffect(key1 = tipState) {
             if (tipState?.note?.tips?.isNotEmpty() == true) {

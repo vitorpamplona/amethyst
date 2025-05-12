@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,9 +63,13 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -74,10 +79,12 @@ class UpdateTipAmountViewModel : ViewModel() {
 
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<Double>())
+    var selectedTipType by mutableStateOf(TipEvent.TipType.ANONYMOUS)
 
     fun load(myAccount: Account) {
         this.account = myAccount
         this.amountSet = myAccount.settings.syncedSettings.tips.tipAmountChoices.value
+        this.selectedTipType = myAccount.settings.syncedSettings.tips.defaultTipType.value
     }
 
     fun addAmount() {
@@ -98,7 +105,14 @@ class UpdateTipAmountViewModel : ViewModel() {
     }
 
     fun hasChanged(): Boolean =
-        amountSet !=
+        selectedTipType !=
+            account
+                ?.settings
+                ?.syncedSettings
+                ?.tips
+                ?.defaultTipType
+                ?.value ||
+            amountSet !=
             account
                 ?.settings
                 ?.syncedSettings
@@ -108,7 +122,7 @@ class UpdateTipAmountViewModel : ViewModel() {
 
     fun sendPost() {
         viewModelScope.launch(Dispatchers.IO) {
-            account?.updateTipAmounts(amountSet)
+            account?.updateTipAmounts(amountSet, selectedTipType)
 
             nextAmount = TextFieldValue("")
         }
@@ -122,12 +136,13 @@ fun UpdateTipAmountDialog(
 ) {
     val postViewModel: UpdateTipAmountViewModel = viewModel()
     postViewModel.load(accountViewModel.account)
-    UpdateTipAmountDialog(postViewModel, onClose)
+    UpdateTipAmountDialog(postViewModel, accountViewModel, onClose)
 }
 
 @Composable
 fun UpdateTipAmountDialog(
     postViewModel: UpdateTipAmountViewModel,
+    accountViewModel: AccountViewModel,
     onClose: () -> Unit,
 ) {
     Dialog(
@@ -166,7 +181,7 @@ fun UpdateTipAmountDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                UpdateTipAmountContent(postViewModel)
+                UpdateTipAmountContent(postViewModel, accountViewModel)
             }
         }
     }
@@ -174,7 +189,10 @@ fun UpdateTipAmountDialog(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun UpdateTipAmountContent(postViewModel: UpdateTipAmountViewModel) {
+fun UpdateTipAmountContent(
+    postViewModel: UpdateTipAmountViewModel,
+    accountViewModel: AccountViewModel,
+) {
     Column(
         modifier =
             Modifier
@@ -241,6 +259,44 @@ fun UpdateTipAmountContent(postViewModel: UpdateTipAmountViewModel) {
             ) {
                 Text(text = stringRes(R.string.add), color = Color.White)
             }
+        }
+
+        val tipTypes =
+            listOf(
+                Triple(
+                    TipEvent.TipType.PUBLIC,
+                    stringRes(id = R.string.zap_type_public),
+                    stringRes(id = R.string.zap_type_public_explainer),
+                ),
+                Triple(
+                    TipEvent.TipType.ANONYMOUS,
+                    stringRes(id = R.string.zap_type_anonymous),
+                    stringRes(id = R.string.zap_type_anonymous_explainer),
+                ),
+                Triple(
+                    TipEvent.TipType.NONTIP,
+                    stringRes(id = R.string.tip_type_nontip),
+                    stringRes(id = R.string.tip_type_nontip_explainer),
+                ),
+            )
+
+        val tipOptions =
+            remember {
+                tipTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList()
+            }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextSpinner(
+                label = stringRes(id = R.string.tip_type_explainer),
+                placeholder =
+                    tipTypes.first { it.first == accountViewModel.defaultTipType() }.second,
+                options = tipOptions,
+                onSelect = { postViewModel.selectedTipType = tipTypes[it].first },
+                modifier = Modifier.weight(1f).padding(end = 5.dp),
+            )
         }
     }
 }
