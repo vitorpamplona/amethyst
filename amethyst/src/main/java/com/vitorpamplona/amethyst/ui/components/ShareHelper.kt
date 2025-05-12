@@ -33,6 +33,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
+// TODO use passed in context type rather than hard coding
+// TODO Add unit tests for sharehelper
+// TODO Move intent sharing back to ZoomableContentView for coroutine management?
 object ShareHelper {
     fun shareImageFromUrl(
         context: Context,
