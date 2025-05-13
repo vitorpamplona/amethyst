@@ -697,6 +697,7 @@ fun ShareImageAction(
             hash = null,
             mimeType = content.mimeType,
             onDismiss = onDismiss,
+            content = content,
         )
     }
 }
