@@ -27,4 +27,10 @@ class EOSETime(
     var time: Long,
 ) {
     override fun toString(): String = time.toString()
+
+    fun update(newTime: Long) {
+        if (newTime > time) {
+            time = newTime
+        }
+    }
 }
