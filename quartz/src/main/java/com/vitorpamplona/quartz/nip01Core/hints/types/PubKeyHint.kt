@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.hints.types
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 
-class PubKeyHint(
+data class PubKeyHint(
     val pubkey: HexKey,
     var relay: String? = null,
 ) : Hint {
