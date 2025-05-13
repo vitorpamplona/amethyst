@@ -39,6 +39,7 @@ object ShareHelper {
     private val PNG_MAGIC = byteArrayOf(0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte())
     private val WEBP_HEADER_START = "RIFF".toByteArray()
     private val WEBP_HEADER_END = "WEBP".toByteArray()
+    private val GIF_MAGIC = "GIF8".toByteArray()
 
     fun getSharableUriFromUrl(
         context: Context,
@@ -77,6 +78,9 @@ object ShareHelper {
 
                     // PNG: Check first 4 bytes
                     matchesMagicNumbers(header, 0, PNG_MAGIC) -> "png"
+
+                    // GIF: Check first 4 bytes for "GIF8"
+                    matchesMagicNumbers(header, 0, GIF_MAGIC) -> "gif"
 
                     // WEBP: Check "RIFF" (bytes 0-3) and "WEBP" (bytes 8-11)
                     matchesMagicNumbers(header, 0, WEBP_HEADER_START) &&
