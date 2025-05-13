@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.searchCommand
+package com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers
 
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.datasources.SubscriptionOrchestrator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -29,31 +27,31 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
-interface MutableQueryState {
-    fun flow(): Flow<*>
-}
-
 /**
- * Creates a data source where the filters are derived from
- * data (keys) that is being watched in the UI.
+ *  This allows composables to directly register their queries
+ *  to relays. There may be multiple duplications in these
+ *  subscriptions since we do not control when screens are removed.
+ *
+ *  This is similar to QueryBasedSubscriptionOrchestrator, but it
+ *  also allows the subscription itself to change over time as a
+ *  flow, which trigger an update on the relay subscriptions
  */
-abstract class MutableQueryBasedSubscriptionOrchestrator<T : MutableQueryState>(
-    client: NostrClient,
+abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
     val scope: CoroutineScope,
-) : SubscriptionOrchestrator(client) {
-    private var queries: ConcurrentHashMap<T, Job?> = ConcurrentHashMap()
+) : ComposeSubscriptionManagerControls {
+    private var composeSubscriptions: ConcurrentHashMap<T, Job?> = ConcurrentHashMap()
 
     // This is called by main. Keep it really fast.
     fun subscribe(query: T?) {
         if (query == null) return
 
-        val wasEmpty = queries.isEmpty()
+        val wasEmpty = composeSubscriptions.isEmpty()
 
-        queries[query]?.cancel()
-        queries[query] =
+        composeSubscriptions[query]?.cancel()
+        composeSubscriptions[query] =
             scope.launch {
                 query.flow().collectLatest {
-                    invalidateFilters()
+                    invalidateKeys()
                 }
             }
 
@@ -61,30 +59,30 @@ abstract class MutableQueryBasedSubscriptionOrchestrator<T : MutableQueryState>(
             start()
         }
 
-        invalidateFilters()
+        invalidateKeys()
     }
 
     // This is called by main. Keep it really fast.
     fun unsubscribe(query: T?) {
         if (query == null) return
 
-        queries[query]?.cancel()
-        queries.remove(query)
+        composeSubscriptions[query]?.cancel()
+        composeSubscriptions.remove(query)
 
-        invalidateFilters()
+        invalidateKeys()
 
-        if (queries.isEmpty()) {
+        if (composeSubscriptions.isEmpty()) {
             stop()
         }
     }
 
+    fun allKeys() = composeSubscriptions.keys
+
     fun forEachSubscriber(action: (T) -> Unit) {
-        queries.keys.forEach(action)
+        composeSubscriptions.keys.forEach(action)
     }
+}
 
-    final override fun updateSubscriptions() {
-        updateSubscriptions(queries.keys)
-    }
-
-    abstract fun updateSubscriptions(keys: Set<T>)
+interface MutableQueryState {
+    fun flow(): Flow<*>
 }

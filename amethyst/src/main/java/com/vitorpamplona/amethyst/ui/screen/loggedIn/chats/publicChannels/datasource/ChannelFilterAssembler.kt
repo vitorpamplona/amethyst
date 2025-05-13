@@ -22,21 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datas
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.amethyst.service.relays.EOSEAccount
-import com.vitorpamplona.amethyst.service.relays.EOSEFollowList
-import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.ChannelFromUserFilterSubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.ChannelPublicFilterSubAssembler
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChannelQueryState(
@@ -46,169 +35,24 @@ class ChannelQueryState(
 
 class ChannelFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<ChannelQueryState>(client) {
-    companion object {
-        val RELAY_SET =
-            setOf(
-                FeedType.FOLLOWS,
-                FeedType.PRIVATE_DMS,
-                FeedType.GLOBAL,
-                FeedType.SEARCH,
-            )
-    }
-
-    private val latestEOSEPerAccount = EOSEAccount()
-    private val latestEOSEPerChannel = EOSEFollowList()
-
-    fun sinceUser(key: ChannelQueryState) =
-        latestEOSEPerAccount.users[key.account.userProfile()]
-            ?.followList
-            ?.get(key.channel.idHex)
-            ?.relayList
-
-    fun since(key: ChannelQueryState) = latestEOSEPerChannel.followList.get(key.channel.idHex)?.relayList
-
-    fun newEose(
-        key: ChannelQueryState,
-        relayUrl: String,
-        time: Long,
-    ) {
-        latestEOSEPerAccount.addOrUpdate(
-            key.account.userProfile(),
-            key.channel.idHex,
-            relayUrl,
-            time,
+) : ComposeSubscriptionManager<ChannelQueryState>() {
+    val group =
+        listOf(
+            // Requests the latest messages
+            ChannelPublicFilterSubAssembler(client, ::allKeys),
+            // Requests the latest messages by logged in user
+            ChannelFromUserFilterSubAssembler(client, ::allKeys),
         )
 
-        latestEOSEPerChannel.addOrUpdate(key.channel.idHex, relayUrl, time)
-    }
+    override fun start() = group.forEach { it.start() }
 
-    fun createMessagesByMeToChannelFilter(key: ChannelQueryState): TypedFilter? =
-        when (key.channel) {
-            is PublicChatChannel ->
-                TypedFilter(
-                    types = RELAY_SET,
-                    filter =
-                        SincePerRelayFilter(
-                            kinds = listOf(ChannelMessageEvent.KIND),
-                            authors = listOf(key.account.userProfile().pubkeyHex),
-                            limit = 50,
-                            since = sinceUser(key),
-                        ),
-                )
-            is LiveActivitiesChannel ->
-                TypedFilter(
-                    types = RELAY_SET,
-                    filter =
-                        SincePerRelayFilter(
-                            kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                            authors = listOf(key.account.userProfile().pubkeyHex),
-                            limit = 50,
-                            since = sinceUser(key),
-                        ),
-                )
-            is EphemeralChatChannel ->
-                null // there is nothing in the past
-            else -> {
-                null
-            }
-        }
+    override fun stop() = group.forEach { it.stop() }
 
-    fun createMessagesToChannelFilter(key: ChannelQueryState): TypedFilter? {
-        val channel = key.channel
+    override fun invalidateKeys() = invalidateFilters()
 
-        return when (channel) {
-            is PublicChatChannel ->
-                TypedFilter(
-                    types = setOf(FeedType.PUBLIC_CHATS),
-                    filter =
-                        SincePerRelayFilter(
-                            kinds = listOf(ChannelMessageEvent.KIND),
-                            tags = mapOf("e" to listOfNotNull(channel.idHex)),
-                            limit = 200,
-                            since = since(key),
-                        ),
-                )
-            is LiveActivitiesChannel ->
-                TypedFilter(
-                    types = setOf(FeedType.PUBLIC_CHATS),
-                    filter =
-                        SincePerRelayFilter(
-                            kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                            tags = mapOf("a" to listOfNotNull(channel.idHex)),
-                            limit = 200,
-                            since = since(key),
-                        ),
-                )
-            is EphemeralChatChannel -> {
-                TypedFilter(
-                    types =
-                        setOf(
-                            FeedType.FOLLOWS,
-                            FeedType.PUBLIC_CHATS,
-                            FeedType.GLOBAL,
-                        ),
-                    filter =
-                        SincePerRelayFilter(
-                            kinds = listOf(EphemeralChatEvent.KIND),
-                            tags =
-                                if (channel.roomId.id.isBlank()) {
-                                    mapOf("d" to listOf("_"))
-                                } else {
-                                    mapOf("d" to listOfNotNull(channel.roomId.id))
-                                },
-                            limit = 200,
-                            since = since(key),
-                        ),
-                )
-            }
-            else -> {
-                null
-            }
-        }
-        return null
-    }
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    fun mergeAllFilters(key: ChannelQueryState): List<TypedFilter>? =
-        listOfNotNull(
-            createMessagesToChannelFilter(key),
-            createMessagesByMeToChannelFilter(key),
-        ).ifEmpty { null }
+    override fun destroy() = group.forEach { it.start() }
 
-    fun newSub(key: ChannelQueryState): Subscription =
-        requestNewSubscription { time, relayUrl ->
-            newEose(key, relayUrl, time)
-        }
-
-    val userSubscriptionMap = mutableMapOf<User, String>()
-
-    fun findOrCreateSubFor(key: ChannelQueryState): Subscription {
-        var subId = userSubscriptionMap[key.account.userProfile()]
-        return if (subId == null) {
-            newSub(key).also { userSubscriptionMap[key.account.userProfile()] = it.id }
-        } else {
-            getSub(subId) ?: newSub(key).also { userSubscriptionMap[key.account.userProfile()] = it.id }
-        }
-    }
-
-    // One sub per subscribed account
-    override fun updateSubscriptions(keys: Set<ChannelQueryState>) {
-        val uniqueSubscribedAccounts = keys.distinctBy { it.account }
-
-        val updated = mutableSetOf<User>()
-
-        uniqueSubscribedAccounts.forEach {
-            val user = it.account.userProfile()
-            val sub = findOrCreateSubFor(it)
-            sub.typedFilters = mergeAllFilters(it)
-
-            updated.add(user)
-        }
-
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                dismissSubscription(it.value)
-            }
-        }
-    }
+    override fun printStats() = group.forEach { it.printStats() }
 }

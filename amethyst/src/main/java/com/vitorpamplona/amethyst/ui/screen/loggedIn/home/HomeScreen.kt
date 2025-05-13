@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose

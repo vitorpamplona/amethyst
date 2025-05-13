@@ -21,20 +21,10 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.findMinimumEOSEsForUsers
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.groupByEOSEPresence
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserLoaderSubAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
-import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 // This allows multiple screen to be listening to tags, even the same tag
 class UserFinderQueryState(
@@ -43,90 +33,22 @@ class UserFinderQueryState(
 
 class UserFinderFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<UserFinderQueryState>(client) {
-    fun createUserMetadataFilter(keys: Set<UserFinderQueryState>): List<TypedFilter>? {
-        if (keys.isEmpty()) return null
-
-        val firstTimers = keys.filter { it.user.latestMetadata == null }.map { it.user.pubkeyHex }.distinct()
-
-        if (firstTimers.isEmpty()) return null
-
-        return listOf(
-            TypedFilter(
-                types = EVENT_FINDER_TYPES,
-                filter =
-                    SincePerRelayFilter(
-                        kinds = listOf(MetadataEvent.KIND, AdvertisedRelayListEvent.KIND),
-                        authors = firstTimers,
-                    ),
-            ),
+) : ComposeSubscriptionManager<UserFinderQueryState>() {
+    val group =
+        listOf(
+            UserLoaderSubAssembler(client, ::allKeys),
+            UserWatcherSubAssembler(client, ::allKeys),
         )
-    }
 
-    fun createUserMetadataStatusReportFilter(keys: Set<UserFinderQueryState>): List<TypedFilter>? {
-        if (keys.isEmpty()) return null
+    override fun start() = group.forEach { it.start() }
 
-        val secondTimers = keys.filter { it.user.latestMetadata != null }.map { it.user }.toSet()
+    override fun stop() = group.forEach { it.stop() }
 
-        if (secondTimers.isEmpty()) return null
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-        return groupByEOSEPresence(secondTimers)
-            .map { group ->
-                val groupIds = group.map { it.pubkeyHex }
-                val minEOSEs = findMinimumEOSEsForUsers(group)
+    override fun invalidateKeys() = invalidateFilters()
 
-                if (groupIds.isNotEmpty()) {
-                    listOf(
-                        TypedFilter(
-                            types = EVENT_FINDER_TYPES,
-                            filter =
-                                SincePerRelayFilter(
-                                    kinds =
-                                        listOf(
-                                            MetadataEvent.KIND,
-                                            StatusEvent.KIND,
-                                            RelationshipStatusEvent.KIND,
-                                            AdvertisedRelayListEvent.KIND,
-                                            ChatMessageRelayListEvent.KIND,
-                                        ),
-                                    authors = groupIds,
-                                    since = minEOSEs,
-                                ),
-                        ),
-                        TypedFilter(
-                            types = EVENT_FINDER_TYPES,
-                            filter =
-                                SincePerRelayFilter(
-                                    kinds = listOf(ReportEvent.KIND),
-                                    tags = mapOf("p" to groupIds),
-                                    since = minEOSEs,
-                                ),
-                        ),
-                    )
-                } else {
-                    listOf()
-                }
-            }.flatten()
-    }
+    override fun destroy() = group.forEach { it.destroy() }
 
-    val userChannel =
-        requestNewSubscription { time, relayUrl ->
-            forEachSubscriber {
-                val eose = it.user.latestEOSEs[relayUrl]
-                if (eose == null) {
-                    it.user.latestEOSEs = it.user.latestEOSEs + Pair(relayUrl, EOSETime(time))
-                } else {
-                    eose.time = time
-                }
-            }
-        }
-
-    override fun updateSubscriptions(keys: Set<UserFinderQueryState>) {
-        userChannel.typedFilters =
-            listOfNotNull(
-                createUserMetadataFilter(keys),
-                createUserMetadataStatusReportFilter(keys),
-            ).flatten()
-                .ifEmpty { null }
-    }
+    override fun printStats() = group.forEach { it.printStats() }
 }

@@ -878,15 +878,17 @@ class Account(
     }
 
     val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<HexKey>>?> by lazy {
-        liveHomeListAuthorsPerRelayFlow.flowOn(Dispatchers.Default).stateIn(
-            scope,
-            SharingStarted.Eagerly,
-            authorsPerRelay(
-                liveHomeFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
-                connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
-                settings.torSettings.torType.value,
-            ).ifEmpty { null },
-        )
+        liveHomeListAuthorsPerRelayFlow
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                authorsPerRelay(
+                    liveHomeFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                    connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                    settings.torSettings.torType.value,
+                ).ifEmpty { null },
+            )
     }
 
     val liveNotificationFollowLists: StateFlow<LiveFollowList?> by lazy {
@@ -1677,6 +1679,7 @@ class Account(
     fun broadcast(note: Note) {
         note.event?.let {
             if (it is WrappedEvent && it.host != null) {
+                // download the event and send it.
                 it.host?.let {
                     Amethyst.instance.client.sendFilterAndStopOnFirstResponse(
                         filters =

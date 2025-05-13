@@ -21,10 +21,63 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import android.util.Log
+import com.vitorpamplona.amethyst.service.relayClient.RelaySpeedLogger.Companion.TAG
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.LargeCache
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.forEach
+import kotlin.collections.get
+import kotlin.concurrent.timer
+import kotlin.text.get
+import kotlin.text.set
+
+class FrameStat {
+    var eventCount = AtomicInteger(0)
+    var kinds = LargeCache<Int, AtomicInteger>()
+
+    fun increment(kind: Int) {
+        eventCount.incrementAndGet()
+
+        val kindCount = kinds.get(kind)
+        if (kindCount != null) {
+            kindCount.incrementAndGet()
+        } else {
+            kinds.put(kind, AtomicInteger(1))
+        }
+    }
+
+    fun hasAnything() = eventCount.get() > 0
+
+    fun reset() {
+        eventCount.set(0)
+        kinds.forEach { key, value ->
+            value.set(0)
+        }
+    }
+
+    fun log() {
+        Log.d(TAG, "Events Per Second: ${eventCount.get()}")
+        kinds.forEach { key, value ->
+            if (value.get() > 0) {
+                Log.d(TAG, "-- Events Per Second Debug: $key $value")
+            }
+        }
+    }
+
+    // Initialize the timer in the constructor.  This ensures it starts when the
+    // ResettableCounter object is created.
+    init {
+        // Use a timer to reset the counter every second.
+        timer(name = "EventsPerSecondCounter", period = 1000, daemon = true) {
+            if (hasAnything()) {
+                log()
+                reset()
+            }
+        }
+    }
+}
 
 /**
  * Listens to NostrClient's onNotify messages from the relay
@@ -36,8 +89,7 @@ class RelaySpeedLogger(
         val TAG = RelaySpeedLogger::class.java.simpleName
     }
 
-    var time = TimeUtils.now() / 10
-    var onEventCount: Long = 0L
+    var current = FrameStat()
 
     private val clientListener =
         object : NostrClient.Listener {
@@ -49,14 +101,7 @@ class RelaySpeedLogger(
                 arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
-                val now = TimeUtils.now() / 10
-                if (time == now) {
-                    onEventCount++
-                } else {
-                    Log.d(TAG, "EPS: ${onEventCount / 10} ")
-                    time = now
-                    onEventCount = 0
-                }
+                current.increment(event.kind)
             }
         }
 

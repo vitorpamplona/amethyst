@@ -21,26 +21,15 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 // This allows multiple screen to be listening to tags, even the same tag
 class GeohashQueryState(
     val geohash: String,
-)
+) {
+    val lowercaseGeohash = geohash.lowercase()
+}
 
 /**
  * Creates a filter for multiple geohashes at the same time.
@@ -48,46 +37,21 @@ class GeohashQueryState(
 @Stable
 class GeoHashFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<GeohashQueryState>(client) {
-    companion object {
-        val GEO_COMPATIBLE_KINDS =
-            listOf(
-                TextNoteEvent.KIND,
-                ChannelMessageEvent.KIND,
-                LongTextNoteEvent.KIND,
-                PollNoteEvent.KIND,
-                ClassifiedsEvent.KIND,
-                HighlightEvent.KIND,
-                AudioTrackEvent.KIND,
-                AudioHeaderEvent.KIND,
-                WikiNoteEvent.KIND,
-                CommentEvent.KIND,
-            )
-    }
-
-    fun createLoadHashtagFilter(keys: Set<GeohashQueryState>): TypedFilter? {
-        if (keys.isEmpty()) return null
-
-        val unique =
-            keys
-                .mapTo(mutableSetOf()) {
-                    it.geohash
-                }.toList()
-
-        return TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    tags = mapOf("g" to unique),
-                    kinds = GEO_COMPATIBLE_KINDS,
-                    limit = 200,
-                ),
+) : ComposeSubscriptionManager<GeohashQueryState>() {
+    val group =
+        listOf(
+            GeoHashFeedFilterSubAssembler(client, ::allKeys),
         )
-    }
 
-    val loadGeohashChannel = requestNewSubscription()
+    override fun start() = group.forEach { it.start() }
 
-    override fun updateSubscriptions(keys: Set<GeohashQueryState>) {
-        loadGeohashChannel.typedFilters = createLoadHashtagFilter(keys)?.let { listOf(it) }
-    }
+    override fun stop() = group.forEach { it.stop() }
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.start() }
+
+    override fun printStats() = group.forEach { it.printStats() }
 }
