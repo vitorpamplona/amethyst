@@ -80,6 +80,10 @@ class MarkdownMediaRenderer(
             false
         }
 
+    override fun shouldSanitizeUriLabel(): Boolean = true
+
+    override fun sanitizeUriLabel(label: String): String = label.filterNot { it == '#' || it == '@' }
+
     override fun renderImage(
         title: String?,
         uri: String,

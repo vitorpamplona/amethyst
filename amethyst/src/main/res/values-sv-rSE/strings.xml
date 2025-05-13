@@ -216,6 +216,13 @@
     <string name="unfollow">Sluta följa</string>
     <string name="channel_created">Kanal skapad</string>
     <string name="channel_information_changed_to">"Kanalinformation ändrad till"</string>
+    <string name="ephemeral_relay_chat">Försvinnande chatt</string>
+    <string name="relay_chat">Relä Chatt</string>
+    <string name="relay_chat_title">Relä Chattar</string>
+    <string name="relay_chat_explainer">Relä chattar är chattgrupper som kontrolleras av deras hem relä.
+        De är synliga för alla på Nostr och vem som helst kan delta på dem.
+        De är bra för öppna gemenskaper kring specifika ämnen. Några av dessa grupper är kortlivade
+    och därmed försvinner chattmeddelanden över tiden</string>
     <string name="public_chat">Publik Chat</string>
     <string name="public_chat_title">Metadata för offentlig chatt</string>
     <string name="public_chat_explainer">Offentliga chattar är synliga för alla på Nostr och alla
@@ -540,6 +547,8 @@
     <string name="are_you_sure_you_want_to_log_out">Att logga ut raderar all din lokala information. Se till att ha dina privata nycklar säkerhetskopierade för att undvika att förlora ditt konto. Vill du fortsätta?</string>
     <string name="followed_tags">Följda taggar</string>
     <string name="relay_setup">Reläer</string>
+    <string name="discover_follows">Följpaket</string>
+    <string name="discover_reads">Läsningar</string>
     <string name="discover_content">Upptäckt av anteckningar</string>
     <string name="discover_marketplace">Marknadsplats</string>
     <string name="discover_live">Live</string>
@@ -603,6 +612,7 @@
     <string name="new_feature_nip17_activate">Aktivera</string>
     <string name="messages_create_public_chat">Publik</string>
     <string name="messages_create_public_private_chat_description">Ny offentlig eller privat grupp</string>
+    <string name="messages_relay_based">Relä</string>
     <string name="messages_new_message">Privat</string>
     <string name="messages_new_message_to">Till</string>
     <string name="messages_new_message_subject">Ämne</string>
@@ -945,4 +955,6 @@
     <string name="select_list_to_filter">Välj en lista för att filtrera flödet</string>
     <string name="temporary_account">Logga ut när enheten låses</string>
     <string name="private_message">Privat meddelande</string>
+    <string name="group_relay">Chatt Relä</string>
+    <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
 </resources>
