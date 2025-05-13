@@ -46,6 +46,7 @@ class RelaySpeedLogger(
                 event: Event,
                 subscriptionId: String,
                 relay: Relay,
+                arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
                 val now = TimeUtils.now() / 10

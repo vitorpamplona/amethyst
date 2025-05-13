@@ -39,6 +39,7 @@ class RelayLogger(
                 event: Event,
                 subscriptionId: String,
                 relay: Relay,
+                arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
                 Log.d("Relay", "Relay onEVENT ${relay.url} ($subscriptionId - $afterEOSE) ${event.toJson()}")
