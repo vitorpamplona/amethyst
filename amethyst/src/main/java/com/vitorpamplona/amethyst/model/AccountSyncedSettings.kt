@@ -190,17 +190,17 @@ class AccountSecurityPreferences(
         return false
     }
 
-    // ---
-    // filters
-    // ---
-    fun updateOptOutOptions(
-        warnReports: Boolean,
-        filterSpam: Boolean,
-    ): Boolean =
-        if (warnAboutPostsWithReports != warnReports || filterSpam != filterSpamFromStrangers.value) {
+    fun updateWarnReports(warnReports: Boolean): Boolean =
+        if (warnAboutPostsWithReports != warnReports) {
             warnAboutPostsWithReports = warnReports
-            filterSpamFromStrangers.tryEmit(filterSpam)
+            true
+        } else {
+            false
+        }
 
+    fun updateFilterSpam(filterSpam: Boolean): Boolean =
+        if (filterSpam != filterSpamFromStrangers.value) {
+            filterSpamFromStrangers.tryEmit(filterSpam)
             true
         } else {
             false

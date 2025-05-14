@@ -161,8 +161,9 @@ class Relay(
         relay: SimpleClientRelay,
         subscriptionId: String,
         event: Event,
+        time: Long,
         afterEOSE: Boolean,
-    ) = listeners.forEach { it.onEvent(this, subscriptionId, event, afterEOSE) }
+    ) = listeners.forEach { it.onEvent(this, subscriptionId, event, time, afterEOSE) }
 
     override fun onError(
         relay: SimpleClientRelay,
@@ -173,7 +174,8 @@ class Relay(
     override fun onEOSE(
         relay: SimpleClientRelay,
         subscriptionId: String,
-    ) = listeners.forEach { it.onEOSE(this, subscriptionId) }
+        time: Long,
+    ) = listeners.forEach { it.onEOSE(this, subscriptionId, time) }
 
     override fun onRelayStateChange(
         relay: SimpleClientRelay,
@@ -219,12 +221,14 @@ class Relay(
             relay: Relay,
             subscriptionId: String,
             event: Event,
+            time: Long,
             afterEOSE: Boolean,
         )
 
         fun onEOSE(
             relay: Relay,
             subscriptionId: String,
+            time: Long,
         )
 
         fun onError(

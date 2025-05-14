@@ -25,12 +25,9 @@ import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilderFactory
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
@@ -42,13 +39,6 @@ import java.util.concurrent.TimeUnit
  */
 class NostrClient(
     private val websocketBuilder: WebsocketBuilderFactory,
-    private val listenerScope: CoroutineScope =
-        CoroutineScope(
-            Dispatchers.Default + SupervisorJob() +
-                CoroutineExceptionHandler { _, throwable ->
-                    Log.e("NostrClient", "Caught exception: ${throwable.message}", throwable)
-                },
-        ),
 ) : RelayPool.Listener {
     private val relayPool: RelayPool = RelayPool()
     private val activeSubscriptions: MutableSubscriptionManager = MutableSubscriptionManager()
@@ -135,12 +125,14 @@ class NostrClient(
                     event: Event,
                     subId: String,
                     relay: Relay,
+                    arrivalTime: Long,
                     afterEOSE: Boolean,
                 ) {
                     if (subId == subscriptionId) {
-                        onResponse(event)
                         unsubscribe(this)
                         close(subscriptionId)
+
+                        onResponse(event)
                     }
                 }
             },
@@ -186,6 +178,7 @@ class NostrClient(
                 override fun onEOSE(
                     relay: Relay,
                     subscriptionId: String,
+                    arrivalTime: Long,
                 ) {
                     latch.countDown()
                     Log.d("sendAndWaitForResponse", "onEOSE relay ${relay.url} count: ${latch.count}")
@@ -320,31 +313,27 @@ class NostrClient(
         event: Event,
         subscriptionId: String,
         relay: Relay,
+        arrivalTime: Long,
         afterEOSE: Boolean,
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        listenerScope.launch {
-            listeners.forEach { it.onEvent(event, subscriptionId, relay, afterEOSE) }
-        }
+        listeners.forEach { it.onEvent(event, subscriptionId, relay, arrivalTime, afterEOSE) }
     }
 
     override fun onEOSE(
         relay: Relay,
         subscriptionId: String,
+        arrivalTime: Long,
     ) {
-        listenerScope.launch {
-            listeners.forEach { it.onEOSE(relay, subscriptionId) }
-        }
+        listeners.forEach { it.onEOSE(relay, subscriptionId, arrivalTime) }
     }
 
     override fun onRelayStateChange(
         type: RelayState,
         relay: Relay,
     ) {
-        listenerScope.launch {
-            listeners.forEach { it.onRelayStateChange(type, relay) }
-        }
+        listeners.forEach { it.onRelayStateChange(type, relay) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -356,9 +345,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        listenerScope.launch {
-            listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
-        }
+        listeners.forEach { it.onSendResponse(eventId, success, message, relay) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -368,7 +355,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        listenerScope.launch { listeners.forEach { it.onAuth(relay, challenge) } }
+        listeners.forEach { it.onAuth(relay, challenge) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -378,9 +365,7 @@ class NostrClient(
     ) {
         // Releases the Web thread for the new payload.
         // May need to add a processing queue if processing new events become too costly.
-        listenerScope.launch {
-            listeners.forEach { it.onNotify(relay, description) }
-        }
+        listeners.forEach { it.onNotify(relay, description) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -389,9 +374,7 @@ class NostrClient(
         msg: String,
         success: Boolean,
     ) {
-        listenerScope.launch {
-            listeners.forEach { it.onSend(relay, msg, success) }
-        }
+        listeners.forEach { it.onSend(relay, msg, success) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -399,9 +382,7 @@ class NostrClient(
         relay: Relay,
         event: Event,
     ) {
-        listenerScope.launch {
-            listeners.forEach { it.onBeforeSend(relay, event) }
-        }
+        listeners.forEach { it.onBeforeSend(relay, event) }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -410,9 +391,7 @@ class NostrClient(
         subscriptionId: String,
         relay: Relay,
     ) {
-        listenerScope.launch {
-            listeners.forEach { it.onError(error, subscriptionId, relay) }
-        }
+        listeners.forEach { it.onError(error, subscriptionId, relay) }
     }
 
     fun subscribe(listener: Listener) {
@@ -439,6 +418,7 @@ class NostrClient(
             event: Event,
             subscriptionId: String,
             relay: Relay,
+            arrivalTime: Long,
             afterEOSE: Boolean,
         ) = Unit
 
@@ -446,6 +426,7 @@ class NostrClient(
         open fun onEOSE(
             relay: Relay,
             subscriptionId: String,
+            arrivalTime: Long,
         ) = Unit
 
         /** Connected to or disconnected from a relay */

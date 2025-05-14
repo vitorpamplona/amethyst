@@ -50,9 +50,5 @@ class CacheClientConnector(
     private fun markAsSeen(
         eventId: HexKey,
         relay: RelayBriefInfoCache.RelayBriefInfo,
-    ) {
-        val note = LocalCache.getNoteIfExists(eventId)
-
-        note?.addRelay(relay)
-    }
+    ) = LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
 }

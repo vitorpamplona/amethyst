@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints.types
 
-class AddressHint(
+data class AddressHint(
     val addressId: String,
     var relay: String? = null,
 ) : Hint {

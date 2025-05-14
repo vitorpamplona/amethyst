@@ -38,6 +38,7 @@ class EventCollector(
                 event: Event,
                 subscriptionId: String,
                 relay: Relay,
+                arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
                 onEvent(event, relay)

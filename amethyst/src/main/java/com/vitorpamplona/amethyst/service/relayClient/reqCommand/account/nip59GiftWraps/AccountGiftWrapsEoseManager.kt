@@ -18,31 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
+import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 
-@Composable
-fun ChannelFinderFilterAssemblerSubscription(
-    channel: Channel,
-    accountViewModel: AccountViewModel,
-) = ChannelFinderFilterAssemblerSubscription(channel, accountViewModel.dataSources().channelFinder)
+class AccountGiftWrapsEoseManager(
+    client: NostrClient,
+    allKeys: () -> Set<AccountQueryState>,
+) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
+    override fun user(query: AccountQueryState) = query.account.userProfile()
 
-@Composable
-fun ChannelFinderFilterAssemblerSubscription(
-    channel: Channel,
-    dataSource: ChannelFinderFilterAssembler,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(channel) {
-            ChannelFinderQueryState(channel)
-        }
-
-    KeyDataSourceSubscription(state, dataSource)
+    override fun updateFilter(
+        key: AccountQueryState,
+        since: Map<String, EOSETime>?,
+    ): List<TypedFilter>? = filterGiftWrapsToPubkey(user(key).pubkeyHex, since)
 }

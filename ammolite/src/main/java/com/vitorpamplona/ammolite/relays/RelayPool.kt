@@ -170,12 +170,14 @@ class RelayPool : Relay.Listener {
             event: Event,
             subscriptionId: String,
             relay: Relay,
+            arrivalTime: Long,
             afterEOSE: Boolean,
         )
 
         fun onEOSE(
             relay: Relay,
             subscriptionId: String,
+            arrivalTime: Long,
         )
 
         fun onRelayStateChange(
@@ -222,9 +224,10 @@ class RelayPool : Relay.Listener {
         relay: Relay,
         subscriptionId: String,
         event: Event,
+        arrivalTime: Long,
         afterEOSE: Boolean,
     ) {
-        listeners.forEach { it.onEvent(event, subscriptionId, relay, afterEOSE) }
+        listeners.forEach { it.onEvent(event, subscriptionId, relay, arrivalTime, afterEOSE) }
     }
 
     override fun onError(
@@ -239,8 +242,9 @@ class RelayPool : Relay.Listener {
     override fun onEOSE(
         relay: Relay,
         subscriptionId: String,
+        arrivalTime: Long,
     ) {
-        listeners.forEach { it.onEOSE(relay, subscriptionId) }
+        listeners.forEach { it.onEOSE(relay, subscriptionId, arrivalTime) }
         updateStatus()
     }
 

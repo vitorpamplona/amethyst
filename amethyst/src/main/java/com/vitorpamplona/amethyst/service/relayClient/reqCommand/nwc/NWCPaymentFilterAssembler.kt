@@ -20,12 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 
 // This allows multiple screen to be listening to tags, even the same tag
 class NWCPaymentQueryState(
@@ -36,38 +32,21 @@ class NWCPaymentQueryState(
 
 class NWCPaymentFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<NWCPaymentQueryState>(client) {
-    fun createAccountMetadataFilter(keys: Set<NWCPaymentQueryState>): TypedFilter? {
-        val fromAuthors = keys.mapTo(mutableSetOf()) { it.fromServiceHex }
-        val replyingToPayments = keys.mapTo(mutableSetOf()) { it.replyingToHex }
-        val aboutUsers = keys.mapTo(mutableSetOf()) { it.toUserHex }
-
-        if (fromAuthors.isEmpty()) return null
-
-        return TypedFilter(
-            types = setOf(FeedType.WALLET_CONNECT),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(LnZapPaymentResponseEvent.KIND),
-                    authors = fromAuthors.toList(),
-                    tags =
-                        mapOf(
-                            "e" to replyingToPayments.toList(),
-                            "p" to aboutUsers.toList(),
-                        ),
-                    limit = 1,
-                ),
+) : ComposeSubscriptionManager<NWCPaymentQueryState>() {
+    val group =
+        listOf(
+            NWCPaymentWatcherSubAssembler(client, ::allKeys),
         )
-    }
 
-    val channel = requestNewSubscription()
+    override fun start() = group.forEach { it.start() }
 
-    override fun updateSubscriptions(keys: Set<NWCPaymentQueryState>) {
-        val filter = createAccountMetadataFilter(keys)
-        if (filter != null) {
-            channel.typedFilters = listOf(filter)
-        } else {
-            channel.typedFilters = null
-        }
-    }
+    override fun stop() = group.forEach { it.stop() }
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun destroy() = group.forEach { it.destroy() }
+
+    override fun printStats() = group.forEach { it.printStats() }
 }

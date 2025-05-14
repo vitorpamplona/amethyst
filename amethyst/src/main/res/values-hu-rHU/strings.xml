@@ -216,6 +216,13 @@
     <string name="unfollow">Követés megszüntetése</string>
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult:"</string>
+    <string name="ephemeral_relay_chat">Eltűnő csevegés</string>
+    <string name="relay_chat">Átjátszócsevegés</string>
+    <string name="relay_chat_title">Átjátszócsevegések</string>
+    <string name="relay_chat_explainer">Az átjátszócsevegések olyan csevegőcsoportok, amelyeket az otthoni átjátszó irányít.
+        Ezek mindenki számára láthatóak a Nostr-on, és bárki részt vehet rajtuk.
+        Remekül alkalmasak nyitott közösségek kialakítására bizonyos témák körül. Néhány ilyen csoport
+    rövid élettartamú, ezért a csevegési üzenetek idővel eltűnnek</string>
     <string name="public_chat">Nyilvános csevegés</string>
     <string name="public_chat_title">Nyilvános csevegés metaadatai</string>
     <string name="public_chat_explainer">A nyilvános csevegések mindenki számára láthatóak a Nostr-on, és bárki
@@ -543,6 +550,8 @@
     <string name="are_you_sure_you_want_to_log_out">A kijelentkezéssel törlődik az összes helyben tárolt adat. Győződjön meg arról, hogy a privát kulcsokról biztonsági mentést készített, hogy elkerülje fiókja elvesztését. Szeretné folytatni?</string>
     <string name="followed_tags">Követett címke</string>
     <string name="relay_setup">Átjátszók</string>
+    <string name="discover_follows">Követett csomagok</string>
+    <string name="discover_reads">Olvasmányok</string>
     <string name="discover_content">Bejegyzések felfedezése</string>
     <string name="discover_marketplace">Piac</string>
     <string name="discover_live">Élő</string>
@@ -606,6 +615,7 @@
     <string name="new_feature_nip17_activate">Aktiválás</string>
     <string name="messages_create_public_chat">Nyílvános</string>
     <string name="messages_create_public_private_chat_description">Új nyilvános vagy privát csoport</string>
+    <string name="messages_relay_based">Átjátszó</string>
     <string name="messages_new_message">Privát</string>
     <string name="messages_new_message_to">Neki:</string>
     <string name="messages_new_message_subject">Tárgy</string>
@@ -948,4 +958,6 @@
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="private_message">Privát üzenet</string>
+    <string name="group_relay">Csevegési átjátszó</string>
+    <string name="group_relay_explanation">Az átjátszó, amelyhez a csevegés összes felhasználója csatlakozik</string>
 </resources>

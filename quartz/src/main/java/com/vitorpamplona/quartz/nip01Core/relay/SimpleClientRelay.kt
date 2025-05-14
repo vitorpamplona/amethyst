@@ -234,13 +234,12 @@ class SimpleClientRelay(
     fun processNewRelayMessage(newMessage: String) {
         when (val msg = parser.parse(newMessage)) {
             is EventMessage -> {
-                // Log.w("Relay", "Relay onEVENT $url $newMessage")
-                listener.onEvent(this, msg.subId, msg.event, afterEOSEPerSubscription[msg.subId] == true)
+                listener.onEvent(this, msg.subId, msg.event, TimeUtils.now(), afterEOSEPerSubscription[msg.subId] == true)
             }
             is EoseMessage -> {
                 // Log.w("Relay", "Relay onEOSE $url $newMessage")
                 afterEOSEPerSubscription[msg.subId] = true
-                listener.onEOSE(this@SimpleClientRelay, msg.subId)
+                listener.onEOSE(this, msg.subId, TimeUtils.now())
             }
             is NoticeMessage -> {
                 // Log.w("Relay", "Relay onNotice $url, $newMessage")
@@ -282,6 +281,7 @@ class SimpleClientRelay(
                 listener.onNotify(this@SimpleClientRelay, msg.message)
             }
             is ClosedMessage -> {
+                afterEOSEPerSubscription[msg.subscriptionId] = false
                 // Log.w("Relay", "Relay Closed Subscription $url, $newMessage")
                 listener.onClosed(this@SimpleClientRelay, msg.subscriptionId, msg.message)
             }
@@ -318,8 +318,8 @@ class SimpleClientRelay(
         if (isConnectionStarted()) {
             if (isReady) {
                 if (filters.isNotEmpty()) {
-                    writeToSocket(ReqCmd.toJson(requestId, filters))
                     afterEOSEPerSubscription[requestId] = false
+                    writeToSocket(ReqCmd.toJson(requestId, filters))
                 }
             }
         } else {
@@ -339,8 +339,8 @@ class SimpleClientRelay(
         if (isConnectionStarted()) {
             if (isReady) {
                 if (filters.isNotEmpty()) {
-                    writeToSocket(CountCmd.toJson(requestId, filters))
                     afterEOSEPerSubscription[requestId] = false
+                    writeToSocket(CountCmd.toJson(requestId, filters))
                 }
             }
         } else {
@@ -423,6 +423,7 @@ class SimpleClientRelay(
 
     fun close(subscriptionId: String) {
         writeToSocket(CloseCmd.toJson(subscriptionId))
+        afterEOSEPerSubscription[subscriptionId] = false
     }
 
     interface Listener {
@@ -433,6 +434,7 @@ class SimpleClientRelay(
             relay: SimpleClientRelay,
             subscriptionId: String,
             event: Event,
+            arrivalTime: Long,
             afterEOSE: Boolean,
         )
 
@@ -442,6 +444,7 @@ class SimpleClientRelay(
         fun onEOSE(
             relay: SimpleClientRelay,
             subscriptionId: String,
+            arrivalTime: Long,
         )
 
         /**

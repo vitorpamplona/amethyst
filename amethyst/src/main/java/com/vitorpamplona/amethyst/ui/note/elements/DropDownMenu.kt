@@ -324,34 +324,6 @@ fun NoteDropDownMenu(
             )
         }
         HorizontalDivider(thickness = DividerThickness)
-        if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_hide_all_sensitive_content)) },
-                onClick = {
-                    accountViewModel.hideSensitiveContent()
-                    onDismiss()
-                },
-            )
-        }
-        if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_show_all_sensitive_content)) },
-                onClick = {
-                    accountViewModel.disableContentWarnings()
-                    onDismiss()
-                },
-            )
-        }
-        if (state.showSensitiveContent != null) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_see_warnings)) },
-                onClick = {
-                    accountViewModel.seeContentWarnings()
-                    onDismiss()
-                },
-            )
-        }
-        HorizontalDivider(thickness = DividerThickness)
         if (state.isLoggedUser) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.request_deletion)) },

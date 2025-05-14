@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
@@ -887,21 +888,9 @@ class AccountViewModel(
 
     fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
-    fun hideSensitiveContent() {
+    fun updateContentWarnings(value: WarningType) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(false)
-        }
-    }
-
-    fun disableContentWarnings() {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(true)
-        }
-    }
-
-    fun seeContentWarnings() {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(null)
+            account.updateShowSensitiveContent(value.prefCode)
         }
     }
 
@@ -925,12 +914,15 @@ class AccountViewModel(
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
-    fun updateOptOutOptions(
-        warnReports: Boolean,
-        filterSpam: Boolean,
-    ) {
+    fun updateWarnReports(warnReports: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (account.updateOptOutOptions(warnReports, filterSpam)) {
+            account.updateWarnReports(warnReports)
+        }
+    }
+
+    fun updateFilterSpam(filterSpam: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (account.updateFilterSpam(filterSpam)) {
                 LocalCache.antiSpam.active = filterSpamFromStrangers().value
             }
         }

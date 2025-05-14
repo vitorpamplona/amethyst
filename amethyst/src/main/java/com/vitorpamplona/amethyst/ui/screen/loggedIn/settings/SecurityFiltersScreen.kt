@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,11 +34,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,6 +65,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.WarningType
+import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -72,6 +75,8 @@ import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenAccountsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.HiddenWordsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal.SpammerAccountsFeedViewModel
@@ -80,9 +85,12 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 
 @Composable
@@ -153,35 +161,17 @@ fun SecurityFiltersScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Column(Modifier.padding(it).fillMaxHeight()) {
+        Column(
+            Modifier
+                .padding(it)
+                .fillMaxHeight(),
+        ) {
             val pagerState = rememberPagerState { 3 }
             val coroutineScope = rememberCoroutineScope()
-            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
-            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers.value) }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = warnAboutReports,
-                    onCheckedChange = {
-                        warnAboutReports = it
-                        accountViewModel.updateOptOutOptions(warnAboutReports, filterSpam)
-                    },
-                )
+            HeaderOptions(accountViewModel)
 
-                Text(stringRes(R.string.warn_when_posts_have_reports_from_your_follows))
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = filterSpam,
-                    onCheckedChange = {
-                        filterSpam = it
-                        accountViewModel.updateOptOutOptions(warnAboutReports, filterSpam)
-                    },
-                )
-
-                Text(stringRes(R.string.filter_spam_from_strangers))
-            }
+            HorizontalDivider()
 
             ScrollableTabRow(
                 containerColor = MaterialTheme.colorScheme.background,
@@ -214,6 +204,69 @@ fun SecurityFiltersScreen(
                     2 -> HiddenWordsFeed(hiddenWordsViewModel, accountViewModel)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HeaderOptions(accountViewModel: AccountViewModel) {
+    Column(
+        Modifier
+            .padding(top = Size10dp, bottom = Size10dp, start = Size15dp, end = Size15dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = spacedBy(10.dp),
+    ) {
+        SettingsRow(
+            R.string.warn_when_posts_have_reports_from_your_follows_title,
+            R.string.warn_when_posts_have_reports_from_your_follows_explainer,
+        ) {
+            var warnAboutReports by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.warnAboutPostsWithReports) }
+
+            Switch(
+                checked = warnAboutReports,
+                onCheckedChange = {
+                    warnAboutReports = it
+                    accountViewModel.updateWarnReports(warnAboutReports)
+                },
+            )
+        }
+
+        SettingsRow(
+            R.string.filter_spam_from_strangers_title,
+            R.string.filter_spam_from_strangers_explainer,
+        ) {
+            var filterSpam by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.filterSpamFromStrangers.value) }
+
+            Switch(
+                checked = filterSpam,
+                onCheckedChange = {
+                    filterSpam = it
+                    accountViewModel.updateFilterSpam(filterSpam)
+                },
+            )
+        }
+
+        SettingsRow(
+            R.string.show_sensitive_content_title,
+            R.string.show_sensitive_content_explainer,
+        ) {
+            var sensitive by remember { mutableStateOf(accountViewModel.account.settings.syncedSettings.security.showSensitiveContent.value) }
+
+            val selectedItens =
+                persistentListOf(
+                    TitleExplainer(stringRes(WarningType.WARN.resourceId)),
+                    TitleExplainer(stringRes(WarningType.SHOW.resourceId)),
+                    TitleExplainer(stringRes(WarningType.HIDE.resourceId)),
+                )
+
+            TextSpinner(
+                label = "",
+                placeholder = selectedItens[parseWarningType(sensitive).screenCode].title,
+                options = selectedItens,
+                onSelect = {
+                    accountViewModel.updateContentWarnings(parseWarningType(it))
+                },
+            )
         }
     }
 }

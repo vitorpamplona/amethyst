@@ -2382,21 +2382,18 @@ object LocalCache : ILocalCache {
             noteEvent.zappedAuthor().forEach {
                 val author = getUserIfExists(it)
                 author?.removeZap(note)
-                author?.clearEOSE()
             }
         }
         if (noteEvent is LnZapRequestEvent) {
             noteEvent.zappedAuthor().mapNotNull {
                 val author = getUserIfExists(it)
                 author?.removeZap(note)
-                author?.clearEOSE()
             }
         }
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().mapNotNull {
                 val author = getUserIfExists(it.pubkey)
                 author?.removeReport(note)
-                author?.clearEOSE()
             }
         }
 

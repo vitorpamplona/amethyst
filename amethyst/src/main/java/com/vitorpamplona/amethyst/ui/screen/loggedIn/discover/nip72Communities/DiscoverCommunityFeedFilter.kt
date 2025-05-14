@@ -109,7 +109,7 @@ open class DiscoverCommunityFeedFilter(
     private fun shouldInclude(
         aTag: Address?,
         params: FilterByListParams,
-    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.Companion.KIND && params.match(aTag)
+    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag)
 
     override fun sort(collection: Set<Note>): List<Note> {
         val lastNote =

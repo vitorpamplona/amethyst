@@ -49,10 +49,10 @@ class SubscriptionStats {
         }
     }
 
-    fun printCounter() {
+    fun printCounter(tag: String) {
         eventCounter.forEach {
             Log.d(
-                "STATE DUMP ${this.javaClass.simpleName}",
+                tag,
                 "Received Events ${it.value.subscriptionId} ${it.value.eventKind}: ${it.value.counter}",
             )
         }

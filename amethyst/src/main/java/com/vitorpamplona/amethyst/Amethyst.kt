@@ -41,7 +41,7 @@ import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
-import com.vitorpamplona.amethyst.service.relayClient.RelayLogger
+import com.vitorpamplona.amethyst.service.relayClient.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -110,7 +110,7 @@ class Amethyst : Application() {
     // Authenticates with relays.
     val authCoordinator = AuthCoordinator(client)
 
-    val logger = if (isDebug) RelayLogger(client) else null
+    val logger = if (isDebug) RelaySpeedLogger(client) else null
 
     // Organizes cache clearing
     val trimmingService = MemoryTrimmingService(cache)
