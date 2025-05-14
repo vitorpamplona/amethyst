@@ -408,6 +408,8 @@ class NostrClient(
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter> = activeSubscriptions.getSubscriptionFilters(subId)
 
+    fun getSubscriptionFiltersOrNull(subId: String): List<TypedFilter>? = activeSubscriptions.getSubscriptionFiltersOrNull(subId)
+
     fun connectedRelays() = relayPool.connectedRelays()
 
     fun relayStatusFlow() = relayPool.statusFlow

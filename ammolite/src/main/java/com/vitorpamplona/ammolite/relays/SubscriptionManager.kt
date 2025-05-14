@@ -39,6 +39,8 @@ class MutableSubscriptionManager : SubscriptionManager {
     override fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions
 
     override fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
+
+    override fun getSubscriptionFiltersOrNull(subId: String): List<TypedFilter>? = subscriptions[subId]
 }
 
 interface SubscriptionManager {
@@ -47,4 +49,6 @@ interface SubscriptionManager {
     fun allSubscriptions(): Map<String, List<TypedFilter>>
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter>
+
+    fun getSubscriptionFiltersOrNull(subId: String): List<TypedFilter>
 }

@@ -155,7 +155,7 @@ class SubscriptionController(
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.actives()
         // saves the current content to only update if it changes
-        val currentFilters = activeSubscriptions.associate { it.id to it.typedFilters }
+        val currentFilters = activeSubscriptions.associate { it.id to client.getSubscriptionFiltersOrNull(it.id) }
 
         // updates all filters
         updateSubscriptions()
