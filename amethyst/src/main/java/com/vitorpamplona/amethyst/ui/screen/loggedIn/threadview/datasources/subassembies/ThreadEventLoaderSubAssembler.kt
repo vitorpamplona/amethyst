@@ -45,7 +45,7 @@ class ThreadEventLoaderSubAssembler(
         since: Map<String, EOSETime>?,
     ): List<TypedFilter>? {
         val branches = ThreadAssembler().findThreadFor(key.eventId) ?: return null
-        return filterMissingEventsForThread(branches, since)
+        return filterMissingEventsForThread(branches)
     }
 
     override fun id(key: ThreadQueryState) = key.eventId

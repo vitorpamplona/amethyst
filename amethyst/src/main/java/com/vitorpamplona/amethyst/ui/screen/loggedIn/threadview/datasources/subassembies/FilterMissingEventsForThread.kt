@@ -25,13 +25,9 @@ import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
-fun filterMissingEventsForThread(
-    threadInfo: ThreadAssembler.ThreadInfo,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
+fun filterMissingEventsForThread(threadInfo: ThreadAssembler.ThreadInfo): List<TypedFilter> {
     val missingEvents = mutableSetOf<String>()
     val missingAddresses = mutableSetOf<Address>()
 
@@ -53,8 +49,8 @@ fun filterMissingEventsForThread(
         }
     }
 
-    val missingEventsFilter = filterMissingEvents(missingEvents, since) ?: emptyList()
-    val missingAddressFilter = filterMissingAddressables(missingAddresses, since) ?: emptyList()
+    val missingEventsFilter = filterMissingEvents(missingEvents) ?: emptyList()
+    val missingAddressFilter = filterMissingAddressables(missingAddresses) ?: emptyList()
 
     return missingEventsFilter + missingAddressFilter
 }
