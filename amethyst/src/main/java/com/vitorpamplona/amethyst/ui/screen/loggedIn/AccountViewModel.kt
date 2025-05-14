@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
+import com.vitorpamplona.amethyst.service.MoneroValidator
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
@@ -752,6 +753,16 @@ class AccountViewModel(
         message: String = "",
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            val address = note.author?.info?.moneroAddress() ?: ""
+            if (!MoneroValidator.isValidAddress(address)) {
+                if (address.isBlank()) {
+                    onError(context.getString(R.string.monero), context.getString(R.string.user_doesnt_have_monero_address), note.author)
+                } else {
+                    onError(context.getString(R.string.monero), context.getString(R.string.invalid_monero_address), note.author)
+                }
+                return@launch
+            }
+
             TipPaymentHandler
                 .tip(
                     note = note,

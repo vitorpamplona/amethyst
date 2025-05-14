@@ -1201,5 +1201,5 @@
     <string name="tip_type_nontip">Non-Tip</string>
     <string name="tip_type_nontip_explainer">No trace in Nostr, only in Monero</string>
     <string name="tip_type_explainer">Tip Type for all options</string>
-
+    <string name="user_doesnt_have_monero_address">User doesn\'t have a monero address</string>
 </resources>
