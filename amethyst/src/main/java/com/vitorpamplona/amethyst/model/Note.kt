@@ -25,11 +25,9 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
-import com.vitorpamplona.amethyst.service.relays.EOSERelayList
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
@@ -76,7 +74,6 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -161,8 +158,6 @@ open class Note(
 
     var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         private set
-
-    var lastReactionsDownloadTime: EOSERelayList = EOSERelayList()
 
     fun id() = Hex.decode(idHex)
 
@@ -298,7 +293,6 @@ open class Note(
         zapPayments = mapOf<Note, Note?>()
         zapsAmount = BigDecimal.ZERO
         relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
-        lastReactionsDownloadTime.clear()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
@@ -386,11 +380,10 @@ open class Note(
         zapRequest: Note,
         zap: Note?,
     ) {
-        checkNotInMainThread()
-
         if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
-            if (inserted) {
+            println("AABBCC addZap $inserted")
+            if (inserted && zap != null) {
                 updateZapTotal()
                 flowSet?.zaps?.invalidateData()
             }
@@ -830,10 +823,6 @@ open class Note(
         zapsAmount = BigDecimal.ZERO
     }
 
-    fun clearEOSE() {
-        lastReactionsDownloadTime.clear()
-    }
-
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
         val thisEvent = event ?: return false
         val hash = thisEvent.pubKey.hashCode()
@@ -886,7 +875,6 @@ open class Note(
             }
         } else {
             if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet?.destroy()
                 flowSet = null
             }
         }
@@ -986,18 +974,6 @@ class NoteFlowSet(
             zaps.hasObservers() ||
             ots.hasObservers() ||
             edits.hasObservers()
-
-    fun destroy() {
-        metadata.destroy()
-        reports.destroy()
-        relays.destroy()
-        reactions.destroy()
-        boosts.destroy()
-        replies.destroy()
-        zaps.destroy()
-        ots.destroy()
-        edits.destroy()
-    }
 }
 
 @Stable
@@ -1005,18 +981,10 @@ class NoteBundledRefresherFlow(
     val note: Note,
 ) {
     // Refreshes observers in batches.
-    // TODO: Replace the bundler for .sample
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(NoteState(note))
 
-    fun destroy() {
-        bundler.cancel()
-    }
-
     fun invalidateData() {
-        bundler.invalidate {
-            stateFlow.emit(NoteState(note))
-        }
+        stateFlow.tryEmit(NoteState(note))
     }
 
     fun hasObservers() = stateFlow.subscriptionCount.value > 0

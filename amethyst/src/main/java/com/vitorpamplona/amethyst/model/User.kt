@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache.RelayBriefInfo
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -48,7 +47,6 @@ import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
 import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 
@@ -397,7 +395,6 @@ class User(
             }
         } else {
             if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet?.destroy()
                 flowSet = null
             }
         }
@@ -444,19 +441,6 @@ class UserFlowSet(
             zaps.hasObservers() ||
             bookmarks.hasObservers() ||
             statuses.hasObservers()
-
-    fun destroy() {
-        metadata.destroy()
-        relays.destroy()
-        follows.destroy()
-        followers.destroy()
-        reports.destroy()
-        messages.destroy()
-        relayInfo.destroy()
-        zaps.destroy()
-        bookmarks.destroy()
-        statuses.destroy()
-    }
 }
 
 @Immutable
@@ -470,22 +454,10 @@ data class RelayInfo(
 class UserBundledRefresherFlow(
     val user: User,
 ) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(500, Dispatchers.IO)
     val stateFlow = MutableStateFlow(UserState(user))
 
-    fun destroy() {
-        bundler.cancel()
-    }
-
     fun invalidateData() {
-        checkNotInMainThread()
-
-        bundler.invalidate {
-            checkNotInMainThread()
-
-            stateFlow.emit(UserState(user))
-        }
+        stateFlow.tryEmit(UserState(user))
     }
 
     fun hasObservers() = stateFlow.subscriptionCount.value > 0

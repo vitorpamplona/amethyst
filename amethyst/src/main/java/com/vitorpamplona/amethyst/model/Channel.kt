@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -42,7 +41,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
@@ -291,7 +289,6 @@ abstract class Channel(
             }
         } else {
             if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet?.destroy()
                 flowSet = null
             }
         }
@@ -322,28 +319,15 @@ class ChannelFlowSet(
     fun isInUse(): Boolean =
         metadata.hasObservers() ||
             notes.hasObservers()
-
-    fun destroy() {
-        metadata.destroy()
-        notes.destroy()
-    }
 }
 
 class ChannelFlow(
     val channel: Channel,
 ) {
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.IO)
     val stateFlow = MutableStateFlow(ChannelState(channel))
 
     fun invalidateData() {
-        bundler.invalidate {
-            stateFlow.emit(ChannelState(channel))
-        }
-    }
-
-    fun destroy() {
-        bundler.cancel()
+        stateFlow.tryEmit(ChannelState(channel))
     }
 
     fun hasObservers() = stateFlow.subscriptionCount.value > 0
