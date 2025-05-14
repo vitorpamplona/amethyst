@@ -134,7 +134,8 @@ height="70">](https://github.com/vitorpamplona/amethyst/releases)
 - [ ] Signed Filters (NIP-xx/Draft)
 - [ ] Key Migration (NIP-xx/Draft)
 - [ ] Time-based Sync (NIP-xx/Draft)
-- [ ] Image/Video Capture in the app
+- [x] Image Capture in the app
+- [ ] Video Capture in the app
 - [ ] Local Database
 - [ ] Workspaces
 - [ ] Infinity Scroll

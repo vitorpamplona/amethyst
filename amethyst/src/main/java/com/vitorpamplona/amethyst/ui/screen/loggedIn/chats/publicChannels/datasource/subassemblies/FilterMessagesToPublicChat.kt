@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -18,31 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
-@Composable
-fun ChannelFinderFilterAssemblerSubscription(
-    channel: Channel,
-    accountViewModel: AccountViewModel,
-) = ChannelFinderFilterAssemblerSubscription(channel, accountViewModel.dataSources().channelFinder)
-
-@Composable
-fun ChannelFinderFilterAssemblerSubscription(
-    channel: Channel,
-    dataSource: ChannelFinderFilterAssembler,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(channel) {
-            ChannelFinderQueryState(channel)
-        }
-
-    KeyDataSourceSubscription(state, dataSource)
-}
+fun filterMessagesToPublicChat(
+    channel: PublicChatChannel,
+    since: Map<String, EOSETime>?,
+): List<TypedFilter>? =
+    listOf(
+        TypedFilter(
+            types = setOf(FeedType.PUBLIC_CHATS),
+            filter =
+                SincePerRelayFilter(
+                    kinds = listOf(ChannelMessageEvent.KIND),
+                    tags = mapOf("e" to listOfNotNull(channel.idHex)),
+                    limit = 200,
+                    since = since,
+                ),
+        ),
+    )

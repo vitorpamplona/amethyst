@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -50,9 +50,5 @@ class CacheClientConnector(
     private fun markAsSeen(
         eventId: HexKey,
         relay: RelayBriefInfoCache.RelayBriefInfo,
-    ) {
-        val note = LocalCache.getNoteIfExists(eventId)
-
-        note?.addRelay(relay)
-    }
+    ) = LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
 }

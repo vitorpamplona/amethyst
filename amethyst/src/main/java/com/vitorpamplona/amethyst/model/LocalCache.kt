@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -2382,21 +2382,18 @@ object LocalCache : ILocalCache {
             noteEvent.zappedAuthor().forEach {
                 val author = getUserIfExists(it)
                 author?.removeZap(note)
-                author?.clearEOSE()
             }
         }
         if (noteEvent is LnZapRequestEvent) {
             noteEvent.zappedAuthor().mapNotNull {
                 val author = getUserIfExists(it)
                 author?.removeZap(note)
-                author?.clearEOSE()
             }
         }
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().mapNotNull {
                 val author = getUserIfExists(it.pubkey)
                 author?.removeReport(note)
-                author?.clearEOSE()
             }
         }
 

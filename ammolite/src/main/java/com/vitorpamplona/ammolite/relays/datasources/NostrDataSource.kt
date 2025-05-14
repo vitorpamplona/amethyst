@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,7 +27,6 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.RelayState
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.atomic.AtomicBoolean
@@ -55,6 +54,7 @@ abstract class NostrDataSource(
                 event: Event,
                 subscriptionId: String,
                 relay: Relay,
+                arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
                 if (subscriptions.contains(subscriptionId)) {
@@ -63,7 +63,7 @@ abstract class NostrDataSource(
                     consume(event, relay)
 
                     if (afterEOSE) {
-                        markAsEOSE(subscriptionId, relay)
+                        markAsEOSE(subscriptionId, relay, arrivalTime)
                     }
                 }
             }
@@ -71,9 +71,10 @@ abstract class NostrDataSource(
             override fun onEOSE(
                 relay: Relay,
                 subscriptionId: String,
+                arrivalTime: Long,
             ) {
                 if (subscriptions.contains(subscriptionId)) {
-                    markAsEOSE(subscriptionId, relay)
+                    markAsEOSE(subscriptionId, relay, arrivalTime)
                 }
             }
 
@@ -253,10 +254,10 @@ abstract class NostrDataSource(
     open fun markAsEOSE(
         subscriptionId: String,
         relay: Relay,
+        arrivalTime: Long,
     ) {
         subscriptions[subscriptionId]?.callEose(
-            // in case people's clock is slighly off.
-            TimeUtils.oneMinuteAgo(),
+            arrivalTime,
             relay.url,
         )
     }

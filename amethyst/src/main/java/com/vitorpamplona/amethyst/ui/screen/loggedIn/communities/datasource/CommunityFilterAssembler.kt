@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,13 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 // This allows multiple screen to be listening to tags, even the same tag
 class CommunityQueryState(
@@ -36,37 +31,21 @@ class CommunityQueryState(
 
 class CommunityFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<CommunityQueryState>(client) {
-    private fun createLoadCommunityFilter(keys: Set<CommunityQueryState>): List<TypedFilter> {
-        if (keys.isEmpty()) return emptyList()
+) : ComposeSubscriptionManager<CommunityQueryState>() {
+    val group =
+        listOf(
+            CommunityFeedFilterSubAssembler(client, ::allKeys),
+        )
 
-        val uniqueCommunities =
-            keys.associate {
-                it.community.address.toValue() to it.community
-            }
+    override fun start() = group.forEach { it.start() }
 
-        return uniqueCommunities.mapNotNull {
-            val commEvent = it.value.event
-            if (commEvent is CommunityDefinitionEvent) {
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter =
-                        SincePerRelayFilter(
-                            authors = commEvent.moderators().map { it.pubKey }.plus(listOfNotNull(it.value.author?.pubkeyHex)),
-                            tags = mapOf("a" to listOf(it.value.address.toValue())),
-                            kinds = listOf(CommunityPostApprovalEvent.KIND),
-                            limit = 500,
-                        ),
-                )
-            } else {
-                null
-            }
-        }
-    }
+    override fun stop() = group.forEach { it.stop() }
 
-    val loadCommunityChannel = requestNewSubscription()
+    override fun invalidateKeys() = invalidateFilters()
 
-    override fun updateSubscriptions(keys: Set<CommunityQueryState>) {
-        loadCommunityChannel.typedFilters = createLoadCommunityFilter(keys).ifEmpty { null }
-    }
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.start() }
+
+    override fun printStats() = group.forEach { it.printStats() }
 }

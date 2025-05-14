@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,13 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.ThreadAssembler
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadEventLoaderSubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadFilterSubAssembler
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -36,72 +33,22 @@ class ThreadQueryState(
 
 class ThreadFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<ThreadQueryState>(client) {
-    fun createLoadEventsIfNotLoadedFilter(keys: Set<ThreadQueryState>): List<TypedFilter> {
-        if (keys.isEmpty()) return emptyList()
-
-        val uniqueThreadIds = keys.mapTo(mutableSetOf()) { it.eventId }
-
-        val branches =
-            uniqueThreadIds.map {
-                ThreadAssembler().findThreadFor(it) ?: return emptyList()
-            }
-
-        val eventsToLoad =
-            branches
-                .mapNotNull {
-                    it.allNotes
-                        .filter { it.event == null }
-                        .map { it.idHex }
-                        .toSet()
-                        .ifEmpty { null }
-                }.flatten()
-                .distinct()
-
-        val addressRoots =
-            branches
-                .mapNotNull {
-                    if (it.root is AddressableNote) it.root.idHex else null
-                }.distinct()
-
-        val eventRoots =
-            branches
-                .mapNotNull {
-                    if (it.root !is AddressableNote) it.root.idHex else it.root.event?.id
-                }.distinct()
-
-        return listOfNotNull(
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter = SincePerRelayFilter(tags = mapOf("e" to eventRoots)),
-            ),
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter = SincePerRelayFilter(tags = mapOf("a" to addressRoots)),
-            ),
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter = SincePerRelayFilter(tags = mapOf("E" to eventRoots)),
-            ),
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter = SincePerRelayFilter(tags = mapOf("A" to addressRoots)),
-            ),
-            TypedFilter(
-                types = COMMON_FEED_TYPES,
-                filter = SincePerRelayFilter(ids = eventsToLoad),
-            ),
+) : ComposeSubscriptionManager<ThreadQueryState>() {
+    val group =
+        listOf(
+            ThreadFilterSubAssembler(client, ::allKeys),
+            ThreadEventLoaderSubAssembler(client, ::allKeys),
         )
-    }
 
-    val loadEventsChannel =
-        requestNewSubscription { _, _ ->
-            // Many relays operate with limits in the amount of filters.
-            // As information comes, the filters will be rotated to get more data.
-            invalidateFilters()
-        }
+    override fun start() = group.forEach { it.start() }
 
-    override fun updateSubscriptions(keys: Set<ThreadQueryState>) {
-        loadEventsChannel.typedFilters = createLoadEventsIfNotLoadedFilter(keys).ifEmpty { null }
-    }
+    override fun stop() = group.forEach { it.stop() }
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+
+    override fun destroy() = group.forEach { it.start() }
+
+    override fun printStats() = group.forEach { it.printStats() }
 }

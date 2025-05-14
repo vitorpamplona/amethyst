@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,7 @@
 package com.vitorpamplona.ammolite.relays.datasources
 
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.NormalFilter
 import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import java.util.UUID
@@ -54,6 +55,10 @@ data class Subscription(
             }
 
             if (typedFilter.filter is SinceAuthorPerRelayFilter && otherFilter.filter is SinceAuthorPerRelayFilter) {
+                return isDifferent(typedFilter.filter, otherFilter.filter)
+            }
+
+            if (typedFilter.filter is NormalFilter && otherFilter.filter is NormalFilter) {
                 return isDifferent(typedFilter.filter, otherFilter.filter)
             }
 
@@ -95,6 +100,36 @@ data class Subscription(
     fun isDifferent(
         filter1: SinceAuthorPerRelayFilter,
         filter2: SinceAuthorPerRelayFilter,
+    ): Boolean {
+        // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
+        // fast check
+        if (filter1.authors?.size != filter2.authors?.size ||
+            filter1.ids?.size != filter2.ids?.size ||
+            filter1.tags?.size != filter2.tags?.size ||
+            filter1.kinds?.size != filter2.kinds?.size ||
+            filter1.limit != filter2.limit ||
+            filter1.search?.length != filter2.search?.length ||
+            filter1.until != filter2.until
+        ) {
+            return true
+        }
+
+        // deep check
+        if (filter1.ids != filter2.ids ||
+            filter1.authors != filter2.authors ||
+            filter1.tags != filter2.tags ||
+            filter1.kinds != filter2.kinds ||
+            filter1.search != filter2.search
+        ) {
+            return true
+        }
+
+        return false
+    }
+
+    fun isDifferent(
+        filter1: NormalFilter,
+        filter2: NormalFilter,
     ): Boolean {
         // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
         // fast check

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -109,7 +109,7 @@ open class DiscoverCommunityFeedFilter(
     private fun shouldInclude(
         aTag: Address?,
         params: FilterByListParams,
-    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.Companion.KIND && params.match(aTag)
+    ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag)
 
     override fun sort(collection: Set<Note>): List<Note> {
         val lastNote =

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,7 +26,6 @@ import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.atomic.AtomicBoolean
@@ -35,9 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Semantically groups Nostr filters and subscriptions in data source objects that
  * maintain the desired active filter with the relay.
  */
-abstract class SubscriptionOrchestrator(
+class SubscriptionController(
     val client: NostrClient,
-) {
+    val updateSubscriptions: () -> Unit,
+) : SubscriptionControllerService {
     private val subscriptions = SubscriptionSet()
     private var active: Boolean = false
     private val changingFilters = AtomicBoolean()
@@ -50,13 +50,13 @@ abstract class SubscriptionOrchestrator(
                 event: Event,
                 subscriptionId: String,
                 relay: Relay,
+                arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
                 if (subscriptions.contains(subscriptionId)) {
                     stats.add(subscriptionId, event.kind)
-
                     if (afterEOSE) {
-                        runAfterEOSE(subscriptionId, relay)
+                        runAfterEOSE(subscriptionId, relay, arrivalTime)
                     }
                 }
             }
@@ -64,18 +64,20 @@ abstract class SubscriptionOrchestrator(
             override fun onEOSE(
                 relay: Relay,
                 subscriptionId: String,
+                arrivalTime: Long,
             ) {
                 if (subscriptions.contains(subscriptionId)) {
-                    runAfterEOSE(subscriptionId, relay)
+                    runAfterEOSE(subscriptionId, relay, arrivalTime)
                 }
             }
         }
 
-    fun runAfterEOSE(
+    private fun runAfterEOSE(
         subscriptionId: String,
         relay: Relay,
+        arrivalTime: Long,
     ) {
-        subscriptions[subscriptionId]?.callEose(TimeUtils.oneMinuteAgo(), relay.url)
+        subscriptions[subscriptionId]?.callEose(arrivalTime, relay.url)
     }
 
     init {
@@ -83,7 +85,7 @@ abstract class SubscriptionOrchestrator(
         client.subscribe(clientListener)
     }
 
-    fun destroy() {
+    override fun destroy() {
         // makes sure to run
         Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
         stop()
@@ -91,14 +93,14 @@ abstract class SubscriptionOrchestrator(
         bundler.cancel()
     }
 
-    open fun start() {
+    override fun start() {
         Log.d("${this.javaClass.simpleName}", "Start")
         active = true
         invalidateFilters()
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    open fun stop() {
+    override fun stop() {
         active = false
         Log.d("${this.javaClass.simpleName}", "Stop")
 
@@ -108,13 +110,13 @@ abstract class SubscriptionOrchestrator(
         }
     }
 
+    override fun printStats(tag: String) = stats.printCounter(tag)
+
     fun getSub(subId: String) = subscriptions.get(subId)
 
     fun requestNewSubscription(onEOSE: ((Long, String) -> Unit)? = null): Subscription = subscriptions.newSub(onEOSE)
 
-    fun dismissSubscription(subId: String) {
-        getSub(subId)?.let { dismissSubscription(it) }
-    }
+    fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 
     fun dismissSubscription(subscription: Subscription) {
         client.close(subscription.id)
@@ -127,7 +129,7 @@ abstract class SubscriptionOrchestrator(
     // Refreshes observers in batches.
     private val bundler = BundledUpdate(300, Dispatchers.Default)
 
-    fun invalidateFilters() {
+    override fun invalidateFilters() {
         bundler.invalidate {
             // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
 
@@ -153,7 +155,7 @@ abstract class SubscriptionOrchestrator(
         // saves the channels that are currently active
         val activeSubscriptions = subscriptions.actives()
         // saves the current content to only update if it changes
-        val currentFilters = activeSubscriptions.associate { it.id to it.typedFilters }
+        val currentFilters = activeSubscriptions.associate { it.id to client.getSubscriptionFiltersOrNull(it.id) }
 
         // updates all filters
         updateSubscriptions()
@@ -211,6 +213,4 @@ abstract class SubscriptionOrchestrator(
             }
         }
     }
-
-    abstract fun updateSubscriptions()
 }

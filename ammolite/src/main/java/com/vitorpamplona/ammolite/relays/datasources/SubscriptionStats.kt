@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -49,10 +49,10 @@ class SubscriptionStats {
         }
     }
 
-    fun printCounter() {
+    fun printCounter(tag: String) {
         eventCounter.forEach {
             Log.d(
-                "STATE DUMP ${this.javaClass.simpleName}",
+                tag,
                 "Received Events ${it.value.subscriptionId} ${it.value.eventKind}: ${it.value.counter}",
             )
         }

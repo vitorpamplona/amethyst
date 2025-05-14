@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -119,13 +119,15 @@ fun ThinPaddingTextField(
                 modifier
                     .defaultMinSize(
                         minWidth = TextFieldDefaults.MinWidth,
-                        minHeight = 36.dp, // this has changed
+                        // this has changed
+                        minHeight = 36.dp,
                     ),
             onValueChange = onValueChange,
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary), // this has changed
+            // this has changed
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -152,7 +154,8 @@ fun ThinPaddingTextField(
                         isError = isError,
                         interactionSource = interactionSource,
                         colors = colors,
-                        contentPadding = contentPadding, // this has changed
+                        // this has changed
+                        contentPadding = contentPadding,
                     )
                 },
         )

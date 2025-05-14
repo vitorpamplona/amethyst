@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.Log
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
@@ -886,21 +888,9 @@ class AccountViewModel(
 
     fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
-    fun hideSensitiveContent() {
+    fun updateContentWarnings(value: WarningType) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(false)
-        }
-    }
-
-    fun disableContentWarnings() {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(true)
-        }
-    }
-
-    fun seeContentWarnings() {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(null)
+            account.updateShowSensitiveContent(value.prefCode)
         }
     }
 
@@ -924,12 +914,15 @@ class AccountViewModel(
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
-    fun updateOptOutOptions(
-        warnReports: Boolean,
-        filterSpam: Boolean,
-    ) {
+    fun updateWarnReports(warnReports: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (account.updateOptOutOptions(warnReports, filterSpam)) {
+            account.updateWarnReports(warnReports)
+        }
+    }
+
+    fun updateFilterSpam(filterSpam: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (account.updateFilterSpam(filterSpam)) {
                 LocalCache.antiSpam.active = filterSpamFromStrangers().value
             }
         }
@@ -1788,6 +1781,7 @@ class AccountViewModel(
     val nip19: Nip19Parser.ParseReturn,
 )
 
+@SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun mockAccountViewModel(): AccountViewModel {
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
@@ -1808,6 +1802,7 @@ fun mockAccountViewModel(): AccountViewModel {
     )
 }
 
+@SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun mockVitorAccountViewModel(): AccountViewModel {
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()

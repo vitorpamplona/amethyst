@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -319,34 +319,6 @@ fun NoteDropDownMenu(
                 text = { Text(stringRes(R.string.add_to_public_bookmarks)) },
                 onClick = {
                     accountViewModel.addPublicBookmark(note)
-                    onDismiss()
-                },
-            )
-        }
-        HorizontalDivider(thickness = DividerThickness)
-        if (state.showSensitiveContent == null || state.showSensitiveContent == true) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_hide_all_sensitive_content)) },
-                onClick = {
-                    accountViewModel.hideSensitiveContent()
-                    onDismiss()
-                },
-            )
-        }
-        if (state.showSensitiveContent == null || state.showSensitiveContent == false) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_show_all_sensitive_content)) },
-                onClick = {
-                    accountViewModel.disableContentWarnings()
-                    onDismiss()
-                },
-            )
-        }
-        if (state.showSensitiveContent != null) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.content_warning_see_warnings)) },
-                onClick = {
-                    accountViewModel.seeContentWarnings()
                     onDismiss()
                 },
             )

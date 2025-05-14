@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,12 +25,12 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
+import com.vitorpamplona.amethyst.service.relays.EOSERelayList
 import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -162,7 +162,7 @@ open class Note(
     var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
         private set
 
-    var lastReactionsDownloadTime: Map<String, EOSETime> = emptyMap()
+    var lastReactionsDownloadTime: EOSERelayList = EOSERelayList()
 
     fun id() = Hex.decode(idHex)
 
@@ -298,7 +298,7 @@ open class Note(
         zapPayments = mapOf<Note, Note?>()
         zapsAmount = BigDecimal.ZERO
         relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
-        lastReactionsDownloadTime = emptyMap()
+        lastReactionsDownloadTime.clear()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
@@ -831,7 +831,7 @@ open class Note(
     }
 
     fun clearEOSE() {
-        lastReactionsDownloadTime = emptyMap()
+        lastReactionsDownloadTime.clear()
     }
 
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {

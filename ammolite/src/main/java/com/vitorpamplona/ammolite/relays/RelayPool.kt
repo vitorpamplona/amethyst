@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -170,12 +170,14 @@ class RelayPool : Relay.Listener {
             event: Event,
             subscriptionId: String,
             relay: Relay,
+            arrivalTime: Long,
             afterEOSE: Boolean,
         )
 
         fun onEOSE(
             relay: Relay,
             subscriptionId: String,
+            arrivalTime: Long,
         )
 
         fun onRelayStateChange(
@@ -222,9 +224,10 @@ class RelayPool : Relay.Listener {
         relay: Relay,
         subscriptionId: String,
         event: Event,
+        arrivalTime: Long,
         afterEOSE: Boolean,
     ) {
-        listeners.forEach { it.onEvent(event, subscriptionId, relay, afterEOSE) }
+        listeners.forEach { it.onEvent(event, subscriptionId, relay, arrivalTime, afterEOSE) }
     }
 
     override fun onError(
@@ -239,8 +242,9 @@ class RelayPool : Relay.Listener {
     override fun onEOSE(
         relay: Relay,
         subscriptionId: String,
+        arrivalTime: Long,
     ) {
-        listeners.forEach { it.onEOSE(relay, subscriptionId) }
+        listeners.forEach { it.onEOSE(relay, subscriptionId, arrivalTime) }
         updateStatus()
     }
 

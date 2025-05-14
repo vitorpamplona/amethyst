@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -49,7 +49,7 @@ val EVENT_FINDER_TYPES =
 class RelaySubFilter(
     val url: String,
     val activeTypes: Set<FeedType>,
-    val subs: SubscriptionManager,
+    val subs: SubscriptionCache,
 ) : SubscriptionCollection {
     fun isMatch(filter: TypedFilter) = activeTypes.any { it in filter.types } && filter.isValidFor(url)
 
@@ -95,7 +95,7 @@ class Relay(
     val forceProxy: Boolean = false,
     val activeTypes: Set<FeedType>,
     socketBuilderFactory: WebsocketBuilderFactory,
-    subs: SubscriptionManager,
+    subs: SubscriptionCache,
 ) : SimpleClientRelay.Listener {
     private var listeners = setOf<Listener>()
 
@@ -161,8 +161,9 @@ class Relay(
         relay: SimpleClientRelay,
         subscriptionId: String,
         event: Event,
+        time: Long,
         afterEOSE: Boolean,
-    ) = listeners.forEach { it.onEvent(this, subscriptionId, event, afterEOSE) }
+    ) = listeners.forEach { it.onEvent(this, subscriptionId, event, time, afterEOSE) }
 
     override fun onError(
         relay: SimpleClientRelay,
@@ -173,7 +174,8 @@ class Relay(
     override fun onEOSE(
         relay: SimpleClientRelay,
         subscriptionId: String,
-    ) = listeners.forEach { it.onEOSE(this, subscriptionId) }
+        time: Long,
+    ) = listeners.forEach { it.onEOSE(this, subscriptionId, time) }
 
     override fun onRelayStateChange(
         relay: SimpleClientRelay,
@@ -219,12 +221,14 @@ class Relay(
             relay: Relay,
             subscriptionId: String,
             event: Event,
+            time: Long,
             afterEOSE: Boolean,
         )
 
         fun onEOSE(
             relay: Relay,
             subscriptionId: String,
+            time: Long,
         )
 
         fun onError(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -57,14 +57,13 @@ class ThreadAssembler {
 
         // recursive
         val roots =
-            note.replyTo
-                ?.map {
-                    if (it !in testedNotes) {
-                        searchRoot(it, testedNotes)
-                    } else {
-                        null
-                    }
-                }?.filterNotNull()
+            note.replyTo?.mapNotNull {
+                if (it !in testedNotes) {
+                    searchRoot(it, testedNotes)
+                } else {
+                    null
+                }
+            }
 
         if (roots != null && roots.isNotEmpty()) {
             return roots[0]
@@ -78,6 +77,18 @@ class ThreadAssembler {
         val root: Note,
         val allNotes: ImmutableSet<Note>,
     )
+
+    fun findRoot(noteId: String): Note? {
+        val note = LocalCache.checkGetOrCreateNote(noteId) ?: return null
+
+        return if (note.event != null) {
+            val thread = OnlyLatestVersionSet()
+
+            searchRoot(note, thread) ?: note
+        } else {
+            note
+        }
+    }
 
     fun findThreadFor(noteId: String): ThreadInfo? {
         checkNotInMainThread()

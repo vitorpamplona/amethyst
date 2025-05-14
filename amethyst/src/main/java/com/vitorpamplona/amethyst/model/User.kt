@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache.RelayBriefInfo
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -66,8 +65,6 @@ class User(
 
     var reports = mapOf<User, Set<Note>>()
         private set
-
-    var latestEOSEs: Map<String, EOSETime> = emptyMap()
 
     var zaps = mapOf<Note, Note?>()
         private set
@@ -125,10 +122,6 @@ class User(
 
         latestBookmarkList = event
         flowSet?.bookmarks?.invalidateData()
-    }
-
-    fun clearEOSE() {
-        latestEOSEs = emptyMap()
     }
 
     fun updateContactList(event: ContactListEvent) {

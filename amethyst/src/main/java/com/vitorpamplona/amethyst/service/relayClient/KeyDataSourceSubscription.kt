@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,14 +22,14 @@ package com.vitorpamplona.amethyst.service.relayClient
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.MutableQueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.amethyst.service.relayClient.searchCommand.MutableQueryState
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableQueryState
 
 @Composable
 fun <T> KeyDataSourceSubscription(
     state: T,
-    dataSource: QueryBasedSubscriptionOrchestrator<T>,
+    dataSource: ComposeSubscriptionManager<T>,
 ) = DisposableEffect(state) {
     dataSource.subscribe(state)
     onDispose {
@@ -40,7 +40,7 @@ fun <T> KeyDataSourceSubscription(
 @Composable
 fun <T : MutableQueryState> KeyDataSourceSubscription(
     state: T,
-    dataSource: MutableQueryBasedSubscriptionOrchestrator<T>,
+    dataSource: MutableComposeSubscriptionManager<T>,
 ) = DisposableEffect(state) {
     dataSource.subscribe(state)
     onDispose {

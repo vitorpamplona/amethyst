@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,104 +21,35 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.QueryBasedSubscriptionOrchestrator
-import com.vitorpamplona.amethyst.service.relays.EOSEAccount
-import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChatroomQueryState(
     val room: ChatroomKey,
     val account: Account,
-)
+) {
+    val listId = room.hashCode().toString()
+}
 
 class ChatroomFilterAssembler(
     client: NostrClient,
-) : QueryBasedSubscriptionOrchestrator<ChatroomQueryState>(client) {
-    private val latestEOSEs = EOSEAccount()
-
-    fun createMessagesToMeFilter(key: ChatroomQueryState): TypedFilter? =
-        TypedFilter(
-            types = setOf(FeedType.PRIVATE_DMS),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(PrivateDmEvent.KIND),
-                    authors = key.room.users.toList(),
-                    tags = mapOf("p" to listOf(key.account.userProfile().pubkeyHex)),
-                    since =
-                        latestEOSEs.users[key.account.userProfile()]
-                            ?.followList
-                            ?.get(key.room.hashCode().toString())
-                            ?.relayList,
-                ),
+) : ComposeSubscriptionManager<ChatroomQueryState>() {
+    val group =
+        listOf(
+            ChatroomFilterSubAssembler(client, ::allKeys),
         )
 
-    fun createMessagesFromMeFilter(key: ChatroomQueryState): TypedFilter? =
-        TypedFilter(
-            types = setOf(FeedType.PRIVATE_DMS),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(PrivateDmEvent.KIND),
-                    authors = listOf(key.account.userProfile().pubkeyHex),
-                    tags = mapOf("p" to key.room.users.map { it }),
-                    since =
-                        latestEOSEs.users[key.account.userProfile()]
-                            ?.followList
-                            ?.get(key.room.hashCode().toString())
-                            ?.relayList,
-                ),
-        )
+    override fun start() = group.forEach { it.start() }
 
-    fun clearEOSEs(account: Account) {
-        latestEOSEs.removeDataFor(account.userProfile())
-    }
+    override fun stop() = group.forEach { it.stop() }
 
-    fun mergeAllFilters(key: ChatroomQueryState): List<TypedFilter>? =
-        listOfNotNull(
-            createMessagesToMeFilter(key),
-            createMessagesFromMeFilter(key),
-        ).ifEmpty { null }
+    override fun invalidateKeys() = invalidateFilters()
 
-    fun newSub(key: ChatroomQueryState): Subscription =
-        requestNewSubscription { time, relayUrl ->
-            latestEOSEs.addOrUpdate(key.account.userProfile(), key.room.hashCode().toString(), relayUrl, time)
-        }
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    val userSubscriptionMap = mutableMapOf<User, String>()
+    override fun destroy() = group.forEach { it.start() }
 
-    fun findOrCreateSubFor(key: ChatroomQueryState): Subscription {
-        var subId = userSubscriptionMap[key.account.userProfile()]
-        return if (subId == null) {
-            newSub(key).also { userSubscriptionMap[key.account.userProfile()] = it.id }
-        } else {
-            getSub(subId) ?: newSub(key).also { userSubscriptionMap[key.account.userProfile()] = it.id }
-        }
-    }
-
-    // One sub per subscribed account
-    override fun updateSubscriptions(keys: Set<ChatroomQueryState>) {
-        val uniqueSubscribedAccounts = keys.distinctBy { it.account }
-
-        val updated = mutableSetOf<User>()
-
-        uniqueSubscribedAccounts.forEach {
-            val user = it.account.userProfile()
-            val sub = findOrCreateSubFor(it)
-            sub.typedFilters = mergeAllFilters(it)
-
-            updated.add(user)
-        }
-
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                dismissSubscription(it.value)
-            }
-        }
-    }
+    override fun printStats() = group.forEach { it.printStats() }
 }

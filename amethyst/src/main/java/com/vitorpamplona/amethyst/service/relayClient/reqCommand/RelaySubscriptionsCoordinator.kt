@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,8 +21,9 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManagerControls
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssembler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderFilterAssemblyGroup
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
@@ -57,7 +58,7 @@ class RelaySubscriptionsCoordinator(
 
     // loaders of content that is not yet in the device.
     // they are active when looking at events, users, channels.
-    val channelFinder = ChannelFinderFilterAssembler(client)
+    val channelFinder = ChannelFinderFilterAssemblyGroup(client)
     val eventFinder = EventFinderFilterAssembler(client)
     val userFinder = UserFinderFilterAssembler(client)
 
@@ -77,7 +78,7 @@ class RelaySubscriptionsCoordinator(
     val nwc = NWCPaymentFilterAssembler(client)
 
     val all =
-        listOf(
+        listOf<ComposeSubscriptionManagerControls>(
             account,
             home,
             chatroomList,
@@ -103,5 +104,5 @@ class RelaySubscriptionsCoordinator(
 
     fun destroy() = all.forEach { it.destroy() }
 
-    fun printCounters() = all.forEach { it.stats.printCounter() }
+    fun printCounters() = all.forEach { it.printStats() }
 }

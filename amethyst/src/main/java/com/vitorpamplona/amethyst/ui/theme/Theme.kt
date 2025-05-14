@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -65,9 +65,9 @@ private val DarkColorPalette =
         primary = Purple200,
         secondary = Teal200,
         tertiary = Teal200,
-        background = Color.Black, // full black theme
-        surface = Color.Black, // full black theme
-        surfaceDim = Color.Black, // full black theme
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceDim = Color.Black,
         surfaceVariant = Color(red = 29, green = 26, blue = 34),
     )
 

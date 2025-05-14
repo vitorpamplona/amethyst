@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -205,6 +205,7 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import kotlinx.coroutines.delay
 
 @Composable
 fun NoteCompose(
@@ -363,25 +364,33 @@ fun calculateBackgroundColor(
 ): MutableState<Color> {
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
-    return remember(createdAt) {
-        mutableStateOf(
-            if (routeForLastRead != null) {
-                val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
+    val bgColor =
+        remember(createdAt) {
+            mutableStateOf(
+                if (routeForLastRead != null) {
+                    val isNew = accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
 
-                if (isNew) {
-                    if (parentBackgroundColor != null) {
-                        newItemColor.compositeOver(parentBackgroundColor.value)
+                    if (isNew) {
+                        if (parentBackgroundColor != null) {
+                            newItemColor.compositeOver(parentBackgroundColor.value)
+                        } else {
+                            newItemColor.compositeOver(defaultBackgroundColor)
+                        }
                     } else {
-                        newItemColor.compositeOver(defaultBackgroundColor)
+                        parentBackgroundColor?.value ?: Color.Transparent
                     }
                 } else {
                     parentBackgroundColor?.value ?: Color.Transparent
-                }
-            } else {
-                parentBackgroundColor?.value ?: Color.Transparent
-            },
-        )
+                },
+            )
+        }
+
+    LaunchedEffect(createdAt) {
+        delay(5000)
+        bgColor.value = parentBackgroundColor?.value ?: Color.Transparent
     }
+
+    return bgColor
 }
 
 @Composable

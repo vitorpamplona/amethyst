@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -18,56 +18,49 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand
+package com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers
 
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.datasources.SubscriptionOrchestrator
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Creates a data source where the filters are derived from
- * data (keys) that is being watched in the UI.
+ *  This allows composables to directly register their queries
+ *  to relays. There may be multiple duplications in these
+ *  subscriptions since we do not control when screens are removed.
  */
-abstract class QueryBasedSubscriptionOrchestrator<T>(
-    client: NostrClient,
-) : SubscriptionOrchestrator(client) {
-    private var queries: ConcurrentHashMap<T, T> = ConcurrentHashMap()
+abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControls {
+    private var composeSubscriptions: ConcurrentHashMap<T, T> = ConcurrentHashMap()
 
     // This is called by main. Keep it really fast.
     fun subscribe(query: T?) {
         if (query == null) return
 
-        val wasEmpty = queries.isEmpty()
+        val wasEmpty = composeSubscriptions.isEmpty()
 
-        queries.put(query, query)
+        composeSubscriptions.put(query, query)
 
         if (wasEmpty) {
             start()
         }
 
-        invalidateFilters()
+        invalidateKeys()
     }
 
     // This is called by main. Keep it really fast.
     fun unsubscribe(query: T?) {
         if (query == null) return
 
-        queries.remove(query)
+        composeSubscriptions.remove(query)
 
-        invalidateFilters()
+        invalidateKeys()
 
-        if (queries.isEmpty()) {
+        if (composeSubscriptions.isEmpty()) {
             stop()
         }
     }
 
+    fun allKeys() = composeSubscriptions.keys
+
     fun forEachSubscriber(action: (T) -> Unit) {
-        queries.keys.forEach(action)
+        composeSubscriptions.keys.forEach(action)
     }
-
-    final override fun updateSubscriptions() {
-        updateSubscriptions(queries.keys)
-    }
-
-    abstract fun updateSubscriptions(keys: Set<T>)
 }

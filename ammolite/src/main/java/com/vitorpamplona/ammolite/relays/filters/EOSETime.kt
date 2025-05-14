@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -27,4 +27,10 @@ class EOSETime(
     var time: Long,
 ) {
     override fun toString(): String = time.toString()
+
+    fun update(newTime: Long) {
+        if (newTime > time) {
+            time = newTime
+        }
+    }
 }

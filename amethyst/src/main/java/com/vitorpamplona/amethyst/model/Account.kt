@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -878,15 +878,17 @@ class Account(
     }
 
     val liveHomeListAuthorsPerRelay: StateFlow<Map<String, List<HexKey>>?> by lazy {
-        liveHomeListAuthorsPerRelayFlow.flowOn(Dispatchers.Default).stateIn(
-            scope,
-            SharingStarted.Eagerly,
-            authorsPerRelay(
-                liveHomeFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
-                connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
-                settings.torSettings.torType.value,
-            ).ifEmpty { null },
-        )
+        liveHomeListAuthorsPerRelayFlow
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                authorsPerRelay(
+                    liveHomeFollowLists.value?.authorsPlusMe?.map { getNIP65RelayListNote(it) } ?: emptyList(),
+                    connectToRelays.value.filter { it.feedTypes.contains(FeedType.FOLLOWS) && it.read }.map { it.url },
+                    settings.torSettings.torType.value,
+                ).ifEmpty { null },
+            )
     }
 
     val liveNotificationFollowLists: StateFlow<LiveFollowList?> by lazy {
@@ -1142,11 +1144,16 @@ class Account(
 
     fun isWriteable(): Boolean = settings.isWriteable()
 
-    fun updateOptOutOptions(
-        warnReports: Boolean,
-        filterSpam: Boolean,
-    ): Boolean {
-        if (settings.updateOptOutOptions(warnReports, filterSpam)) {
+    fun updateWarnReports(warnReports: Boolean): Boolean {
+        if (settings.updateWarnReports(warnReports)) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
+    fun updateFilterSpam(filterSpam: Boolean): Boolean {
+        if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {
                 transientHiddenUsers.update {
                     emptySet()
@@ -1510,7 +1517,7 @@ class Account(
                     relayTemplate =
                         RelaySetupInfoToConnect(
                             url = nip47.relayUri,
-                            forceProxy = shouldUseTorForTrustedRelays(), // this is trusted.
+                            forceProxy = shouldUseTorForTrustedRelays(),
                             read = true,
                             write = true,
                             feedTypes = setOf(FeedType.WALLET_CONNECT),
@@ -1677,6 +1684,7 @@ class Account(
     fun broadcast(note: Note) {
         note.event?.let {
             if (it is WrappedEvent && it.host != null) {
+                // download the event and send it.
                 it.host?.let {
                     Amethyst.instance.client.sendFilterAndStopOnFirstResponse(
                         filters =

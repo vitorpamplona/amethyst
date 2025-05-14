@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -79,7 +79,7 @@ fun GalleryThumbnail(
     ratio: Float = 1.0f,
 ) {
     val noteState by observeNote(baseNote, accountViewModel)
-    val noteEvent = noteState?.note?.event ?: return
+    val noteEvent = noteState.note.event ?: return
 
     val content =
         if (noteEvent is ProfileGalleryEntryEvent) {
@@ -98,7 +98,8 @@ fun GalleryThumbnail(
                     MediaUrlImage(
                         url = url,
                         description = noteEvent.content,
-                        hash = null, // We don't want to show the hash banner here
+                        // We don't want to show the hash banner here
+                        hash = null,
                         blurhash = noteEvent.blurhash(),
                         dim = noteEvent.dimensions(),
                         uri = null,
@@ -111,7 +112,8 @@ fun GalleryThumbnail(
                 MediaUrlImage(
                     url = imeta.url,
                     description = noteEvent.content,
-                    hash = null, // We don't want to show the hash banner here
+                    // We don't want to show the hash banner here
+                    hash = null,
                     blurhash = imeta.blurhash,
                     dim = imeta.dimension,
                     uri = null,
@@ -123,7 +125,8 @@ fun GalleryThumbnail(
                 MediaUrlVideo(
                     url = imeta.url,
                     description = noteEvent.content,
-                    hash = null, // We don't want to show the hash banner here
+                    // We don't want to show the hash banner here
+                    hash = null,
                     blurhash = imeta.blurhash,
                     dim = imeta.dimension,
                     uri = null,
