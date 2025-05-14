@@ -1179,14 +1179,14 @@
     <string name="dvm_nip17_disabled_message">Private messages (NIP-17) are disabled in DVM conversations, as not all DVMs support them.</string>
     
     <!-- Text generation detection terms -->
-    <string name="text_gen_term_language_model">language model</string>
-    <string name="text_gen_term_llm">llm</string>
-    <string name="text_gen_term_gpt">gpt</string>
-    <string name="text_gen_term_ai_assistant">ai assistant</string>
-    <string name="text_gen_term_chat">chat</string>
-    <string name="text_gen_term_bot">bot</string>
-    <string name="text_gen_term_text">text</string>
-    <string name="text_gen_term_generat">generat</string>
-    <string name="text_gen_term_ai">ai</string>
-    <string name="text_gen_term_assistant">assistant</string>
+    <string name="text_gen_term_language_model" translatable="false">language model</string>
+    <string name="text_gen_term_llm" translatable="false">llm</string>
+    <string name="text_gen_term_gpt" translatable="false">gpt</string>
+    <string name="text_gen_term_ai_assistant" translatable="false">ai assistant</string>
+    <string name="text_gen_term_chat" translatable="false">chat</string>
+    <string name="text_gen_term_bot" translatable="false">bot</string>
+    <string name="text_gen_term_text" translatable="false">text</string>
+    <string name="text_gen_term_generat" translatable="false">generat</string>
+    <string name="text_gen_term_ai" translatable="false">ai</string>
+    <string name="text_gen_term_assistant" translatable="false">assistant</string>
 </resources>
