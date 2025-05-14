@@ -2858,7 +2858,7 @@ class LocalCacheFlow {
     val newEventBundles = _newEventBundles.asSharedFlow() // read-only public view
 
     // Refreshes observers in batches.
-    private val bundler = BundledInsert<Note>(1000, Dispatchers.IO)
+    private val bundler = BundledInsert<Note>(1000, Dispatchers.Default)
 
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->
