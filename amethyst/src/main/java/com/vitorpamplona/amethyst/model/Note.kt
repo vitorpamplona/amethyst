@@ -382,7 +382,6 @@ open class Note(
     ) {
         if (zaps[zapRequest] == null) {
             val inserted = innerAddZap(zapRequest, zap)
-            println("AABBCC addZap $inserted")
             if (inserted && zap != null) {
                 updateZapTotal()
                 flowSet?.zaps?.invalidateData()
