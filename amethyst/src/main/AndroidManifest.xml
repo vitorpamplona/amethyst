@@ -115,6 +115,37 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
+
+            <intent-filter android:label="njump.me">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="njump.me" />
+            </intent-filter>
+
+            <intent-filter android:label="Primal">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="primal.net" />
+                <data android:pathPrefix="/e/" />
+                <data android:pathPrefix="/p/" />
+                <data android:pathPrefix="/a/" />
+            </intent-filter>
+
+            <intent-filter android:label="Yakihonne">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="yakihonne.com" />
+                <data android:pathPrefix="/notes/" />
+                <data android:pathPrefix="/users/" />
+                <data android:pathPrefix="/videos/" />
+                <data android:pathPrefix="/article/" />
+            </intent-filter>
         </activity>
 
         <activity
