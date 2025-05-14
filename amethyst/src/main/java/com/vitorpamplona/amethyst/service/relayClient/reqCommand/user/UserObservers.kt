@@ -493,6 +493,21 @@ fun observeUserIsFollowingChannel(
 }
 
 @Composable
+fun observeUserTips(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<UserState?> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return user
+        .flow()
+        .tips.stateFlow
+        .collectAsStateWithLifecycle()
+}
+
+@Composable
 fun observeUserZaps(
     user: User,
     accountViewModel: AccountViewModel,
@@ -525,6 +540,31 @@ fun observeUserZapAmount(
                 .sample(1000)
                 .mapLatest { userState ->
                     userState.user.zappedAmount()
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(BigDecimal.ZERO)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeUserTipAmount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<BigDecimal> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            user
+                .flow()
+                .tips.stateFlow
+                .sample(1000)
+                .mapLatest { userState ->
+                    userState.user.tippedAmount()
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
