@@ -3543,7 +3543,7 @@ class Account(
         val localSigner = if (tipType == TipEvent.TipType.PUBLIC) signer else NostrSignerInternal(KeyPair())
         localSigner.sign(template) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
