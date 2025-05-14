@@ -42,7 +42,7 @@ abstract class PerUserEoseManager<T>(
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    private val latestEOSEs = EOSEAccountFast()
+    private val latestEOSEs = EOSEAccountFast<User>()
     private val userSubscriptionMap = mutableMapOf<User, String>()
 
     fun since(key: T) = latestEOSEs.since(user(key))

@@ -33,7 +33,7 @@ class UserWatcherSubAssembler(
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys) {
     var lastUsersOnFilter: Set<User> = emptySet()
-    var latestEOSEs: EOSEAccountFast = EOSEAccountFast(2000)
+    var latestEOSEs: EOSEAccountFast<User> = EOSEAccountFast<User>(2000)
 
     override fun newEose(
         relayUrl: String,
@@ -69,7 +69,7 @@ class UserWatcherSubAssembler(
 
     fun groupByRelayPresence(
         users: Iterable<User>,
-        eoseCache: EOSEAccountFast,
+        eoseCache: EOSEAccountFast<User>,
     ): Collection<List<User>> =
         users
             .groupBy { eoseCache.since(it)?.keys?.hashCode() }
@@ -81,7 +81,7 @@ class UserWatcherSubAssembler(
 
     fun findMinimumEOSEsForUsers(
         users: List<User>,
-        eoseCache: EOSEAccountFast,
+        eoseCache: EOSEAccountFast<User>,
     ): Map<String, EOSETime> {
         val minLatestEOSEs = mutableMapOf<String, EOSETime>()
 
