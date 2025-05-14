@@ -26,6 +26,7 @@ import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -61,6 +62,7 @@ fun filterRepliesAndReactionsToNotes(
                             GenericRepostEvent.KIND,
                             ReportEvent.KIND,
                             LnZapEvent.KIND,
+                            TipEvent.KIND,
                             PollNoteEvent.KIND,
                             OtsEvent.KIND,
                             TextNoteModificationEvent.KIND,

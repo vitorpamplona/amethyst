@@ -27,6 +27,7 @@ import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -67,6 +68,7 @@ fun filterNotificationsToPubkey(
                             ReportEvent.KIND,
                             LnZapEvent.KIND,
                             LnZapPaymentResponseEvent.KIND,
+                            TipEvent.KIND,
                             ChannelMessageEvent.KIND,
                             EphemeralChatEvent.KIND,
                             BadgeAwardEvent.KIND,
