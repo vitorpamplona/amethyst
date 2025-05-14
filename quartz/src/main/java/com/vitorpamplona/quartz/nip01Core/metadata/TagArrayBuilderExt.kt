@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud06Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud16Tag
+import com.vitorpamplona.quartz.nip01Core.metadata.tags.MoneroAddressesTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.NameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Nip05Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.PictureTag
@@ -52,11 +53,4 @@ fun TagArrayBuilder<MetadataEvent>.banner(banner: String) = addUnique(BannerTag.
 
 fun TagArrayBuilder<MetadataEvent>.pronouns(pronouns: String) = addUnique(PronounsTag.assemble(pronouns))
 
-fun TagArrayBuilder<MetadataEvent>.cryptoCurrenciesAddresses(
-    tagName: String,
-    currency: String,
-    address: String,
-) {
-    remove(tagName, currency)
-    add(arrayOf(tagName, currency, address))
-}
+fun TagArrayBuilder<MetadataEvent>.monero(monero: String) = addUnique(MoneroAddressesTag.assemble(monero))

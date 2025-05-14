@@ -49,7 +49,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
@@ -299,7 +301,7 @@ fun MoneroIcon(
     Icon(
         imageVector = ImageVector.vectorResource(R.drawable.monero),
         modifier = modifier,
-        contentDescription = stringRes(R.string.share_or_save),
+        contentDescription = stringRes(R.string.monero),
         tint = tint,
     )
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip01Core.metadata.tags
 
 import com.vitorpamplona.quartz.utils.ensure
 
-class CryptoCurrenciesAddressesTag {
+class MoneroAddressesTag {
     companion object {
-        const val TAG_NAME = "cryptocurrency_addresses"
+        const val TAG_NAME = "monero"
 
         fun parse(tag: Array<String>): String? {
             ensure(tag.size > 1) { return null }
@@ -33,9 +33,6 @@ class CryptoCurrenciesAddressesTag {
             return tag[1]
         }
 
-        fun assemble(
-            currency: String,
-            value: String,
-        ) = arrayOf(TAG_NAME, currency, value)
+        fun assemble(name: String) = arrayOf(TAG_NAME, name)
     }
 }
