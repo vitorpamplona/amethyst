@@ -21,15 +21,30 @@
 package com.vitorpamplona.quartz.nip01Core.tags.geohash
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-class GeoHash {
+class GeoHashTag {
     companion object {
         const val TAG_NAME = "g"
 
         @JvmStatic
+        fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tags: Array<String>): String? {
+            ensure(tags.has(1)) { return null }
+            ensure(tags[0] == TAG_NAME) { return null }
+            return tags[1]
+        }
+
+        @JvmStatic
+        fun assembleSingle(geohash: String) = arrayOf(TAG_NAME, geohash)
+
+        @JvmStatic
         fun geoMipMap(geohash: String): List<String> = geohash.indices.map { geohash.substring(0, it + 1) }.reversed()
 
-        fun geohashMipMap(geohash: String): TagArray = geoMipMap(geohash).map { arrayOf(TAG_NAME, it) }.toTypedArray()
+        fun geohashMipMap(geohash: String): TagArray = geoMipMap(geohash).map { assembleSingle(it) }.toTypedArray()
 
         fun assemble(geohash: String) = geohashMipMap(geohash)
     }

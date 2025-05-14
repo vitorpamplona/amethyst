@@ -20,11 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
+
 class ZapSplitSetupParser {
     companion object {
         @JvmStatic
+        fun isTagged(tags: Array<String>) = tags.has(1) && tags[0] == BaseZapSplitSetup.TAG_NAME
+
+        @JvmStatic
         fun parse(tags: Array<String>): BaseZapSplitSetup? {
-            require(tags[0] == BaseZapSplitSetup.TAG_NAME)
+            ensure(tags.has(1)) { return null }
+            ensure(tags[0] == BaseZapSplitSetup.TAG_NAME) { return null }
 
             val isLnAddress = tags[1].contains("@") || tags[1].startsWith("LNURL", true)
             val weight = if (isLnAddress) 1.0 else (tags.getOrNull(3)?.toDoubleOrNull() ?: 0.0)

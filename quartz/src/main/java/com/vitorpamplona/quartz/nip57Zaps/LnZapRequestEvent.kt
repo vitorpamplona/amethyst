@@ -26,10 +26,13 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseId
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseKey
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -47,9 +50,9 @@ class LnZapRequestEvent(
 
     override fun countMemory(): Long = super.countMemory() + pointerSizeInBytes + (privateZapEvent?.countMemory() ?: 0)
 
-    fun zappedPost() = tags.mapValues("e")
+    fun zappedPost() = tags.mapNotNull(ETag::parseId)
 
-    fun zappedAuthor() = tags.mapValues("p")
+    fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 

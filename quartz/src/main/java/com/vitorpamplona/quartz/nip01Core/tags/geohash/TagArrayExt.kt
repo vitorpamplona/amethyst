@@ -24,14 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.anyTagWithValueStartingWith
 import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
 import com.vitorpamplona.quartz.nip01Core.core.isAnyTagged
-import com.vitorpamplona.quartz.nip01Core.core.mapValues
 
-fun TagArray.hasGeohashes() = this.hasTagWithContent(GeoHash.TAG_NAME)
+fun TagArray.hasGeohashes() = this.hasTagWithContent(GeoHashTag.TAG_NAME)
 
-fun TagArray.isTaggedGeoHashes(hashtags: Set<String>) = this.isAnyTagged(GeoHash.TAG_NAME, hashtags)
+fun TagArray.isTaggedGeoHashes(hashtags: Set<String>) = this.isAnyTagged(GeoHashTag.TAG_NAME, hashtags)
 
-fun TagArray.isTaggedGeoHash(hashtag: String) = this.anyTagWithValueStartingWith(GeoHash.TAG_NAME, hashtag)
+fun TagArray.isTaggedGeoHash(hashtag: String) = this.anyTagWithValueStartingWith(GeoHashTag.TAG_NAME, hashtag)
 
-fun TagArray.geohashes() = this.mapValues(GeoHash.TAG_NAME)
+fun TagArray.geohashes() = this.mapNotNull(GeoHashTag::parse)
 
 fun TagArray.getGeoHash(): String? = geohashes().maxByOrNull { it.length }?.ifBlank { null }
