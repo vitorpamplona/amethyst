@@ -89,7 +89,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -121,7 +120,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -1587,34 +1585,26 @@ class AccountViewModel(
         return note
     }
 
-    fun <T : Event> requestDVMContentDiscoveryGeneric(
+    fun requestDVMContentDiscovery(
         dvmPublicKey: String,
-        createEvent: (
-            dvmPublicKey: HexKey,
-            forUser: HexKey,
-            relays: Set<String>,
-            signer: NostrSigner,
-            createdAt: Long,
-            onReady: (T) -> Unit,
-        ) -> Unit,
         onReady: (event: Note) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.requestDVMContentDiscoveryGeneric(dvmPublicKey, createEvent) {
+            account.requestDVMContentDiscovery(dvmPublicKey) {
                 onReady(LocalCache.getOrCreateNote(it.id))
             }
         }
     }
 
-    fun requestDVMContentDiscovery(
+    fun requestDVMTextGenDiscovery(
         dvmPublicKey: String,
         onReady: (event: Note) -> Unit,
     ) {
-        requestDVMContentDiscoveryGeneric(
-            dvmPublicKey,
-            NIP90ContentDiscoveryRequestEvent::create,
-            onReady,
-        )
+        viewModelScope.launch(Dispatchers.IO) {
+            account.requestDVMTextGenDiscovery(dvmPublicKey) {
+                onReady(LocalCache.getOrCreateNote(it.id))
+            }
+        }
     }
 
     suspend fun cachedDVMContentDiscovery(pubkeyHex: String): Note? =

@@ -38,6 +38,22 @@ class NIP90TextGenDVMFeedFilter(
         const val KIND_REQUEST_DVM_TEXT = DiscoverNIP89FeedFilter.TEXT_GENERATION_KIND
     }
 
+    // helper function to check if an event is a valid text generation DVM
+    private fun isValidTextGenDVM(event: AppDefinitionEvent): Boolean {
+        try {
+            val supportsKind5050 = acceptDVM(event)
+            val metadata = event.appMetaData()
+            val isValidDvm = metadata != null && metadata.subscription != true
+            val passesFilter = buildFilterParams(account).match(event)
+            val isRecentlyActive = event.createdAt > TimeUtils.oneWeekAgo()
+
+            return supportsKind5050 && isValidDvm && passesFilter && isRecentlyActive
+        } catch (e: Exception) {
+            Log.e("DVM_DEBUG", "Error checking if event is valid text generation DVM: ${e.message}")
+            return false
+        }
+    }
+
     override fun feed(): List<Note> {
         try {
             Log.d("DVM_DEBUG", "NIP90TextGenDVMFeedFilter.feed(): Searching for AppDefinition events in cache")
@@ -46,9 +62,14 @@ class NIP90TextGenDVMFeedFilter(
             val allAppDefinitions =
                 LocalCache.addressables.filterIntoSet { _, note ->
                     try {
-                        note.event is AppDefinitionEvent
+                        val event = note.event
+                        if (event !is AppDefinitionEvent) {
+                            false
+                        } else {
+                            event is AppDefinitionEvent
+                        }
                     } catch (e: Exception) {
-                        Log.w("DVM_DEBUG", "Error checking if event is AppDefinitionEvent: ${e.message}", e)
+                        Log.w("DVM_DEBUG", "Error accessing note.event: ${e.message}", e)
                         false
                     }
                 }
@@ -60,13 +81,7 @@ class NIP90TextGenDVMFeedFilter(
                 allAppDefinitions.filter { note ->
                     try {
                         val event = note.event as? AppDefinitionEvent ?: return@filter false
-                        val metadata = event.appMetaData()
-                        val supportsKind5050 = acceptDVM(event)
-                        val isValidDvm = metadata?.subscription != true
-                        val passesFilter = buildFilterParams(account).match(event)
-                        val isRecentlyActive = event.createdAt > TimeUtils.oneWeekAgo()
-
-                        supportsKind5050 && isValidDvm && passesFilter && isRecentlyActive
+                        isValidTextGenDVM(event)
                     } catch (e: Exception) {
                         Log.e("DVM_DEBUG", "Error filtering AppDefinition: ${e.message}")
                         false
@@ -87,12 +102,7 @@ class NIP90TextGenDVMFeedFilter(
             try {
                 val event = note.event
                 if (event is AppDefinitionEvent) {
-                    val supportsKind5050 = acceptDVM(event)
-                    val isValidDvm = event.appMetaData()?.subscription != true
-                    val passesFilter = buildFilterParams(account).match(event)
-                    val isRecentlyActive = event.createdAt > TimeUtils.oneWeekAgo()
-
-                    supportsKind5050 && isValidDvm && passesFilter && isRecentlyActive
+                    isValidTextGenDVM(event)
                 } else {
                     false
                 }

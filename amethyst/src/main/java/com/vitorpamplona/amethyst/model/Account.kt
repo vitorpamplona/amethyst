@@ -166,6 +166,8 @@ import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -3095,18 +3097,47 @@ class Account(
         }
     }
 
-    fun <T : Event> requestDVMContentDiscoveryGeneric(
+    private fun <T : Event> requestDVMGeneric(
         dvmPublicKey: String,
-        createEvent: (
+        kind: Int,
+        onReady: (event: T) -> Unit,
+    ) {
+        val createEvent: (
             dvmPublicKey: HexKey,
             forUser: HexKey,
             relays: Set<String>,
             signer: NostrSigner,
             createdAt: Long,
             onReady: (T) -> Unit,
-        ) -> Unit,
-        onReady: (event: T) -> Unit,
-    ) {
+        ) -> Unit =
+            when (kind) {
+                NIP90ContentDiscoveryRequestEvent.KIND -> { pubKey, forUser, relays, signer, createdAt, callback ->
+                    @Suppress("UNCHECKED_CAST")
+                    NIP90ContentDiscoveryRequestEvent.create(
+                        pubKey,
+                        forUser,
+                        relays,
+                        signer,
+                        createdAt,
+                    ) {
+                        callback(it as T)
+                    }
+                }
+                NIP90TextGenDiscoveryRequestEvent.KIND -> { pubKey, forUser, relays, signer, createdAt, callback ->
+                    @Suppress("UNCHECKED_CAST")
+                    NIP90TextGenDiscoveryRequestEvent.create(
+                        pubKey,
+                        forUser,
+                        relays,
+                        signer,
+                        createdAt,
+                    ) {
+                        callback(it as T)
+                    }
+                }
+                else -> throw IllegalArgumentException("Unsupported DVM kind: $kind")
+            }
+
         createEvent(dvmPublicKey, signer.pubKey, getReceivingRelays(), signer, TimeUtils.now()) { event ->
             val relayList =
                 (
@@ -3133,6 +3164,28 @@ class Account(
             LocalCache.justConsume(event, null)
             onReady(event)
         }
+    }
+
+    fun requestDVMContentDiscovery(
+        dvmPublicKey: String,
+        onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
+    ) {
+        requestDVMGeneric(
+            dvmPublicKey,
+            NIP90ContentDiscoveryRequestEvent.KIND,
+            onReady,
+        )
+    }
+
+    fun requestDVMTextGenDiscovery(
+        dvmPublicKey: String,
+        onReady: (event: NIP90TextGenDiscoveryRequestEvent) -> Unit,
+    ) {
+        requestDVMGeneric(
+            dvmPublicKey,
+            NIP90TextGenDiscoveryRequestEvent.KIND,
+            onReady,
+        )
     }
 
     fun unwrap(
