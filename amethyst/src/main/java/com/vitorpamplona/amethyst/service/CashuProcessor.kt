@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -82,8 +82,8 @@ object CachedCashuProcessor {
 class CashuProcessor {
     @Serializable
     class V3Token(
-        val unit: String?, // unit
-        val memo: String?, // memo
+        val unit: String?,
+        val memo: String?,
         val token: List<V3T>?,
     )
 
@@ -140,27 +140,36 @@ class CashuProcessor {
 
     @Serializable
     class V4Token(
-        val m: String, // mint
-        val u: String, // unit
-        val d: String? = null, // memo
+        // mint
+        val m: String,
+        // unit
+        val u: String,
+        // memo
+        val d: String? = null,
         val t: Array<V4T>?,
     )
 
     @Serializable
     class V4T(
+        // identifier
         @ByteString
-        val i: ByteArray, // identifier
+        val i: ByteArray,
         val p: Array<V4Proof>,
     )
 
     @Serializable
     class V4Proof(
-        val a: Int, // amount
-        val s: String, // secret
+        // amount
+        val a: Int,
+        // secret
+        val s: String,
+        // signature
         @ByteString
-        val c: ByteArray, // signature
-        val d: V4DleqProof? = null, // no idea what this is
-        val w: String? = null, // witness
+        val c: ByteArray,
+        // no idea what this is
+        val d: V4DleqProof? = null,
+        // witness
+        val w: String? = null,
     )
 
     @Serializable

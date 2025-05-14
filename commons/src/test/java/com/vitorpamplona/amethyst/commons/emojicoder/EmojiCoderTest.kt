@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,7 +34,7 @@ class EmojiCoderTest {
                 "Testing 123",
                 "Special chars: !@#$%^&*()",
                 "Unicode: 你好，世界",
-                " ", // space only
+                " ",
             )
 
         val HELLO_WORLD = "\uD83D\uDE00\uDB40\uDD38\uDB40\uDD55\uDB40\uDD5C\uDB40\uDD5C\uDB40\uDD5F\uDB40\uDD1C\uDB40\uDD10\uDB40\uDD47\uDB40\uDD5F\uDB40\uDD62\uDB40\uDD5C\uDB40\uDD54\uDB40\uDD11"
