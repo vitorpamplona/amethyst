@@ -753,7 +753,7 @@ class AccountViewModel(
         message: String = "",
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val address = note.author?.info?.moneroAddress() ?: ""
+            val address = note.author?.info?.monero ?: ""
             if (!MoneroValidator.isValidAddress(address)) {
                 if (address.isBlank()) {
                     onError(context.getString(R.string.monero), context.getString(R.string.user_doesnt_have_monero_address), note.author)

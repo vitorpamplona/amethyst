@@ -2678,6 +2678,34 @@ object LocalCache : ILocalCache {
         return false
     }
 
+    fun consume(
+        event: TipEvent,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        // Already processed this event.
+        if (note.event != null) return false
+
+        if (wasVerified || justVerify(event)) {
+            val author = getOrCreateUser(event.pubKey)
+            val mentions = event.tippedAuthor().mapNotNull { checkGetOrCreateUser(it) }
+            val repliesTo = computeReplyTo(event)
+
+            note.loadEvent(event, author, repliesTo)
+
+            repliesTo.forEach { it.addTip(note) }
+            mentions.forEach { it.addTip(note) }
+            relay?.let { note.addRelay(it) }
+
+            refreshObservers(note)
+
+            return true
+        }
+
+        return false
+    }
+
     fun indexDraftAsRealEvent(
         draftWrap: DraftEvent,
         draft: Event,
@@ -2947,6 +2975,7 @@ object LocalCache : ILocalCache {
                 is StatusEvent -> consume(event, relay, wasVerified)
                 is TextNoteEvent -> consume(event, relay, wasVerified)
                 is TextNoteModificationEvent -> consume(event, relay, wasVerified)
+                is TipEvent -> consume(event, relay, wasVerified)
                 is TorrentEvent -> consume(event, relay, wasVerified)
                 is TorrentCommentEvent -> consume(event, relay, wasVerified)
                 is VideoHorizontalEvent -> consume(event, relay, wasVerified)

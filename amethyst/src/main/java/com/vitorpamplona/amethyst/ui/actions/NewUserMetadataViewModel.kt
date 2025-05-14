@@ -100,7 +100,7 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info?.nip05 ?: ""
             lnAddress.value = it.info?.lud16 ?: ""
             lnURL.value = it.info?.lud06 ?: ""
-            moneroAddress.value = it.info?.moneroAddress() ?: ""
+            moneroAddress.value = it.info?.monero ?: ""
 
             twitter.value = ""
             github.value = ""

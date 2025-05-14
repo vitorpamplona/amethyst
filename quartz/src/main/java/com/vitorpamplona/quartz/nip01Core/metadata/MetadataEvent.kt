@@ -31,10 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
-import com.vitorpamplona.quartz.nip01Core.metadata.tags.CryptoCurrenciesAddressesTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud06Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud16Tag
+import com.vitorpamplona.quartz.nip01Core.metadata.tags.MoneroAddressesTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.NameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Nip05Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.PictureTag
@@ -117,16 +117,7 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it.trim()) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it.trim()) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it.trim()) }
-            moneroAddress?.let {
-                val cryptos =
-                    if (currentMetadata.has(CryptoCurrenciesAddressesTag.TAG_NAME)) {
-                        currentMetadata.get(CryptoCurrenciesAddressesTag.TAG_NAME)
-                    } else {
-                        currentMetadata.putObject(CryptoCurrenciesAddressesTag.TAG_NAME)
-                    } as ObjectNode
-
-                addIfNotBlank(cryptos, "monero", it.trim())
-            }
+            moneroAddress?.let { addIfNotBlank(currentMetadata, MoneroAddressesTag.TAG_NAME, it.trim()) }
 
             return eventTemplate(KIND, currentMetadata.toString(), createdAt) {
                 alt("User profile for ${currentMetadata.get("name")?.asText() ?: "Anonymous"}")
@@ -142,11 +133,7 @@ class MetadataEvent(
                 currentMetadata.get(Nip05Tag.TAG_NAME)?.asText()?.let { nip05(it) }
                 currentMetadata.get(Lud16Tag.TAG_NAME)?.asText()?.let { lud16(it) }
                 currentMetadata.get(Lud06Tag.TAG_NAME)?.asText()?.let { lud06(it) }
-                currentMetadata.get(CryptoCurrenciesAddressesTag.TAG_NAME)?.fields()?.let {
-                    it.forEach {
-                        cryptoCurrenciesAddresses(CryptoCurrenciesAddressesTag.TAG_NAME, it.key, it.value.asText())
-                    }
-                }
+                currentMetadata.get(MoneroAddressesTag.TAG_NAME)?.asText()?.let { monero(it) }
                 twitter?.let { twitterClaim(it) }
                     ?: mastodon?.let { mastodonClaim(it) }
                 github?.let { githubClaim(it) }
@@ -190,16 +177,7 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it.trim()) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it.trim()) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it.trim()) }
-            moneroAddress?.let {
-                val cryptos =
-                    if (currentMetadata.has(CryptoCurrenciesAddressesTag.TAG_NAME)) {
-                        currentMetadata.get(CryptoCurrenciesAddressesTag.TAG_NAME)
-                    } else {
-                        currentMetadata.putObject(CryptoCurrenciesAddressesTag.TAG_NAME)
-                    } as ObjectNode
-
-                addIfNotBlank(cryptos, "monero", it.trim())
-            }
+            moneroAddress?.let { addIfNotBlank(currentMetadata, MoneroAddressesTag.TAG_NAME, it.trim()) }
 
             val tags =
                 latest.tags.builder {
@@ -216,13 +194,7 @@ class MetadataEvent(
                     currentMetadata.get(Nip05Tag.TAG_NAME)?.asText()?.let { nip05(it) } ?: run { remove(Nip05Tag.TAG_NAME) }
                     currentMetadata.get(Lud16Tag.TAG_NAME)?.asText()?.let { lud16(it) } ?: run { remove(Lud16Tag.TAG_NAME) }
                     currentMetadata.get(Lud06Tag.TAG_NAME)?.asText()?.let { lud06(it) } ?: run { remove(Lud06Tag.TAG_NAME) }
-                    currentMetadata.get(CryptoCurrenciesAddressesTag.TAG_NAME)?.fields()?.let {
-                        it.forEach {
-                            if (it.value.asText().isNotBlank()) {
-                                cryptoCurrenciesAddresses(CryptoCurrenciesAddressesTag.TAG_NAME, it.key, it.value.asText())
-                            }
-                        }
-                    } ?: run { remove(CryptoCurrenciesAddressesTag.TAG_NAME) }
+                    currentMetadata.get(MoneroAddressesTag.TAG_NAME)?.asText()?.let { monero(it) } ?: run { remove(MoneroAddressesTag.TAG_NAME) }
 
                     val newClaims = latest.replaceClaims(twitter, mastodon, github)
                     remove(IdentityClaimTag.TAG_NAME)
