@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Vitor Pamplona
+ * Copyright (c) 2025 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -25,6 +25,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
@@ -41,25 +43,26 @@ object ShareHelper {
     private val WEBP_HEADER_END = "WEBP".toByteArray()
     private val GIF_MAGIC = "GIF8".toByteArray()
 
-    fun getSharableUriFromUrl(
+    suspend fun getSharableUriFromUrl(
         context: Context,
         imageUrl: String,
-    ): Pair<Uri, String> {
-        // Safely get snapshot and file
-        Amethyst.instance.diskCache.openSnapshot(imageUrl)?.use { snapshot ->
-            val file = snapshot.data.toFile()
+    ): Pair<Uri, String> =
+        withContext(Dispatchers.IO) {
+            // Safely get snapshot and file
+            Amethyst.instance.diskCache.openSnapshot(imageUrl)?.use { snapshot ->
+                val file = snapshot.data.toFile()
 
-            // Determine file extension and prepare sharable file
-            val fileExtension = getImageExtension(file)
-            val fileCopy = prepareSharableFile(context, file, fileExtension)
+                // Determine file extension and prepare sharable file
+                val fileExtension = getImageExtension(file)
+                val fileCopy = prepareSharableFile(context, file, fileExtension)
 
-            // Return sharable uri
-            return Pair(
-                FileProvider.getUriForFile(context, "${context.packageName}.provider", fileCopy),
-                fileExtension,
-            )
-        } ?: throw IOException("Unable to open snapshot for: $imageUrl")
-    }
+                // Return sharable uri
+                return@use Pair(
+                    FileProvider.getUriForFile(context, "${context.packageName}.provider", fileCopy),
+                    fileExtension,
+                )
+            } ?: throw IOException("Unable to open snapshot for: $imageUrl")
+        }
 
     private fun getImageExtension(file: File): String =
         try {

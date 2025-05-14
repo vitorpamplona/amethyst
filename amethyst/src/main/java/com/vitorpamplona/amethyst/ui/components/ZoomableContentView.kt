@@ -49,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,7 +105,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -716,6 +716,8 @@ fun ShareImageAction(
     onDismiss: () -> Unit,
     content: BaseMediaContent? = null,
 ) {
+    val scope = rememberCoroutineScope()
+
     DropdownMenu(
         expanded = popupExpanded.value,
         onDismissRequest = onDismiss,
@@ -767,7 +769,7 @@ fun ShareImageAction(
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.share_image)) },
                             onClick = {
-                                shareImageFile(context, videoUri, mimeType)
+                                scope.launch { shareImageFile(context, videoUri, mimeType) }
                                 onDismiss()
                             },
                         )
@@ -778,7 +780,7 @@ fun ShareImageAction(
     }
 }
 
-private fun shareImageFile(
+private suspend fun shareImageFile(
     context: Context,
     videoUri: String,
     mimeType: String?,
@@ -796,13 +798,11 @@ private fun shareImageFile(
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-    // TODO is this the right scope to avoid leaks?
-    CoroutineScope(Dispatchers.Main).launch {
-        context.startActivity(Intent.createChooser(shareIntent, null))
-    }
+
+    context.startActivity(Intent.createChooser(shareIntent, null))
 }
 
-private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
+private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
     Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
