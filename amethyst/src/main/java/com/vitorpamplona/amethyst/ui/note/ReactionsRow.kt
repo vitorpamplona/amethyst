@@ -329,8 +329,10 @@ fun MoneroTippingReaction(
                 }
             }
         }
-        ObserveTipAmountText(note, accountViewModel) { zapAmountTxt ->
-            SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+        if (accountViewModel.settings.tipsType != TipsType.BOTH) {
+            ObserveTipAmountText(note, accountViewModel) { zapAmountTxt ->
+                SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+            }
         }
     }
 }
@@ -1231,8 +1233,10 @@ fun ZapReaction(
             }
         }
 
-        ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
-            SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+        if (accountViewModel.settings.tipsType != TipsType.BOTH) {
+            ObserveZapAmountText(baseNote, accountViewModel) { zapAmountTxt ->
+                SlidingAnimationAmount(zapAmountTxt, grayTint, accountViewModel)
+            }
         }
     }
 }
