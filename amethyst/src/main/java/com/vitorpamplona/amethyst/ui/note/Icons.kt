@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
@@ -518,7 +519,7 @@ fun IncognitoIconOn(
     tint: Color,
 ) {
     Icon(
-        painter = painterRes(id = R.drawable.incognito),
+        painter = painterResource(id = R.drawable.incognito),
         contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
         modifier = modifier,
         tint = tint,
@@ -531,7 +532,7 @@ fun IncognitoIconOff(
     tint: Color,
 ) {
     Icon(
-        painter = painterRes(id = R.drawable.incognito_off),
+        painter = painterResource(id = R.drawable.incognito_off),
         contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
         modifier = modifier,
         tint = tint,

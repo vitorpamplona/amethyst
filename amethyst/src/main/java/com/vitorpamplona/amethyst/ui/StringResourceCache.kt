@@ -125,6 +125,9 @@ fun stringRes(
         )
 }
 
+/**
+ * This cache can only be used if the painter is the only copy on the screen
+ */
 @Composable
 fun painterRes(
     @DrawableRes id: Int,
