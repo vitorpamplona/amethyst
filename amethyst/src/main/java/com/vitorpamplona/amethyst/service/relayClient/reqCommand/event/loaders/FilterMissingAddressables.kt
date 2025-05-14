@@ -24,14 +24,10 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
-fun filterMissingAddressables(
-    keys: List<EventFinderQueryState>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<TypedFilter>? {
     val missingAddressables = mutableSetOf<Address>()
 
     keys.forEach {
@@ -47,13 +43,10 @@ fun filterMissingAddressables(
         }
     }
 
-    return filterMissingAddressables(missingAddressables, since)
+    return filterMissingAddressables(missingAddressables)
 }
 
-fun filterMissingAddressables(
-    missingAddressables: Set<Address>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+fun filterMissingAddressables(missingAddressables: Set<Address>): List<TypedFilter>? {
     if (missingAddressables.isEmpty()) return null
 
     return missingAddressables.map { aTag ->

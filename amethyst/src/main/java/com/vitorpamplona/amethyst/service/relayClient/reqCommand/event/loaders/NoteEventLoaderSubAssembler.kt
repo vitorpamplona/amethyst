@@ -20,22 +20,19 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 
 class NoteEventLoaderSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
-) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun updateFilter(
-        keys: List<EventFinderQueryState>,
-        since: Map<String, EOSETime>?,
-    ) = listOfNotNull(
-        filterMissingEvents(keys, since),
-        filterMissingAddressables(keys, since),
-    ).flatten()
+) : SingleSubNoEoseCacheEoseManager<EventFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override fun updateFilter(keys: List<EventFinderQueryState>) =
+        listOfNotNull(
+            filterMissingEvents(keys),
+            filterMissingAddressables(keys),
+        ).flatten()
 
     override fun distinct(key: EventFinderQueryState) = key.note
 }
