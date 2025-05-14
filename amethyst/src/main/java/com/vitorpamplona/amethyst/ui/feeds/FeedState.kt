@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.feeds
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import kotlinx.collections.immutable.ImmutableList
@@ -40,7 +41,7 @@ sealed class FeedState {
     ) : FeedState()
 }
 
-@Stable
+@Immutable
 class LoadedFeedState<T>(
     val list: ImmutableList<T>,
     val showHidden: Boolean,

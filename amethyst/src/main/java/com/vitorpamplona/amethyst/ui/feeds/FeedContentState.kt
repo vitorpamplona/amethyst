@@ -110,11 +110,7 @@ class FeedContentState(
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
             if (oldNotesState is FeedState.Loaded) {
-                val deletionEvents: List<DeletionEvent> =
-                    newItems.mapNotNull {
-                        val noteEvent = it.event
-                        if (noteEvent is DeletionEvent) noteEvent else null
-                    }
+                val deletionEvents: List<DeletionEvent> = newItems.mapNotNull { it.event as? DeletionEvent }
 
                 val oldList =
                     if (deletionEvents.isEmpty()) {
