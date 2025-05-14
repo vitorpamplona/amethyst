@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import android.util.Log
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.datasources.SubscriptionController
 
@@ -29,6 +31,7 @@ abstract class BaseEoseManager<T>(
 ) {
     val orchestrator =
         SubscriptionController(client) {
+            if (isDebug) Log.d("${this.javaClass.simpleName}", "Updating Subscriptions")
             updateSubscriptions(allKeys())
         }
 
@@ -38,9 +41,30 @@ abstract class BaseEoseManager<T>(
 
     fun invalidateFilters() = orchestrator.invalidateFilters()
 
-    fun start() = orchestrator.start()
+    fun start() {
+        orchestrator.start()
+        if (isDebug) {
+            Log.d("${this.javaClass.simpleName}", "Start")
+        }
+    }
 
-    fun stop() = orchestrator.stop()
+    fun stop() {
+        orchestrator.stop()
+        if (isDebug) {
+            Log.d("${this.javaClass.simpleName}", "Stop")
+        }
+    }
 
-    fun destroy() = orchestrator.destroy()
+    fun destroy() {
+        orchestrator.destroy()
+        if (isDebug) {
+            Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
+        }
+    }
+
+    fun init() {
+        if (isDebug) {
+            Log.d("${this.javaClass.simpleName}", "Init, Subscribe")
+        }
+    }
 }

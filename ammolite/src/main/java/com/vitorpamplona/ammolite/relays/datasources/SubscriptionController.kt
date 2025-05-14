@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.ammolite.relays.datasources
 
-import android.util.Log
 import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.Relay
@@ -81,20 +80,17 @@ class SubscriptionController(
     }
 
     init {
-        Log.d("${this.javaClass.simpleName}", "Init, Subscribe")
         client.subscribe(clientListener)
     }
 
     override fun destroy() {
         // makes sure to run
-        Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
         stop()
         client.unsubscribe(clientListener)
         bundler.cancel()
     }
 
     override fun start() {
-        Log.d("${this.javaClass.simpleName}", "Start")
         active = true
         invalidateFilters()
     }
@@ -102,7 +98,6 @@ class SubscriptionController(
     @OptIn(DelicateCoroutinesApi::class)
     override fun stop() {
         active = false
-        Log.d("${this.javaClass.simpleName}", "Stop")
 
         subscriptions.forEach { subscription ->
             client.close(subscription.id)
@@ -142,7 +137,6 @@ class SubscriptionController(
     private fun resetFiltersSuspend() {
         // only runs one at a time. Ignores the others
         if (changingFilters.compareAndSet(false, true)) {
-            Log.d("${this.javaClass.simpleName}", "resetFiltersSuspend $active")
             try {
                 resetFiltersSuspendInner()
             } finally {
