@@ -20,25 +20,21 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 
 class UserLoaderSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<UserFinderQueryState>,
-) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun updateFilter(
-        keys: List<UserFinderQueryState>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? {
+) : SingleSubNoEoseCacheEoseManager<UserFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
+    override fun updateFilter(keys: List<UserFinderQueryState>): List<TypedFilter>? {
         val firstTimers = keys.filter { it.user.latestMetadata == null }.mapTo(mutableSetOf()) { it.user.pubkeyHex }
 
         if (firstTimers.isEmpty()) return null
 
-        return filterNewUserMetadataForKey(firstTimers, since)
+        return filterNewUserMetadataForKey(firstTimers)
     }
 
     override fun distinct(key: UserFinderQueryState) = key.user
