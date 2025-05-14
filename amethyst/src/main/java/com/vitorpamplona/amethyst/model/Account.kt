@@ -1144,11 +1144,16 @@ class Account(
 
     fun isWriteable(): Boolean = settings.isWriteable()
 
-    fun updateOptOutOptions(
-        warnReports: Boolean,
-        filterSpam: Boolean,
-    ): Boolean {
-        if (settings.updateOptOutOptions(warnReports, filterSpam)) {
+    fun updateWarnReports(warnReports: Boolean): Boolean {
+        if (settings.updateWarnReports(warnReports)) {
+            sendNewAppSpecificData()
+            return true
+        }
+        return false
+    }
+
+    fun updateFilterSpam(filterSpam: Boolean): Boolean {
+        if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {
                 transientHiddenUsers.update {
                     emptySet()

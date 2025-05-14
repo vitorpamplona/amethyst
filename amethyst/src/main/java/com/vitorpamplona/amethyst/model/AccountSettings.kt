@@ -538,11 +538,16 @@ class AccountSettings(
         return false
     }
 
-    fun updateOptOutOptions(
-        warnReports: Boolean,
-        filterSpam: Boolean,
-    ): Boolean =
-        if (syncedSettings.security.updateOptOutOptions(warnReports, filterSpam)) {
+    fun updateWarnReports(warnReports: Boolean): Boolean =
+        if (syncedSettings.security.updateWarnReports(warnReports)) {
+            saveAccountSettings()
+            true
+        } else {
+            false
+        }
+
+    fun updateFilterSpam(filterSpam: Boolean): Boolean =
+        if (syncedSettings.security.updateFilterSpam(filterSpam)) {
             saveAccountSettings()
             true
         } else {
