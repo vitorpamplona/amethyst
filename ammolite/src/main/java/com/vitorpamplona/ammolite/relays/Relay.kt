@@ -49,7 +49,7 @@ val EVENT_FINDER_TYPES =
 class RelaySubFilter(
     val url: String,
     val activeTypes: Set<FeedType>,
-    val subs: SubscriptionManager,
+    val subs: SubscriptionCache,
 ) : SubscriptionCollection {
     fun isMatch(filter: TypedFilter) = activeTypes.any { it in filter.types } && filter.isValidFor(url)
 
@@ -95,7 +95,7 @@ class Relay(
     val forceProxy: Boolean = false,
     val activeTypes: Set<FeedType>,
     socketBuilderFactory: WebsocketBuilderFactory,
-    subs: SubscriptionManager,
+    subs: SubscriptionCache,
 ) : SimpleClientRelay.Listener {
     private var listeners = setOf<Listener>()
 

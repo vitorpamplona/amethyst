@@ -41,7 +41,7 @@ class NostrClient(
     private val websocketBuilder: WebsocketBuilderFactory,
 ) : RelayPool.Listener {
     private val relayPool: RelayPool = RelayPool()
-    private val activeSubscriptions: MutableSubscriptionManager = MutableSubscriptionManager()
+    private val activeSubscriptions: MutableSubscriptionCache = MutableSubscriptionCache()
     private var listeners = setOf<Listener>()
 
     fun buildRelay(it: RelaySetupInfoToConnect): Relay = Relay(it.url, it.read, it.write, it.forceProxy, it.feedTypes, websocketBuilder, activeSubscriptions)

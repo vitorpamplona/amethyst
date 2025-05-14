@@ -20,35 +20,12 @@
  */
 package com.vitorpamplona.ammolite.relays
 
-class MutableSubscriptionManager : SubscriptionManager {
-    private var subscriptions = mapOf<String, List<TypedFilter>>()
-
-    fun add(
-        subscriptionId: String,
-        filters: List<TypedFilter> = listOf(),
-    ) {
-        subscriptions = subscriptions + Pair(subscriptionId, filters)
-    }
-
-    fun remove(subscriptionId: String) {
-        subscriptions = subscriptions.minus(subscriptionId)
-    }
-
-    override fun isActive(subscriptionId: String): Boolean = subscriptions.contains(subscriptionId)
-
-    override fun allSubscriptions(): Map<String, List<TypedFilter>> = subscriptions
-
-    override fun getSubscriptionFilters(subId: String): List<TypedFilter> = subscriptions[subId] ?: emptyList()
-
-    override fun getSubscriptionFiltersOrNull(subId: String): List<TypedFilter>? = subscriptions[subId]
-}
-
-interface SubscriptionManager {
+interface SubscriptionCache {
     fun isActive(subscriptionId: String): Boolean
 
     fun allSubscriptions(): Map<String, List<TypedFilter>>
 
     fun getSubscriptionFilters(subId: String): List<TypedFilter>
 
-    fun getSubscriptionFiltersOrNull(subId: String): List<TypedFilter>
+    fun getSubscriptionFiltersOrNull(subId: String): List<TypedFilter>?
 }
