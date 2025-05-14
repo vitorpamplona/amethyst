@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -35,10 +36,13 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
-fun filterRepliesAndReactionsToAddresses(keys: List<AddressableNote>): List<TypedFilter>? {
+fun filterRepliesAndReactionsToAddresses(
+    keys: List<AddressableNote>,
+    since: Map<String, EOSETime>?,
+): List<TypedFilter>? {
     if (keys.isEmpty()) return null
 
-    val addresses = keys.map { it.address().toValue() }
+    val addresses = keys.mapTo(mutableSetOf<String>()) { it.address().toValue() }.sorted()
 
     return listOf(
         TypedFilter(
@@ -58,7 +62,7 @@ fun filterRepliesAndReactionsToAddresses(keys: List<AddressableNote>): List<Type
                             LiveActivitiesChatMessageEvent.KIND,
                         ),
                     tags = mapOf("a" to addresses),
-                    since = findMinimumEOSEs(keys),
+                    since = since,
                     // Max amount of "replies" to download on a specific event.
                     limit = 1000,
                 ),
@@ -72,7 +76,7 @@ fun filterRepliesAndReactionsToAddresses(keys: List<AddressableNote>): List<Type
                             DeletionEvent.KIND,
                         ),
                     tags = mapOf("a" to addresses),
-                    since = findMinimumEOSEs(keys),
+                    since = since,
                     // Max amount of "replies" to download on a specific event.
                     limit = 10,
                 ),

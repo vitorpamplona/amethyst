@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
@@ -39,8 +40,13 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 
-fun filterRepliesAndReactionsToNotes(keys: List<Note>): List<TypedFilter>? {
-    if (keys.isEmpty()) return null
+fun filterRepliesAndReactionsToNotes(
+    events: List<Note>,
+    since: Map<String, EOSETime>?,
+): List<TypedFilter>? {
+    if (events.isEmpty()) return null
+
+    val eventIds = events.mapTo(mutableSetOf<String>()) { it.idHex }.sorted()
 
     return listOf(
         TypedFilter(
@@ -60,8 +66,8 @@ fun filterRepliesAndReactionsToNotes(keys: List<Note>): List<TypedFilter>? {
                             TextNoteModificationEvent.KIND,
                             GitReplyEvent.KIND,
                         ),
-                    tags = mapOf("e" to keys.map { it.idHex }),
-                    since = findMinimumEOSEs(keys),
+                    tags = mapOf("e" to eventIds),
+                    since = since,
                     // Max amount of "replies" to download on a specific event.
                     limit = 1000,
                 ),
@@ -77,8 +83,8 @@ fun filterRepliesAndReactionsToNotes(keys: List<Note>): List<TypedFilter>? {
                             NIP90StatusEvent.KIND,
                             TorrentCommentEvent.KIND,
                         ),
-                    tags = mapOf("e" to keys.map { it.idHex }),
-                    since = findMinimumEOSEs(keys),
+                    tags = mapOf("e" to eventIds),
+                    since = since,
                     limit = 100,
                 ),
         ),

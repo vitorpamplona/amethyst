@@ -21,25 +21,29 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache.addressables
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import kotlin.collections.flatten
 
 class EventWatcherSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys) {
     var lastNotesOnFilter = emptyList<Note>()
+    var latestEOSEs: EOSEAccountFast<Note> = EOSEAccountFast<Note>(10000)
 
     override fun newEose(
         relayUrl: String,
         time: Long,
     ) {
         lastNotesOnFilter.forEach {
-            it.lastReactionsDownloadTime.newEose(relayUrl, time)
+            latestEOSEs.newEose(it, relayUrl, time)
         }
         super.newEose(relayUrl, time)
     }
@@ -53,18 +57,53 @@ class EventWatcherSubAssembler(
         }
 
         lastNotesOnFilter = keys.map { it.note }
-        val addressables = lastNotesOnFilter.filterIsInstance<AddressableNote>()
-        val events = keys.mapNotNull { if (it.note !is AddressableNote) it.note else null }
 
-        return groupByEOSEPresence(lastNotesOnFilter)
-            .map {
-                listOfNotNull(
-                    filterRepliesAndReactionsToNotes(events),
-                    filterRepliesAndReactionsToAddresses(addressables),
-                    filterQuotesToNotes(it),
-                ).flatten()
+        return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)
+            .map { group ->
+                if (group.isNotEmpty()) {
+                    val addressables = group.filterIsInstance<AddressableNote>()
+                    val events = group.mapNotNull { if (it !is AddressableNote) it else null }
+
+                    listOfNotNull(
+                        filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs)),
+                        filterRepliesAndReactionsToAddresses(addressables, findMinimumEOSEs(addressables, latestEOSEs)),
+                        filterQuotesToNotes(group, findMinimumEOSEs(group, latestEOSEs)),
+                    ).flatten()
+                } else {
+                    emptyList()
+                }
             }.flatten()
     }
 
     override fun distinct(key: EventFinderQueryState) = key.note
+
+    fun groupByRelayPresence(
+        notes: Iterable<Note>,
+        eoseCache: EOSEAccountFast<Note>,
+    ): Collection<List<Note>> =
+        notes.groupBy { eoseCache.since(it)?.keys?.hashCode() }
+            .values.map {
+                // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
+                it.sortedBy { it.idHex }
+            }
+
+    fun findMinimumEOSEs(
+        notes: List<Note>,
+        eoseCache: EOSEAccountFast<Note>,
+    ): Map<String, EOSETime> {
+        val minLatestEOSEs = mutableMapOf<String, EOSETime>()
+
+        notes.forEach { note ->
+            eoseCache.since(note)?.forEach {
+                val minEose = minLatestEOSEs[it.key]
+                if (minEose == null) {
+                    minLatestEOSEs.put(it.key, EOSETime(it.value.time))
+                } else if (it.value.time < minEose.time) {
+                    minEose.time = it.value.time
+                }
+            }
+        }
+
+        return minLatestEOSEs
+    }
 }
