@@ -113,6 +113,8 @@ import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendatio
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
@@ -233,6 +235,8 @@ class EventFactory {
                 NIP90ContentDiscoveryResponseEvent.KIND -> NIP90ContentDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90UserDiscoveryRequestEvent.KIND -> NIP90UserDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90UserDiscoveryResponseEvent.KIND -> NIP90UserDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextGenDiscoveryRequestEvent.KIND -> NIP90TextGenDiscoveryRequestEvent(id, pubKey, createdAt, tags, content, sig)
+                NIP90TextGenDiscoveryResponseEvent.KIND -> NIP90TextGenDiscoveryResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
                 PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)
                 PictureEvent.KIND -> PictureEvent(id, pubKey, createdAt, tags, content, sig)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Vitor Pamplona
+ * Copyright (c) 2024 Vitor Pamplona
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal
 
+import android.util.Log
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -29,16 +30,19 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.NIP90TextGenDiscoveryResponseEvent
 
-open class NIP90ContentDiscoveryResponseFilter(
+open class NIP90TextGenDiscoveryResponseFilter(
     val account: Account,
-    val dvmkey: String,
     val request: String,
 ) : AdditiveFeedFilter<Note>() {
+    companion object {
+        const val TEXT_GENERATION_RESPONSE_KIND = 6050
+    }
+
     var latestNote: Note? = null
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + request
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-textgen-" + request
 
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
@@ -48,12 +52,10 @@ open class NIP90ContentDiscoveryResponseFilter(
 
     fun acceptableEvent(note: Note): Boolean {
         val noteEvent = note.event
-        return noteEvent is NIP90ContentDiscoveryResponseEvent && noteEvent.isTaggedEvent(request)
+        return noteEvent is NIP90TextGenDiscoveryResponseEvent && noteEvent.isTaggedEvent(request)
     }
 
     override fun feed(): List<Note> {
-        val params = buildFilterParams(account)
-
         latestNote =
             LocalCache.notes.maxOrNullOf(
                 filter = { idHex: String, note: Note ->
@@ -62,7 +64,9 @@ open class NIP90ContentDiscoveryResponseFilter(
                 comparator = CreatedAtComparator,
             )
 
-        val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return listOf()
+        if (!validateLatestNote()) return listOf()
+
+        val noteEvent = latestNote?.event as? NIP90TextGenDiscoveryResponseEvent ?: return listOf()
 
         return noteEvent.innerTags().mapNotNull {
             LocalCache.checkGetOrCreateNote(it)
@@ -80,15 +84,15 @@ open class NIP90ContentDiscoveryResponseFilter(
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        // val params = buildFilterParams(account)
-
         val maxNote = collection.filter { acceptableEvent(it) }.maxByOrNull { it.createdAt() ?: 0 } ?: return emptySet()
 
         if ((maxNote.createdAt() ?: 0) > (latestNote?.createdAt() ?: 0)) {
             latestNote = maxNote
         }
 
-        val noteEvent = latestNote?.event as? NIP90ContentDiscoveryResponseEvent ?: return setOf()
+        if (!validateLatestNote()) return emptySet()
+
+        val noteEvent = latestNote?.event as? NIP90TextGenDiscoveryResponseEvent ?: return setOf()
 
         return noteEvent
             .innerTags()
@@ -97,5 +101,19 @@ open class NIP90ContentDiscoveryResponseFilter(
             }.toSet()
     }
 
+    /**
+     * Validates that latestNote contains a NIP90TextGenDiscoveryResponseEvent.
+     * If not, logs an error and resets latestNote to null.
+     * @return true if latestNote is valid, false otherwise
+     */
+    private fun validateLatestNote(): Boolean {
+        if (latestNote != null && latestNote?.event !is NIP90TextGenDiscoveryResponseEvent) {
+            Log.e("DVM_DEBUG", "latestNote's event is not a NIP90TextGenDiscoveryResponseEvent: ${latestNote?.event?.javaClass?.simpleName}")
+            latestNote = null
+            return false
+        }
+        return true
+    }
+
     override fun sort(collection: Set<Note>): List<Note> = collection.toList()
-}
+} 
