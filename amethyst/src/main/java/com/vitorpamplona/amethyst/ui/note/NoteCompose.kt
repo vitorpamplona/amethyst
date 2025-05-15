@@ -51,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
-import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -222,37 +221,33 @@ fun NoteCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    logTime(
-        debugMessage = { "NoteCompose " + externalLinkForNote(baseNote) },
+    WatchNoteEvent(
+        baseNote = baseNote,
+        accountViewModel = accountViewModel,
+        modifier,
     ) {
-        WatchNoteEvent(
-            baseNote = baseNote,
+        CheckHiddenFeedWatchBlockAndReport(
+            note = baseNote,
+            modifier = modifier,
+            ignoreAllBlocksAndReports = isHiddenFeed,
+            showHiddenWarning = isQuotedNote || isBoostedNote,
             accountViewModel = accountViewModel,
-            modifier,
-        ) {
-            CheckHiddenFeedWatchBlockAndReport(
-                note = baseNote,
+            nav = nav,
+        ) { canPreview ->
+            AcceptableNote(
+                baseNote = baseNote,
                 modifier = modifier,
-                ignoreAllBlocksAndReports = isHiddenFeed,
-                showHiddenWarning = isQuotedNote || isBoostedNote,
+                routeForLastRead = routeForLastRead,
+                isBoostedNote = isBoostedNote,
+                isQuotedNote = isQuotedNote,
+                unPackReply = unPackReply,
+                makeItShort = makeItShort,
+                canPreview = canPreview,
+                quotesLeft = quotesLeft,
+                parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
-            ) { canPreview ->
-                AcceptableNote(
-                    baseNote = baseNote,
-                    modifier = modifier,
-                    routeForLastRead = routeForLastRead,
-                    isBoostedNote = isBoostedNote,
-                    isQuotedNote = isQuotedNote,
-                    unPackReply = unPackReply,
-                    makeItShort = makeItShort,
-                    canPreview = canPreview,
-                    quotesLeft = quotesLeft,
-                    parentBackgroundColor = parentBackgroundColor,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
+            )
         }
     }
 }

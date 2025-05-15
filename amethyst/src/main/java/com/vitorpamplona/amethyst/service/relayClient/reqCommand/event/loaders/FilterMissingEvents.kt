@@ -24,14 +24,10 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-fun filterMissingEvents(
-    keys: List<EventFinderQueryState>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+fun filterMissingEvents(keys: List<EventFinderQueryState>): List<TypedFilter>? {
     val missingEvents = mutableSetOf<String>()
 
     keys.forEach {
@@ -47,19 +43,16 @@ fun filterMissingEvents(
         }
     }
 
-    return filterMissingEvents(missingEvents, since)
+    return filterMissingEvents(missingEvents)
 }
 
-fun filterMissingEvents(
-    missingEventIds: Set<HexKey>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+fun filterMissingEvents(missingEventIds: Set<HexKey>): List<TypedFilter>? {
     if (missingEventIds.isEmpty()) return null
 
     return listOf(
         TypedFilter(
             types = EVENT_FINDER_TYPES,
-            filter = SincePerRelayFilter(ids = missingEventIds.toList()),
+            filter = SincePerRelayFilter(ids = missingEventIds.sorted()),
         ),
     )
 }

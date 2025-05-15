@@ -2355,12 +2355,6 @@ object LocalCache : ILocalCache {
 
         removeFromCache(childrenToBeRemoved)
 
-        toBeRemoved.forEach {
-            it.replyTo?.forEach { masterNote ->
-                masterNote.clearEOSE() // allows reloading of these events
-            }
-        }
-
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} thread replies removed.")
         }
@@ -2373,7 +2367,6 @@ object LocalCache : ILocalCache {
             masterNote.removeReaction(note)
             masterNote.removeZap(note)
             masterNote.removeReport(note)
-            masterNote.clearEOSE() // allows reloading of these events if needed
         }
 
         val noteEvent = note.event
@@ -2865,7 +2858,7 @@ class LocalCacheFlow {
     val newEventBundles = _newEventBundles.asSharedFlow() // read-only public view
 
     // Refreshes observers in batches.
-    private val bundler = BundledInsert<Note>(1000, Dispatchers.IO)
+    private val bundler = BundledInsert<Note>(1000, Dispatchers.Default)
 
     fun invalidateData(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->

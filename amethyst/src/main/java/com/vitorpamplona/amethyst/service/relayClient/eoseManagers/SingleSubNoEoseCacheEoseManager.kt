@@ -18,35 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
+package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.ammolite.relays.TypedFilter
+import kotlin.collections.distinctBy
 
-fun groupByEOSEPresence(notes: Iterable<Note>): Collection<List<Note>> =
-    notes
-        .groupBy {
-            it.lastReactionsDownloadTime.relayList.keys
-                .sorted()
-                .joinToString(",")
-        }.values
-        .map {
-            it.sortedBy { it.idHex } // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
-        }
-
-fun findMinimumEOSEs(notes: List<Note>): Map<String, EOSETime> {
-    val minLatestEOSEs = mutableMapOf<String, EOSETime>()
-
-    notes.forEach { note ->
-        note.lastReactionsDownloadTime.relayList.forEach {
-            val minEose = minLatestEOSEs[it.key]
-            if (minEose == null) {
-                minLatestEOSEs.put(it.key, EOSETime(it.value.time))
-            } else if (it.value.time < minEose.time) {
-                minEose.time = it.value.time
+/**
+ * This query type creates only ONE relay subscription and does not
+ * store any EOSE cache. The EOSE is irrelevant for these types of
+ * filters
+ */
+abstract class SingleSubNoEoseCacheEoseManager<T>(
+    client: NostrClient,
+    allKeys: () -> Set<T>,
+    val invalidateAfterEose: Boolean = false,
+) : BaseEoseManager<T>(client, allKeys) {
+    val sub =
+        orchestrator.requestNewSubscription { time, relayUrl ->
+            if (invalidateAfterEose) {
+                invalidateFilters()
             }
         }
+
+    override fun updateSubscriptions(keys: Set<T>) {
+        val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
+
+        sub.typedFilters = updateFilter(uniqueSubscribedAccounts)?.ifEmpty { null }
     }
 
-    return minLatestEOSEs
+    abstract fun updateFilter(key: List<T>): List<TypedFilter>?
+
+    abstract fun distinct(key: T): Any
 }

@@ -39,6 +39,10 @@ open class Event(
     val content: String,
     val sig: HexKey,
 ) : IEvent {
+    /**
+     * Set this to true if the .content is encrypted or encoded in a
+     * way that it should not be indexed for local search.
+     */
     open fun isContentEncoded() = false
 
     open fun countMemory(): Long =

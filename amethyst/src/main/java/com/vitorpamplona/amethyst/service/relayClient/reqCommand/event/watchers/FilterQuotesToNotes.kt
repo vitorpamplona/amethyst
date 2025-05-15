@@ -23,11 +23,15 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 
-fun filterQuotesToNotes(keys: List<Note>): List<TypedFilter>? {
-    if (keys.isEmpty()) return null
+fun filterQuotesToNotes(
+    notes: List<Note>,
+    since: Map<String, EOSETime>?,
+): List<TypedFilter>? {
+    if (notes.isEmpty()) return null
 
     return listOf(
         TypedFilter(
@@ -35,8 +39,8 @@ fun filterQuotesToNotes(keys: List<Note>): List<TypedFilter>? {
             filter =
                 SincePerRelayFilter(
                     kinds = listOf(TextNoteEvent.KIND),
-                    tags = mapOf("q" to keys.map { it.idHex }),
-                    since = findMinimumEOSEs(keys),
+                    tags = mapOf("q" to notes.map { it.idHex }.sorted()),
+                    since = since,
                     // Max amount of "replies" to download on a specific event.
                     limit = 1000,
                 ),

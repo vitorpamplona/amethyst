@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
@@ -63,8 +64,8 @@ fun MessagesSinglePane(
         remember(knownFeedContentState, markKnownAsRead) {
             derivedStateOf {
                 listOf(
-                    MessagesTabItem(R.string.known, knownFeedContentState, markKnownAsRead),
-                    MessagesTabItem(R.string.new_requests, newFeedContentState, markNewAsRead),
+                    MessagesTabItem(R.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState, markKnownAsRead),
+                    MessagesTabItem(R.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState, markNewAsRead),
                 )
             }
         }

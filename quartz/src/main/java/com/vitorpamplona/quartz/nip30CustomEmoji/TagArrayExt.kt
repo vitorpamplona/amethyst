@@ -21,6 +21,5 @@
 package com.vitorpamplona.quartz.nip30CustomEmoji
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 
-fun TagArray.emojis() = this.mapTagged(EmojiUrlTag.TAG_NAME) { EmojiUrlTag.parse(it) }
+fun TagArray.emojis() = this.mapNotNull(EmojiUrlTag::parse)

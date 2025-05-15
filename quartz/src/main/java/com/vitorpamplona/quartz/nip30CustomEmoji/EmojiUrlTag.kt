@@ -48,7 +48,7 @@ data class EmojiUrlTag(
         }
 
         fun parse(tag: Array<String>): EmojiUrlTag? =
-            if (tag.size > 2 && tag[0] == "emoji") {
+            if (tag.size > 2 && tag[0] == TAG_NAME) {
                 EmojiUrlTag(tag[1], tag[2])
             } else {
                 null

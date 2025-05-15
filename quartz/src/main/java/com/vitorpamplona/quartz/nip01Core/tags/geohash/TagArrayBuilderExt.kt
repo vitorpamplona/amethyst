@@ -23,4 +23,4 @@ package com.vitorpamplona.quartz.nip01Core.tags.geohash
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun <T : Event> TagArrayBuilder<T>.geohash(tag: String) = addAll(GeoHash.assemble(tag))
+fun <T : Event> TagArrayBuilder<T>.geohash(tag: String) = addAll(GeoHashTag.assemble(tag))

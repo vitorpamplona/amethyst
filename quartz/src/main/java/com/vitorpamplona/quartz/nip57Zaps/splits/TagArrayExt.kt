@@ -21,9 +21,7 @@
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.core.hasTagWithContent
-import com.vitorpamplona.quartz.nip01Core.core.mapTagged
 
-fun TagArray.hasZapSplitSetup() = this.hasTagWithContent(BaseZapSplitSetup.TAG_NAME)
+fun TagArray.hasZapSplitSetup() = this.any(ZapSplitSetupParser::isTagged)
 
-fun TagArray.zapSplitSetup(): List<BaseZapSplitSetup> = this.mapTagged(BaseZapSplitSetup.TAG_NAME) { ZapSplitSetupParser.parse(it) }
+fun TagArray.zapSplitSetup(): List<BaseZapSplitSetup> = this.mapNotNull(ZapSplitSetupParser::parse)

@@ -45,6 +45,13 @@ interface QTag {
         }
 
         @JvmStatic
+        fun parseKey(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return tag[1]
+        }
+
+        @JvmStatic
         fun parseEventAsHint(tag: Array<String>): EventIdHint? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

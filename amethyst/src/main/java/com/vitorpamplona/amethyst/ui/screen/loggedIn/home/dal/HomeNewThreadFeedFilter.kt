@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
+import androidx.compose.ui.util.fastAny
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -93,7 +94,7 @@ class HomeNewThreadFeedFilter(
         filterParams: FilterByListParams,
     ): Boolean {
         val noteEvent = it.event
-        val isGlobalRelay = it.relays.any { globalRelays.contains(it.url) }
+        val isGlobalRelay = it.relays.fastAny { globalRelays.contains(it.url) }
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||

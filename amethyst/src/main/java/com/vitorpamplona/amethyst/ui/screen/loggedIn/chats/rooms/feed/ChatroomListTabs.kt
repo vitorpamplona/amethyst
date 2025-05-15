@@ -60,6 +60,7 @@ import kotlinx.coroutines.launch
 @Immutable
 class MessagesTabItem(
     val resource: Int,
+    val scrollStateKey: String,
     val feedContentState: FeedContentState,
     val markAsRead: MutableState<Boolean>,
 )
@@ -128,6 +129,7 @@ fun MessagesPager(
     ) { page ->
         ChatroomListFeedView(
             feedContentState = tabs[page].feedContentState,
+            scrollStateKey = tabs[page].scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
             markAsRead = tabs[page].markAsRead,

@@ -24,14 +24,10 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 
-fun filterMissingChannelsById(
-    keys: List<ChannelFinderQueryState>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+fun filterMissingChannelsById(keys: List<ChannelFinderQueryState>): List<TypedFilter>? {
     val firstTimers =
         keys.mapNotNullTo(mutableSetOf()) {
             if (it.channel is PublicChatChannel && it.channel.event == null) {

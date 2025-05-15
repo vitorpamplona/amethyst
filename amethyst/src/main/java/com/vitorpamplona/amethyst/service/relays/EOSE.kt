@@ -122,13 +122,13 @@ class EOSEAccount(
     ) = addOrUpdate(user, listCode, relayUrl, time)
 }
 
-class EOSEAccountFast(
+class EOSEAccountFast<T : Any>(
     cacheSize: Int = 20,
 ) {
-    private val users: LruCache<User, EOSERelayList> = LruCache<User, EOSERelayList>(cacheSize)
+    private val users: LruCache<T, EOSERelayList> = LruCache<T, EOSERelayList>(cacheSize)
 
     fun addOrUpdate(
-        user: User,
+        user: T,
         relayUrl: String,
         time: Long,
     ) {
@@ -143,14 +143,14 @@ class EOSEAccountFast(
         }
     }
 
-    fun removeDataFor(user: User) {
+    fun removeDataFor(user: T) {
         users.remove(user)
     }
 
-    fun since(key: User) = users[key]?.relayList
+    fun since(key: T) = users[key]?.relayList
 
     fun newEose(
-        user: User,
+        user: T,
         relayUrl: String,
         time: Long,
     ) = addOrUpdate(user, relayUrl, time)

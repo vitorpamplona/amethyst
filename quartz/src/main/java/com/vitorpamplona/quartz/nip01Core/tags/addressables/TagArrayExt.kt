@@ -22,12 +22,12 @@ package com.vitorpamplona.quartz.nip01Core.tags.addressables
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.any
-import com.vitorpamplona.quartz.nip01Core.core.firstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 
 fun <R> TagArray.mapTaggedAddress(map: (address: String) -> R) = this.mapValueTagged(ATag.TAG_NAME, map)
 
-fun TagArray.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = this.firstNotNullOfOrNull(ATag::parseIfIsIn, addressableNotes)
+fun TagArray.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = this.fastFirstNotNullOfOrNull(ATag::parseIfIsIn, addressableNotes)
 
 fun TagArray.isTaggedAddressableNote(addressId: String) = this.any(ATag::isTagged, addressId)
 
@@ -35,12 +35,12 @@ fun TagArray.isTaggedAddressableNotes(addressIds: Set<String>) = this.any(ATag::
 
 fun TagArray.isTaggedAddressableKind(kind: Int) = this.any(ATag::isTaggedWithKind, kind.toString())
 
-fun TagArray.getTagOfAddressableKind(kind: Int) = this.firstNotNullOfOrNull(ATag::parseIfOfKind, kind.toString())
+fun TagArray.getTagOfAddressableKind(kind: Int) = this.fastFirstNotNullOfOrNull(ATag::parseIfOfKind, kind.toString())
 
 fun TagArray.taggedATags() = this.mapNotNull(ATag::parse)
 
-fun TagArray.firstTaggedATag() = this.firstNotNullOfOrNull(ATag::parse)
+fun TagArray.firstTaggedATag() = this.fastFirstNotNullOfOrNull(ATag::parse)
 
 fun TagArray.taggedAddresses() = this.mapNotNull(ATag::parseAddress)
 
-fun TagArray.firstTaggedAddress() = this.firstNotNullOfOrNull(ATag::parseAddress)
+fun TagArray.firstTaggedAddress() = this.fastFirstNotNullOfOrNull(ATag::parseAddress)

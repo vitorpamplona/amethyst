@@ -107,7 +107,9 @@ class Nav(
     override fun newStack(route: Route) {
         scope.launch {
             controller.navigate(route) {
-                popUpTo(Route.Home)
+                popUpTo(Route.Home) {
+                    inclusive = true
+                }
                 launchSingleTop = true
             }
         }

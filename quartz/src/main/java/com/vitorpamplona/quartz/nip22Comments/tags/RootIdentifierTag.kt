@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip22Comments.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.GeohashId
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
@@ -54,7 +54,7 @@ class RootIdentifierTag {
         @JvmStatic
         fun assemble(id: ExternalId): List<Array<String>> =
             when (id) {
-                is GeohashId -> GeoHash.geoMipMap(id.geohash).map { assemble(it, id.hint) }
+                is GeohashId -> GeoHashTag.geoMipMap(id.geohash).map { assemble(it, id.hint) }
                 else -> listOf(assemble(id.toScope(), id.hint()))
             }
     }
