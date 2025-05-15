@@ -30,21 +30,67 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.forEach
 import kotlin.collections.get
 import kotlin.concurrent.timer
+import kotlin.jvm.java
 import kotlin.text.get
 import kotlin.text.set
 
+class KindGroup(
+    var count: AtomicInteger = AtomicInteger(0),
+    val subs: LargeCache<String, AtomicInteger> = LargeCache<String, AtomicInteger>(),
+    val relays: LargeCache<String, AtomicInteger> = LargeCache<String, AtomicInteger>(),
+) {
+    fun increment(
+        subId: String,
+        relayUrl: String,
+    ) {
+        count.incrementAndGet()
+
+        val subStats = subs.get(subId)
+        if (subStats != null) {
+            subStats.incrementAndGet()
+        } else {
+            subs.put(subId, AtomicInteger(1))
+        }
+
+        val relayStats = relays.get(relayUrl)
+        if (relayStats != null) {
+            relayStats.incrementAndGet()
+        } else {
+            relays.put(relayUrl, AtomicInteger(1))
+        }
+    }
+
+    fun reset() {
+        count.set(0)
+        subs.forEach { key, value -> value.set(0) }
+        relays.forEach { key, value -> value.set(0) }
+    }
+
+    fun printSubs() = subs.joinToString(", ") { key, value -> if (value.get() > 0) "$key ($value)" else "" }
+
+    fun printRelays() = relays.joinToString(", ") { key, value -> if (value.get() > 0) "${key.removePrefix("wss://").removeSuffix("/")} ($value)" else "" }
+
+    override fun toString() = "(${count.get()}); ${printSubs()}; ${printRelays()}"
+}
+
 class FrameStat {
     var eventCount = AtomicInteger(0)
-    var kinds = LargeCache<Int, AtomicInteger>()
+    var kinds = LargeCache<Int, KindGroup>()
 
-    fun increment(kind: Int) {
+    fun increment(
+        kind: Int,
+        subId: String,
+        relayUrl: String,
+    ) {
         eventCount.incrementAndGet()
 
-        val kindCount = kinds.get(kind)
-        if (kindCount != null) {
-            kindCount.incrementAndGet()
+        val kindGroup = kinds.get(kind)
+        if (kindGroup != null) {
+            kindGroup.increment(subId, relayUrl)
         } else {
-            kinds.put(kind, AtomicInteger(1))
+            val group = KindGroup(AtomicInteger(0))
+            group.increment(subId, relayUrl)
+            kinds.put(kind, group)
         }
     }
 
@@ -52,16 +98,14 @@ class FrameStat {
 
     fun reset() {
         eventCount.set(0)
-        kinds.forEach { key, value ->
-            value.set(0)
-        }
+        kinds.forEach { key, value -> value.reset() }
     }
 
     fun log() {
         Log.d(TAG, "Events Per Second: ${eventCount.get()}")
         kinds.forEach { key, value ->
-            if (value.get() > 0) {
-                Log.d(TAG, "-- Events Per Second Debug: $key $value")
+            if (value.count.get() > 0) {
+                Log.d(TAG, "-- Kind $key $value")
             }
         }
     }
@@ -101,7 +145,7 @@ class RelaySpeedLogger(
                 arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
-                current.increment(event.kind)
+                current.increment(event.kind, subscriptionId, relay.url)
             }
         }
 

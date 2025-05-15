@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import org.apache.commons.lang3.text.FormattableUtils.append
+import java.io.File.separator
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
+import kotlin.text.StringBuilder
 
 class LargeCache<K, V> {
     private val cache = ConcurrentSkipListMap<K, V>()
@@ -159,6 +162,38 @@ class LargeCache<K, V> {
         cache.forEach(runner)
         //    }
         // println("LargeCache full loop $elapsed \t for $runner")
+
+        listOf(1, 2, 3).joinToString()
+    }
+
+    fun joinToString(
+        separator: CharSequence = ", ",
+        prefix: CharSequence = "",
+        postfix: CharSequence = "",
+        limit: Int = -1,
+        truncated: CharSequence = "...",
+        transform: ((K, V) -> CharSequence)? = null,
+    ): String {
+        val buffer = StringBuilder()
+        buffer.append(prefix)
+        var count = 0
+        forEach { key, value ->
+            val str = if (transform != null) transform(key, value) else ""
+            if (str.isNotEmpty()) {
+                if (++count > 1) buffer.append(separator)
+                if (limit < 0 || count <= limit) {
+                    when {
+                        transform != null -> buffer.append(str)
+                        else -> buffer.append("$key $value")
+                    }
+                } else {
+                    return@forEach
+                }
+            }
+        }
+        if (limit >= 0 && count > limit) buffer.append(truncated)
+        buffer.append(postfix)
+        return buffer.toString()
     }
 }
 
