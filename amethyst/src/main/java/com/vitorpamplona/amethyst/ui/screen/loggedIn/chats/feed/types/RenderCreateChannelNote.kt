@@ -238,7 +238,7 @@ fun RenderRelayLinePublicChat(
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo = loadRelayInfo(dirtyUrl, accountViewModel)
+    val relayInfo by loadRelayInfo(dirtyUrl, accountViewModel)
 
     var openRelayDialog by remember { mutableStateOf(false) }
 
@@ -247,14 +247,16 @@ fun RenderRelayLinePublicChat(
             RelayBriefInfoCache.get(RelayUrlFormatter.normalize(dirtyUrl))
         }
 
-    if (openRelayDialog && relayInfo != null) {
-        RelayInformationDialog(
-            onClose = { openRelayDialog = false },
-            relayInfo = relayInfo!!,
-            relayBriefInfo = info,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    if (openRelayDialog) {
+        relayInfo?.let {
+            RelayInformationDialog(
+                onClose = { openRelayDialog = false },
+                relayInfo = it,
+                relayBriefInfo = info,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 
     val clipboardManager = LocalClipboardManager.current

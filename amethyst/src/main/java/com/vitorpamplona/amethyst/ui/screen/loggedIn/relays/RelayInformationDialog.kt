@@ -27,15 +27,17 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,21 +63,25 @@ import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.ammolite.relays.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.RelayDebugMessage
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.collections.immutable.toImmutableList
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun RelayInformationDialog(
     onClose: () -> Unit,
@@ -106,29 +112,34 @@ fun RelayInformationDialog(
             ),
     ) {
         SetDialogToEdgeToEdge()
-        Surface {
-            val color =
-                remember {
-                    mutableStateOf(Color.Transparent)
-                }
 
-            val context = LocalContext.current
-
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    actions = {},
+                    title = {
+                        Text(relayBriefInfo.displayUrl)
+                    },
+                    navigationIcon = {
+                        Row {
+                            Spacer(modifier = StdHorzSpacer)
+                            BackButton(
+                                onPress = { onClose() },
+                            )
+                        }
+                    },
+                )
+            },
+        ) { pad ->
             LazyColumn(
                 modifier =
                     Modifier
-                        .padding(10.dp)
+                        .padding(pad)
+                        .consumeWindowInsets(pad)
+                        .padding(bottom = Size10dp, start = Size10dp, end = Size10dp)
                         .fillMaxSize(),
             ) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CloseButton(onPress = { onClose() })
-                    }
-                }
                 item {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -142,7 +153,7 @@ fun RelayInformationDialog(
                                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
                                 RelayStats.get(url = relayBriefInfo.url).pingInMs,
-                                iconModifier = MaterialTheme.colorScheme.largeRelayIconModifier,
+                                iconModifier = LargeRelayIconModifier,
                             )
                         }
 
@@ -150,9 +161,15 @@ fun RelayInformationDialog(
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Title(relayInfo.name?.trim() ?: "")
-                            SubtitleContent(relayInfo.description?.trim() ?: "")
+                            Spacer(modifier = HalfVertSpacer)
+                            SubtitleContent(relayBriefInfo.url)
                         }
                     }
+                }
+                item {
+                    Section(stringRes(R.string.description))
+
+                    SectionContent(relayInfo.description?.trim() ?: "")
                 }
                 item {
                     Section(stringRes(R.string.owner))
@@ -160,15 +177,6 @@ fun RelayInformationDialog(
                     relayInfo.pubkey?.let {
                         DisplayOwnerInformation(it, accountViewModel, newNav)
                     }
-                }
-                item {
-                    Section(stringRes(R.string.software))
-
-                    DisplaySoftwareInformation(relayInfo)
-
-                    Section(stringRes(R.string.version))
-
-                    SectionContent(relayInfo.version ?: "")
                 }
                 item {
                     Section(stringRes(R.string.contact))
@@ -184,6 +192,15 @@ fun RelayInformationDialog(
                             }
                         }
                     }
+                }
+                item {
+                    Section(stringRes(R.string.software))
+
+                    DisplaySoftwareInformation(relayInfo)
+
+                    Section(stringRes(R.string.version))
+
+                    SectionContent(relayInfo.version ?: "")
                 }
                 item {
                     Section(stringRes(R.string.supports))
@@ -290,28 +307,42 @@ fun RelayInformationDialog(
 
                 items(messages) { msg ->
                     Row {
-                        SelectionContainer {
-                            TranslatableRichTextViewer(
-                                content =
-                                    remember {
-                                        "${timeAgo(msg.time, context)}, ${msg.type.name}: ${msg.message}"
-                                    },
-                                canPreview = false,
-                                quotesLeft = 0,
-                                modifier = Modifier.fillMaxWidth(),
-                                tags = EmptyTagList,
-                                backgroundColor = color,
-                                id = msg.hashCode().toString(),
-                                accountViewModel = accountViewModel,
-                                nav = newNav,
-                            )
-                        }
+                        RenderDebugMessage(msg, accountViewModel, newNav)
                     }
 
                     Spacer(modifier = StdVertSpacer)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RenderDebugMessage(
+    msg: RelayDebugMessage,
+    accountViewModel: AccountViewModel,
+    newNav: INav,
+) {
+    SelectionContainer {
+        val context = LocalContext.current
+        val color =
+            remember {
+                mutableStateOf(Color.Transparent)
+            }
+        TranslatableRichTextViewer(
+            content =
+                remember {
+                    "${timeAgo(msg.time, context)}, ${msg.type.name}: ${msg.message}"
+                },
+            canPreview = false,
+            quotesLeft = 0,
+            modifier = Modifier.fillMaxWidth(),
+            tags = EmptyTagList,
+            backgroundColor = color,
+            id = msg.hashCode().toString(),
+            accountViewModel = accountViewModel,
+            nav = newNav,
+        )
     }
 }
 

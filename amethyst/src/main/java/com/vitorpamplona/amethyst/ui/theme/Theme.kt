@@ -248,16 +248,6 @@ val DarkRelayIconModifier =
         .size(Size13dp)
         .clip(shape = CircleShape)
 
-val LightLargeRelayIconModifier =
-    Modifier
-        .size(Size55dp)
-        .clip(shape = CircleShape)
-
-val DarkLargeRelayIconModifier =
-    Modifier
-        .size(Size55dp)
-        .clip(shape = CircleShape)
-
 val darkLargeProfilePictureModifier =
     Modifier
         .width(120.dp)
@@ -448,10 +438,6 @@ val ColorScheme.userProfileBorderModifier: Modifier
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.relayIconModifier: Modifier
     get() = if (isLight) LightRelayIconModifier else DarkRelayIconModifier
-
-@Suppress("ModifierFactoryExtensionFunction")
-val ColorScheme.largeRelayIconModifier: Modifier
-    get() = if (isLight) LightLargeRelayIconModifier else DarkLargeRelayIconModifier
 
 @Suppress("ModifierFactoryExtensionFunction")
 val ColorScheme.selectedReactionBoxModifier: Modifier

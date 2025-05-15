@@ -121,18 +121,20 @@ fun RenderRelay(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relayInfo = loadRelayInfo(relay.url, accountViewModel)
+    val relayInfo by loadRelayInfo(relay.url, accountViewModel)
 
     var openRelayDialog by remember { mutableStateOf(false) }
 
-    if (openRelayDialog && relayInfo != null) {
-        RelayInformationDialog(
-            onClose = { openRelayDialog = false },
-            relayInfo = relayInfo,
-            relayBriefInfo = relay,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+    if (openRelayDialog) {
+        relayInfo?.let {
+            RelayInformationDialog(
+                onClose = { openRelayDialog = false },
+                relayInfo = it,
+                relayBriefInfo = relay,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 
     val clipboardManager = LocalClipboardManager.current

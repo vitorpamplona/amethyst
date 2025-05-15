@@ -27,8 +27,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -40,8 +40,8 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
-import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -68,15 +68,15 @@ fun BasicRelaySetupInfoClickableRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,
         ) {
-            val iconUrlFromRelayInfoDoc = loadRelayInfo(item.url, accountViewModel)?.icon
+            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.url, accountViewModel)
 
             RenderRelayIcon(
                 item.briefInfo.displayUrl,
-                iconUrlFromRelayInfoDoc ?: item.briefInfo.favIcon,
+                iconUrlFromRelayInfoDoc?.icon ?: item.briefInfo.favIcon,
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,
-                MaterialTheme.colorScheme.largeRelayIconModifier,
+                LargeRelayIconModifier,
             )
 
             Spacer(modifier = HalfHorzPadding)

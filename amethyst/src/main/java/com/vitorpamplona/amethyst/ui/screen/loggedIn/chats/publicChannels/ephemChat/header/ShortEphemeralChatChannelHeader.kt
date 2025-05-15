@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -57,21 +58,22 @@ import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 fun loadRelayInfo(
     relayUrl: String,
     accountViewModel: AccountViewModel,
-): Nip11RelayInformation? {
+): State<Nip11RelayInformation?> {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo by produceStateIfNotNull(
-        Nip11CachedRetriever.getFromCache(relayUrl),
-        relayUrl,
-    ) {
-        accountViewModel.retrieveRelayDocument(
+    val relayInfo =
+        produceStateIfNotNull(
+            Nip11CachedRetriever.getFromCache(relayUrl),
             relayUrl,
-            onInfo = {
-                value = it
-            },
-            onError = { url, errorCode, exceptionMessage ->
-            },
-        )
-    }
+        ) {
+            accountViewModel.retrieveRelayDocument(
+                relayUrl,
+                onInfo = {
+                    value = it
+                },
+                onError = { url, errorCode, exceptionMessage ->
+                },
+            )
+        }
 
     return relayInfo
 }
@@ -121,7 +123,7 @@ private fun DrawRelayIcon(
     channel: EphemeralChatChannel,
     accountViewModel: AccountViewModel,
 ) {
-    val relayInfo = loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
+    val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
     val info =
         remember(channel.roomId.relayUrl) {
             RelayBriefInfoCache.get(RelayUrlFormatter.normalize(channel.roomId.relayUrl))

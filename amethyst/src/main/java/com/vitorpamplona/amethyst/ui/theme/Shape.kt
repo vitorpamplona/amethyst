@@ -323,3 +323,13 @@ val SettingsCategorySpacingModifier = Modifier.padding(top = 24.dp, bottom = 8.d
 
 val SquaredQuoteBorderModifier = Modifier.aspectRatio(1f).clip(shape = QuoteBorder)
 val FillWidthQuoteBorderModifier = Modifier.fillMaxWidth().clip(shape = QuoteBorder)
+
+val MediumRelayIconModifier =
+    Modifier
+        .size(Size35dp)
+        .clip(shape = CircleShape)
+
+val LargeRelayIconModifier =
+    Modifier
+        .size(Size55dp)
+        .clip(shape = CircleShape)

@@ -228,7 +228,7 @@ private fun ChannelRoomCompose(
     val authorName by observeUserName(note.author!!, accountViewModel)
     val channelState by observeChannel(channel, accountViewModel)
 
-    val relayInfo = loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
+    val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
     val info =
         remember(channel.roomId.relayUrl) {
             RelayBriefInfoCache.get(RelayUrlFormatter.normalize(channel.roomId.relayUrl))

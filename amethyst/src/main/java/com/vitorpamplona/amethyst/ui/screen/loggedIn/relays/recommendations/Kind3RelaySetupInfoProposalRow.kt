@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,11 +57,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
-import com.vitorpamplona.amethyst.ui.theme.largeRelayIconModifier
 import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
 import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
 
@@ -84,7 +85,7 @@ fun Kind3RelaySetupInfoProposalRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 5.dp),
         ) {
-            val relayInfo = loadRelayInfo(item.url, accountViewModel)
+            val relayInfo by loadRelayInfo(item.url, accountViewModel)
 
             RenderRelayIcon(
                 item.briefInfo.displayUrl,
@@ -92,7 +93,7 @@ fun Kind3RelaySetupInfoProposalRow(
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,
-                MaterialTheme.colorScheme.largeRelayIconModifier,
+                LargeRelayIconModifier,
             )
 
             Spacer(modifier = HalfHorzPadding)
