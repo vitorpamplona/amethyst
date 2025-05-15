@@ -936,4 +936,5 @@
     <string name="torrent_no_apps">Pro otevření a stažení souboru nejsou nainstalovány žádné torrent aplikace.</string>
     <string name="select_list_to_filter">Vyberte seznam pro filtrování kanálu</string>
     <string name="temporary_account">Odhlásit se na zámek zařízení</string>
+    <string name="share_image">Sdílet obrázek…</string>
 </resources>

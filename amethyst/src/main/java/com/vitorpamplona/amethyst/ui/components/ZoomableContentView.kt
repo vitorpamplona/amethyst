@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -47,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,6 +107,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.seconds
 
@@ -680,6 +684,7 @@ fun ShareImageAction(
             hash = content.hash,
             mimeType = content.mimeType,
             onDismiss = onDismiss,
+            content = content,
         )
     } else if (content is MediaPreloadedContent) {
         ShareImageAction(
@@ -692,6 +697,7 @@ fun ShareImageAction(
             hash = null,
             mimeType = content.mimeType,
             onDismiss = onDismiss,
+            content = content,
         )
     }
 }
@@ -708,7 +714,10 @@ fun ShareImageAction(
     hash: String?,
     mimeType: String?,
     onDismiss: () -> Unit,
+    content: BaseMediaContent? = null,
 ) {
+    val scope = rememberCoroutineScope()
+
     DropdownMenu(
         expanded = popupExpanded.value,
         onDismissRequest = onDismiss,
@@ -751,10 +760,49 @@ fun ShareImageAction(
                 },
             )
         }
+
+        content?.let {
+            if (content is MediaUrlImage) {
+                val context = LocalContext.current
+                videoUri?.let {
+                    if (videoUri.isNotEmpty()) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.share_image)) },
+                            onClick = {
+                                scope.launch { shareImageFile(context, videoUri, mimeType) }
+                                onDismiss()
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
-private suspend fun verifyHash(content: MediaUrlContent): Boolean? {
+private suspend fun shareImageFile(
+    context: Context,
+    videoUri: String,
+    mimeType: String?,
+) {
+    // Get sharable URI and file extension
+    val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
+
+    // Determine mime type, use provided or derive from extension
+    val determinedMimeType = mimeType ?: "image/$fileExtension"
+
+    // Create share intent
+    val shareIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = determinedMimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+    context.startActivity(Intent.createChooser(shareIntent, null))
+}
+
+private fun verifyHash(content: MediaUrlContent): Boolean? {
     if (content.hash == null) return null
 
     Amethyst.instance.diskCache.openSnapshot(content.url)?.use { snapshot ->
