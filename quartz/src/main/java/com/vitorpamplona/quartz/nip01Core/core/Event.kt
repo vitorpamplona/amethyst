@@ -56,11 +56,6 @@ open class Event(
 
     fun toJson(): String = EventManualSerializer.toJson(id, pubKey, createdAt, kind, tags, content, sig)
 
-    /**
-     * For debug purposes only
-     */
-    fun toPrettyJson(): String = EventManualSerializer.toPrettyJson(id, pubKey, createdAt, kind, tags, content, sig)
-
     companion object {
         fun fromJson(json: String): Event = EventMapper.fromJson(json)
 

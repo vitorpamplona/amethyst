@@ -20,12 +20,23 @@
  */
 package com.vitorpamplona.quartz.nip01Core.metadata
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.utils.nsecToSigner
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class UpdateMetadataTest {
     val signer = "nsec10g0wheggqn9dawlc0yuv6adnat6n09anr7eyykevw2dm8xa5fffs0wsdsr".nsecToSigner()
+
+    /**
+     * For debug purposes only
+     */
+    fun Event.toPrettyJson(): String {
+        val obj = EventManualSerializer.assemble(id, pubKey, createdAt, kind, tags, content, sig)
+        return EventMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
+    }
 
     @Test
     fun createNewMetadata() {
