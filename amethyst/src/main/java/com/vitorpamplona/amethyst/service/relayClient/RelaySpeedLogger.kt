@@ -27,12 +27,8 @@ import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.LargeCache
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.forEach
-import kotlin.collections.get
 import kotlin.concurrent.timer
 import kotlin.jvm.java
-import kotlin.text.get
-import kotlin.text.set
 
 class KindGroup(
     var count: AtomicInteger = AtomicInteger(0),
