@@ -90,7 +90,9 @@
     <string name="note_to_receiver">Note to Receiver</string>
     <string name="thank_you_so_much">Thank you so much!</string>
     <string name="amount_in_sats">Amount in Sats</string>
+    <string name="amount">Amount</string>
     <string name="send_sats">Send Sats</string>
+    <string name="send_monero">Send Monero</string>
 
     <string name="secret_emoji_maker">Secret Emoji Maker</string>
     <string name="secret_emoji_maker_explainer">Add an emoji with hidden message to post</string>
@@ -1171,4 +1173,22 @@
     <string name="group_relay">Chat Relay</string>
     <string name="group_relay_explanation">The relay that all users of this chat connect to</string>
     <string name="share_image">Share image…</string>
+
+    <string name="monero">Monero</string>
+    <string name="monero_template">8… or 4…</string>
+    <string name="invalid_monero_address">Invalid monero address</string>
+    <string name="monero_wallet">Monero wallet</string>
+    <string name="no_monero_wallet_found">No monero wallet found</string>
+    <string name="error_dialog_tip_error">Unable to send Tip</string>
+    <string name="no_tip_amount_setup_long_press_to_change">No Tip Amount Setup. Long Press to change</string>
+    <string name="it_s_not_possible_to_tip_to_a_draft_note">It\'s not possible to tip a draft note</string>
+    <string name="new_amount">New amount</string>
+    <string name="both">Both</string>
+    <string name="monero_tips">Monero Tips</string>
+    <string name="tips">Tips</string>
+    <string name="tips_description">Both, Lightning or Monero</string>
+    <string name="tip_type_nontip">Non-Tip</string>
+    <string name="tip_type_nontip_explainer">No trace in Nostr, only in Monero</string>
+    <string name="tip_type_explainer">Tip Type for all options</string>
+    <string name="user_doesnt_have_monero_address">User doesn\'t have a monero address</string>
 </resources>

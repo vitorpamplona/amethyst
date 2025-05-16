@@ -25,6 +25,7 @@ import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -57,6 +58,7 @@ fun filterRepliesAndReactionsToAddresses(
                             GenericRepostEvent.KIND,
                             ReportEvent.KIND,
                             LnZapEvent.KIND,
+                            TipEvent.KIND,
                             PollNoteEvent.KIND,
                             CommunityPostApprovalEvent.KIND,
                             LiveActivitiesChatMessageEvent.KIND,
