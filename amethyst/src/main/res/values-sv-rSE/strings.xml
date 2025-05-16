@@ -493,9 +493,18 @@
     <string name="content_warning_hide_all_sensitive_content">Dölj alltid känsligt innehåll</string>
     <string name="content_warning_show_all_sensitive_content">Visa alltid känsligt innehåll</string>
     <string name="content_warning_see_warnings">Visa alltid innehållsvarningar</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Dölj</string>
+    <string name="content_warning_show_all_sensitive_content_option">Visa</string>
+    <string name="content_warning_see_warnings_option">Varna</string>
     <string name="recommended_apps">Rekommenderas: </string>
     <string name="filter_spam_from_strangers">Filtrera skräppost från främlingar</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Varna när inlägg har rapporter från dina följare</string>
+    <string name="filter_spam_from_strangers_title">Filtrera spam</string>
+    <string name="filter_spam_from_strangers_explainer">Döljer inlägg från främlingar som var exakt samma för 5 eller fler gånger</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Varna vid rapporter</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
+    <string name="show_sensitive_content_title">Visa känsligt innehåll</string>
+    <string name="show_sensitive_content_explainer">Visar ett varningsmeddelande när författaren till inlägget markerar det som känsligt</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
     <string name="zapraiser">Zap insamling</string>
@@ -957,4 +966,5 @@
     <string name="private_message">Privat meddelande</string>
     <string name="group_relay">Chatt Relä</string>
     <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
+    <string name="share_image">Dela bild…</string>
 </resources>

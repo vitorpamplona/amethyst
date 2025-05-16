@@ -499,9 +499,18 @@ anz der Bedingungen ist erforderlich</string>
     <string name="content_warning_hide_all_sensitive_content">Sensiblen Inhalt immer ausblenden</string>
     <string name="content_warning_show_all_sensitive_content">Sensiblen Inhalt immer anzeigen</string>
     <string name="content_warning_see_warnings">Immer Inhaltswarnungen anzeigen</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Ausblenden</string>
+    <string name="content_warning_show_all_sensitive_content_option">Anzeigen</string>
+    <string name="content_warning_see_warnings_option">Warnen</string>
     <string name="recommended_apps">Empfohlene Apps: </string>
     <string name="filter_spam_from_strangers">Spam von Fremden filtern</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Warnung bei Meldungen von deinen Abonnements</string>
+    <string name="filter_spam_from_strangers_title">Spam filtern</string>
+    <string name="filter_spam_from_strangers_explainer">Versteckt Beiträge von Fremden, die 5 oder mehr Male genau die gleichen waren</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Bei Berichten warnen</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zeigt eine Warnmeldung an, wenn die Beiträge 5 oder mehr Berichte von den folgenden Beiträgen enthalten</string>
+    <string name="show_sensitive_content_title">Heiklen Inhalt anzeigen</string>
+    <string name="show_sensitive_content_explainer">Zeigt eine Warnmeldung an, wenn der Autor des Beitrags ihn als sensibel markiert hat</string>
     <string name="new_reaction_symbol">Neues Reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Keine Reaktionstypen ausgewählt. Lange drücken, um zu ändern</string>
     <string name="zapraiser">Zap-Sammlung</string>
@@ -963,4 +972,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="private_message">Private Nachricht</string>
     <string name="group_relay">Chat-Relais</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
+    <string name="share_image">Bild teilen…</string>
 </resources>
