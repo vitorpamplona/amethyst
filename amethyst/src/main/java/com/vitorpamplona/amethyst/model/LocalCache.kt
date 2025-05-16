@@ -1269,7 +1269,10 @@ object LocalCache : ILocalCache {
         }
     }
 
-    fun consume(event: RepostEvent): Boolean {
+    fun consume(
+        event: RepostEvent,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+    ): Boolean {
         val note = getOrCreateNote(event.id)
 
         // Already processed this event.
@@ -1284,6 +1287,10 @@ object LocalCache : ILocalCache {
             // Counts the replies
             repliesTo.forEach { it.addBoost(note) }
 
+            event.containedPost()?.let {
+                justConsumeInner(it, relay)
+            }
+
             refreshObservers(note)
 
             return true
@@ -1291,7 +1298,10 @@ object LocalCache : ILocalCache {
         return false
     }
 
-    fun consume(event: GenericRepostEvent): Boolean {
+    fun consume(
+        event: GenericRepostEvent,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+    ): Boolean {
         val note = getOrCreateNote(event.id)
 
         // Already processed this event.
@@ -1306,6 +1316,10 @@ object LocalCache : ILocalCache {
             // Counts the replies
             repliesTo.forEach { it.addBoost(note) }
 
+            event.containedPost()?.let {
+                justConsumeInner(it, relay)
+            }
+
             refreshObservers(note)
 
             return true
@@ -1314,7 +1328,10 @@ object LocalCache : ILocalCache {
         return false
     }
 
-    fun consume(event: CommunityPostApprovalEvent): Boolean {
+    fun consume(
+        event: CommunityPostApprovalEvent,
+        relay: RelayBriefInfoCache.RelayBriefInfo?,
+    ): Boolean {
         val note = getOrCreateNote(event.id)
 
         // Already processed this event.
@@ -1332,6 +1349,10 @@ object LocalCache : ILocalCache {
 
             // Counts the replies
             repliesTo.forEach { it.addBoost(note) }
+
+            event.containedPost()?.let {
+                justConsumeInner(it, relay)
+            }
 
             refreshObservers(note)
 
@@ -1618,14 +1639,23 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event != null) return false
 
-        val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
-
-        if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-            Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
-            return false
-        }
-
         if (justVerify(event)) {
+            val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+
+            if (existingZapRequest == null || existingZapRequest.event == null) {
+                // tries to add it
+                event.zapRequest?.let {
+                    justConsumeInner(it, relay)
+                }
+            }
+
+            val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+
+            if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
+                Log.e("ZP", "Zap Request not found. Unable to process Zap {${event.toJson()}}")
+                return false
+            }
+
             val author = getOrCreateUser(event.pubKey)
             val mentions = event.zappedAuthor().mapNotNull { checkGetOrCreateUser(it) }
             val repliesTo = computeReplyTo(event)
@@ -2725,12 +2755,7 @@ object LocalCache : ILocalCache {
                 is CommentEvent -> consume(event, relay)
                 is CommunityDefinitionEvent -> consume(event, relay)
                 is CommunityListEvent -> consume(event, relay)
-                is CommunityPostApprovalEvent -> {
-                    event.containedPost()?.let {
-                        justConsumeInner(it, relay)
-                    }
-                    consume(event)
-                }
+                is CommunityPostApprovalEvent -> consume(event, relay)
                 is ContactListEvent -> consume(event)
                 is DeletionEvent -> consume(event)
                 is DraftEvent -> consume(event, relay)
@@ -2738,14 +2763,7 @@ object LocalCache : ILocalCache {
                 is EmojiPackSelectionEvent -> consume(event, relay)
                 is EphemeralChatEvent -> consume(event, relay)
                 is EphemeralChatListEvent -> consume(event, relay)
-                is GenericRepostEvent -> {
-                    event.containedPost()?.let {
-                        if (justVerify(it)) {
-                            justConsumeInner(it, relay)
-                        }
-                    }
-                    consume(event)
-                }
+                is GenericRepostEvent -> consume(event, relay)
                 is FhirResourceEvent -> consume(event, relay)
                 is FileHeaderEvent -> consume(event, relay)
                 is ProfileGalleryEntryEvent -> consume(event, relay)
@@ -2764,13 +2782,7 @@ object LocalCache : ILocalCache {
                 is InteractiveStoryReadingStateEvent -> consume(event, relay)
                 is LiveActivitiesEvent -> consume(event, relay)
                 is LiveActivitiesChatMessageEvent -> consume(event, relay)
-                is LnZapEvent -> {
-                    event.zapRequest?.let {
-                        // must have a valid request
-                        justConsumeInner(it, relay)
-                    }
-                    consume(event, relay)
-                }
+                is LnZapEvent -> consume(event, relay)
                 is LnZapRequestEvent -> consume(event)
                 is NIP90StatusEvent -> consume(event, relay)
                 is NIP90ContentDiscoveryResponseEvent -> consume(event, relay)
@@ -2794,12 +2806,7 @@ object LocalCache : ILocalCache {
                 is RelationshipStatusEvent -> consume(event, relay)
                 is RelaySetEvent -> consume(event, relay)
                 is ReportEvent -> consume(event, relay)
-                is RepostEvent -> {
-                    event.containedPost()?.let {
-                        justConsumeInner(it, relay)
-                    }
-                    consume(event)
-                }
+                is RepostEvent -> consume(event, relay)
                 is SealedRumorEvent -> consume(event, relay)
                 is SearchRelayListEvent -> consume(event, relay)
                 is StatusEvent -> consume(event, relay)
