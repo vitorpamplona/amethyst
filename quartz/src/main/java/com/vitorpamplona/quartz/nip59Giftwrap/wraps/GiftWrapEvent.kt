@@ -68,15 +68,6 @@ class GiftWrapEvent(
 
     override fun isContentEncoded() = true
 
-    @Deprecated(
-        message = "Heavy caching was removed from this class due to high memory use. Cache it separatedly",
-        replaceWith = ReplaceWith("unwrap"),
-    )
-    fun cachedGift(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) = unwrap(signer, onReady)
-
     fun unwrapThrowing(
         signer: NostrSigner,
         onReady: (Event) -> Unit,

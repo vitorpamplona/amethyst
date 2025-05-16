@@ -66,15 +66,6 @@ class SealedRumorEvent(
 
     override fun isContentEncoded() = true
 
-    @Deprecated(
-        message = "Heavy caching was removed from this class due to high memory use. Cache it separatedly",
-        replaceWith = ReplaceWith("unseal"),
-    )
-    fun cachedRumor(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) = unseal(signer, onReady)
-
     fun unseal(
         signer: NostrSigner,
         onReady: (Event) -> Unit,

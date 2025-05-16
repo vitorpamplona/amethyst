@@ -67,9 +67,9 @@ class GiftWrapEventTest {
             // Simulate Receiver
             val eventsReceiverGets = events.wraps.filter { it.isTaggedUser(receiver.pubKey) }
             eventsReceiverGets.forEach {
-                it.cachedGift(receiver) { event ->
+                it.unwrap(receiver) { event ->
                     if (event is SealedRumorEvent) {
-                        event.cachedRumor(receiver) { innerData ->
+                        event.unseal(receiver) { innerData ->
                             countDownLatch.countDown()
                             assertEquals(message, innerData.content)
                         }
@@ -82,9 +82,9 @@ class GiftWrapEventTest {
             // Simulate Sender
             val eventsSenderGets = events.wraps.filter { it.isTaggedUser(sender.pubKey) }
             eventsSenderGets.forEach {
-                it.cachedGift(sender) { event ->
+                it.unwrap(sender) { event ->
                     if (event is SealedRumorEvent) {
-                        event.cachedRumor(sender) { innerData ->
+                        event.unseal(sender) { innerData ->
                             countDownLatch.countDown()
                             assertEquals(message, innerData.content)
                         }
@@ -130,9 +130,9 @@ class GiftWrapEventTest {
             receivers.forEach { receiver ->
                 val eventsReceiverGets = events.wraps.filter { it.isTaggedUser(receiver.pubKey) }
                 eventsReceiverGets.forEach {
-                    it.cachedGift(receiver) { event ->
+                    it.unwrap(receiver) { event ->
                         if (event is SealedRumorEvent) {
-                            event.cachedRumor(receiver) { innerData ->
+                            event.unseal(receiver) { innerData ->
                                 countDownLatch.countDown()
                                 assertEquals(message, innerData.content)
                             }
@@ -146,9 +146,9 @@ class GiftWrapEventTest {
             // Simulate Sender
             val eventsSenderGets = events.wraps.filter { it.isTaggedUser(sender.pubKey) }
             eventsSenderGets.forEach {
-                it.cachedGift(sender) { event ->
+                it.unwrap(sender) { event ->
                     if (event is SealedRumorEvent) {
-                        event.cachedRumor(sender) { innerData ->
+                        event.unseal(sender) { innerData ->
                             countDownLatch.countDown()
                             assertEquals(message, innerData.content)
                         }
@@ -252,17 +252,17 @@ class GiftWrapEventTest {
 
         val countDownDecryptLatch = CountDownLatch(2)
 
-        giftWrapEventToSender!!.cachedGift(sender) { unwrappedMsgForSenderBySender ->
+        giftWrapEventToSender!!.unwrap(sender) { unwrappedMsgForSenderBySender ->
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForSenderBySender.kind)
             assertTrue(unwrappedMsgForSenderBySender is SealedRumorEvent)
 
             if (unwrappedMsgForSenderBySender is SealedRumorEvent) {
-                unwrappedMsgForSenderBySender.cachedRumor(sender) { unwrappedRumorToSenderBySender ->
+                unwrappedMsgForSenderBySender.unseal(sender) { unwrappedRumorToSenderBySender ->
                     assertEquals("Hi There!", unwrappedRumorToSenderBySender.content)
                     countDownDecryptLatch.countDown()
                 }
 
-                unwrappedMsgForSenderBySender.cachedRumor(receiver) { _ ->
+                unwrappedMsgForSenderBySender.unseal(receiver) { _ ->
                     fail(
                         "Should not be able to decrypt msg for the sender by the sender but decrypted with receiver",
                     )
@@ -270,25 +270,25 @@ class GiftWrapEventTest {
             }
         }
 
-        giftWrapEventToReceiver!!.cachedGift(sender) { _ ->
+        giftWrapEventToReceiver!!.unwrap(sender) { _ ->
             fail("Should not be able to decrypt msg for the receiver decrypted by the sender")
         }
 
-        giftWrapEventToSender!!.cachedGift(receiver) { _ ->
+        giftWrapEventToSender!!.unwrap(receiver) { _ ->
             fail("Should not be able to decrypt msg for the sender decrypted by the receiver")
         }
 
-        giftWrapEventToReceiver!!.cachedGift(receiver) { unwrappedMsgForReceiverByReceiver ->
+        giftWrapEventToReceiver!!.unwrap(receiver) { unwrappedMsgForReceiverByReceiver ->
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverByReceiver.kind)
             assertTrue(unwrappedMsgForReceiverByReceiver is SealedRumorEvent)
 
             if (unwrappedMsgForReceiverByReceiver is SealedRumorEvent) {
-                unwrappedMsgForReceiverByReceiver.cachedRumor(receiver) { unwrappedRumorToReceiverByReceiver ->
+                unwrappedMsgForReceiverByReceiver.unseal(receiver) { unwrappedRumorToReceiverByReceiver ->
                     assertEquals("Hi There!", unwrappedRumorToReceiverByReceiver?.content)
                     countDownDecryptLatch.countDown()
                 }
 
-                unwrappedMsgForReceiverByReceiver.cachedRumor(sender) { unwrappedRumorToReceiverBySender ->
+                unwrappedMsgForReceiverByReceiver.unseal(sender) { unwrappedRumorToReceiverBySender ->
                     fail(
                         "Should not be able to decrypt msg for the receiver by the receiver but decrypted with the sender",
                     )
@@ -423,19 +423,19 @@ class GiftWrapEventTest {
 
         val countDownDecryptLatch = CountDownLatch(3)
 
-        giftWrapEventToSender?.cachedGift(sender) { unwrappedMsgForSenderBySender ->
+        giftWrapEventToSender?.unwrap(sender) { unwrappedMsgForSenderBySender ->
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForSenderBySender.kind)
 
             if (unwrappedMsgForSenderBySender is SealedRumorEvent) {
-                unwrappedMsgForSenderBySender.cachedRumor(receiverA) { unwrappedRumorToSenderByReceiverA ->
+                unwrappedMsgForSenderBySender.unseal(receiverA) { unwrappedRumorToSenderByReceiverA ->
                     fail()
                 }
 
-                unwrappedMsgForSenderBySender.cachedRumor(receiverB) { unwrappedRumorToSenderByReceiverB ->
+                unwrappedMsgForSenderBySender.unseal(receiverB) { unwrappedRumorToSenderByReceiverB ->
                     fail()
                 }
 
-                unwrappedMsgForSenderBySender.cachedRumor(sender) { unwrappedRumorToSenderBySender ->
+                unwrappedMsgForSenderBySender.unseal(sender) { unwrappedRumorToSenderBySender ->
                     assertEquals(
                         "Who is going to the party tonight?",
                         unwrappedRumorToSenderBySender.content,
@@ -446,34 +446,34 @@ class GiftWrapEventTest {
             countDownDecryptLatch.countDown()
         }
 
-        giftWrapEventToReceiverA!!.cachedGift(sender) { unwrappedMsgForReceiverBySenderA ->
+        giftWrapEventToReceiverA!!.unwrap(sender) { unwrappedMsgForReceiverBySenderA ->
             fail("Should not be able to decode msg to the receiver A with the sender's key")
         }
 
-        giftWrapEventToReceiverB!!.cachedGift(sender) { unwrappedMsgForReceiverBySenderB ->
+        giftWrapEventToReceiverB!!.unwrap(sender) { unwrappedMsgForReceiverBySenderB ->
             fail("Should not be able to decode msg to the receiver B with the sender's key")
         }
 
-        giftWrapEventToSender!!.cachedGift(receiverA) {
+        giftWrapEventToSender!!.unwrap(receiverA) {
             fail("Should not be able to decode msg to sender with the receiver A's key")
         }
 
-        giftWrapEventToReceiverA!!.cachedGift(receiverA) { unwrappedMsgForReceiverAByReceiverA ->
+        giftWrapEventToReceiverA!!.unwrap(receiverA) { unwrappedMsgForReceiverAByReceiverA ->
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverAByReceiverA.kind)
 
             if (unwrappedMsgForReceiverAByReceiverA is SealedRumorEvent) {
-                unwrappedMsgForReceiverAByReceiverA.cachedRumor(receiverA) { unwrappedRumorToReceiverAByReceiverA ->
+                unwrappedMsgForReceiverAByReceiverA.unseal(receiverA) { unwrappedRumorToReceiverAByReceiverA ->
                     assertEquals(
                         "Who is going to the party tonight?",
                         unwrappedRumorToReceiverAByReceiverA.content,
                     )
                 }
 
-                unwrappedMsgForReceiverAByReceiverA.cachedRumor(sender) { unwrappedRumorToReceiverABySender ->
+                unwrappedMsgForReceiverAByReceiverA.unseal(sender) { unwrappedRumorToReceiverABySender ->
                     fail()
                 }
 
-                unwrappedMsgForReceiverAByReceiverA.cachedRumor(receiverB) { unwrappedRumorToReceiverAByReceiverB ->
+                unwrappedMsgForReceiverAByReceiverA.unseal(receiverB) { unwrappedRumorToReceiverAByReceiverB ->
                     fail()
                 }
             }
@@ -481,25 +481,25 @@ class GiftWrapEventTest {
             countDownDecryptLatch.countDown()
         }
 
-        giftWrapEventToReceiverB!!.cachedGift(receiverA) {
+        giftWrapEventToReceiverB!!.unwrap(receiverA) {
             fail("Should not be able to decode msg to sender with the receiver A's key")
         }
 
-        giftWrapEventToSender!!.cachedGift(receiverB) { unwrappedMsgForSenderByReceiverB ->
+        giftWrapEventToSender!!.unwrap(receiverB) { unwrappedMsgForSenderByReceiverB ->
             fail("Should not be able to decode msg to sender with the receiver B's key")
         }
-        giftWrapEventToReceiverA!!.cachedGift(receiverB) { unwrappedMsgForReceiverAByReceiverB ->
+        giftWrapEventToReceiverA!!.unwrap(receiverB) { unwrappedMsgForReceiverAByReceiverB ->
             fail("Should not be able to decode msg to receiver A with the receiver B's key")
         }
-        giftWrapEventToReceiverB!!.cachedGift(receiverB) { unwrappedMsgForReceiverBByReceiverB ->
+        giftWrapEventToReceiverB!!.unwrap(receiverB) { unwrappedMsgForReceiverBByReceiverB ->
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverBByReceiverB.kind)
 
             if (unwrappedMsgForReceiverBByReceiverB is SealedRumorEvent) {
-                unwrappedMsgForReceiverBByReceiverB.cachedRumor(receiverA) { unwrappedRumorToReceiverBByReceiverA ->
+                unwrappedMsgForReceiverBByReceiverB.unseal(receiverA) { unwrappedRumorToReceiverBByReceiverA ->
                     fail()
                 }
 
-                unwrappedMsgForReceiverBByReceiverB.cachedRumor(receiverB) { unwrappedRumorToReceiverBByReceiverB ->
+                unwrappedMsgForReceiverBByReceiverB.unseal(receiverB) { unwrappedRumorToReceiverBByReceiverB ->
                     assertEquals(
                         "Who is going to the party tonight?",
                         unwrappedRumorToReceiverBByReceiverB.content,
@@ -508,7 +508,7 @@ class GiftWrapEventTest {
                     countDownDecryptLatch.countDown()
                 }
 
-                unwrappedMsgForReceiverBByReceiverB.cachedRumor(sender) { unwrappedRumorToReceiverBBySender ->
+                unwrappedMsgForReceiverBByReceiverB.unseal(sender) { unwrappedRumorToReceiverBBySender ->
                     fail()
                 }
             }
@@ -718,9 +718,9 @@ class GiftWrapEventTest {
 
         assertEquals(pkBytes.pubKey, wrap.recipientPubKey())
 
-        wrap.cachedGift(pkBytes) { event ->
+        wrap.unwrap(pkBytes) { event ->
             if (event is SealedRumorEvent) {
-                event.cachedRumor(pkBytes, onReady)
+                event.unseal(pkBytes, onReady)
             } else {
                 println(event.toJson())
                 fail("Event is not a Sealed Rumor")
@@ -753,7 +753,7 @@ class GiftWrapEventTest {
         var event: Event? = null
 
         wait1SecondForResult { onDone ->
-            wrap.cachedGift(receiversPrivateKey) {
+            wrap.unwrap(receiversPrivateKey) {
                 event = it
                 onDone()
             }

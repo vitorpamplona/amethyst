@@ -89,11 +89,11 @@ class GiftWrapBenchmark {
 
             val keyToUse = if (it.recipientPubKey() == sender.pubKey) sender else receiver
 
-            it.cachedGift(keyToUse) { event ->
+            it.unwrap(keyToUse) { event ->
                 event.checkSignature()
 
                 if (event is SealedRumorEvent) {
-                    event.cachedRumor(keyToUse) { innerData ->
+                    event.unseal(keyToUse) { innerData ->
                         Assert.assertEquals(message, innerData.content)
                         countDownLatch2.countDown()
                     }
@@ -136,11 +136,11 @@ class GiftWrapBenchmark {
             val wrap = Event.fromJson(giftWrapJson) as GiftWrapEvent
             wrap.checkSignature()
 
-            wrap.cachedGift(keyToUse) { seal ->
+            wrap.unwrap(keyToUse) { seal ->
                 seal.checkSignature()
 
                 if (seal is SealedRumorEvent) {
-                    seal.cachedRumor(keyToUse) { innerData ->
+                    seal.unseal(keyToUse) { innerData ->
                         Assert.assertEquals(message, innerData.content)
                         counter.countDown()
                     }
