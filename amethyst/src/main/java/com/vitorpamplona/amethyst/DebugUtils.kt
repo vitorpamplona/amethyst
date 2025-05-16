@@ -66,7 +66,7 @@ fun debugState(context: Context) {
     )
     Log.d(
         "STATE DUMP",
-        "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.size) / (1024 * 1024)} MB",
+        "Image Memory Cache ${(Amethyst.instance.memoryCache.size) / (1024 * 1024)}/${(Amethyst.instance.memoryCache.maxSize) / (1024 * 1024)} MB",
     )
 
     Log.d(
