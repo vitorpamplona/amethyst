@@ -494,9 +494,17 @@
     <string name="content_warning_hide_all_sensitive_content">Vždy skrýt citlivý obsah</string>
     <string name="content_warning_show_all_sensitive_content">Vždy zobrazit citlivý obsah</string>
     <string name="content_warning_see_warnings">Vždy zobrazovat upozornění na obsah</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Skrýt</string>
+    <string name="content_warning_show_all_sensitive_content_option">Ukázat</string>
+    <string name="content_warning_see_warnings_option">Varovat</string>
     <string name="recommended_apps">Doporučuje: </string>
     <string name="filter_spam_from_strangers">Filtrovat spam od cizinců</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Varovat, když příspěvky obsahují hlášení od vašich sledovaných osob</string>
+    <string name="filter_spam_from_strangers_title">Filtrovat spam</string>
+    <string name="filter_spam_from_strangers_explainer">Skryje příspěvky od cizinců, které byly přesně stejné 5 a více krát</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Upozornit na hlášení</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zobrazí varovnou zprávu, když příspěvky mají 5 nebo více hlášení od vašich sledovaných</string>
+    <string name="show_sensitive_content_title">Zobrazit citlivý obsah</string>
     <string name="new_reaction_symbol">Nový symbol reakce</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nebyly vybrány žádné typy reakcí. Dlouhým stiskem změňte</string>
     <string name="zapraiser">Zap-sběr</string>

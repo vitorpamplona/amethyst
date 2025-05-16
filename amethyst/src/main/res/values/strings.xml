@@ -596,7 +596,7 @@
     <string name="filter_spam_from_strangers_title">Filter spam</string>
     <string name="filter_spam_from_strangers_explainer">Hides posts from strangers that were exactly the same for 5 or more times</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts have 5 or more reports your follows</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts have 5 or more reports from your follows</string>
     <string name="show_sensitive_content_title">Show sensitive content</string>
     <string name="show_sensitive_content_explainer">Shows a warning message when the author of the post marked it as sensitive</string>
 
