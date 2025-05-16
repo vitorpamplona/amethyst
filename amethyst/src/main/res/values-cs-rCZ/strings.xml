@@ -505,6 +505,7 @@
     <string name="warn_when_posts_have_reports_from_your_follows_title">Upozornit na hlášení</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zobrazí varovnou zprávu, když příspěvky mají 5 nebo více hlášení od vašich sledovaných</string>
     <string name="show_sensitive_content_title">Zobrazit citlivý obsah</string>
+    <string name="show_sensitive_content_explainer">Zobrazí varovnou zprávu, když ji autor příspěvku označil jako citlivý</string>
     <string name="new_reaction_symbol">Nový symbol reakce</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nebyly vybrány žádné typy reakcí. Dlouhým stiskem změňte</string>
     <string name="zapraiser">Zap-sběr</string>
@@ -966,4 +967,5 @@
     <string name="private_message">Soukromá zpráva</string>
     <string name="group_relay">Relé chatu</string>
     <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
+    <string name="share_image">Sdílet obrázek…</string>
 </resources>
