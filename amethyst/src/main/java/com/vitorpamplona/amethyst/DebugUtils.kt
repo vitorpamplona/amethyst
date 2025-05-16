@@ -43,19 +43,19 @@ fun debugState(context: Context) {
 
     val jvmHeapAllocatedMb = totalMemoryMb - freeMemoryMb
 
-    Log.d("STATE DUMP", "Total Heap Allocated: " + jvmHeapAllocatedMb + "/" + maxMemoryMb + " MB")
+    Log.d("STATE DUMP", "Total Heap Allocated: $jvmHeapAllocatedMb/$maxMemoryMb MB")
 
     val nativeHeap = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
     val maxNative = Debug.getNativeHeapSize() / (1024 * 1024)
 
-    Log.d("STATE DUMP", "Total Native Heap Allocated: " + nativeHeap + "/" + maxNative + " MB")
+    Log.d("STATE DUMP", "Total Native Heap Allocated: $nativeHeap/$maxNative MB")
 
     val activityManager: ActivityManager? = context.getSystemService()
     if (activityManager != null) {
         val isLargeHeap = (context.applicationInfo.flags and ApplicationInfo.FLAG_LARGE_HEAP) != 0
         val memClass = if (isLargeHeap) activityManager.largeMemoryClass else activityManager.memoryClass
 
-        Log.d("STATE DUMP", "Memory Class " + memClass + " MB (largeHeap $isLargeHeap)")
+        Log.d("STATE DUMP", "Memory Class $memClass MB (largeHeap $isLargeHeap)")
     }
 
     Log.d("STATE DUMP", "Connected Relays: " + Amethyst.instance.client.connectedRelays())
