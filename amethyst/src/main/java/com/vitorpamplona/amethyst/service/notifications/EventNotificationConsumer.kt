@@ -177,6 +177,9 @@ class EventNotificationConsumer(
                 if (LocalCache.justConsume(event, null)) {
                     // new event
                     event.unwrap(signer) {
+                        // clear the encrypted payload to save memory
+                        LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                         unwrapAndConsume(it, signer, onReady)
                     }
                 }
@@ -185,6 +188,9 @@ class EventNotificationConsumer(
                 if (LocalCache.justConsume(event, null)) {
                     // new event
                     event.unseal(signer) {
+                        // clear the encrypted payload to save memory
+                        LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                         // this is not verifiable
                         if (!LocalCache.hasConsumed(it)) {
                             LocalCache.justConsume(it, null)

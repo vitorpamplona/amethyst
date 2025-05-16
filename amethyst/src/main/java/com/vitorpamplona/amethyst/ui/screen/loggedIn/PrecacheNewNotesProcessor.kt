@@ -52,7 +52,7 @@ class PrecacheNewNotesProcessor(
 
     fun consumeAlreadyVerified(
         event: Event,
-        note: Note,
+        publicNote: Note,
     ) {
         when (event) {
             is OtsEvent -> {
@@ -78,16 +78,18 @@ class PrecacheNewNotesProcessor(
                     val inner = event.innerEventId
                     if (inner == null) {
                         event.unwrap(account.signer) {
+                            // clear the encrypted payload to save memory
+                            cache.getOrCreateNote(event.id).event = event.copyNoContent()
                             if (cache.justConsume(it, null)) {
-                                cache.copyRelaysFromTo(note, it)
-                                consumeAlreadyVerified(it, note)
+                                cache.copyRelaysFromTo(publicNote, it)
+                                consumeAlreadyVerified(it, publicNote)
                             }
                         }
                     } else {
-                        cache.copyRelaysFromTo(note, inner)
+                        cache.copyRelaysFromTo(publicNote, inner)
                         val event = cache.getOrCreateNote(inner).event
                         if (event != null) {
-                            consumeAlreadyVerified(event, note)
+                            consumeAlreadyVerified(event, publicNote)
                         }
                     }
                 }
@@ -97,11 +99,14 @@ class PrecacheNewNotesProcessor(
                 val inner = event.innerEventId
                 if (inner == null) {
                     event.unseal(account.signer) {
+                        // clear the encrypted payload to save memory
+                        cache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                         cache.justConsume(it, null)
-                        cache.copyRelaysFromTo(note, it)
+                        cache.copyRelaysFromTo(publicNote, it)
                     }
                 } else {
-                    cache.copyRelaysFromTo(note, inner)
+                    cache.copyRelaysFromTo(publicNote, inner)
                 }
             }
 

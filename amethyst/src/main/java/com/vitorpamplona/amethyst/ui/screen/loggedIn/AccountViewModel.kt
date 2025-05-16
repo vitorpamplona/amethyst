@@ -1466,6 +1466,9 @@ class AccountViewModel(
                         unwrapIfNeeded(existingNote.event, onReady)
                     } else {
                         event.unwrap(account.signer) {
+                            // clear the encrypted payload to save memory
+                            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                             if (LocalCache.justConsume(it, null)) {
                                 unwrapIfNeeded(it, onReady)
                             }
@@ -1473,6 +1476,9 @@ class AccountViewModel(
                     }
                 } ?: run {
                     event.unwrap(account.signer) {
+                        // clear the encrypted payload to save memory
+                        LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                         val existingNote = LocalCache.getNoteIfExists(it.id)
                         if (existingNote != null) {
                             unwrapIfNeeded(existingNote.event, onReady)
@@ -1491,6 +1497,9 @@ class AccountViewModel(
                         unwrapIfNeeded(existingNote.event, onReady)
                     } else {
                         event.unseal(account.signer) {
+                            // clear the encrypted payload to save memory
+                            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                             // this is not verifiable
                             if (LocalCache.justConsume(it, null)) {
                                 unwrapIfNeeded(it, onReady)
@@ -1499,6 +1508,9 @@ class AccountViewModel(
                     }
                 } ?: run {
                     event.unseal(account.signer) {
+                        // clear the encrypted payload to save memory
+                        LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
                         val existingNote = LocalCache.getNoteIfExists(it.id)
                         if (existingNote != null) {
                             unwrapIfNeeded(existingNote.event, onReady)
