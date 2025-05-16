@@ -174,7 +174,7 @@ class EventNotificationConsumer(
 
         when (event) {
             is GiftWrapEvent -> {
-                if (LocalCache.justConsume(event, null)) {
+                if (LocalCache.justConsume(event, null, false)) {
                     // new event
                     event.unwrap(signer) {
                         // clear the encrypted payload to save memory
@@ -185,22 +185,21 @@ class EventNotificationConsumer(
                 }
             }
             is SealedRumorEvent -> {
-                if (LocalCache.justConsume(event, null)) {
+                if (LocalCache.justConsume(event, null, false)) {
                     // new event
                     event.unseal(signer) {
                         // clear the encrypted payload to save memory
                         LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
 
                         // this is not verifiable
-                        if (!LocalCache.hasConsumed(it)) {
-                            LocalCache.justConsume(it, null)
+                        if (LocalCache.justConsume(it, null, true)) {
                             onReady(it)
                         }
                     }
                 }
             }
             else -> {
-                LocalCache.justConsume(event, null)
+                LocalCache.justConsume(event, null, false)
                 onReady(event)
             }
         }

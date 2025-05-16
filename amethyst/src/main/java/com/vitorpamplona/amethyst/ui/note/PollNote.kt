@@ -153,9 +153,9 @@ fun PollNotePreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
-            LocalCache.consume(zapVote.zapRequest!!)
-            LocalCache.justConsume(zapVote, null)
+            LocalCache.justConsume(event, null, false)
+            LocalCache.consume(zapVote.zapRequest!!, null, false)
+            LocalCache.justConsume(zapVote, null, false)
             baseNote = LocalCache.getOrCreateNote("6ff9bc13d27490f6e3953325260bd996901a143de89886a0608c39e7d0160a72")
         }
     }
@@ -207,7 +207,7 @@ fun PollNotePreview2() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsume(event, null, false)
             baseNote = LocalCache.getOrCreateNote("3064bf97800a4b04b612fc0fd498936eae75fffbdca5bbd09d19a6dc598530ab")
         }
     }

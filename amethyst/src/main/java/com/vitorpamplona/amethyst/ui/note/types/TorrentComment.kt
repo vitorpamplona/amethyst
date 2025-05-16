@@ -129,8 +129,8 @@ fun TorrentCommentPreview() {
                         sig = "014391c310b1eebb807da4c9b11563126f2b795c9372a9432cae4dd2c0695b88584bb1c68814554c9b1a47626e3d60983e3653c29d0fdbc3a474277c140b95c3",
                     )
 
-                LocalCache.justConsume(torrent, null)
-                LocalCache.justConsume(comment, null)
+                LocalCache.justConsume(torrent, null, false)
+                LocalCache.justConsume(comment, null, false)
                 LocalCache.getOrCreateNote("040aba32010b5adf7cb917054e894e86c8ea7a2bcee448b2266c493f3140e9a0")
             }
         }

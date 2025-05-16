@@ -126,7 +126,7 @@ class ThreadDualAxisChartAssemblerTest {
             var counter = 0
             eventArray.forEach {
                 TestCase.assertTrue("${it.id} failed signature check", it.verify())
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsume(it, null, false)
                 counter++
             }
 

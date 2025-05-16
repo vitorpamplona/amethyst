@@ -989,7 +989,7 @@ private fun RenderWikiHeaderForThreadPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsume(event, null, false)
         }
     }
 

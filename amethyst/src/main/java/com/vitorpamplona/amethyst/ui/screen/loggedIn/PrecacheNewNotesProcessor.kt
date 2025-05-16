@@ -24,6 +24,7 @@ import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.indexDraftAsRealEvent
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -69,7 +70,9 @@ class PrecacheNewNotesProcessor(
             is DraftEvent -> {
                 // Avoid decrypting over and over again if the event already exist.
                 if (!event.isDeleted() && event.preCachedDraft(account.signer) == null && event.pubKey == account.signer.pubKey) {
-                    event.cachedDraft(account.signer) {}
+                    event.cachedDraft(account.signer) {
+                        cache.indexDraftAsRealEvent(event, it)
+                    }
                 }
             }
 
@@ -80,7 +83,7 @@ class PrecacheNewNotesProcessor(
                         event.unwrap(account.signer) {
                             // clear the encrypted payload to save memory
                             cache.getOrCreateNote(event.id).event = event.copyNoContent()
-                            if (cache.justConsume(it, null)) {
+                            if (cache.justConsume(it, null, false)) {
                                 cache.copyRelaysFromTo(publicNote, it)
                                 consumeAlreadyVerified(it, publicNote)
                             }
@@ -102,7 +105,8 @@ class PrecacheNewNotesProcessor(
                         // clear the encrypted payload to save memory
                         cache.getOrCreateNote(event.id).event = event.copyNoContent()
 
-                        cache.justConsume(it, null)
+                        // avoid verifying these events.
+                        cache.justConsume(it, null, true)
                         cache.copyRelaysFromTo(publicNote, it)
                     }
                 } else {

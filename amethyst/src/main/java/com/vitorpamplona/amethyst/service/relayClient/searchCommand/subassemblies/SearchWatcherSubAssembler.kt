@@ -70,7 +70,7 @@ class SearchWatcherSubAssembler(
                         is Note -> filterByEvent(parsed.hex)
                         is NEvent -> filterByEvent(parsed.hex)
                         is NEmbed -> {
-                            cache.justConsume(parsed.event, null)
+                            cache.justConsume(parsed.event, null, false)
                             emptyList()
                         }
 

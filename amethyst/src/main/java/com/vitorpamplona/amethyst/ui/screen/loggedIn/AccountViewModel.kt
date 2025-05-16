@@ -1085,7 +1085,7 @@ class AccountViewModel(
             var note = checkGetOrCreateNote(event.id)
 
             if (note == null) {
-                LocalCache.justConsume(event, null)
+                LocalCache.justConsume(event, null, false)
                 note = checkGetOrCreateNote(event.id)
             }
 
@@ -1469,7 +1469,7 @@ class AccountViewModel(
                             // clear the encrypted payload to save memory
                             LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
 
-                            if (LocalCache.justConsume(it, null)) {
+                            if (LocalCache.justConsume(it, null, false)) {
                                 unwrapIfNeeded(it, onReady)
                             }
                         }
@@ -1483,7 +1483,7 @@ class AccountViewModel(
                         if (existingNote != null) {
                             unwrapIfNeeded(existingNote.event, onReady)
                         } else {
-                            if (LocalCache.justConsume(it, null)) {
+                            if (LocalCache.justConsume(it, null, false)) {
                                 unwrapIfNeeded(it, onReady)
                             }
                         }
@@ -1501,7 +1501,7 @@ class AccountViewModel(
                             LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
 
                             // this is not verifiable
-                            if (LocalCache.justConsume(it, null)) {
+                            if (LocalCache.justConsume(it, null, true)) {
                                 unwrapIfNeeded(it, onReady)
                             }
                         }
@@ -1516,7 +1516,7 @@ class AccountViewModel(
                             unwrapIfNeeded(existingNote.event, onReady)
                         } else {
                             // this is not verifiable
-                            if (LocalCache.justConsume(it, null)) {
+                            if (LocalCache.justConsume(it, null, true)) {
                                 unwrapIfNeeded(it, onReady)
                             }
                         }
@@ -1686,7 +1686,7 @@ class AccountViewModel(
                     )
             } else {
                 account.createZapRequestFor(toUserPubKeyHex, message, defaultZapType()) { zapRequest ->
-                    LocalCache.justConsume(zapRequest, null)
+                    LocalCache.justConsumeMyOwnEvent(zapRequest)
                     LightningAddressResolver()
                         .lnAddressInvoice(
                             lnaddress,
@@ -1766,7 +1766,7 @@ class AccountViewModel(
                                 val baseNote = LocalCache.getOrCreateNote(parsed.event)
                                 if (baseNote.event == null) {
                                     launch(Dispatchers.Default) {
-                                        LocalCache.justConsume(parsed.event, null)
+                                        LocalCache.justConsume(parsed.event, null, false)
                                     }
                                 }
 

@@ -161,7 +161,7 @@ fun ZapTheDevsCardPreview() {
             }
             """.trimIndent()
 
-        LocalCache.justConsume(Event.fromJson(releaseNotes), null)
+        LocalCache.justConsume(Event.fromJson(releaseNotes), null, false)
     }
 
     val accountViewModel = mockAccountViewModel()

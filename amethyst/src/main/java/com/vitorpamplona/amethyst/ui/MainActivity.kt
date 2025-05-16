@@ -183,7 +183,7 @@ fun uriToRoute(uri: String?): Route? =
 
                 is NEmbed -> {
                     if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
-                        LocalCache.justConsume(nip19.event, null)
+                        LocalCache.justConsume(nip19.event, null, false)
                     }
                     Route.EventRedirect(nip19.event.id)
                 }

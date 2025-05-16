@@ -93,7 +93,7 @@ fun RenderLiveActivityEventPreview() {
 
     runBlocking {
         withContext(Dispatchers.IO) {
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsume(event, null, false)
             baseNote = LocalCache.getOrCreateNote("19406ad34ce3c653d62eb73c1816ac27dcf473c2ccdccf5af7d90d2633c62561")
         }
     }

@@ -1227,7 +1227,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -1244,7 +1244,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             ContactListEvent.createFromScratch(
@@ -1257,7 +1257,7 @@ class Account(
             ) {
                 // Keep this local to avoid erasing a good contact list.
                 // Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -1322,7 +1322,7 @@ class Account(
 
         signer.sign(template) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -1393,7 +1393,7 @@ class Account(
                             ReactionEvent.build(emojiUrl, EventHintBundle(it, note.relayHintUrl())),
                         ) {
                             Amethyst.instance.client.send(it)
-                            LocalCache.consume(it)
+                            LocalCache.justConsumeMyOwnEvent(it)
                         }
                     }
 
@@ -1406,7 +1406,7 @@ class Account(
                     ReactionEvent.build(reaction, it),
                 ) {
                     Amethyst.instance.client.send(it)
-                    LocalCache.consume(it)
+                    LocalCache.justConsumeMyOwnEvent(it)
                 }
             }
         }
@@ -1510,7 +1510,7 @@ class Account(
                 Amethyst.instance.sources.nwc
                     .subscribe(filter)
 
-                LocalCache.consume(event, zappedNote) { it.response(signer) { onResponse(it) } }
+                LocalCache.consume(event, zappedNote, true) { it.response(signer) { onResponse(it) } }
 
                 Amethyst.instance.client.sendSingle(
                     signedEvent = event,
@@ -1569,7 +1569,7 @@ class Account(
         note.event?.let {
             signer.sign(ReportEvent.build(it, type)) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -1588,7 +1588,7 @@ class Account(
         val template = ReportEvent.build(user.pubkeyHex, type)
         signer.sign(template) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -1607,7 +1607,7 @@ class Account(
                     DeletionEvent.build(chunkedList),
                 ) { deletionEvent ->
                     Amethyst.instance.client.send(deletionEvent)
-                    LocalCache.justConsume(deletionEvent, null)
+                    LocalCache.justConsumeMyOwnEvent(deletionEvent)
                 }
             }
         }
@@ -1677,7 +1677,7 @@ class Account(
 
         signer.sign(template) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -1726,7 +1726,7 @@ class Account(
                     }
 
                 signer.sign(template) {
-                    LocalCache.justConsume(it, null)
+                    LocalCache.justConsumeMyOwnEvent(it)
                     Amethyst.instance.client.send(it)
 
                     settings.pendingAttestations.update {
@@ -1760,7 +1760,7 @@ class Account(
         if (contactList != null) {
             ContactListEvent.followUser(contactList, user.pubkeyHex, signer) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             ContactListEvent.createFromScratch(
@@ -1775,7 +1775,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -1785,7 +1785,7 @@ class Account(
 
         publicChatList.follow(channel) {
             sendToPrivateOutboxAndLocal(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -1794,7 +1794,7 @@ class Account(
 
         publicChatList.unfollow(channel) {
             sendToPrivateOutboxAndLocal(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -1803,7 +1803,7 @@ class Account(
 
         ephemeralChatList.follow(channel) {
             sendToPrivateOutboxAndLocal(it)
-            LocalCache.justConsumeInner(it, RelayBriefInfoCache.get(channel.roomId.relayUrl))
+            LocalCache.justConsumeInner(it, RelayBriefInfoCache.get(channel.roomId.relayUrl), true)
         }
     }
 
@@ -1812,7 +1812,7 @@ class Account(
 
         ephemeralChatList.unfollow(channel) {
             sendToPrivateOutboxAndLocal(it)
-            LocalCache.justConsumeInner(it, RelayBriefInfoCache.get(channel.roomId.relayUrl))
+            LocalCache.justConsumeInner(it, RelayBriefInfoCache.get(channel.roomId.relayUrl), true)
         }
     }
 
@@ -1824,7 +1824,7 @@ class Account(
         if (contactList != null) {
             ContactListEvent.followAddressableEvent(contactList, community.toATag(), signer) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             val relays =
@@ -1840,7 +1840,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -1857,7 +1857,7 @@ class Account(
                 signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             ContactListEvent.createFromScratch(
@@ -1872,7 +1872,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -1907,7 +1907,7 @@ class Account(
 
     fun onNewEventCreated(event: Event) {
         Amethyst.instance.client.send(event)
-        LocalCache.justConsume(event, null)
+        LocalCache.justConsumeMyOwnEvent(event)
     }
 
     fun unfollow(user: User) {
@@ -2008,10 +2008,10 @@ class Account(
         if (!isWriteable()) return null
 
         Amethyst.instance.client.send(data, relayList = relayList)
-        LocalCache.justConsume(data, null)
+        LocalCache.justConsumeMyOwnEvent(data)
 
         Amethyst.instance.client.send(signedEvent, relayList = relayList)
-        LocalCache.justConsume(signedEvent, null)
+        LocalCache.justConsumeMyOwnEvent(signedEvent)
 
         return LocalCache.getNoteIfExists(signedEvent.id)
     }
@@ -2020,8 +2020,8 @@ class Account(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
     ): Note? {
-        LocalCache.justConsume(data, null)
-        LocalCache.justConsume(signedEvent, null)
+        LocalCache.justConsumeMyOwnEvent(data)
+        LocalCache.justConsumeMyOwnEvent(signedEvent)
 
         return LocalCache.getNoteIfExists(signedEvent.id)
     }
@@ -2062,7 +2062,7 @@ class Account(
         onReady: (Note) -> Unit,
     ) {
         Amethyst.instance.client.send(signedEvent, relayList = relayList)
-        LocalCache.justConsume(signedEvent, null)
+        LocalCache.justConsumeMyOwnEvent(signedEvent)
 
         LocalCache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
     }
@@ -2233,7 +2233,7 @@ class Account(
             }
         } else {
             signer.sign(template) {
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
                 Amethyst.instance.client.send(it)
             }
         }
@@ -2245,7 +2245,7 @@ class Account(
         onDone: (T) -> Unit = {},
     ) {
         signer.sign(template) {
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
             Amethyst.instance.client.sendPrivately(it, relayList = convertRelayList(relayList))
             onDone(it)
         }
@@ -2257,7 +2257,7 @@ class Account(
         onDone: (T) -> Unit = {},
     ) {
         signer.sign(template) {
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
             val relays = relayList(it)
             if (relays != null) {
                 Amethyst.instance.client.sendPrivately(it, relayList = convertRelayList(relays))
@@ -2274,7 +2274,7 @@ class Account(
         broadcastNotes: Set<Note>,
     ) {
         signer.sign(template) {
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
             Amethyst.instance.client.send(it, relayList = relayList)
 
             broadcastNotes.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
@@ -2302,7 +2302,7 @@ class Account(
             }
         } else {
             signer.sign(template) {
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
                 Amethyst.instance.client.send(it, relayList = relayList)
 
                 broadcastNotes.forEach { it.event?.let { Amethyst.instance.client.send(it, relayList = relayList) } }
@@ -2336,7 +2336,7 @@ class Account(
                         )
                     }
 
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
                 Amethyst.instance.client.sendPrivately(it, relayList = connect)
                 broadcastNotes.forEach { it.event?.let { Amethyst.instance.client.sendPrivately(it, relayList = connect) } }
             }
@@ -2382,7 +2382,7 @@ class Account(
                             )
                         },
                     )
-                    LocalCache.justConsume(it, null)
+                    LocalCache.justConsumeMyOwnEvent(it)
                 }
             }
             delete(note)
@@ -2557,7 +2557,7 @@ class Account(
             summary = summary,
             signer = signer,
         ) {
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
             Amethyst.instance.client.send(it, relayList = relayList)
         }
     }
@@ -2674,7 +2674,7 @@ class Account(
         } else {
             Amethyst.instance.client.send(event)
         }
-        LocalCache.justConsume(event, null)
+        LocalCache.justConsumeMyOwnEvent(event)
     }
 
     fun convertRelayList(broadcast: List<String>): List<RelaySetupInfoToConnect> =
@@ -2696,14 +2696,14 @@ class Account(
             giftWrap.unwrap(signer) { gift ->
                 if (gift is SealedRumorEvent) {
                     gift.unseal(signer) { rumor ->
-                        LocalCache.justConsume(rumor, null)
+                        LocalCache.justConsumeMyOwnEvent(rumor)
                     }
                 }
 
-                LocalCache.justConsume(gift, null)
+                LocalCache.justConsumeMyOwnEvent(gift)
             }
 
-            LocalCache.justConsume(giftWrap, null)
+            LocalCache.justConsumeMyOwnEvent(giftWrap)
         }
 
         val id = mine.firstOrNull()?.id
@@ -2753,7 +2753,7 @@ class Account(
 
         StatusEvent.update(oldEvent, newStatus, signer) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -2762,7 +2762,7 @@ class Account(
 
         StatusEvent.create(newStatus, "general", expiration = null, signer) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -2772,13 +2772,13 @@ class Account(
 
         StatusEvent.clear(oldEvent, signer) { event ->
             Amethyst.instance.client.send(event)
-            LocalCache.justConsume(event, null)
+            LocalCache.justConsumeMyOwnEvent(event)
 
             signer.sign(
                 DeletionEvent.buildForVersionOnly(listOf(event)),
             ) { event2 ->
                 Amethyst.instance.client.send(event2)
-                LocalCache.justConsume(event2, null)
+                LocalCache.justConsumeMyOwnEvent(event2)
             }
         }
     }
@@ -2796,7 +2796,7 @@ class Account(
 
         signer.sign(EmojiPackSelectionEvent.remove(noteEvent, emojiPackEvent)) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -2813,7 +2813,7 @@ class Account(
         if (usersEmojiList.event == null) {
             signer.sign(EmojiPackSelectionEvent.build(listOf(eventHint))) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             val noteEvent = usersEmojiList.event
@@ -2821,7 +2821,7 @@ class Account(
 
             signer.sign(EmojiPackSelectionEvent.add(noteEvent, eventHint)) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -2847,7 +2847,7 @@ class Account(
             },
         ) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -2870,7 +2870,7 @@ class Account(
                 signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             BookmarkListEvent.addEvent(
@@ -2880,7 +2880,7 @@ class Account(
                 signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -2901,7 +2901,7 @@ class Account(
                 signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             BookmarkListEvent.removeEvent(
@@ -2911,7 +2911,7 @@ class Account(
                 signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.consume(it)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3004,7 +3004,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             MuteListEvent.createListWithWord(
@@ -3013,7 +3013,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3028,7 +3028,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
 
@@ -3041,7 +3041,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3057,7 +3057,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             MuteListEvent.createListWithUser(
@@ -3066,7 +3066,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3081,7 +3081,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
 
@@ -3094,7 +3094,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
 
@@ -3130,7 +3130,7 @@ class Account(
             } else {
                 Amethyst.instance.client.send(it)
             }
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
             onReady(it)
         }
     }
@@ -3347,7 +3347,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             ChatMessageRelayListEvent.createFromScratch(
@@ -3355,7 +3355,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3381,7 +3381,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             PrivateOutboxRelayListEvent.createFromScratch(
@@ -3389,7 +3389,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3415,7 +3415,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             SearchRelayListEvent.createFromScratch(
@@ -3423,7 +3423,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3449,7 +3449,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             AdvertisedRelayListEvent.createFromScratch(
@@ -3457,7 +3457,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3507,7 +3507,7 @@ class Account(
 
         signer.sign(template) {
             Amethyst.instance.client.send(it)
-            LocalCache.justConsume(it, null)
+            LocalCache.justConsumeMyOwnEvent(it)
         }
     }
 
@@ -3523,7 +3523,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         } else {
             BlossomServersEvent.createFromScratch(
@@ -3531,7 +3531,7 @@ class Account(
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+                LocalCache.justConsumeMyOwnEvent(it)
             }
         }
     }
@@ -3710,32 +3710,32 @@ class Account(
             Log.d("AccountRegisterObservers", "Loading saved contacts ${it.toJson()}")
 
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.consume(it) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
         settings.backupUserMetadata?.let {
             Log.d("AccountRegisterObservers", "Loading saved user metadata ${it.toJson()}")
 
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
         settings.backupDMRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved DM Relay List ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
         settings.backupNIP65RelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved nip65 relay list ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
         settings.backupSearchRelayList?.let {
             Log.d("AccountRegisterObservers", "Loading saved search relay list ${it.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsume(it, null) }
+            GlobalScope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
         }
 
         settings.backupPrivateHomeRelayList?.let { event ->
@@ -3743,7 +3743,7 @@ class Account(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
-                    LocalCache.justConsume(event, null)
+                    LocalCache.justConsumeMyOwnEvent(event)
                 }
             }
         }
@@ -3752,7 +3752,7 @@ class Account(
             Log.d("AccountRegisterObservers", "Loading saved app specific data ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                LocalCache.justConsume(event, null)
+                LocalCache.justConsumeMyOwnEvent(event)
                 signer.decrypt(event.content, event.pubKey) { decrypted ->
                     try {
                         val syncedSettings = EventMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
@@ -3772,7 +3772,7 @@ class Account(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
-                    LocalCache.justConsume(event, null)
+                    LocalCache.justConsumeMyOwnEvent(event)
                 }
             }
         }
@@ -3782,7 +3782,7 @@ class Account(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
-                    LocalCache.justConsume(event, null)
+                    LocalCache.justConsumeMyOwnEvent(event)
                 }
             }
         }
@@ -3792,7 +3792,7 @@ class Account(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 event.privateTags(signer) {
-                    LocalCache.justConsume(event, null)
+                    LocalCache.justConsumeMyOwnEvent(event)
                 }
             }
         }
@@ -3939,7 +3939,7 @@ class Account(
                     Log.d("DB UPGRADE", "Migrating List")
                     publicChatList.follow(oldChannels) {
                         sendToPrivateOutboxAndLocal(it)
-                        LocalCache.justConsume(it, null)
+                        LocalCache.justConsumeMyOwnEvent(it)
                     }
                 }
             }
