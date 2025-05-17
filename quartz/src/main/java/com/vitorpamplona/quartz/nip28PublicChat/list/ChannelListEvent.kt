@@ -33,8 +33,6 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.lang.reflect.Modifier.isPrivate
-import kotlin.collections.plus
 
 @Immutable
 class ChannelListEvent(

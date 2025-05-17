@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import org.apache.commons.lang3.text.FormattableUtils.append
-import java.io.File.separator
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
-import kotlin.text.StringBuilder
 
 class LargeCache<K, V> {
     private val cache = ConcurrentSkipListMap<K, V>()
