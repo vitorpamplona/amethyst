@@ -21,10 +21,8 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.collection.LruCache
-import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import kotlin.collections.plus
 
 class EOSERelayList {
     var relayList: Map<String, EOSETime> = emptyMap()

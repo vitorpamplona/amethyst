@@ -29,9 +29,7 @@ import com.vitorpamplona.quartz.utils.LargeCache
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
-import kotlin.concurrent.atomics.plusAssign
 import kotlin.concurrent.timer
-import kotlin.jvm.java
 
 @OptIn(ExperimentalAtomicApi::class)
 class KindGroup(

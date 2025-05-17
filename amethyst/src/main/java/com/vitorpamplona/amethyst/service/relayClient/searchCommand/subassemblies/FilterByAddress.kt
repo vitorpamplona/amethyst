@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer.types
 import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
