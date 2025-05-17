@@ -216,6 +216,13 @@
     <string name="unfollow">Porzuć obserwację</string>
     <string name="channel_created">Kanał utworzony</string>
     <string name="channel_information_changed_to">"Informacje o kanale zmienione na"</string>
+    <string name="ephemeral_relay_chat">Czat efemeryczny</string>
+    <string name="relay_chat">Czat Transmitera</string>
+    <string name="relay_chat_title">Czaty Transmitera</string>
+    <string name="relay_chat_explainer">Czaty transmiterów to grupy czatów kontrolowane przez ich macierzyste transmitery.
+        Są one widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć.
+        Świetnie nadają się do tworzenia otwartych społeczności wokół określonych tematów. Niektóre z tych grup są efemeryczne
+   i dlatego wiadomości czatu znikają z czasem</string>
     <string name="public_chat">Czat Publiczny</string>
     <string name="public_chat_title">Metadane Czatu Publicznego</string>
     <string name="public_chat_explainer">Czaty publiczne są widoczne dla wszystkich użytkowników Nostr i każdy może w nich uczestniczyć. Są idealne dla otwartych społeczności skupionych wokół konkretnych tematów. Moderację można kontrolować, usuwając posty z transmiterów</string>
@@ -486,9 +493,18 @@
     <string name="content_warning_hide_all_sensitive_content">Zawsze ukrywaj wrażliwe treści</string>
     <string name="content_warning_show_all_sensitive_content">Zawsze pokazuj wrażliwą zawartość</string>
     <string name="content_warning_see_warnings">Zawsze pokazuj ostrzeżenia dotyczące zawartości</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Ukryj</string>
+    <string name="content_warning_show_all_sensitive_content_option">Pokaż</string>
+    <string name="content_warning_see_warnings_option">Ostrzeżenie</string>
     <string name="recommended_apps">Polecane: </string>
     <string name="filter_spam_from_strangers">Filtruj spam z nieznajomych</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Ostrzegaj, gdy posty zostały zgłoszone przez osoby które obserwujesz</string>
+    <string name="filter_spam_from_strangers_title">Filtr spamu</string>
+    <string name="filter_spam_from_strangers_explainer">Ukrywa posty od nieznajomych, które były dokładnie takie same przez 5 lub więcej razy</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Ostrzeżenie o zgłoszeniach</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Wyświetla komunikat ostrzegawczy, gdy posty zostały zgłoszone przez 5 lub więcej obserwowanych osób</string>
+    <string name="show_sensitive_content_title">Pokaż wrażliwe treści</string>
+    <string name="show_sensitive_content_explainer">Pokazuje komunikat ostrzegawczy, gdy autor wpisu oznaczył go jako wrażliwy</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
@@ -540,14 +556,14 @@
     <string name="are_you_sure_you_want_to_log_out">Wylogowanie usuwa wszystkie informacje lokalne. Upewnij się, że masz kopię zapasową kluczy prywatnych, aby uniknąć utraty konta. Czy chcesz kontynuować?</string>
     <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
-    <string name="discover_content">Przegląd Wpisów</string>
+    <string name="discover_content">Kategorie Wpisów</string>
     <string name="discover_marketplace">Market</string>
     <string name="discover_live">Na żywo</string>
-    <string name="discover_community">Społeczność</string>
+    <string name="discover_community">Społeczności</string>
     <string name="discover_chat">Czaty</string>
     <string name="community_approved_posts">Zatwierdzone posty</string>
     <string name="groups_no_descriptor">Ta grupa nie ma opisu ani reguł. Porozmawiaj z właścicielem, aby je dodać</string>
-    <string name="community_no_descriptor">Ta społeczność nie ma opisu. Porozmawiaj z właścicielem, aby go dodać</string>
+    <string name="community_no_descriptor">Ta społeczność nie ma opisu. Zwróć się do właściciela, aby go dodać</string>
     <string name="add_sensitive_content_label">Treść wrażliwa</string>
     <string name="add_sensitive_content_description">Dodaje ostrzeżenie o wrażliwej treści przed wyświetleniem tej zawartości</string>
     <string name="preferences">Ustawienia Aplikacji</string>
@@ -603,6 +619,7 @@
     <string name="new_feature_nip17_activate">Aktywuj</string>
     <string name="messages_create_public_chat">Publiczna</string>
     <string name="messages_create_public_private_chat_description">Nowa Grupa Publiczna lub Prywatna</string>
+    <string name="messages_relay_based">Transmiter</string>
     <string name="messages_new_message">Prywatna</string>
     <string name="messages_new_message_to">Do</string>
     <string name="messages_new_message_subject">Temat</string>
@@ -945,4 +962,6 @@
     <string name="select_list_to_filter">Wybierz listę, aby filtrować kanał</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
+    <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
+    <string name="share_image">Udostępnij zdjęcie…</string>
 </resources>

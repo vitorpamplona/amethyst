@@ -969,4 +969,5 @@
     <string name="private_message">निजी सन्देश</string>
     <string name="group_relay">चर्चा पुनःप्रसारक</string>
     <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
+    <string name="share_image">चित्र बाँटें…</string>
 </resources>
