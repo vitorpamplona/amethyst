@@ -54,7 +54,7 @@ class RootIdentifierTag {
         @JvmStatic
         fun assemble(id: ExternalId): List<Array<String>> =
             when (id) {
-                is GeohashId -> GeoHashTag.geoMipMap(id.geohash).map { assemble(it, id.hint) }
+                is GeohashId -> GeoHashTag.geoMipMap(id.geohash).map { assemble(GeohashId.toScope(it), id.hint) }
                 else -> listOf(assemble(id.toScope(), id.hint()))
             }
     }

@@ -74,6 +74,14 @@ class CommentEvent(
 
     fun replyAuthors() = tags.filter(ReplyAuthorTag::match)
 
+    fun rootAuthorKeys() = tags.mapNotNull(RootAuthorTag::parseKey)
+
+    fun replyAuthorKeys() = tags.mapNotNull(ReplyAuthorTag::parseKey)
+
+    fun rootAuthorHints() = tags.mapNotNull(RootAuthorTag::parseAsHint)
+
+    fun replyAuthorHints() = tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+
     fun rootScopes() = tags.filter { RootIdentifierTag.match(it) || RootAddressTag.match(it) || RootEventTag.match(it) }
 
     fun rootKinds() = tags.filter(RootKindTag::match)
