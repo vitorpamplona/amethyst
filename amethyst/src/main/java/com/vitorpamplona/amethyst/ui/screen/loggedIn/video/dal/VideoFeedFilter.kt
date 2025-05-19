@@ -75,16 +75,16 @@ class VideoFeedFilter(
         mimeType: String?,
     ): Boolean {
         // we don't have an youtube player
-        val urls = baseUrls.filter { !it.contains("youtu.be") && !it.contains("youtube.com") }
+        val urls = baseUrls.filter { !(it.contains("youtu.be") || it.contains("youtube.com")) }
 
-        val isSupportedMimeType = mimeType?.let { SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it) } ?: false
+        val isSupportedMimeType = mimeType?.let { SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it) } == true
 
         return urls.isNotEmpty() && (urls.any { RichTextParser.Companion.isImageOrVideoUrl(it) } || isSupportedMimeType)
     }
 
     fun acceptableiMetas(iMetas: List<VideoMeta>): Boolean =
         iMetas.any {
-            !it.url.contains("youtu.be") && (RichTextParser.Companion.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
+            !it.url.contains("youtu.be") && !it.url.contains("youtube.com") && (RichTextParser.Companion.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
         }
 
     fun acceptanceEvent(noteEvent: FileHeaderEvent) = acceptableUrls(noteEvent.urls(), noteEvent.mimeType())
