@@ -80,5 +80,13 @@ class MovieId(
             ensure(encoded.startsWith(PREFIX_COLON)) { return null }
             return encoded.substring(PREFIX_COLON.length)
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): MovieId? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return MovieId(encoded.substring(PREFIX_COLON.length), hint)
+        }
     }
 }

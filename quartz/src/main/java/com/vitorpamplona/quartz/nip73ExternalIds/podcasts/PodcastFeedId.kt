@@ -54,5 +54,13 @@ class PodcastFeedId(
             ensure(encoded.startsWith(PREFIX_COLON)) { return null }
             return encoded.substring(PREFIX_COLON.length)
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): PodcastFeedId? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return PodcastFeedId(encoded.substring(PREFIX_COLON.length), hint)
+        }
     }
 }

@@ -54,5 +54,13 @@ class PodcastPublisherId(
             ensure(encoded.startsWith(PREFIX_COLON)) { return null }
             return encoded.substring(PREFIX_COLON.length)
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): PodcastPublisherId? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return PodcastPublisherId(encoded.substring(PREFIX_COLON.length), hint)
+        }
     }
 }

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,21 +34,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -59,13 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -75,9 +62,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Nav
-import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
@@ -89,8 +74,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrlFillWidth
+import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -99,19 +83,17 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.Notifying
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FillWidthQuoteBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -133,7 +115,7 @@ fun HashtagPostScreen(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
-    val postViewModel: HashtagPostViewModel = viewModel()
+    val postViewModel: CommentPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
     val context = LocalContext.current
@@ -169,7 +151,7 @@ fun HashtagPostScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HashtagPostScreenInner(
-    postViewModel: HashtagPostViewModel,
+    postViewModel: CommentPostViewModel,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -262,7 +244,7 @@ fun HashtagPostScreenInner(
 
 @Composable
 private fun HashtagPostBody(
-    postViewModel: HashtagPostViewModel,
+    postViewModel: CommentPostViewModel,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -281,7 +263,7 @@ private fun HashtagPostBody(
             Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 postViewModel.externalIdentity?.let {
                     Row {
-                        DisplayExternalId(it, accountViewModel, nav)
+                        DisplayExternalId(it, nav)
                         Spacer(modifier = StdVertSpacer)
                     }
                 }
@@ -322,7 +304,7 @@ private fun HashtagPostBody(
                     )
                 }
 
-                DisplayPreviews(postViewModel, accountViewModel, nav)
+                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
@@ -442,41 +424,7 @@ private fun HashtagPostBody(
 }
 
 @Composable
-fun DisplayExternalId(
-    externalId: HashtagId,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Default.Tag,
-            contentDescription = stringRes(id = R.string.hashtag_exclusive),
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-
-        Spacer(StdHorzSpacer)
-
-        Text(
-            text =
-                buildAnnotatedString {
-                    withLink(
-                        LinkAnnotation.Clickable("hashtag") { nav.nav(Route.Hashtag(externalId.topic)) },
-                    ) {
-                        append(externalId.topic)
-                    }
-                },
-            style =
-                LocalTextStyle.current.copy(
-                    fontWeight = FontWeight.Bold,
-                ),
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun BottomRowActions(postViewModel: HashtagPostViewModel) {
+private fun BottomRowActions(postViewModel: CommentPostViewModel) {
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -525,33 +473,6 @@ private fun BottomRowActions(postViewModel: HashtagPostViewModel) {
         if (postViewModel.canAddInvoice && postViewModel.hasLnAddress()) {
             AddLnInvoiceButton(postViewModel.wantsInvoice) {
                 postViewModel.wantsInvoice = !postViewModel.wantsInvoice
-            }
-        }
-    }
-}
-
-@Composable
-fun DisplayPreviews(
-    postViewModel: HashtagPostViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
-
-    if (urlPreviews.isNotEmpty()) {
-        Row(HalfHorzPadding) {
-            if (urlPreviews.size > 1) {
-                LazyRow(Height100Modifier, horizontalArrangement = spacedBy(Size5dp)) {
-                    items(urlPreviews) {
-                        Box(SquaredQuoteBorderModifier) {
-                            PreviewUrl(it, accountViewModel, nav)
-                        }
-                    }
-                }
-            } else {
-                Box(FillWidthQuoteBorderModifier) {
-                    PreviewUrlFillWidth(urlPreviews[0], accountViewModel, nav)
-                }
             }
         }
     }

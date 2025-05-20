@@ -54,5 +54,13 @@ class PaperId(
             ensure(encoded.startsWith(PREFIX_COLON)) { return null }
             return encoded.substring(PREFIX_COLON.length)
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): PaperId? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return PaperId(encoded.substring(PREFIX_COLON.length), hint)
+        }
     }
 }

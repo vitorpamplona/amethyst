@@ -23,9 +23,17 @@ package com.vitorpamplona.quartz.nip22Comments.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip46RemoteSigner.getOrNull
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.books.BookId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.movies.MovieId
+import com.vitorpamplona.quartz.nip73ExternalIds.papers.PaperId
+import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastEpisodeId
+import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastFeedId
+import com.vitorpamplona.quartz.nip73ExternalIds.podcasts.PodcastPublisherId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -83,16 +91,32 @@ class ReplyIdentifierTag {
         }
 
         @JvmStatic
+        fun parseExternalId(tag: Tag): ExternalId? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == RootIdentifierTag.Companion.TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+
+            val value = tag[1]
+            val hint = tag.getOrNull(2)
+
+            return BookId.parse(value, hint)
+                ?: HashtagId.parse(value, hint)
+                ?: GeohashId.parse(value, hint)
+                ?: MovieId.parse(value, hint)
+                ?: PaperId.parse(value, hint)
+                ?: PodcastEpisodeId.parse(value, hint)
+                ?: PodcastFeedId.parse(value, hint)
+                ?: PodcastPublisherId.parse(value, hint)
+                ?: UrlId.parse(value, hint)
+        }
+
+        @JvmStatic
         fun assemble(
             identity: String,
             hint: String?,
         ) = arrayOfNotNull(TAG_NAME, identity, hint)
 
         @JvmStatic
-        fun assemble(id: ExternalId): List<Array<String>> =
-            when (id) {
-                is GeohashId -> GeoHashTag.geoMipMap(id.geohash).map { assemble(GeohashId.toScope(it), id.hint) }
-                else -> listOf(assemble(id.toScope(), id.hint()))
-            }
+        fun assemble(id: ExternalId): Array<String> = assemble(id.toScope(), id.hint())
     }
 }

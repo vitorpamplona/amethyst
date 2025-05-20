@@ -48,7 +48,9 @@ fun TagArrayBuilder<CommentEvent>.rootEvent(
     pubkey: String?,
 ) = addUnique(RootEventTag.assemble(eventId, relayHint, pubkey))
 
-fun TagArrayBuilder<CommentEvent>.rootExternalIdentity(id: ExternalId) = addAll(RootIdentifierTag.assemble(id))
+fun TagArrayBuilder<CommentEvent>.rootExternalIdentity(id: ExternalId) = add(RootIdentifierTag.assemble(id))
+
+fun TagArrayBuilder<CommentEvent>.rootExternalIdentities(ids: List<ExternalId>) = addAll(ids.map { RootIdentifierTag.assemble(it) })
 
 fun TagArrayBuilder<CommentEvent>.rootKind(kind: String) = addUnique(RootKindTag.assemble(kind))
 
@@ -72,7 +74,9 @@ fun TagArrayBuilder<CommentEvent>.replyEvent(
     pubkey: String?,
 ) = addUnique(ReplyEventTag.assemble(eventId, relayHint, pubkey))
 
-fun TagArrayBuilder<CommentEvent>.replyExternalIdentity(id: ExternalId) = addAll(ReplyIdentifierTag.assemble(id))
+fun TagArrayBuilder<CommentEvent>.replyExternalIdentity(id: ExternalId) = add(ReplyIdentifierTag.assemble(id))
+
+fun TagArrayBuilder<CommentEvent>.replyExternalIdentities(ids: List<ExternalId>) = addAll(ids.map { ReplyIdentifierTag.assemble(it) })
 
 fun TagArrayBuilder<CommentEvent>.replyKind(kind: String) = addUnique(ReplyKindTag.assemble(kind))
 

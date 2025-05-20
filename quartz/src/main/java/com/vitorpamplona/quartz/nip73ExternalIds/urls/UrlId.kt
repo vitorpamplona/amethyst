@@ -56,5 +56,13 @@ class UrlId(
             ensure(encoded.startsWith(PREFIX1) || encoded.startsWith(PREFIX2)) { return null }
             return encoded
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): UrlId? {
+            ensure(encoded.startsWith(PREFIX1) || encoded.startsWith(PREFIX2)) { return null }
+            return UrlId(encoded, hint)
+        }
     }
 }

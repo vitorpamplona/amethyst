@@ -54,5 +54,13 @@ class BookId(
             ensure(encoded.startsWith(PREFIX_COLON)) { return null }
             return encoded.substring(PREFIX_COLON.length)
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): BookId? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return BookId(encoded.substring(PREFIX_COLON.length), hint)
+        }
     }
 }

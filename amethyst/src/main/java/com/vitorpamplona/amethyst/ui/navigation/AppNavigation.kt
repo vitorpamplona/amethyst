@@ -69,8 +69,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
@@ -143,7 +143,7 @@ fun AppNavigation(
             composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
 
             composableFromBottomArgs<Route.GeoPost> {
-                GeoPostScreen(
+                GeoHashPostScreen(
                     geohash = it.geohash,
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),

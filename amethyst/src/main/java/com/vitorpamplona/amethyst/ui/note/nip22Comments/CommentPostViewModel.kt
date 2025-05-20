@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash
+package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import android.content.Context
 import androidx.compose.runtime.Stable
@@ -37,7 +37,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
+import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
@@ -63,6 +65,8 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -81,8 +85,8 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
-import com.vitorpamplona.quartz.nip73ExternalIds.location.geohashedScope
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -97,12 +101,15 @@ import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.collections.plus
 
 @Stable
-open class GeoPostViewModel :
+open class CommentPostViewModel :
     ViewModel(),
+    ILocationGrabber,
     IMessageField,
     IZapField,
     IZapRaiser {
@@ -119,11 +126,13 @@ open class GeoPostViewModel :
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
 
-    var externalIdentity by mutableStateOf<GeohashId?>(null)
+    var externalIdentity by mutableStateOf<ExternalId?>(null)
     var replyingTo: Note? by mutableStateOf<Note?>(null)
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
+    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(
+        emptyList(),
+    )
 
     var notifying by mutableStateOf<List<User>?>(null)
 
@@ -155,6 +164,10 @@ open class GeoPostViewModel :
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
 
+    // GeoHash
+    var wantsToAddGeoHash by mutableStateOf(false)
+    var location: StateFlow<LocationState.LocationResult>? = null
+
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
@@ -182,7 +195,7 @@ open class GeoPostViewModel :
         this.emojiSuggestions = EmojiSuggestionState(accountVM)
     }
 
-    fun newPostFor(externalIdentity: GeohashId) {
+    fun newPostFor(externalIdentity: ExternalId) {
         this.externalIdentity = externalIdentity
     }
 
@@ -210,10 +223,10 @@ open class GeoPostViewModel :
     open fun reply(post: Note) {
         val accountViewModel = accountViewModel ?: return
         val noteEvent = post.event as? CommentEvent ?: return
-        val geohash = noteEvent.geohashedScope() ?: return
+        val scope = noteEvent.scope() ?: return
 
         this.replyingTo = post
-        this.externalIdentity = GeohashId(geohash)
+        this.externalIdentity = scope
     }
 
     open fun quote(quote: Note) {
@@ -250,8 +263,8 @@ open class GeoPostViewModel :
     }
 
     private fun loadFromDraft(draftEvent: CommentEvent) {
-        val geohash = draftEvent.geohashedScope() ?: return
-        this.externalIdentity = GeohashId(geohash)
+        val scope = draftEvent.scope() ?: return
+        this.externalIdentity = scope
 
         canAddInvoice = accountViewModel?.userProfile()?.info?.lnAddress() != null
         canAddZapRaiser = accountViewModel?.userProfile()?.info?.lnAddress() != null
@@ -279,6 +292,8 @@ open class GeoPostViewModel :
         draftEvent.replyingTo()?.let {
             replyingTo = LocalCache.getOrCreateNote(it)
         }
+
+        wantsToAddGeoHash = draftEvent.hasGeohashes()
 
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
@@ -343,6 +358,8 @@ open class GeoPostViewModel :
             )
         tagger.run()
 
+        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+
         val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
@@ -357,7 +374,7 @@ open class GeoPostViewModel :
             if (replyingTo != null) {
                 val eventHint = replyingTo.toEventHint<Event>() ?: return null
 
-                CommentEvent.replyBuilder(
+                CommentEvent.Companion.replyBuilder(
                     msg = tagger.message,
                     replyingTo = eventHint,
                 ) {
@@ -373,10 +390,11 @@ open class GeoPostViewModel :
 
                     emojis(emojis)
                     imetas(usedAttachments)
+                    geoHash?.let { geohash(it) }
                 }
             } else {
                 val externalIdentity = externalIdentity ?: return null
-                CommentEvent.replyExternalIdentity(
+                CommentEvent.Companion.replyExternalIdentity(
                     msg = tagger.message,
                     extId = externalIdentity,
                 ) {
@@ -392,6 +410,7 @@ open class GeoPostViewModel :
 
                     emojis(emojis)
                     imetas(usedAttachments)
+                    geoHash?.let { geohash(it) }
                 }
             }
 
@@ -400,11 +419,16 @@ open class GeoPostViewModel :
 
     fun findEmoji(
         message: String,
-        myEmojiSet: List<EmojiMedia>?,
+        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
-            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let { EmojiUrlTag(it.code, it.link.url) }
+        return CustomEmoji.Companion.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
+            myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let {
+                EmojiUrlTag(
+                    it.code,
+                    it.link.url,
+                )
+            }
         }
     }
 
@@ -427,7 +451,7 @@ open class GeoPostViewModel :
                     viewModelScope,
                     alt,
                     contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
+                    MediaCompressor.Companion.intToCompressorQuality(mediaQuality),
                     server,
                     myAccount,
                     context,
@@ -473,7 +497,14 @@ open class GeoPostViewModel :
 
                 multiOrchestrator = null
             } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+                val errorMessages =
+                    results.errors.map {
+                        stringRes(
+                            context,
+                            it.errorResource,
+                            *it.params,
+                        )
+                    }.distinct()
 
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
@@ -499,6 +530,7 @@ open class GeoPostViewModel :
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
+        wantsToAddGeoHash = false
         wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()
@@ -587,7 +619,7 @@ open class GeoPostViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmoji(item: EmojiMedia) {
+    open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -598,13 +630,13 @@ open class GeoPostViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmojiUrl(item: EmojiMedia) {
+    open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
+                { Amethyst.Companion.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
         }
 
@@ -660,4 +692,14 @@ open class GeoPostViewModel :
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
         draftTag.newVersion()
     }
+
+    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+        if (location == null) {
+            location = locationManager().geohashStateFlow
+        }
+
+        return location!!
+    }
+
+    override fun locationManager(): LocationState = Amethyst.Companion.instance.locationManager
 }

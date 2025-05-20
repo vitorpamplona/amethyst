@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAddressTag
@@ -44,6 +45,7 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
@@ -172,10 +174,18 @@ class CommentEvent(
         ) = eventTemplate(KIND, msg, createdAt) {
             alt(ALT + extId.toScope())
 
-            rootExternalIdentity(extId)
+            if (extId is GeohashId) {
+                GeoHashTag.geoMipMap(extId.geohash).forEach { rootExternalIdentity(GeohashId(it, extId.hint)) }
+            } else {
+                rootExternalIdentity(extId)
+            }
             rootKind(extId)
 
-            replyExternalIdentity(extId)
+            if (extId is GeohashId) {
+                GeoHashTag.geoMipMap(extId.geohash).forEach { replyExternalIdentity(GeohashId(it, extId.hint)) }
+            } else {
+                replyExternalIdentity(extId)
+            }
             replyKind(extId)
 
             initializer()

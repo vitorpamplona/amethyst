@@ -77,5 +77,16 @@ class HashtagId(
                 null
             }
         }
+
+        fun parse(
+            encoded: String,
+            hint: String?,
+        ): HashtagId? {
+            return if (encoded.length > 1 && encoded[0] == KIND_CHR) {
+                HashtagId(encoded.substring(1), hint)
+            } else {
+                null
+            }
+        }
     }
 }

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,8 +34,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -81,8 +77,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrlFillWidth
+import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -96,13 +91,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.FillWidthQuoteBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -283,7 +274,7 @@ private fun NewProductBody(
                 MessageField(R.string.description, postViewModel)
             }
 
-            DisplayPreviews(postViewModel, accountViewModel, nav)
+            DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
 
             if (postViewModel.wantsToMarkAsSensitive) {
                 Row(
@@ -400,33 +391,6 @@ private fun NewProductBody(
         }
 
         BottomRowActions(postViewModel)
-    }
-}
-
-@Composable
-fun DisplayPreviews(
-    postViewModel: NewProductViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
-
-    if (urlPreviews.isNotEmpty()) {
-        Row(HalfHorzPadding) {
-            if (urlPreviews.size > 1) {
-                LazyRow(Height100Modifier, horizontalArrangement = spacedBy(Size5dp)) {
-                    items(urlPreviews) {
-                        Box(SquaredQuoteBorderModifier) {
-                            PreviewUrl(it, accountViewModel, nav)
-                        }
-                    }
-                }
-            } else {
-                Box(FillWidthQuoteBorderModifier) {
-                    PreviewUrlFillWidth(urlPreviews[0], accountViewModel, nav)
-                }
-            }
-        }
     }
 }
 
