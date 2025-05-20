@@ -221,12 +221,8 @@ open class CommentPostViewModel :
     }
 
     open fun reply(post: Note) {
-        val accountViewModel = accountViewModel ?: return
-        val noteEvent = post.event as? CommentEvent ?: return
-        val scope = noteEvent.scope() ?: return
-
         this.replyingTo = post
-        this.externalIdentity = scope
+        this.externalIdentity = (post.event as? CommentEvent)?.scope()
     }
 
     open fun quote(quote: Note) {

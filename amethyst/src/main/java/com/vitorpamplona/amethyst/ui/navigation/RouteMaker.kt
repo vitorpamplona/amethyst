@@ -211,39 +211,10 @@ fun routeReplyTo(
             } else if (noteEvent.isHashtagScoped()) {
                 Route.HashtagPost(replyTo = note.idHex)
             } else {
-                null
+                Route.GenericCommentPost(replyTo = note.idHex)
             }
         }
 
-        else -> null
-    }
-}
-
-fun routeQuote(
-    note: Note,
-    asUser: User,
-): Route? {
-    val noteEvent = note.event
-    return when (noteEvent) {
-        is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
-        is PrivateDmEvent ->
-            routeToMessage(
-                room = noteEvent.chatroomKey(asUser.pubkeyHex),
-                draftMessage = null,
-                replyId = noteEvent.id,
-                draftId = null,
-                fromUser = asUser,
-            )
-        is ChatroomKeyable ->
-            routeToMessage(
-                room = noteEvent.chatroomKey(asUser.pubkeyHex),
-                draftMessage = null,
-                replyId = noteEvent.id,
-                draftId = null,
-                fromUser = asUser,
-            )
-        is CommentEvent -> Route.GeoPost(replyTo = note.idHex)
-
-        else -> null
+        else -> Route.GenericCommentPost(replyTo = note.idHex)
     }
 }

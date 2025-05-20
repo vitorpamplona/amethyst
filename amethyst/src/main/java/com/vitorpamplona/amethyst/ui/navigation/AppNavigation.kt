@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.Disp
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
@@ -161,6 +162,18 @@ fun AppNavigation(
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
                     reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.GenericCommentPost> {
+                ReplyCommentPostScreen(
+                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    message = it.message,
+                    attachment = it.attachment?.ifBlank { null }?.toUri(),
                     quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     accountViewModel,
