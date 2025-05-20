@@ -317,6 +317,7 @@ fun HashtagLine(
                 start = 12.dp,
                 end = 12.dp,
                 top = 10.dp,
+                bottom = 10.dp,
             ),
     ) {
         Row(
@@ -325,7 +326,7 @@ fun HashtagLine(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                "Search hashtag: #$tag",
+                stringRes(R.string.search_by_hashtag, tag),
                 fontWeight = FontWeight.Bold,
             )
         }
