@@ -551,8 +551,7 @@ private fun BoostWithDialog(
                 val forkEvent = baseNote.event
                 val replyTo =
                     if (forkEvent is BaseThreadedEvent) {
-                        val hex = forkEvent.replyingTo()
-                        baseNote.replyTo?.filter { it.event?.id == hex }?.firstOrNull()
+                        baseNote.replyTo?.firstOrNull { it.event?.id == forkEvent.replyingTo() }
                     } else {
                         null
                     }
