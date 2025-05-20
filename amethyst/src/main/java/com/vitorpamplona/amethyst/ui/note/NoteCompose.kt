@@ -579,7 +579,7 @@ fun NoteBody(
     }
 
     if (baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent) {
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(4.dp))
     }
 
     RenderNoteRow(

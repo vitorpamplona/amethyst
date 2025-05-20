@@ -174,14 +174,14 @@ val LightReplyBorderModifier =
 
 val DarkInnerPostBorderModifier =
     Modifier
-        .padding(vertical = 5.dp)
+        .padding(vertical = 4.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, DarkSubtleBorder, QuoteBorder)
 
 val LightInnerPostBorderModifier =
     Modifier
-        .padding(vertical = 5.dp)
+        .padding(vertical = 4.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
