@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -33,14 +33,19 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
-fun NewNoteButton(nav: INav) {
+fun NewGeoPostButton(
+    tag: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     FloatingActionButton(
         onClick = {
-            nav.nav(Route.NewPost())
+            nav.nav(Route.GeoPost(tag))
         },
         modifier = Size55Modifier,
         shape = CircleShape,
@@ -48,7 +53,7 @@ fun NewNoteButton(nav: INav) {
     ) {
         Icon(
             painter = painterRes(R.drawable.ic_compose),
-            contentDescription = stringRes(R.string.new_post),
+            contentDescription = stringRes(id = R.string.new_community_note),
             modifier = Modifier.size(26.dp),
             tint = Color.White,
         )

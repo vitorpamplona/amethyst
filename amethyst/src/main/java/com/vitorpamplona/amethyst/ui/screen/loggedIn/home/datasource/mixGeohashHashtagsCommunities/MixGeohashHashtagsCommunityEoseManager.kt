@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseMa
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQueryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Geohash.filterHomePostsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Hashtags.filterHomePostsByHashtags
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsFromCommunities
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
@@ -46,6 +47,8 @@ class MixGeohashHashtagsCommunityEoseManager(
         listOfNotNull(
             filterHomePostsByHashtags(key.followLists()?.hashtags, since),
             filterHomePostsByGeohashes(key.followLists()?.geotags, since),
+            filterHomePostsByScopes(key.followLists()?.hashtagScopes, since),
+            filterHomePostsByScopes(key.followLists()?.geotagScopes, since),
             filterHomePostsFromCommunities(key.followLists()?.addresses, since),
         ).flatten()
 

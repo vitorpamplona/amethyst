@@ -98,6 +98,9 @@ fun HashtagScreen(
                 popBack = nav::popBack,
             )
         },
+        floatingButton = {
+            NewHashtagPostButton(tag, accountViewModel, nav)
+        },
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {

@@ -140,6 +140,26 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class GeoPost(
+        val geohash: String? = null,
+        val message: String? = null,
+        val attachment: String? = null,
+        val replyTo: String? = null,
+        val quote: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class HashtagPost(
+        val hashtag: String? = null,
+        val message: String? = null,
+        val attachment: String? = null,
+        val replyTo: String? = null,
+        val quote: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
     data class NewPost(
         val message: String? = null,
         val attachment: String? = null,
@@ -148,7 +168,6 @@ sealed class Route {
         val fork: String? = null,
         val version: String? = null,
         val draft: String? = null,
-        val enableGeolocation: Boolean = false,
     ) : Route()
 }
 
@@ -191,6 +210,8 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Room>() -> entry.toRoute<Route.Room>()
         dest.hasRoute<Route.NewPost>() -> entry.toRoute<Route.NewPost>()
         dest.hasRoute<Route.NewProduct>() -> entry.toRoute<Route.NewProduct>()
+        dest.hasRoute<Route.GeoPost>() -> entry.toRoute<Route.GeoPost>()
+        dest.hasRoute<Route.HashtagPost>() -> entry.toRoute<Route.HashtagPost>()
 
         else -> {
             null

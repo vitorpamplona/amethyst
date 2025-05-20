@@ -18,24 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.quartz.nip73ExternalIds.location
 
-import com.vitorpamplona.quartz.utils.toStringNoFragment
-import org.czeal.rfc3986.URIReference
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-class UrlId(
-    val url: String,
-    val hint: String? = null,
-) : ExternalId {
-    override fun toScope() = toScope(url)
+fun CommentEvent.isGeohashedScoped() = hasScopeKind(GeohashId.KIND)
 
-    override fun toKind() = toKind(url)
-
-    override fun hint() = hint
-
-    companion object {
-        fun toScope(url: String) = URIReference.parse(url).normalize().toStringNoFragment()
-
-        fun toKind(url: String) = "web"
-    }
-}
+fun CommentEvent.geohashedScope() = scopeValues(GeohashId::parse).maxByOrNull { it.length }

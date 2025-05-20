@@ -165,6 +165,8 @@ import com.vitorpamplona.quartz.nip68Picture.pictureIMeta
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
@@ -230,7 +232,10 @@ class Account(
         val hashtags: Set<String> = emptySet(),
         val geotags: Set<String> = emptySet(),
         val addresses: Set<String> = emptySet(),
-    )
+    ) {
+        val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
+        val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf<String>()) { HashtagId.toScope(it) }
+    }
 
     class FeedsBaseFlows(
         val listName: String,
@@ -623,7 +628,6 @@ class Account(
                     listName,
                     location = Amethyst.instance.locationManager.geohashStateFlow,
                 )
-
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {

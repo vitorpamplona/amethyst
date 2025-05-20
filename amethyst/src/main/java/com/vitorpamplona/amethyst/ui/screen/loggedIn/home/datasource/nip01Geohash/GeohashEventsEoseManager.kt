@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Geoha
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQueryState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
@@ -31,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.collections.flatten
 
 class GeohashEventsEoseManager(
     client: NostrClient,
@@ -39,7 +41,11 @@ class GeohashEventsEoseManager(
     override fun updateFilter(
         key: HomeQueryState,
         since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? = filterHomePostsByGeohashes(key.followLists()?.geotags, since)
+    ): List<TypedFilter>? =
+        listOfNotNull(
+            filterHomePostsByGeohashes(key.followLists()?.geotags, since),
+            filterHomePostsByScopes(key.followLists()?.geotagScopes, since),
+        ).flatten()
 
     override fun user(query: HomeQueryState) = query.account.userProfile()
 

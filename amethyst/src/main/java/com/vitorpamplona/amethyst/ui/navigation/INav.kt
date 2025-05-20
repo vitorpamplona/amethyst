@@ -56,7 +56,7 @@ interface INav {
 
     fun nav(route: Route)
 
-    fun nav(computeRoute: suspend () -> Route)
+    fun nav(computeRoute: suspend () -> Route?)
 
     fun newStack(route: Route)
 
@@ -95,10 +95,10 @@ class Nav(
         }
     }
 
-    override fun nav(computeRoute: suspend () -> Route) {
+    override fun nav(computeRoute: suspend () -> Route?) {
         scope.launch {
             val route = computeRoute()
-            if (getRouteWithArguments(controller) != route) {
+            if (route != null && getRouteWithArguments(controller) != route) {
                 controller.navigate(route)
             }
         }
@@ -148,7 +148,7 @@ object EmptyNav : INav {
 
     override fun nav(route: Route) {}
 
-    override fun nav(computeRoute: suspend () -> Route) {}
+    override fun nav(computeRoute: suspend () -> Route?) {}
 
     override fun newStack(route: Route) {}
 
@@ -181,7 +181,7 @@ class ObservableNavigate(
         nav.nav(route)
     }
 
-    override fun nav(computeRoute: suspend () -> Route) {
+    override fun nav(computeRoute: suspend () -> Route?) {
         onNavigate()
         nav.nav(computeRoute)
     }

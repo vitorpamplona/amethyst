@@ -70,6 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.N
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.drafts.DraftListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoPostScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
@@ -140,6 +142,32 @@ fun AppNavigation(
 
             composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
 
+            composableFromBottomArgs<Route.GeoPost> {
+                GeoPostScreen(
+                    geohash = it.geohash,
+                    message = it.message,
+                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.HashtagPost> {
+                HashtagPostScreen(
+                    hashtag = it.hashtag,
+                    message = it.message,
+                    attachment = it.attachment?.ifBlank { null }?.toUri(),
+                    reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
             composableFromBottomArgs<Route.NewProduct> {
                 NewProductScreen(
                     message = it.message,
@@ -160,7 +188,6 @@ fun AppNavigation(
                     fork = it.fork?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     version = it.version?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
-                    enableGeolocation = it.enableGeolocation,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

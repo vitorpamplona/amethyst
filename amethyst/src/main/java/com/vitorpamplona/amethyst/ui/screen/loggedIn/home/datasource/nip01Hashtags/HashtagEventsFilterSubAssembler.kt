@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Hasht
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQueryState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
 import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
@@ -40,10 +41,13 @@ class HashtagEventsFilterSubAssembler(
         key: HomeQueryState,
         since: Map<String, EOSETime>?,
     ): List<TypedFilter>? =
-        filterHomePostsByHashtags(
-            key.followLists()?.hashtags,
-            since,
-        )
+        listOfNotNull(
+            filterHomePostsByHashtags(
+                key.followLists()?.hashtags,
+                since,
+            ),
+            filterHomePostsByScopes(key.followLists()?.hashtagScopes, since),
+        ).flatten()
 
     override fun user(query: HomeQueryState) = query.account.userProfile()
 

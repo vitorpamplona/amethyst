@@ -33,6 +33,12 @@ class RootKindTag {
         fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
+        fun isKind(
+            tag: Tag,
+            kind: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == kind
+
+        @JvmStatic
         fun parse(tag: Tag): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }

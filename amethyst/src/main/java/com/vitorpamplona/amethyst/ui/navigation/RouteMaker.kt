@@ -29,14 +29,19 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 
 fun routeFor(
@@ -142,8 +147,16 @@ fun routeToMessage(
     replyId: HexKey? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
+): Route = routeToMessage(room, draftMessage, replyId, draftId, accountViewModel.userProfile())
+
+fun routeToMessage(
+    room: ChatroomKey,
+    draftMessage: String?,
+    replyId: HexKey? = null,
+    draftId: HexKey? = null,
+    fromUser: User,
 ): Route {
-    accountViewModel.account.userProfile().createChatroom(room)
+    fromUser.createChatroom(room)
 
     return Route.Room(room.hashCode(), draftMessage, replyId, draftId)
 }
@@ -168,3 +181,69 @@ fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.rela
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 
 fun authorRouteFor(note: Note): Route.Profile? = note.author?.pubkeyHex?.let { Route.Profile(it) }
+
+fun routeReplyTo(
+    note: Note,
+    asUser: User,
+): Route? {
+    val noteEvent = note.event
+    return when (noteEvent) {
+        is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
+        is PrivateDmEvent ->
+            routeToMessage(
+                room = noteEvent.chatroomKey(asUser.pubkeyHex),
+                draftMessage = null,
+                replyId = noteEvent.id,
+                draftId = null,
+                fromUser = asUser,
+            )
+        is ChatroomKeyable ->
+            routeToMessage(
+                room = noteEvent.chatroomKey(asUser.pubkeyHex),
+                draftMessage = null,
+                replyId = noteEvent.id,
+                draftId = null,
+                fromUser = asUser,
+            )
+        is CommentEvent -> {
+            if (noteEvent.isGeohashedScoped()) {
+                Route.GeoPost(replyTo = note.idHex)
+            } else if (noteEvent.isHashtagScoped()) {
+                Route.HashtagPost(replyTo = note.idHex)
+            } else {
+                null
+            }
+        }
+
+        else -> null
+    }
+}
+
+fun routeQuote(
+    note: Note,
+    asUser: User,
+): Route? {
+    val noteEvent = note.event
+    return when (noteEvent) {
+        is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
+        is PrivateDmEvent ->
+            routeToMessage(
+                room = noteEvent.chatroomKey(asUser.pubkeyHex),
+                draftMessage = null,
+                replyId = noteEvent.id,
+                draftId = null,
+                fromUser = asUser,
+            )
+        is ChatroomKeyable ->
+            routeToMessage(
+                room = noteEvent.chatroomKey(asUser.pubkeyHex),
+                draftMessage = null,
+                replyId = noteEvent.id,
+                draftId = null,
+                fromUser = asUser,
+            )
+        is CommentEvent -> Route.GeoPost(replyTo = note.idHex)
+
+        else -> null
+    }
+}

@@ -18,22 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments
 
-class BookId(
-    val isbn: String,
-    val hint: String? = null,
-) : ExternalId {
-    override fun toScope() = toScope(isbn)
+import com.vitorpamplona.ammolite.relays.FeedType
+import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-    override fun toKind() = toKind(isbn)
+fun filterHomePostsByScopes(
+    scopesToLoad: Set<String>?,
+    since: Map<String, EOSETime>?,
+): List<TypedFilter>? {
+    if (scopesToLoad == null || scopesToLoad.isEmpty()) return null
 
-    override fun hint() = hint
-
-    companion object {
-        // "isbn:9780765382030"
-        fun toScope(isbn: String) = "isbn:" + isbn.lowercase().replace("-", "")
-
-        fun toKind(isbn: String) = "isbn"
-    }
+    return listOf(
+        TypedFilter(
+            types = setOf(FeedType.FOLLOWS),
+            filter =
+                SincePerRelayFilter(
+                    kinds = listOf(CommentEvent.KIND),
+                    tags = mapOf("I" to scopesToLoad.toList()),
+                    limit = 100,
+                    since = since,
+                ),
+        ),
+    )
 }

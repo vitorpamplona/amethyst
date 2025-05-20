@@ -18,22 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.quartz.nip73ExternalIds.topics
 
-class PodcastFeedId(
-    val guid: String,
-    val hint: String? = null,
-) : ExternalId {
-    override fun toScope() = toScope(guid)
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-    override fun toKind() = toKind(guid)
+fun CommentEvent.isHashtagScoped() = hasScopeKind(HashtagId.KIND)
 
-    override fun hint() = hint
+fun CommentEvent.hashtagScope() = firstScopeValue(HashtagId::parse)
 
-    companion object {
-        // "isbn:9780765382030"
-        fun toScope(guid: String) = "podcast:guid:" + guid
-
-        fun toKind(guid: String) = "podcast:guid"
-    }
-}
+fun CommentEvent.hashtagScopes() = scopeValues(HashtagId::parse)

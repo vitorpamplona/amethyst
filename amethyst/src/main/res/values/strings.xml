@@ -733,6 +733,10 @@
     <string name="geohash_exclusive">Location-exclusive Post</string>
     <string name="geohash_exclusive_explainer">Only followers of the location will see it. Your general followers won\'t see it.</string>
 
+    <string name="hashtag_exclusive">Hashtag-exclusive Post</string>
+    <string name="hashtag_exclusive_explainer">Only followers of the hashtag will see it. Your general followers won\'t see it.</string>
+
+
     <string name="loading_location">Loading location</string>
     <string name="lack_location_permissions">No Location Permissions</string>
 
@@ -988,6 +992,7 @@
     <string name="new_short">New Shorts: images or videos</string>
     <string name="new_community_note">New Community Note</string>
     <string name="new_product">New Product</string>
+    <string name="new_exclusive_geo_note">New Geo-Exclusive Post</string>
 
     <string name="open_all_reactions_to_this_post">Open all reactions to this post</string>
     <string name="close_all_reactions_to_this_post">Close all reactions to this post</string>

@@ -41,6 +41,8 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
 @Composable
 fun DisplayFollowingHashtagsInPost(
@@ -52,7 +54,14 @@ fun DisplayFollowingHashtagsInPost(
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {
-        val newFirstTag = baseNote.event?.firstIsTaggedHashes(userFollowState.hashtags)
+        val noteEvent = baseNote.event
+
+        val newFirstTag =
+            if (noteEvent is CommentEvent) {
+                noteEvent.firstTaggedScopeIn(userFollowState.hashtagScopes)?.let { HashtagId.parse(it) } ?: noteEvent.firstIsTaggedHashes(userFollowState.hashtags)
+            } else {
+                noteEvent?.firstIsTaggedHashes(userFollowState.hashtags)
+            }
 
         if (firstTag != newFirstTag) {
             firstTag = newFirstTag

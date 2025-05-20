@@ -27,14 +27,17 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
 class HashtagFeedFilter(
     val tag: String,
@@ -60,20 +63,31 @@ class HashtagFeedFilter(
         it: Note,
         hashTag: String,
     ): Boolean =
-        (
-            it.event is TextNoteEvent ||
-                it.event is RepostEvent ||
-                it.event is GenericRepostEvent ||
-                it.event is LongTextNoteEvent ||
-                it.event is WikiNoteEvent ||
-                it.event is ChannelMessageEvent ||
-                it.event is PrivateDmEvent ||
-                it.event is PollNoteEvent ||
-                it.event is AudioHeaderEvent
-        ) &&
-            it.event?.isTaggedHash(hashTag) == true &&
+        (acceptableViaHashtag(it.event, hashTag) || acceptableViaScope(it.event, hashTag)) &&
             !it.isHiddenFor(account.flowHiddenUsers.value) &&
             account.isAcceptable(it)
+
+    fun acceptableViaHashtag(
+        event: Event?,
+        hashTag: String,
+    ): Boolean =
+        (
+            event is TextNoteEvent ||
+                event is RepostEvent ||
+                event is GenericRepostEvent ||
+                event is LongTextNoteEvent ||
+                event is WikiNoteEvent ||
+                event is ChannelMessageEvent ||
+                event is PrivateDmEvent ||
+                event is PollNoteEvent ||
+                event is AudioHeaderEvent
+        ) &&
+            event.isTaggedHash(hashTag) == true
+
+    fun acceptableViaScope(
+        event: Event?,
+        hashTag: String,
+    ): Boolean = event is CommentEvent && event.isTaggedScope(hashTag, HashtagId::match)
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

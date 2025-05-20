@@ -18,31 +18,43 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip70ProtectedEvts.tags
+package com.vitorpamplona.quartz.nip73ExternalIds.urls
 
-import com.vitorpamplona.quartz.nip01Core.core.Tag
-import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.utils.toStringNoFragment
+import org.czeal.rfc3986.URIReference
 
-class ProtectedTag {
+class UrlId(
+    val url: String,
+    val hint: String? = null,
+) : ExternalId {
+    override fun toScope() = toScope(url)
+
+    override fun toKind() = toKind(url)
+
+    override fun hint() = hint
+
     companion object {
-        const val TAG_NAME = "-"
+        const val KIND = "web"
+        const val PREFIX1 = "https://"
+        const val PREFIX2 = "http://"
 
-        @JvmStatic
-        fun match(tag: Tag): Boolean {
-            ensure(tag.has(0)) { return false }
-            ensure(tag[0] == TAG_NAME) { return false }
-            return true
+        fun toScope(url: String) = URIReference.parse(url).normalize().toStringNoFragment()
+
+        fun toKind(url: String) = KIND
+
+        fun match(
+            encoded: String,
+            value: String,
+        ): Boolean {
+            ensure(encoded.startsWith(PREFIX1) || encoded.startsWith(PREFIX2)) { return false }
+            return encoded == value
         }
 
-        @JvmStatic
-        fun parse(tag: Tag): Boolean? {
-            ensure(tag.has(0)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            return true
+        fun parse(encoded: String): String? {
+            ensure(encoded.startsWith(PREFIX1) || encoded.startsWith(PREFIX2)) { return null }
+            return encoded
         }
-
-        @JvmStatic
-        fun assemble() = arrayOf(TAG_NAME)
     }
 }

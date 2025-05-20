@@ -18,24 +18,40 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.quartz.nip73ExternalIds.podcasts
 
-import kotlin.math.min
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.utils.ensure
 
-class MovieId(
-    val isan: String,
+class PodcastEpisodeId(
+    val guid: String,
     val hint: String? = null,
 ) : ExternalId {
-    override fun toScope() = toScope(isan)
+    override fun toScope() = toScope(guid)
 
-    override fun toKind() = toKind(isan)
+    override fun toKind() = toKind(guid)
 
     override fun hint() = hint
 
     companion object {
-        // "isan:0000-0000-401A-0000-7"
-        fun toScope(isan: String) = "isan:" + isan.lowercase().substring(0, min(21, isan.length))
+        const val KIND = "podcast:item:guid:guid"
+        const val PREFIX_COLON = "podcast:item:guid:"
 
-        fun toKind(isan: String) = "isan"
+        fun toScope(guid: String) = PREFIX_COLON + guid
+
+        fun toKind(guid: String) = KIND
+
+        fun match(
+            encoded: String,
+            value: String,
+        ): Boolean {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return false }
+            return encoded.indexOf(value, PREFIX_COLON.length) > 0
+        }
+
+        fun parse(encoded: String): String? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return encoded.substring(PREFIX_COLON.length)
+        }
     }
 }

@@ -18,22 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.quartz.nip73ExternalIds.podcasts
 
-class PodcastPublisherId(
-    val guid: String,
-    val hint: String? = null,
-) : ExternalId {
-    override fun toScope() = toScope(guid)
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-    override fun toKind() = toKind(guid)
+fun CommentEvent.isPodcastEpisodeScoped() = hasScopeKind(PodcastEpisodeId.KIND)
 
-    override fun hint() = hint
+fun CommentEvent.podcastEpisodeScope() = firstScopeValue(PodcastEpisodeId::parse)
 
-    companion object {
-        // "isbn:9780765382030"
-        fun toScope(guid: String) = "podcast:publisher:guid:" + guid
+fun CommentEvent.podcastEpisodeScopes() = scopeValues(PodcastEpisodeId::parse)
 
-        fun toKind(guid: String) = "podcast:publisher:guid"
-    }
-}
+fun CommentEvent.isPodcastFeedScoped() = hasScopeKind(PodcastFeedId.KIND)
+
+fun CommentEvent.podcastFeedScope() = firstScopeValue(PodcastFeedId::parse)
+
+fun CommentEvent.podcastFeedScopes() = scopeValues(PodcastFeedId::parse)
+
+fun CommentEvent.isPodcastPublisherScoped() = hasScopeKind(PodcastPublisherId.KIND)
+
+fun CommentEvent.podcastPublisherScope() = firstScopeValue(PodcastPublisherId::parse)
+
+fun CommentEvent.podcastPublisherScopes() = scopeValues(PodcastPublisherId::parse)

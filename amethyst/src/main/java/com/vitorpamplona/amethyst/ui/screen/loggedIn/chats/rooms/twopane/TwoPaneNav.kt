@@ -45,13 +45,15 @@ class TwoPaneNav(
         }
     }
 
-    override fun nav(routeMaker: suspend () -> Route) {
+    override fun nav(routeMaker: suspend () -> Route?) {
         scope.launch(Dispatchers.Default) {
             val route = routeMaker()
-            if (route is Route.Room || route is Route.Channel) {
-                innerNav.value = route
-            } else {
-                nav.nav(route)
+            if (route != null) {
+                if (route is Route.Room || route is Route.Channel) {
+                    innerNav.value = route
+                } else {
+                    nav.nav(route)
+                }
             }
         }
     }

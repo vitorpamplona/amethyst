@@ -157,7 +157,7 @@ import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -974,7 +974,7 @@ fun SecondUserInfoRow(
             ObserveDisplayNip05Status(noteAuthor, remember(noteEvent) { Modifier.weight(1f) }, accountViewModel, nav)
         }
 
-        val geo = remember(noteEvent) { noteEvent.getGeoHash() }
+        val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }
         if (geo != null) {
             Spacer(StdHorzSpacer)
             DisplayLocation(geo, nav)

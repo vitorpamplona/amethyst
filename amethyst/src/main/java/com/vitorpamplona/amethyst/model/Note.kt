@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -852,6 +853,10 @@ open class Note(
         if (accountChoices.hiddenWordsCase.isNotEmpty()) {
             if (thisEvent is BaseThreadedEvent && thisEvent.content.containsAny(accountChoices.hiddenWordsCase)) {
                 return true
+            }
+
+            if (thisEvent is CommentEvent) {
+                thisEvent.isScoped { it.containsAny(accountChoices.hiddenWordsCase) }
             }
 
             if (thisEvent.anyHashTag { it.containsAny(accountChoices.hiddenWordsCase) }) {

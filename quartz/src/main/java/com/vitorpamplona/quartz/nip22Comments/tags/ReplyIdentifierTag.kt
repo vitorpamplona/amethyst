@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
-import com.vitorpamplona.quartz.nip73ExternalIds.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -36,6 +36,43 @@ class ReplyIdentifierTag {
 
         @JvmStatic
         fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun isTagged(
+            tag: Array<String>,
+            encodedScope: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == encodedScope
+
+        fun isTagged(
+            tag: Array<String>,
+            encodedScope: Set<String>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in encodedScope
+
+        fun matchOrNull(
+            tag: Array<String>,
+            encodedScope: Set<String>,
+        ) = if (tag.has(1) && tag[0] == RootIdentifierTag.Companion.TAG_NAME && tag[1] in encodedScope) {
+            tag[1]
+        } else {
+            null
+        }
+
+        fun isTagged(
+            tag: Array<String>,
+            test: (String) -> Boolean,
+        ) = tag.has(1) && tag[0] == TAG_NAME && test(tag[1])
+
+        fun isTagged(
+            tag: Array<String>,
+            value: String,
+            match: (String, String) -> Boolean,
+        ) = tag.has(1) && tag[0] == TAG_NAME && match(tag[1], value)
+
+        fun isTagged(
+            tag: Array<String>,
+            value: Set<String>,
+            match: (String, Set<String>) -> Boolean,
+        ) = tag.has(1) && tag[0] == TAG_NAME && match(tag[1], value)
 
         @JvmStatic
         fun parse(tag: Tag): String? {
@@ -54,7 +91,7 @@ class ReplyIdentifierTag {
         @JvmStatic
         fun assemble(id: ExternalId): List<Array<String>> =
             when (id) {
-                is GeohashId -> GeoHashTag.geoMipMap(id.geohash).map { assemble(it, id.hint) }
+                is GeohashId -> GeoHashTag.geoMipMap(id.geohash).map { assemble(GeohashId.toScope(it), id.hint) }
                 else -> listOf(assemble(id.toScope(), id.hint()))
             }
     }

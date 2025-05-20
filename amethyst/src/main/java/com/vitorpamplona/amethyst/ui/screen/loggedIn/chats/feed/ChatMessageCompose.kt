@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -230,7 +230,7 @@ fun NormalChatNote(
 
                             ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
 
-                            val geo = remember(note) { note.event?.getGeoHash() }
+                            val geo = remember(note) { note.event?.geoHashOrScope() }
                             if (geo != null) {
                                 Spacer(StdHorzSpacer)
                                 DisplayLocation(geo, nav)

@@ -181,7 +181,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -477,7 +477,7 @@ private fun FullBleedNoteCompose(
                         nav,
                     )
 
-                    val geo = remember { noteEvent.getGeoHash() }
+                    val geo = remember { noteEvent.geoHashOrScope() }
                     if (geo != null) {
                         DisplayLocation(geo, nav)
                     }

@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
@@ -78,6 +79,16 @@ fun filterPostsByHashtags(
                             AudioHeaderEvent.KIND,
                         ),
                     limit = 100,
+                    since = since,
+                ),
+        ),
+        TypedFilter(
+            types = COMMON_FEED_TYPES,
+            filter =
+                SincePerRelayFilter(
+                    tags = mapOf("I" to listOf(HashtagId.toScope(hashtag))),
+                    kinds = listOf(CommentEvent.KIND),
+                    limit = 200,
                     since = since,
                 ),
         ),

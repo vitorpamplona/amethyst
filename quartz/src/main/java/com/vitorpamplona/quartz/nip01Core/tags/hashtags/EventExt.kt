@@ -21,9 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.tags.hashtags
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-
-fun Event.forEachHashTag(onEach: (eventId: HexKey) -> Unit) = tags.forEachHashTag(onEach)
 
 fun Event.anyHashTag(onEach: (str: String) -> Boolean) = tags.anyHashTag(onEach)
 

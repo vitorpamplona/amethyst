@@ -18,10 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +37,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
@@ -61,17 +60,22 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
+import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
@@ -81,12 +85,19 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.hashtagScope
+import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ProductImageMeta
-import com.vitorpamplona.quartz.nip99Classifieds.image
-import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
-import com.vitorpamplona.quartz.nip99Classifieds.tags.PriceTag
+import com.vitorpamplona.quartz.nip94FileMetadata.alt
+import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
+import com.vitorpamplona.quartz.nip94FileMetadata.dims
+import com.vitorpamplona.quartz.nip94FileMetadata.hash
+import com.vitorpamplona.quartz.nip94FileMetadata.magnet
+import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
+import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
+import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
+import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +106,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Stable
-open class NewProductViewModel :
+open class HashtagPostViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
@@ -106,7 +117,7 @@ open class NewProductViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
-                sendDraft()
+                sendDraftSync()
             }
         }
     }
@@ -114,8 +125,13 @@ open class NewProductViewModel :
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
 
-    var productImages by mutableStateOf<List<ProductImageMeta>>(emptyList())
-    val iMetaDescription = IMetaAttachments()
+    var externalIdentity by mutableStateOf<HashtagId?>(null)
+    var replyingTo: Note? by mutableStateOf<Note?>(null)
+
+    val iMetaAttachments = IMetaAttachments()
+    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
+
+    var notifying by mutableStateOf<List<User>?>(null)
 
     override var message by mutableStateOf(TextFieldValue(""))
 
@@ -130,13 +146,6 @@ open class NewProductViewModel :
 
     // Images and Videos
     var multiOrchestrator by mutableStateOf<MultiOrchestrator?>(null)
-
-    // Classifieds
-    var title by mutableStateOf(TextFieldValue(""))
-    var price by mutableStateOf(TextFieldValue(""))
-    var locationText by mutableStateOf(TextFieldValue(""))
-    var category by mutableStateOf(TextFieldValue(""))
-    var condition by mutableStateOf<ConditionTag.CONDITION>(ConditionTag.CONDITION.USED_LIKE_NEW)
 
     // Invoices
     var canAddInvoice by mutableStateOf(false)
@@ -161,6 +170,7 @@ open class NewProductViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
+    var showRelaysDialog by mutableStateOf(false)
     var relayList by mutableStateOf<ImmutableList<String>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
@@ -182,6 +192,10 @@ open class NewProductViewModel :
         this.emojiSuggestions = EmojiSuggestionState(accountVM)
     }
 
+    fun newPostFor(externalIdentity: HashtagId) {
+        this.externalIdentity = externalIdentity
+    }
+
     fun editFromDraft(draft: Note) {
         val accountViewModel = accountViewModel ?: return
 
@@ -201,6 +215,15 @@ open class NewProductViewModel :
                 }
             }
         }
+    }
+
+    open fun reply(post: Note) {
+        val accountViewModel = accountViewModel ?: return
+        val noteEvent = post.event as? CommentEvent ?: return
+        val hashtag = noteEvent.hashtagScope() ?: return
+
+        this.replyingTo = post
+        this.externalIdentity = HashtagId(hashtag)
     }
 
     open fun quote(quote: Note) {
@@ -231,12 +254,19 @@ open class NewProductViewModel :
 
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
-        if (draftEvent !is ClassifiedsEvent) return
+        if (draftEvent !is CommentEvent) return
 
         loadFromDraft(draftEvent)
     }
 
-    private fun loadFromDraft(draftEvent: ClassifiedsEvent) {
+    private fun loadFromDraft(draftEvent: CommentEvent) {
+        val hashtag = draftEvent.hashtagScope() ?: return
+        this.externalIdentity = HashtagId(hashtag)
+
+        canAddInvoice = accountViewModel?.userProfile()?.info?.lnAddress() != null
+        canAddZapRaiser = accountViewModel?.userProfile()?.info?.lnAddress() != null
+        multiOrchestrator = null
+
         val localfowardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
         localfowardZapTo.forEach {
@@ -249,9 +279,6 @@ open class NewProductViewModel :
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
 
-        val geohash = draftEvent.getGeoHash()
-        wantsToAddGeoHash = geohash != null
-
         val zapraiser = draftEvent.zapraiserAmount()
         wantsZapraiser = zapraiser != null
         zapRaiserAmount.value = null
@@ -259,40 +286,38 @@ open class NewProductViewModel :
             zapRaiserAmount.value = zapraiser
         }
 
-        title = TextFieldValue(draftEvent.title() ?: "")
-        price = TextFieldValue(draftEvent.price()?.amount ?: "")
-        category = TextFieldValue(draftEvent.categories().firstOrNull() ?: "")
-        locationText = TextFieldValue(draftEvent.location() ?: "")
-        condition = draftEvent.conditionValid() ?: ConditionTag.CONDITION.USED_LIKE_NEW
-
-        val imageSet = draftEvent.images().toMutableSet()
-
-        draftEvent.imetas().forEach {
-            if (it.url in imageSet) {
-                productImages = productImages + ProductImageMeta.parse(it)
-                imageSet.remove(it.url)
-            } else {
-                iMetaDescription.add(it)
-            }
+        draftEvent.replyingTo()?.let {
+            replyingTo = LocalCache.getOrCreateNote(it)
         }
 
-        imageSet.forEach {
-            productImages = productImages + ProductImageMeta(it)
+        wantsToAddGeoHash = draftEvent.hasGeohashes()
+
+        notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
+            draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
+
+        if (forwardZapTo.value.items.isNotEmpty()) {
+            wantsForwardZapTo = true
         }
 
         message = TextFieldValue(draftEvent.content)
 
-        urlPreviews.update(message)
-    }
+        iMetaAttachments.addAll(draftEvent.imetas())
 
-    fun sendPost() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendPostSync()
-        }
+        urlPreviews.update(message)
     }
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
+        val relayList = relayList
+
+        if (nip95attachments.isNotEmpty() && relayList != null) {
+            val usedImages = template.tags.taggedQuoteIds().toSet()
+            nip95attachments.forEach {
+                if (usedImages.contains(it.second.id) == true) {
+                    account?.sendNip95Privately(it.first, it.second, relayList)
+                }
+            }
+        }
 
         accountViewModel?.account?.signAndSendPrivatelyOrBroadcast(
             template,
@@ -304,12 +329,6 @@ open class NewProductViewModel :
         cancel()
     }
 
-    fun sendDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendDraftSync()
-        }
-    }
-
     suspend fun sendDraftSync() {
         val accountViewModel = accountViewModel ?: return
 
@@ -318,6 +337,11 @@ open class NewProductViewModel :
         } else {
             val template = createTemplate() ?: return
             accountViewModel.account.createAndSendDraft(draftTag.current, template)
+
+            nip95attachments.forEach {
+                account?.sendToPrivateOutboxAndLocal(it.first)
+                account?.sendToPrivateOutboxAndLocal(it.second)
+            }
         }
     }
 
@@ -331,39 +355,60 @@ open class NewProductViewModel :
             )
         tagger.run()
 
+        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+
         val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
         val urls = findURLs(tagger.message)
-        val usedAttachments = iMetaDescription.filterIsIn(urls.toSet()) + productImages.map { it.toIMeta() }
-
-        val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
+        val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
         val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
 
-        val quotes = findNostrUris(tagger.message)
+        val replyingTo = replyingTo
 
         val template =
-            ClassifiedsEvent.build(
-                title.text,
-                PriceTag(price.text, "SATS", null),
-                tagger.message,
-                locationText.text.ifBlank { null },
-                condition,
-            ) {
-                productImages.forEach { image(it.url) }
+            if (replyingTo != null) {
+                val eventHint = replyingTo.toEventHint<Event>() ?: return null
 
-                hashtags(listOfNotNull(category.text.ifBlank { null }) + findHashtags(tagger.message))
-                quotes(quotes)
+                CommentEvent.replyBuilder(
+                    msg = tagger.message,
+                    replyingTo = eventHint,
+                ) {
+                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
 
-                geoHash?.let { geohash(it) }
-                localZapRaiserAmount?.let { zapraiser(it) }
-                zapReceiver?.let { zapSplits(it) }
-                contentWarningReason?.let { contentWarning(it) }
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
 
-                emojis(emojis)
-                imetas(usedAttachments)
-                references(urls)
+                    localZapRaiserAmount?.let { zapraiser(it) }
+                    zapReceiver?.let { zapSplits(it) }
+                    contentWarningReason?.let { contentWarning(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                    geoHash?.let { geohash(it) }
+                }
+            } else {
+                val externalIdentity = externalIdentity ?: return null
+                CommentEvent.replyExternalIdentity(
+                    msg = tagger.message,
+                    extId = externalIdentity,
+                ) {
+                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
+
+                    hashtags(findHashtags(tagger.message))
+                    references(findURLs(tagger.message))
+                    quotes(findNostrUris(tagger.message))
+
+                    localZapRaiserAmount?.let { zapraiser(it) }
+                    zapReceiver?.let { zapSplits(it) }
+                    contentWarningReason?.let { contentWarning(it) }
+
+                    emojis(emojis)
+                    imetas(usedAttachments)
+                    geoHash?.let { geohash(it) }
+                }
             }
 
         return template
@@ -371,7 +416,7 @@ open class NewProductViewModel :
 
     fun findEmoji(
         message: String,
-        myEmojiSet: List<EmojiPackState.EmojiMedia>?,
+        myEmojiSet: List<EmojiMedia>?,
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
         return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
@@ -406,27 +451,39 @@ open class NewProductViewModel :
 
             if (results.allGood) {
                 results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                        if (it.result.fileHeader.mimeType
-                                ?.startsWith("image") == true
-                        ) {
-                            productImages = productImages +
-                                ProductImageMeta(
-                                    it.result.url,
-                                    it.result.fileHeader.mimeType,
-                                    it.result.fileHeader.blurHash
-                                        ?.blurhash,
-                                    it.result.fileHeader.dim,
-                                    alt,
-                                    it.result.fileHeader.hash,
-                                    it.result.fileHeader.size,
-                                )
-                        } else {
-                            iMetaDescription.add(it.result, alt, contentWarningReason)
+                    if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                        account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, alt, contentWarningReason) { nip95 ->
+                            nip95attachments = nip95attachments + nip95
+                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
-                            message = message.insertUrlAtCursor(it.result.url)
-                            urlPreviews.update(message)
+                            note?.let {
+                                message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                                urlPreviews.update(message)
+                            }
                         }
+                    } else if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        val iMeta =
+                            IMetaTagBuilder(it.result.url)
+                                .apply {
+                                    hash(it.result.fileHeader.hash)
+                                    size(it.result.fileHeader.size)
+                                    it.result.fileHeader.mimeType
+                                        ?.let { mimeType(it) }
+                                    it.result.fileHeader.dim
+                                        ?.let { dims(it) }
+                                    it.result.fileHeader.blurHash
+                                        ?.let { blurhash(it.blurhash) }
+                                    it.result.magnet?.let { magnet(it) }
+                                    it.result.uploadedHash?.let { originalHash(it) }
+
+                                    alt?.let { alt(it) }
+                                    contentWarningReason?.let { sensitiveContent(contentWarningReason) }
+                                }.build()
+
+                        iMetaAttachments.replace(iMeta.url, iMeta)
+
+                        message = message.insertUrlAtCursor(it.result.url)
+                        urlPreviews.update(message)
                     }
                 }
 
@@ -444,18 +501,17 @@ open class NewProductViewModel :
     open fun cancel() {
         message = TextFieldValue("")
 
+        replyingTo = null
+        externalIdentity = null
+
         multiOrchestrator = null
         isUploadingImage = false
+
+        notifying = null
 
         wantsInvoice = false
         wantsZapraiser = false
         zapRaiserAmount.value = null
-
-        condition = ConditionTag.CONDITION.USED_LIKE_NEW
-        locationText = TextFieldValue("")
-        title = TextFieldValue("")
-        category = TextFieldValue("")
-        price = TextFieldValue("")
 
         wantsForwardZapTo = false
         wantsToMarkAsSensitive = false
@@ -470,10 +526,11 @@ open class NewProductViewModel :
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
 
-        productImages = emptyList()
-        iMetaDescription.reset()
+        iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
+
+        showRelaysDialog = false
 
         reloadRelaySet()
 
@@ -498,6 +555,10 @@ open class NewProductViewModel :
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
         this.multiOrchestrator?.remove(selected)
+    }
+
+    open fun removeFromReplyList(userToRemove: User) {
+        notifying = notifying?.filter { it != userToRemove }
     }
 
     override fun updateMessage(it: TextFieldValue) {
@@ -543,7 +604,7 @@ open class NewProductViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
+    open fun autocompleteWithEmoji(item: EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -554,11 +615,11 @@ open class NewProductViewModel :
         draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
+    open fun autocompleteWithEmojiUrl(item: EmojiMedia) {
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaDescription.downloadAndPrepare(
+            iMetaAttachments.downloadAndPrepare(
                 item.link.url,
                 { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
@@ -577,9 +638,6 @@ open class NewProductViewModel :
             !isUploadingImage &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
-            title.text.isNotBlank() &&
-            price.text.isNotBlank() &&
-            category.text.isNotBlank() &&
             multiOrchestrator == null
 
     fun insertAtCursor(newElement: String) {
@@ -588,19 +646,6 @@ open class NewProductViewModel :
 
     fun selectImage(uris: ImmutableList<SelectedMedia>) {
         multiOrchestrator = MultiOrchestrator(uris)
-    }
-
-    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
-        if (location == null) {
-            location = locationManager().geohashStateFlow
-        }
-
-        return location!!
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
     }
 
     override fun updateZapPercentage(
@@ -612,7 +657,8 @@ open class NewProductViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger =
+                NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
@@ -632,35 +678,12 @@ open class NewProductViewModel :
         draftTag.newVersion()
     }
 
-    fun updateTitle(it: TextFieldValue) {
-        title = it
-        draftTag.newVersion()
-    }
-
-    fun updatePrice(it: TextFieldValue) {
-        runCatching {
-            if (it.text.isEmpty()) {
-                price = TextFieldValue("")
-            } else if (it.text.toLongOrNull() != null) {
-                price = it
-            }
+    override fun locationFlow(): StateFlow<LocationState.LocationResult> {
+        if (location == null) {
+            location = locationManager().geohashStateFlow
         }
-        draftTag.newVersion()
-    }
 
-    fun updateCondition(newCondition: ConditionTag.CONDITION) {
-        condition = newCondition
-        draftTag.newVersion()
-    }
-
-    fun updateCategory(value: TextFieldValue) {
-        category = value
-        draftTag.newVersion()
-    }
-
-    fun updateLocation(it: TextFieldValue) {
-        locationText = it
-        draftTag.newVersion()
+        return location!!
     }
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager

@@ -154,13 +154,11 @@ fun NewPostScreen(
     fork: Note? = null,
     version: Note? = null,
     draft: Note? = null,
-    enableGeolocation: Boolean = false,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
     val postViewModel: NewPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
-    postViewModel.wantsToAddGeoHash = enableGeolocation
 
     val context = LocalContext.current
     val activity = context.getActivity()

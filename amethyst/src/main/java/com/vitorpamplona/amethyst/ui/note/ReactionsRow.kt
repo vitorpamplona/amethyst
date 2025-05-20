@@ -114,7 +114,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -151,7 +151,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
@@ -581,35 +580,7 @@ private fun ReplyReactionWithDialog(
     nav: INav,
 ) {
     ReplyReaction(baseNote, grayTint, accountViewModel) {
-        val noteEvent = baseNote.event
-        if (noteEvent is PrivateDmEvent) {
-            nav.nav {
-                routeToMessage(
-                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
-                    draftMessage = null,
-                    replyId = noteEvent.id,
-                    draftId = null,
-                    accountViewModel = accountViewModel,
-                )
-            }
-        } else if (noteEvent is ChatroomKeyable) {
-            nav.nav {
-                routeToMessage(
-                    room = noteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex),
-                    draftMessage = null,
-                    replyId = noteEvent.id,
-                    draftId = null,
-                    accountViewModel = accountViewModel,
-                )
-            }
-        } else {
-            nav.nav {
-                Route.NewPost(
-                    baseReplyTo = baseNote.idHex,
-                    quote = null,
-                )
-            }
-        }
+        nav.nav { routeReplyTo(baseNote, accountViewModel.userProfile()) }
     }
 }
 

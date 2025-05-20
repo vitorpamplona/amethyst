@@ -90,19 +90,29 @@ class CommentEvent(
 
     fun directKinds() = tags.filter(ReplyKindTag::match)
 
-    fun isGeohashTag(tag: Array<String>) = tag.size > 1 && (tag[0] == "i" || tag[0] == "I") && tag[1].startsWith("geo:")
+    /** root and reply scope search */
+    fun isTaggedScope(scopeId: String) = tags.any { RootIdentifierTag.isTagged(it, scopeId) || ReplyIdentifierTag.isTagged(it, scopeId) }
 
-    private fun getGeoHashList() = tags.filter { isGeohashTag(it) }
+    fun isTaggedScopes(scopeIds: Set<String>) = tags.any { RootIdentifierTag.isTagged(it, scopeIds) || ReplyIdentifierTag.isTagged(it, scopeIds) }
 
-    fun hasGeohashes() = tags.any { isGeohashTag(it) }
+    fun isTaggedScope(
+        value: String,
+        match: (String, String) -> Boolean,
+    ) = tags.any { RootIdentifierTag.isTagged(it, value, match) || ReplyIdentifierTag.isTagged(it, value, match) }
 
-    fun geohashes() = getGeoHashList().map { it[1].drop(4).lowercase() }
+    fun firstTaggedScopeIn(scopeIds: Set<String>) = tags.firstNotNullOfOrNull { RootIdentifierTag.matchOrNull(it, scopeIds) ?: ReplyIdentifierTag.matchOrNull(it, scopeIds) }
 
-    fun getGeoHash(): String? = geohashes().maxByOrNull { it.length }
+    fun isScoped(scopeTest: (String) -> Boolean) = tags.any { RootIdentifierTag.isTagged(it, scopeTest) || ReplyIdentifierTag.isTagged(it, scopeTest) }
 
-    fun isTaggedGeoHash(hashtag: String) = tags.any { isGeohashTag(it) && it[1].endsWith(hashtag, true) }
+    fun hasRootScopeKind(kind: String) = tags.any { RootKindTag.isKind(it, kind) }
 
-    fun isTaggedGeoHashes(hashtags: Set<String>) = geohashes().any { it in hashtags }
+    fun hasReplyScopeKind(kind: String) = tags.any { ReplyKindTag.isKind(it, kind) }
+
+    fun hasScopeKind(kind: String) = tags.any { RootKindTag.isKind(it, kind) || ReplyKindTag.isKind(it, kind) }
+
+    fun scopeValues(parser: (String) -> String?) = tags.mapNotNull { RootIdentifierTag.parse(it)?.let { parser(it) } }
+
+    fun firstScopeValue(parser: (String) -> String?) = tags.firstNotNullOfOrNull { RootIdentifierTag.parse(it)?.let { parser(it) } }
 
     override fun markedReplyTos(): List<HexKey> =
         tags.mapNotNull(ReplyEventTag::parseKey) +

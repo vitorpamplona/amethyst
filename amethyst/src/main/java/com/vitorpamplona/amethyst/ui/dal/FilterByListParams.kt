@@ -58,7 +58,9 @@ class FilterByListParams(
         } else if (noteEvent is CommentEvent) {
             // ignore follows and checks only the root scope
             noteEvent.isTaggedHashes(followLists.hashtags) ||
+                noteEvent.isTaggedScopes(followLists.hashtagScopes) ||
                 noteEvent.isTaggedGeoHashes(followLists.geotags) ||
+                noteEvent.isTaggedScopes(followLists.geotagScopes) ||
                 noteEvent.isTaggedAddressableNotes(followLists.addresses)
         } else {
             noteEvent.pubKey in followLists.authors ||

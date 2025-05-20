@@ -27,12 +27,15 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 
 class GeoHashFeedFilter(
     val tag: String,
@@ -58,18 +61,29 @@ class GeoHashFeedFilter(
         it: Note,
         geoTag: String,
     ): Boolean =
-        (
-            it.event is TextNoteEvent ||
-                it.event is LongTextNoteEvent ||
-                it.event is WikiNoteEvent ||
-                it.event is ChannelMessageEvent ||
-                it.event is PrivateDmEvent ||
-                it.event is PollNoteEvent ||
-                it.event is AudioHeaderEvent
-        ) &&
-            it.event?.isTaggedGeoHash(geoTag) == true &&
+        (acceptableViaHashtag(it.event, geoTag) || acceptableViaScope(it.event, geoTag)) &&
             !it.isHiddenFor(account.flowHiddenUsers.value) &&
             account.isAcceptable(it)
+
+    fun acceptableViaHashtag(
+        event: Event?,
+        geohash: String,
+    ): Boolean =
+        (
+            event is TextNoteEvent ||
+                event is LongTextNoteEvent ||
+                event is WikiNoteEvent ||
+                event is ChannelMessageEvent ||
+                event is PrivateDmEvent ||
+                event is PollNoteEvent ||
+                event is AudioHeaderEvent
+        ) &&
+            event.isTaggedGeoHash(geohash) == true
+
+    fun acceptableViaScope(
+        event: Event?,
+        geohash: String,
+    ): Boolean = event is CommentEvent && event.isTaggedScope(geohash, GeohashId::match)
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
 }

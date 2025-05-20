@@ -18,22 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.quartz.nip73ExternalIds.urls
 
-class PaperId(
-    val doi: String,
-    val hint: String? = null,
-) : ExternalId {
-    override fun toScope() = toScope(doi)
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
-    override fun toKind() = toKind(doi)
+fun CommentEvent.isUrlScoped() = hasScopeKind(UrlId.KIND)
 
-    override fun hint() = hint
+fun CommentEvent.urlScope() = firstScopeValue(UrlId::parse)
 
-    companion object {
-        // "doi:10.1000/182"
-        fun toScope(doi: String) = "doi:" + doi.lowercase()
-
-        fun toKind(doi: String) = "doi"
-    }
-}
+fun CommentEvent.urlScopes() = scopeValues(UrlId::parse)

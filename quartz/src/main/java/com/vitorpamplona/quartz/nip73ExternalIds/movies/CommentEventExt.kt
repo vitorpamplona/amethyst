@@ -18,25 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.geohash
+package com.vitorpamplona.quartz.nip73ExternalIds.movies
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.location.geohashedScope
 
-fun Event.hasGeohashes() = tags.hasGeohashes()
+fun CommentEvent.isMovieScoped() = hasScopeKind(MovieId.KIND)
 
-fun Event.isTaggedGeoHashes(hashtags: Set<String>) = tags.isTaggedGeoHashes(hashtags)
+fun CommentEvent.movieScope() = firstScopeValue(MovieId::parse)
 
-fun Event.isTaggedGeoHash(hashtag: String) = tags.isTaggedGeoHash(hashtag)
-
-fun Event.geohashes() = tags.geohashes()
-
-fun Event.getGeoHash(): String? = tags.getGeoHash()
-
-fun Event.geoHashOrScope() =
-    if (this is CommentEvent) {
-        geohashedScope()
-    } else {
-        tags.getGeoHash()
-    }
+fun CommentEvent.movieScopes() = scopeValues(MovieId::parse)

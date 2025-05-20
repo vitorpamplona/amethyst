@@ -18,25 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.tags.geohash
+package com.vitorpamplona.quartz.nip73ExternalIds.podcasts
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.location.geohashedScope
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.utils.ensure
 
-fun Event.hasGeohashes() = tags.hasGeohashes()
+class PodcastPublisherId(
+    val guid: String,
+    val hint: String? = null,
+) : ExternalId {
+    override fun toScope() = toScope(guid)
 
-fun Event.isTaggedGeoHashes(hashtags: Set<String>) = tags.isTaggedGeoHashes(hashtags)
+    override fun toKind() = toKind(guid)
 
-fun Event.isTaggedGeoHash(hashtag: String) = tags.isTaggedGeoHash(hashtag)
+    override fun hint() = hint
 
-fun Event.geohashes() = tags.geohashes()
+    companion object {
+        const val KIND = "podcast:publisher:guid"
+        const val PREFIX_COLON = "podcast:publisher:guid:"
 
-fun Event.getGeoHash(): String? = tags.getGeoHash()
+        // "isbn:9780765382030"
+        fun toScope(guid: String) = PREFIX_COLON + guid
 
-fun Event.geoHashOrScope() =
-    if (this is CommentEvent) {
-        geohashedScope()
-    } else {
-        tags.getGeoHash()
+        fun toKind(guid: String) = KIND
+
+        fun match(
+            encoded: String,
+            value: String,
+        ): Boolean {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return false }
+            return encoded.indexOf(value, PREFIX_COLON.length) > 0
+        }
+
+        fun parse(encoded: String): String? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return encoded.substring(PREFIX_COLON.length)
+        }
     }
+}

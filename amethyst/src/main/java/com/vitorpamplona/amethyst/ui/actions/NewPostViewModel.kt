@@ -118,7 +118,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt

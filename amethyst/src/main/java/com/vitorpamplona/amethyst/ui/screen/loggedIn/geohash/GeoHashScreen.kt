@@ -89,6 +89,9 @@ fun GeoHashScreen(
                 popBack = nav::popBack,
             )
         },
+        floatingButton = {
+            NewGeoPostButton(tag, accountViewModel, nav)
+        },
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {

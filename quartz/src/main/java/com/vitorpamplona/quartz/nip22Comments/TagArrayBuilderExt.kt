@@ -78,7 +78,7 @@ fun TagArrayBuilder<CommentEvent>.replyKind(kind: String) = addUnique(ReplyKindT
 
 fun TagArrayBuilder<CommentEvent>.replyKind(kind: Int) = addUnique(ReplyKindTag.assemble(kind))
 
-fun TagArrayBuilder<CommentEvent>.replyKind(id: ExternalId) = addUnique(RootKindTag.assemble(id))
+fun TagArrayBuilder<CommentEvent>.replyKind(id: ExternalId) = addUnique(ReplyKindTag.assemble(id))
 
 fun TagArrayBuilder<CommentEvent>.replyAuthor(
     pubKey: HexKey,

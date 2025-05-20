@@ -18,21 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip73ExternalIds
+package com.vitorpamplona.quartz.nip73ExternalIds.papers
 
-class GeohashId(
-    val geohash: String,
+import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
+import com.vitorpamplona.quartz.utils.ensure
+
+class PaperId(
+    val doi: String,
     val hint: String? = null,
 ) : ExternalId {
-    override fun toScope() = toScope(geohash)
+    override fun toScope() = toScope(doi)
 
-    override fun toKind() = toKind(geohash)
+    override fun toKind() = toKind(doi)
 
     override fun hint() = hint
 
     companion object {
-        fun toScope(geohash: String) = "geo:" + geohash.lowercase()
+        const val KIND = "doi"
+        const val PREFIX_COLON = "doi:"
 
-        fun toKind(geohash: String) = "geo"
+        // "doi:10.1000/182"
+        fun toScope(doi: String) = PREFIX_COLON + doi.lowercase()
+
+        fun toKind(doi: String) = KIND
+
+        fun match(
+            encoded: String,
+            value: String,
+        ): Boolean {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return false }
+            return encoded.indexOf(value, PREFIX_COLON.length) > 0
+        }
+
+        fun parse(encoded: String): String? {
+            ensure(encoded.startsWith(PREFIX_COLON)) { return null }
+            return encoded.substring(PREFIX_COLON.length)
+        }
     }
 }
