@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
+@Deprecated("Replaced by NIP-22")
 class TorrentCommentEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -92,6 +93,7 @@ class TorrentCommentEvent(
             }
         }
 
+        @Deprecated("Replaced by NIP-22")
         fun build(
             post: String,
             createdAt: Long = TimeUtils.now(),

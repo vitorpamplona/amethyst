@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 @Immutable
+@Deprecated("Replaced by NIP-22")
 class GitReplyEvent(
     id: HexKey,
     pubKey: HexKey,
@@ -68,6 +69,7 @@ class GitReplyEvent(
         const val KIND = 1622
         const val ALT_DESCRIPTION = "A Git Reply"
 
+        @Deprecated("Replaced by NIP-22")
         fun reply(
             post: String,
             replyingTo: EventHintBundle<GitReplyEvent>,
@@ -80,6 +82,7 @@ class GitReplyEvent(
             initializer()
         }
 
+        @Deprecated("Replaced by NIP-22")
         fun replyIssue(
             post: String,
             issue: EventHintBundle<GitIssueEvent>,
@@ -92,6 +95,7 @@ class GitReplyEvent(
             initializer()
         }
 
+        @Deprecated("Replaced by NIP-22")
         fun replyPatch(
             post: String,
             patch: EventHintBundle<GitPatchEvent>,

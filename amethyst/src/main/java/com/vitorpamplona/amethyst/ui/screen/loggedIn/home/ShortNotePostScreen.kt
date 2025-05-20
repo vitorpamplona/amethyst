@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import android.content.Intent
 import android.net.Uri
@@ -61,10 +61,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -76,13 +74,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.util.Consumer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
-import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
+import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialogEasy
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -117,6 +115,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -138,15 +137,11 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
-fun NewPostScreen(
+fun ShortNotePostScreen(
     message: String? = null,
     attachment: Uri? = null,
     baseReplyTo: Note? = null,
@@ -157,27 +152,11 @@ fun NewPostScreen(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
-    val postViewModel: NewPostViewModel = viewModel()
+    val postViewModel: ShortNotePostViewModel = viewModel()
     postViewModel.init(accountViewModel)
 
     val context = LocalContext.current
     val activity = context.getActivity()
-
-    val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    var showRelaysDialog by remember { mutableStateOf(false) }
-    var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
-
-    LaunchedEffect(key1 = postViewModel.draftTag) {
-        launch(Dispatchers.IO) {
-            postViewModel.draftTextChanges
-                .receiveAsFlow()
-                .debounce(1000)
-                .collectLatest {
-                    postViewModel.sendDraft(relayList = relayList)
-                }
-        }
-    }
 
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) {
@@ -194,7 +173,6 @@ fun NewPostScreen(
 
     DisposableEffect(nav, activity) {
         // Microsoft's swift key sends Gifs as new actions
-
         val consumer =
             Consumer<Intent> { intent ->
                 if (intent.action == Intent.ACTION_SEND) {
@@ -213,6 +191,18 @@ fun NewPostScreen(
         onDispose { activity.removeOnNewIntentListener(consumer) }
     }
 
+    NewPostScreenInner(postViewModel, accountViewModel, nav)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NewPostScreenInner(
+    postViewModel: ShortNotePostViewModel,
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+) {
+    val scope = rememberCoroutineScope()
+
     WatchAndLoadMyEmojiList(accountViewModel)
 
     Scaffold(
@@ -222,14 +212,14 @@ fun NewPostScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = CenterVertically,
                     ) {
                         Spacer(modifier = StdHorzSpacer)
 
                         Box {
                             IconButton(
                                 modifier = Modifier.align(Alignment.Center),
-                                onClick = { showRelaysDialog = true },
+                                onClick = { postViewModel.showRelaysDialog = true },
                             ) {
                                 Icon(
                                     painter = painterRes(R.drawable.relays),
@@ -241,8 +231,10 @@ fun NewPostScreen(
                         }
                         PostButton(
                             onPost = {
-                                postViewModel.sendPost(relayList = relayList)
-                                scope.launch {
+                                // uses the accountViewModel scope to avoid cancelling this
+                                // function when the postViewModel is released
+                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    postViewModel.sendPostSync()
                                     delay(100)
                                     nav.popBack()
                                 }
@@ -256,13 +248,12 @@ fun NewPostScreen(
                         Spacer(modifier = StdHorzSpacer)
                         CloseButton(
                             onPress = {
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        postViewModel.sendDraftSync(relayList = relayList)
-                                        postViewModel.cancel()
-                                    }
-                                    delay(100)
+                                // uses the accountViewModel scope to avoid cancelling this
+                                // function when the postViewModel is released
+                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    postViewModel.sendDraftSync()
                                     nav.popBack()
+                                    postViewModel.cancel()
                                 }
                             },
                         )
@@ -275,11 +266,11 @@ fun NewPostScreen(
             )
         },
     ) { pad ->
-        if (showRelaysDialog) {
-            RelaySelectionDialog(
-                preSelectedList = relayList,
-                onClose = { showRelaysDialog = false },
-                onPost = { relayList = it },
+        if (postViewModel.showRelaysDialog) {
+            RelaySelectionDialogEasy(
+                preSelectedList = postViewModel.relayList ?: persistentListOf(),
+                onClose = { postViewModel.showRelaysDialog = false },
+                onPost = { postViewModel.relayList = it.map { it.url }.toImmutableList() },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -291,199 +282,210 @@ fun NewPostScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            Column(
-                modifier =
-                    Modifier.fillMaxSize(),
-            ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                start = Size10dp,
-                                end = Size10dp,
-                            ).weight(1f),
-                ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(scrollState),
-                    ) {
-                        postViewModel.originalNote?.let {
-                            Row {
-                                NoteCompose(
-                                    baseNote = it,
-                                    modifier = MaterialTheme.colorScheme.replyModifier,
-                                    isQuotedNote = true,
-                                    unPackReply = false,
-                                    makeItShort = true,
-                                    quotesLeft = 1,
-                                    accountViewModel = accountViewModel,
-                                    nav = nav,
-                                )
-                                Spacer(modifier = StdVertSpacer)
-                            }
-                        }
-
-                        Row {
-                            Notifying(postViewModel.pTags?.toImmutableList(), accountViewModel) {
-                                postViewModel.removeFromReplyList(it)
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.padding(vertical = Size10dp),
-                        ) {
-                            BaseUserPicture(
-                                accountViewModel.userProfile(),
-                                Size35dp,
-                                accountViewModel = accountViewModel,
-                            )
-                            MessageField(
-                                R.string.what_s_on_your_mind,
-                                postViewModel,
-                            )
-                        }
-
-                        if (postViewModel.wantsPoll) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                PollField(postViewModel)
-                            }
-                        }
-
-                        DisplayPreviews(postViewModel, accountViewModel, nav)
-
-                        if (postViewModel.wantsToMarkAsSensitive) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                ContentSensitivityExplainer()
-                            }
-                        }
-
-                        if (postViewModel.wantsToAddGeoHash) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                LocationAsHash(postViewModel) {
-                                    SettingsRow(
-                                        R.string.geohash_exclusive,
-                                        R.string.geohash_exclusive_explainer,
-                                    ) {
-                                        Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
-                                    }
-                                }
-                            }
-                        }
-
-                        if (postViewModel.wantsForwardZapTo) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp),
-                            ) {
-                                ForwardZapTo(postViewModel, accountViewModel)
-                            }
-                        }
-
-                        postViewModel.multiOrchestrator?.let {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                ImageVideoDescription(
-                                    it,
-                                    accountViewModel.account.settings.defaultFileServer,
-                                    onAdd = { alt, server, sensitiveContent, mediaQuality ->
-                                        postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, false, server, accountViewModel.toastManager::toast, context)
-                                        if (server.type != ServerType.NIP95) {
-                                            accountViewModel.account.settings.changeDefaultFileServer(server)
-                                        }
-                                    },
-                                    onDelete = postViewModel::deleteMediaToUpload,
-                                    onCancel = { postViewModel.multiOrchestrator = null },
-                                    accountViewModel = accountViewModel,
-                                )
-                            }
-                        }
-
-                        if (postViewModel.wantsInvoice) {
-                            postViewModel.lnAddress()?.let { lud16 ->
-                                InvoiceRequest(
-                                    lud16,
-                                    accountViewModel.account.userProfile().pubkeyHex,
-                                    accountViewModel,
-                                    stringRes(id = R.string.lightning_invoice),
-                                    stringRes(id = R.string.lightning_create_and_add_invoice),
-                                    onSuccess = {
-                                        postViewModel.insertAtCursor(it)
-                                        postViewModel.wantsInvoice = false
-                                    },
-                                    onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                                )
-                            }
-                        }
-
-                        if (postViewModel.wantsSecretEmoji) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                Column(Modifier.fillMaxWidth()) {
-                                    SecretEmojiRequest {
-                                        postViewModel.insertAtCursor(it)
-                                        postViewModel.wantsSecretEmoji = false
-                                    }
-                                }
-                            }
-                        }
-
-                        if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
-                            ) {
-                                ZapRaiserRequest(
-                                    stringRes(id = R.string.zapraiser),
-                                    postViewModel,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                postViewModel.userSuggestions?.let {
-                    ShowUserSuggestionList(
-                        it,
-                        postViewModel::autocompleteWithUser,
-                        accountViewModel,
-                        modifier = Modifier.heightIn(0.dp, 300.dp),
-                    )
-                }
-
-                postViewModel.emojiSuggestions?.let {
-                    ShowEmojiSuggestionList(
-                        it,
-                        postViewModel::autocompleteWithEmoji,
-                        postViewModel::autocompleteWithEmojiUrl,
-                        accountViewModel,
-                        modifier = Modifier.heightIn(0.dp, 300.dp),
-                    )
-                }
-
-                BottomRowActions(postViewModel)
-            }
+            NewPostScreenBody(postViewModel, accountViewModel, nav)
         }
     }
 }
 
 @Composable
-private fun BottomRowActions(postViewModel: NewPostViewModel) {
+private fun NewPostScreenBody(
+    postViewModel: ShortNotePostViewModel,
+    accountViewModel: AccountViewModel,
+    nav: Nav,
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier =
+            Modifier.fillMaxSize(),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = Size10dp,
+                        end = Size10dp,
+                    ).weight(1f),
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
+            ) {
+                postViewModel.originalNote?.let {
+                    Row {
+                        NoteCompose(
+                            baseNote = it,
+                            modifier = MaterialTheme.colorScheme.replyModifier,
+                            isQuotedNote = true,
+                            unPackReply = false,
+                            makeItShort = true,
+                            quotesLeft = 1,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                        Spacer(modifier = StdVertSpacer)
+                    }
+                }
+
+                Row {
+                    Notifying(postViewModel.pTags?.toImmutableList(), accountViewModel) {
+                        postViewModel.removeFromReplyList(it)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.padding(vertical = Size10dp),
+                ) {
+                    BaseUserPicture(
+                        accountViewModel.userProfile(),
+                        Size35dp,
+                        accountViewModel = accountViewModel,
+                    )
+                    MessageField(
+                        R.string.what_s_on_your_mind,
+                        postViewModel,
+                    )
+                }
+
+                if (postViewModel.wantsPoll) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        PollField(postViewModel)
+                    }
+                }
+
+                DisplayPreviews(postViewModel, accountViewModel, nav)
+
+                if (postViewModel.wantsToMarkAsSensitive) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        ContentSensitivityExplainer()
+                    }
+                }
+
+                if (postViewModel.wantsToAddGeoHash) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        LocationAsHash(postViewModel) {
+                            SettingsRow(
+                                R.string.geohash_exclusive,
+                                R.string.geohash_exclusive_explainer,
+                            ) {
+                                Switch(postViewModel.wantsExclusiveGeoPost, onCheckedChange = { postViewModel.wantsExclusiveGeoPost = it })
+                            }
+                        }
+                    }
+                }
+
+                if (postViewModel.wantsForwardZapTo) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(top = Size5dp, bottom = Size5dp, start = Size10dp),
+                    ) {
+                        ForwardZapTo(postViewModel, accountViewModel)
+                    }
+                }
+
+                postViewModel.multiOrchestrator?.let {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        val context = LocalContext.current
+                        ImageVideoDescription(
+                            it,
+                            accountViewModel.account.settings.defaultFileServer,
+                            onAdd = { alt, server, sensitiveContent, mediaQuality ->
+                                postViewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, context)
+                                if (server.type != ServerType.NIP95) {
+                                    accountViewModel.account.settings.changeDefaultFileServer(server)
+                                }
+                            },
+                            onDelete = postViewModel::deleteMediaToUpload,
+                            onCancel = { postViewModel.multiOrchestrator = null },
+                            accountViewModel = accountViewModel,
+                        )
+                    }
+                }
+
+                if (postViewModel.wantsInvoice) {
+                    postViewModel.lnAddress()?.let { lud16 ->
+                        InvoiceRequest(
+                            lud16,
+                            accountViewModel.account.userProfile().pubkeyHex,
+                            accountViewModel,
+                            stringRes(id = R.string.lightning_invoice),
+                            stringRes(id = R.string.lightning_create_and_add_invoice),
+                            onSuccess = {
+                                postViewModel.insertAtCursor(it)
+                                postViewModel.wantsInvoice = false
+                            },
+                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+                        )
+                    }
+                }
+
+                if (postViewModel.wantsSecretEmoji) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        Column(Modifier.fillMaxWidth()) {
+                            SecretEmojiRequest {
+                                postViewModel.insertAtCursor(it)
+                                postViewModel.wantsSecretEmoji = false
+                            }
+                        }
+                    }
+                }
+
+                if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
+                    Row(
+                        verticalAlignment = CenterVertically,
+                        modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
+                    ) {
+                        ZapRaiserRequest(
+                            stringRes(id = R.string.zapraiser),
+                            postViewModel,
+                        )
+                    }
+                }
+            }
+        }
+
+        postViewModel.userSuggestions?.let {
+            ShowUserSuggestionList(
+                it,
+                postViewModel::autocompleteWithUser,
+                accountViewModel,
+                modifier = Modifier.heightIn(0.dp, 300.dp),
+            )
+        }
+
+        postViewModel.emojiSuggestions?.let {
+            ShowEmojiSuggestionList(
+                it,
+                postViewModel::autocompleteWithEmoji,
+                postViewModel::autocompleteWithEmojiUrl,
+                accountViewModel,
+                modifier = Modifier.heightIn(0.dp, 300.dp),
+            )
+        }
+
+        BottomRowActions(postViewModel)
+    }
+}
+
+@Composable
+private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
     val scrollState = rememberScrollState()
     Row(
         modifier =
@@ -548,7 +550,7 @@ private fun BottomRowActions(postViewModel: NewPostViewModel) {
 
 @Composable
 fun DisplayPreviews(
-    postViewModel: NewPostViewModel,
+    postViewModel: ShortNotePostViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

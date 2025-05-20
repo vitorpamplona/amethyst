@@ -39,12 +39,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
-fun NewPollVoteValueRange(pollViewModel: NewPostViewModel) {
+fun NewPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
     val colorInValid =
         OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.error,
@@ -122,6 +123,6 @@ fun NewPollVoteValueRangePreview() {
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        NewPollVoteValueRange(NewPostViewModel())
+        NewPollVoteValueRange(ShortNotePostViewModel())
     }
 }

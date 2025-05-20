@@ -88,8 +88,8 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CloseButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.PostButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp

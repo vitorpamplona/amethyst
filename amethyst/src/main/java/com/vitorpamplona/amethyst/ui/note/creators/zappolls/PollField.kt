@@ -32,13 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.ui.actions.NewPollOption
 import com.vitorpamplona.amethyst.ui.actions.NewPollVoteValueRange
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
 import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
-fun PollField(postViewModel: NewPostViewModel) {
+fun PollField(postViewModel: ShortNotePostViewModel) {
     val optionsList = postViewModel.pollOptions
     Column(
         modifier = Modifier.fillMaxWidth(),

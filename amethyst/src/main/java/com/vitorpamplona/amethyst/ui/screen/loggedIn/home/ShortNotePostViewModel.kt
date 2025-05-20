@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.actions
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
 import android.content.Context
 import android.util.Log
@@ -38,20 +38,19 @@ import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
@@ -64,7 +63,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.toZapSplitSetup
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
@@ -76,9 +74,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.eTags
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -90,27 +86,16 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
-import com.vitorpamplona.quartz.nip10Notes.tags.positionalMarkedTags
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip22Comments.RootScope
-import com.vitorpamplona.quartz.nip22Comments.notify
-import com.vitorpamplona.quartz.nip28PublicChat.base.notify
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
-import com.vitorpamplona.quartz.nip34Git.reply.notify
-import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
-import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.notify
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
@@ -118,7 +103,6 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -131,12 +115,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.UUID
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -145,13 +128,21 @@ enum class UserSuggestionAnchor {
 }
 
 @Stable
-open class NewPostViewModel :
+open class ShortNotePostViewModel :
     ViewModel(),
     ILocationGrabber,
     IMessageField,
     IZapField,
     IZapRaiser {
-    var draftTag: String by mutableStateOf(UUID.randomUUID().toString())
+    val draftTag = DraftTagState()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            draftTag.versions.collectLatest {
+                sendDraftSync()
+            }
+        }
+    }
 
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
@@ -220,7 +211,8 @@ open class NewPostViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    val draftTextChanges = Channel<String>(Channel.CONFLATED)
+    var showRelaysDialog by mutableStateOf(false)
+    var relayList by mutableStateOf<ImmutableList<String>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -258,9 +250,9 @@ open class NewPostViewModel :
                     if (innerNote != null) {
                         val oldTag = (draft.event as? AddressableEvent)?.dTag()
                         if (oldTag != null) {
-                            draftTag = oldTag
+                            draftTag.set(oldTag)
                         }
-                        loadFromDraft(innerNote, accountViewModel)
+                        loadFromDraft(innerNote)
                     }
                 }
             }
@@ -372,15 +364,16 @@ open class NewPostViewModel :
         urlPreviews.update(message)
     }
 
-    private fun loadFromDraft(
-        draft: Note,
-        accountViewModel: AccountViewModel,
-    ) {
-        Log.d("draft", draft.event!!.toJson())
+    private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
+        if (draftEvent !is TextNoteEvent) return
 
-        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+        loadFromDraft(draftEvent)
+    }
+
+    private fun loadFromDraft(draftEvent: TextNoteEvent) {
+        canAddInvoice = accountViewModel?.userProfile()?.info?.lnAddress() != null
+        canAddZapRaiser = accountViewModel?.userProfile()?.info?.lnAddress() != null
         multiOrchestrator = null
 
         val localfowardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
@@ -471,38 +464,59 @@ open class NewPostViewModel :
         urlPreviews.update(message)
     }
 
-    fun sendPost(relayList: List<RelaySetupInfo>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            innerSendPost(relayList, null)
-            accountViewModel?.deleteDraft(draftTag)
-            cancel()
+    suspend fun sendPostSync() {
+        val template = createTemplate() ?: return
+        val relayList = relayList
+
+        if (nip95attachments.isNotEmpty() && relayList != null) {
+            val usedImages = template.tags.taggedQuoteIds().toSet()
+            nip95attachments.forEach {
+                if (usedImages.contains(it.second.id) == true) {
+                    account?.sendNip95Privately(it.first, it.second, relayList)
+                }
+            }
         }
+
+        accountViewModel?.account?.signAndSendPrivatelyOrBroadcast(
+            template,
+            relayList = { relayList },
+        )
+
+        accountViewModel?.deleteDraft(draftTag.current)
+
+        cancel()
     }
 
-    fun sendDraft(relayList: List<RelaySetupInfo>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendDraftSync(relayList)
-        }
-    }
+    suspend fun sendDraftSync() {
+        val accountViewModel = accountViewModel ?: return
 
-    suspend fun sendDraftSync(relayList: List<RelaySetupInfo>) {
         if (message.text.isBlank()) {
-            account?.deleteDraft(draftTag)
+            accountViewModel.account.deleteDraft(draftTag.current)
         } else {
-            innerSendPost(relayList, draftTag)
+            val template = createTemplate() ?: return
+            accountViewModel.account.createAndSendDraft(draftTag.current, template)
+
+            nip95attachments.forEach {
+                account?.sendToPrivateOutboxAndLocal(it.first)
+                account?.sendToPrivateOutboxAndLocal(it.second)
+            }
         }
     }
 
-    private suspend fun innerSendPost(
-        relayList: List<RelaySetupInfo>,
-        localDraft: String?,
-    ) = withContext(Dispatchers.IO) {
+    private suspend fun createTemplate(): EventTemplate<out Event>? {
         if (accountViewModel == null) {
             cancel()
-            return@withContext
+            return null
         }
 
-        val tagger = NewMessageTagger(message.text, pTags, eTags, originalNote?.channelHex(), accountViewModel!!)
+        val tagger =
+            NewMessageTagger(
+                message.text,
+                pTags,
+                eTags,
+                originalNote?.channelHex(),
+                accountViewModel!!,
+            )
         tagger.run()
 
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
@@ -510,367 +524,56 @@ open class NewPostViewModel :
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
         val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
 
-        nip95attachments.forEach {
-            if (eTags?.contains(LocalCache.getNoteIfExists(it.second.id)) == true) {
-                account?.sendNip95(it.first, it.second, relayList)
-            }
-        }
-
         val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
-        val replyingTo = originalNote
         val contentWarningReason = if (wantsToMarkAsSensitive) "" else null
 
-        val channel = originalNote?.channelHex()?.let { LocalCache.getChannelIfExists(it) }
+        return if (wantsPoll) {
+            val options = pollOptions.map { PollOptionTag(it.key, it.value) }
 
-        if (replyingTo?.event is CommentEvent || replyingTo?.event is RootScope) {
-            val eventHint = replyingTo.toEventHint<Event>() ?: return@withContext
+            if (options.isEmpty()) return null
 
-            val template =
-                CommentEvent.replyBuilder(
-                    msg = tagger.message,
-                    replyingTo = eventHint,
-                ) {
-                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
+            val quotes = findNostrUris(tagger.message)
 
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
+            PollNoteEvent.build(tagger.message, options) {
+                valueMinimum?.let { minAmount(it) }
+                valueMaximum?.let { maxAmount(it) }
+                closedAt?.let { closedAt(it) }
+                consensusThreshold?.let { consensusThreshold(it / 100.0) }
 
-                    geoHash?.let { geohash(it) }
-                    localZapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    contentWarningReason?.let { contentWarning(it) }
+                pTags(tagger.directMentionsUsers.map { it.toPTag() })
+                quotes(quotes)
+                hashtags(findHashtags(tagger.message))
 
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
+                geoHash?.let { geohash(it) }
+                localZapRaiserAmount?.let { zapraiser(it) }
+                zapReceiver?.let { zapSplits(it) }
+                contentWarningReason?.let { contentWarning(it) }
 
-            account?.signAndSend(localDraft, template, relayList, setOf(replyingTo))
-        } else if (wantsExclusiveGeoPost && geoHash != null && originalNote == null) {
-            val template =
-                CommentEvent.replyExternalIdentity(
-                    msg = tagger.message,
-                    extId = GeohashId(geoHash),
-                ) {
-                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-
-                    localZapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    contentWarningReason?.let { contentWarning(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-
-            account?.signAndSend(localDraft, template, relayList, emptyList())
-        } else if (channel != null) {
-            if (channel is PublicChatChannel) {
-                val replyingToEvent = originalNote?.toEventHint<ChannelMessageEvent>()
-                val channelEvent = channel.event
-                val channelRelays = channel.relays()
-
-                val template =
-                    if (replyingToEvent != null) {
-                        ChannelMessageEvent.reply(tagger.message, replyingToEvent) {
-                            tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                            hashtags(findHashtags(tagger.message))
-                            references(findURLs(tagger.message))
-                            quotes(findNostrUris(tagger.message))
-
-                            geoHash?.let { geohash(it) }
-                            localZapRaiserAmount?.let { zapraiser(it) }
-                            zapReceiver?.let { zapSplits(it) }
-                            contentWarningReason?.let { contentWarning(it) }
-
-                            emojis(emojis)
-                            imetas(usedAttachments)
-                        }
-                    } else if (channelEvent != null) {
-                        val hint = EventHintBundle(channelEvent, channelRelays.firstOrNull())
-                        ChannelMessageEvent.message(tagger.message, hint) {
-                            tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                            hashtags(findHashtags(tagger.message))
-                            references(findURLs(tagger.message))
-                            quotes(findNostrUris(tagger.message))
-
-                            geoHash?.let { geohash(it) }
-                            localZapRaiserAmount?.let { zapraiser(it) }
-                            zapReceiver?.let { zapSplits(it) }
-                            contentWarningReason?.let { contentWarning(it) }
-
-                            emojis(emojis)
-                            imetas(usedAttachments)
-                        }
-                    } else {
-                        ChannelMessageEvent.message(tagger.message, ETag(channel.idHex, channelRelays.firstOrNull())) {
-                            tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                            hashtags(findHashtags(tagger.message))
-                            references(findURLs(tagger.message))
-                            quotes(findNostrUris(tagger.message))
-
-                            geoHash?.let { geohash(it) }
-                            localZapRaiserAmount?.let { zapraiser(it) }
-                            zapReceiver?.let { zapSplits(it) }
-                            contentWarningReason?.let { contentWarning(it) }
-
-                            emojis(emojis)
-                            imetas(usedAttachments)
-                        }
-                    }
-
-                val broadcast = tagger.directMentionsNotes + (tagger.eTags ?: emptyList())
-
-                account?.signAndSendWithList(draftTag, template, channelRelays, broadcast)
-            } else if (channel is LiveActivitiesChannel) {
-                val replyingToEvent = originalNote?.toEventHint<LiveActivitiesChatMessageEvent>()
-                val activity = channel.info
-                val channelRelays = channel.relays()
-
-                val template =
-                    if (replyingToEvent != null) {
-                        LiveActivitiesChatMessageEvent.reply(tagger.message, replyingToEvent) {
-                            tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                            hashtags(findHashtags(tagger.message))
-                            references(findURLs(tagger.message))
-                            quotes(findNostrUris(tagger.message))
-
-                            geoHash?.let { geohash(it) }
-                            localZapRaiserAmount?.let { zapraiser(it) }
-                            zapReceiver?.let { zapSplits(it) }
-                            contentWarningReason?.let { contentWarning(it) }
-
-                            emojis(emojis)
-                            imetas(usedAttachments)
-                        }
-                    } else if (activity != null) {
-                        val hint = EventHintBundle(activity, channelRelays.firstOrNull() ?: replyingToEvent?.relay)
-
-                        LiveActivitiesChatMessageEvent.message(tagger.message, hint) {
-                            tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                            hashtags(findHashtags(tagger.message))
-                            references(findURLs(tagger.message))
-                            quotes(findNostrUris(tagger.message))
-
-                            geoHash?.let { geohash(it) }
-                            localZapRaiserAmount?.let { zapraiser(it) }
-                            zapReceiver?.let { zapSplits(it) }
-                            contentWarningReason?.let { contentWarning(it) }
-
-                            emojis(emojis)
-                            imetas(usedAttachments)
-                        }
-                    } else {
-                        LiveActivitiesChatMessageEvent.message(tagger.message, channel.toATag()) {
-                            tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                            hashtags(findHashtags(tagger.message))
-                            references(findURLs(tagger.message))
-                            quotes(findNostrUris(tagger.message))
-
-                            geoHash?.let { geohash(it) }
-                            localZapRaiserAmount?.let { zapraiser(it) }
-                            zapReceiver?.let { zapSplits(it) }
-                            contentWarningReason?.let { contentWarning(it) }
-
-                            emojis(emojis)
-                            imetas(usedAttachments)
-                        }
-                    }
-
-                val broadcast = tagger.directMentionsNotes + (tagger.eTags ?: emptyList())
-
-                account?.signAndSendWithList(draftTag, template, channelRelays, broadcast)
+                emojis(emojis)
+                imetas(usedAttachments)
             }
-        } else if (originalNote?.event is GitIssueEvent) {
-            val originalNoteHint = originalNote?.toEventHint<GitIssueEvent>() ?: return@withContext
-
-            val template =
-                GitReplyEvent.replyIssue(
-                    tagger.message,
-                    originalNoteHint,
-                ) {
-                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-
-                    geoHash?.let { geohash(it) }
-                    localZapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    contentWarningReason?.let { contentWarning(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-
-            val broadcast = tagger.directMentionsNotes + (tagger.eTags ?: emptyList())
-
-            account?.signAndSend(localDraft, template, relayList, broadcast)
-        } else if (originalNote?.event is TorrentCommentEvent) {
-            val replyToEvent = originalNote?.event as TorrentCommentEvent
-
-            val rootETag = replyToEvent.torrent()
-            val rootNote = rootETag?.eventId?.let { LocalCache.getNoteIfExists(it) }
-            val rootNoteEvent = rootNote?.event
-
-            // only uses the root node if the event is loaded.
-            val root =
-                if (rootNoteEvent != null) {
-                    rootNote // refreshes author and relay hint to what we have.
-                } else {
-                    rootETag?.let { LocalCache.getOrCreateNote(it) } // keeps what came in.
-                        ?: originalNote?.replyTo?.firstOrNull { it.event != null && it.replyTo?.isEmpty() == true } // if it has loaded events with zero replies in the reply list
-                        ?: originalNote?.replyTo?.firstOrNull() // old rules, first item is root.
-                        ?: originalNote
-                }
-
-            if (root != null) {
-                val replyToSet =
-                    if (forkedFromNote != null) {
-                        (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
-                    } else {
-                        tagger.eTags
-                    }
-
-                val sortedAndMarked =
-                    eTags?.map { it.toETag() }?.positionalMarkedTags(
-                        root = root.toETag(),
-                        replyingTo = replyingTo?.toETag(),
-                        forkedFrom = forkedFromNote?.toETag(),
-                    )
-
-                val template =
-                    TorrentCommentEvent.build(tagger.message) {
-                        sortedAndMarked?.let { eTags(sortedAndMarked) }
-
-                        pTags(tagger.directMentionsUsers.map { it.toPTag() })
-
-                        hashtags(findHashtags(tagger.message))
-                        references(findURLs(tagger.message))
-                        quotes(findNostrUris(tagger.message))
-
-                        geoHash?.let { geohash(it) }
-                        localZapRaiserAmount?.let { zapraiser(it) }
-                        zapReceiver?.let { zapSplits(it) }
-                        contentWarningReason?.let { contentWarning(it) }
-
-                        emojis(emojis)
-                        imetas(usedAttachments)
-                    }
-
-                val broadcast = tagger.directMentionsNotes + (replyToSet ?: emptySet())
-
-                account?.sendTorrentComment(localDraft, template, broadcast, relayList)
-            }
-        } else if (originalNote?.event is TorrentEvent) {
-            val replyToSet =
-                if (forkedFromNote != null) {
-                    (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
-                } else {
-                    tagger.eTags
-                }
-
-            val sortedAndMarked =
-                eTags?.map { it.toETag() }?.positionalMarkedTags(
-                    root = originalNote?.toETag(),
-                    replyingTo = null,
-                    forkedFrom = forkedFromNote?.toETag(),
-                )
-
-            val template =
-                TorrentCommentEvent.build(tagger.message) {
-                    sortedAndMarked?.let { eTags(sortedAndMarked) }
-
-                    hashtags(findHashtags(tagger.message))
-                    references(findURLs(tagger.message))
-                    quotes(findNostrUris(tagger.message))
-
-                    geoHash?.let { geohash(it) }
-                    localZapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    contentWarningReason?.let { contentWarning(it) }
-
-                    emojis(emojis)
-                    imetas(usedAttachments)
-                }
-
-            val broadcast = tagger.directMentionsNotes + (replyToSet ?: emptySet())
-
-            account?.sendTorrentComment(localDraft, template, broadcast, relayList)
         } else {
-            if (wantsPoll) {
-                val options = pollOptions.map { PollOptionTag(it.key, it.value) }
+            TextNoteEvent.build(
+                note = tagger.message,
+                replyingTo = originalNote?.toEventHint<TextNoteEvent>(),
+                forkingFrom = forkedFromNote?.toEventHint<TextNoteEvent>(),
+            ) {
+                tagger.pTags?.let { notify(it.map { it.toPTag() }) }
 
-                if (options.isEmpty()) return@withContext
+                hashtags(findHashtags(tagger.message))
+                references(findURLs(tagger.message))
+                quotes(findNostrUris(tagger.message))
 
-                val quotes = findNostrUris(tagger.message)
+                geoHash?.let { geohash(it) }
+                localZapRaiserAmount?.let { zapraiser(it) }
+                zapReceiver?.let { zapSplits(it) }
+                contentWarningReason?.let { contentWarning(it) }
 
-                val template =
-                    PollNoteEvent.build(tagger.message, options) {
-                        valueMinimum?.let { minAmount(it) }
-                        valueMaximum?.let { maxAmount(it) }
-                        closedAt?.let { closedAt(it) }
-                        consensusThreshold?.let { consensusThreshold(it / 100.0) }
-
-                        pTags(tagger.directMentionsUsers.map { it.toPTag() })
-                        quotes(quotes)
-                        hashtags(findHashtags(tagger.message))
-
-                        geoHash?.let { geohash(it) }
-                        localZapRaiserAmount?.let { zapraiser(it) }
-                        zapReceiver?.let { zapSplits(it) }
-                        contentWarningReason?.let { contentWarning(it) }
-
-                        emojis(emojis)
-                        imetas(usedAttachments)
-                    }
-
-                account?.signAndSend(localDraft, template, relayList, quotes)
-            } else {
-                val replyToSet =
-                    if (forkedFromNote != null) {
-                        (listOfNotNull(forkedFromNote) + (tagger.eTags ?: emptyList())).ifEmpty { null }
-                    } else {
-                        tagger.eTags
-                    }
-
-                val template =
-                    TextNoteEvent.build(
-                        note = tagger.message,
-                        replyingTo = originalNote?.toEventHint<TextNoteEvent>(),
-                        forkingFrom = forkedFromNote?.toEventHint<TextNoteEvent>(),
-                    ) {
-                        tagger.pTags?.let { notify(it.map { it.toPTag() }) }
-
-                        hashtags(findHashtags(tagger.message))
-                        references(findURLs(tagger.message))
-                        quotes(findNostrUris(tagger.message))
-
-                        geoHash?.let { geohash(it) }
-                        localZapRaiserAmount?.let { zapraiser(it) }
-                        zapReceiver?.let { zapSplits(it) }
-                        contentWarningReason?.let { contentWarning(it) }
-
-                        emojis(emojis)
-                        imetas(usedAttachments)
-                    }
-
-                val broadcast = tagger.directMentionsNotes + (replyToSet ?: emptySet())
-
-                account?.signAndSend(localDraft, template, relayList, broadcast)
+                emojis(emojis)
+                imetas(usedAttachments)
             }
         }
     }
@@ -889,7 +592,6 @@ open class NewPostViewModel :
         alt: String?,
         contentWarningReason: String?,
         mediaQuality: Int,
-        isPrivate: Boolean = false,
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
@@ -1000,13 +702,27 @@ open class NewPostViewModel :
 
         emojiSuggestions?.reset()
 
-        draftTag = UUID.randomUUID().toString()
+        showRelaysDialog = false
+
+        reloadRelaySet()
+
+        draftTag.rotate()
     }
 
-    fun deleteDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel?.deleteDraft(draftTag)
-        }
+    fun reloadRelaySet() {
+        val account = accountViewModel?.account ?: return
+
+        val nip65 = account.normalizedNIP65WriteRelayList.value
+        val private = account.normalizedPrivateOutBoxRelaySet.value
+        val local = account.settings.localRelayServers
+
+        relayList =
+            if (nip65.isEmpty()) {
+                account.activeWriteRelays().map { it.url }.toImmutableList()
+            } else {
+                val combined: Set<String> = (nip65 + private + local)
+                combined.toImmutableList()
+            }
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
@@ -1015,10 +731,6 @@ open class NewPostViewModel :
 
     open fun removeFromReplyList(userToRemove: User) {
         pTags = pTags?.filter { it != userToRemove }
-    }
-
-    private fun saveDraft() {
-        draftTextChanges.trySend("")
     }
 
     open fun addToMessage(it: String) {
@@ -1038,7 +750,7 @@ open class NewPostViewModel :
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
     override fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
@@ -1065,10 +777,10 @@ open class NewPostViewModel :
             userSuggestions.reset()
         }
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
+    open fun autocompleteWithEmoji(item: EmojiMedia) {
         val wordToInsert = ":${item.code}:"
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -1076,10 +788,10 @@ open class NewPostViewModel :
 
         emojiSuggestions?.reset()
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
-    open fun autocompleteWithEmojiUrl(item: EmojiPackState.EmojiMedia) {
+    open fun autocompleteWithEmojiUrl(item: EmojiMedia) {
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -1094,7 +806,7 @@ open class NewPostViewModel :
 
         emojiSuggestions?.reset()
 
-        saveDraft()
+        draftTag.newVersion()
     }
 
     private fun newStateMapPollOptions(): SnapshotStateMap<Int, String> = mutableStateMapOf(Pair(0, ""), Pair(1, ""))
@@ -1138,13 +850,13 @@ open class NewPostViewModel :
     fun updateMinZapAmountForPoll(textMin: String) {
         valueMinimum = textMin.toLongOrNull()?.takeIf { it > 0 }
         checkMinMax()
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun updateMaxZapAmountForPoll(textMax: String) {
         valueMaximum = textMax.toLongOrNull()?.takeIf { it > 0 }
         checkMinMax()
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun checkMinMax() {
@@ -1166,7 +878,8 @@ open class NewPostViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger =
+                NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {
@@ -1178,12 +891,12 @@ open class NewPostViewModel :
 
     override fun updateZapRaiserAmount(newAmount: Long?) {
         zapRaiserAmount.value = newAmount
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun removePollOption(optionIndex: Int) {
         pollOptions.removeOrdered(optionIndex)
-        saveDraft()
+        draftTag.newVersion()
     }
 
     private fun MutableMap<Int, String>.removeOrdered(index: Int) {
@@ -1207,12 +920,12 @@ open class NewPostViewModel :
         text: String,
     ) {
         pollOptions[optionIndex] = text
-        saveDraft()
+        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {
         wantsToMarkAsSensitive = !wantsToMarkAsSensitive
-        saveDraft()
+        draftTag.newVersion()
     }
 
     override fun locationManager(): LocationState = Amethyst.instance.locationManager

@@ -28,13 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollRecipientsField(
-    pollViewModel: NewPostViewModel,
+    pollViewModel: ShortNotePostViewModel,
     account: Account,
 ) {
     // if no recipients, add user's pubkey

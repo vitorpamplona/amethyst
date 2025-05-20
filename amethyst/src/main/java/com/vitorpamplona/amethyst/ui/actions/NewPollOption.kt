@@ -35,12 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
 @Composable
 fun NewPollOption(
-    pollViewModel: NewPostViewModel,
+    pollViewModel: ShortNotePostViewModel,
     optionIndex: Int,
 ) {
     Row {
@@ -90,5 +91,5 @@ fun NewPollOption(
 @Preview
 @Composable
 fun NewPollOptionPreview() {
-    NewPollOption(NewPostViewModel(), 0)
+    NewPollOption(ShortNotePostViewModel(), 0)
 }

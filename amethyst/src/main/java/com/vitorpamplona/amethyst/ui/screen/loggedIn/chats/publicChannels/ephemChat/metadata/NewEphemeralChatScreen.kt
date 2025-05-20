@@ -53,8 +53,8 @@ import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.JoinButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CloseButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.JoinButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.stringRes

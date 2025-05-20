@@ -115,9 +115,9 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload.SuccessfulUploads
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CloseButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.PostButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP

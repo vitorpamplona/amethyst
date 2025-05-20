@@ -55,7 +55,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.NewPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
@@ -75,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
@@ -193,7 +193,7 @@ fun AppNavigation(
             }
 
             composableFromBottomArgs<Route.NewPost> {
-                NewPostScreen(
+                ShortNotePostScreen(
                     message = it.message,
                     attachment = it.attachment?.ifBlank { null }?.toUri(),
                     baseReplyTo = it.baseReplyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },

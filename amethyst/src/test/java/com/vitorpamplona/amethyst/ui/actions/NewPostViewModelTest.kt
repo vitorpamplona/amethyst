@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -51,13 +52,13 @@ class NewPostViewModelTest {
     @MockK(relaxed = true)
     lateinit var replyingTo: Note
 
-    private lateinit var newPostViewModelUnderTest: NewPostViewModel
+    private lateinit var shortNoteViewModelUnderTest: ShortNotePostViewModel
 
     @Before
     fun setup() {
         mockkObject(LocalCache)
         every { LocalCache.getOrCreateUser(any<HexKey>()) } returns mockk<User>()
-        newPostViewModelUnderTest = NewPostViewModel()
+        shortNoteViewModelUnderTest = ShortNotePostViewModel()
         MockKAnnotations.init(this)
     }
 
@@ -81,8 +82,8 @@ class NewPostViewModelTest {
             every { accountViewModel.account.emoji.myEmojis } returns mockk<StateFlow<List<EmojiMedia>>>(relaxed = true)
 
             // Act: Call load with mentions
-            newPostViewModelUnderTest.init(accountViewModel)
-            newPostViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
+            shortNoteViewModelUnderTest.init(accountViewModel)
+            shortNoteViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
 
             // Assert
             // Two mentions should call LocalCache.getOrCreateUser twice
@@ -102,7 +103,7 @@ class NewPostViewModelTest {
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
 
             // Act: Call load with empty mentions
-            newPostViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
+            shortNoteViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
 
             // Assert
             // With no mentions LocalCache.getOrCreateUser should not be called
@@ -122,7 +123,7 @@ class NewPostViewModelTest {
             every { accountViewModel.userProfile() } returns mockk<User>(relaxed = true)
 
             // Act: Call load with empty mentions
-            newPostViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
+            shortNoteViewModelUnderTest.load(replyingTo, quote = null, fork = null, version = null, draft = null)
 
             // Assert
             // Verify LocalCache.getOrCreateUser(it) is not called with empty hex, it will crash the app

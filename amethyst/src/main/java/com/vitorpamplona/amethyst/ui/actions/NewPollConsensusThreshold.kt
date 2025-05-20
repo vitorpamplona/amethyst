@@ -41,13 +41,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.NewPostViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.CancellationException
 
 @Composable
-fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
+fun NewPollConsensusThreshold(pollViewModel: ShortNotePostViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
 
     pollViewModel.isValidConsensusThreshold.value = true
@@ -106,5 +106,5 @@ fun NewPollConsensusThreshold(pollViewModel: NewPostViewModel) {
 @Preview
 @Composable
 fun NewPollConsensusThresholdPreview() {
-    NewPollConsensusThreshold(NewPostViewModel())
+    NewPollConsensusThreshold(ShortNotePostViewModel())
 }

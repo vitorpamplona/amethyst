@@ -88,10 +88,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CloseButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes

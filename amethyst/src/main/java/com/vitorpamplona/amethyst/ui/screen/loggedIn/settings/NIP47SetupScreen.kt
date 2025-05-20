@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.SaveButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.SaveButton
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable

@@ -70,10 +70,10 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CloseButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
