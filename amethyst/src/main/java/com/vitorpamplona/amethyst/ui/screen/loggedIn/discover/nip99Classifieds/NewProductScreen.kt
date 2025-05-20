@@ -49,7 +49,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -57,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -99,7 +99,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -153,7 +152,6 @@ fun NewProductScreen(
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    val scope = rememberCoroutineScope()
     var showRelaysDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -182,10 +180,10 @@ fun NewProductScreen(
                         }
                         PostButton(
                             onPost = {
-                                postViewModel.sendPost()
-                                scope.launch {
-                                    delay(100)
+                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    postViewModel.sendPostSync()
                                     nav.popBack()
+                                    postViewModel.cancel()
                                 }
                             },
                             isActive = postViewModel.canPost(),
@@ -197,13 +195,11 @@ fun NewProductScreen(
                         Spacer(modifier = StdHorzSpacer)
                         CloseButton(
                             onPress = {
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        postViewModel.sendDraftSync()
-                                        postViewModel.cancel()
-                                    }
+                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    postViewModel.sendDraftSync()
+                                    nav.popBack()
+                                    postViewModel.cancel()
                                 }
-                                nav.popBack()
                             },
                         )
                     }

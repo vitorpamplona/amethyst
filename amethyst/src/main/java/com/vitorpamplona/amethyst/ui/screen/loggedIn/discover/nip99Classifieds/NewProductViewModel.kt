@@ -106,7 +106,10 @@ open class NewProductViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
-                sendDraft()
+                // don't save the first
+                if (it > 0) {
+                    sendDraftSync()
+                }
             }
         }
     }
@@ -285,12 +288,6 @@ open class NewProductViewModel :
         urlPreviews.update(message)
     }
 
-    fun sendPost() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendPostSync()
-        }
-    }
-
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
 
@@ -302,12 +299,6 @@ open class NewProductViewModel :
         accountViewModel?.deleteDraft(draftTag.current)
 
         cancel()
-    }
-
-    fun sendDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendDraftSync()
-        }
     }
 
     suspend fun sendDraftSync() {

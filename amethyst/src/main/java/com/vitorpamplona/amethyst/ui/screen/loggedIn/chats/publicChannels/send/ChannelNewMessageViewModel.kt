@@ -104,7 +104,10 @@ open class ChannelNewMessageViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
-                sendDraft()
+                // don't save the first
+                if (it > 0) {
+                    sendDraftSync()
+                }
             }
         }
     }
@@ -277,12 +280,6 @@ open class ChannelNewMessageViewModel :
         accountViewModel?.deleteDraft(draftTag.current)
 
         cancel()
-    }
-
-    fun sendDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendDraftSync()
-        }
     }
 
     suspend fun sendDraftSync() {

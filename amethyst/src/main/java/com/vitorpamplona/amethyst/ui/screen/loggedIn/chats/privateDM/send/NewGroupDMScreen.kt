@@ -75,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -133,7 +134,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -195,13 +195,13 @@ fun NewGroupDMScreen(
                     CloseButton(
                         modifier = HalfStartPadding,
                         onPress = {
-                            scope.launch {
-                                withContext(Dispatchers.IO) {
-                                    postViewModel.sendDraftSync()
-                                    postViewModel.cancel()
-                                }
+                            // uses the accountViewModel scope to avoid cancelling this
+                            // function when the postViewModel is released
+                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                postViewModel.sendDraftSync()
                                 delay(100)
                                 nav.popBack()
+                                postViewModel.cancel()
                             }
                         },
                     )
@@ -234,10 +234,14 @@ fun ActionButton(
     PostButton(
         modifier = HalfEndPadding,
         onPost = {
-            postViewModel.sendPost {
+            // uses the accountViewModel scope to avoid cancelling this
+            // function when the postViewModel is released
+            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                postViewModel.sendPostSync()
                 postViewModel.room?.let {
                     nav.nav(routeToMessage(it, null, null, null, accountViewModel))
                 }
+                postViewModel.cancel()
             }
             nav.popBack()
         },

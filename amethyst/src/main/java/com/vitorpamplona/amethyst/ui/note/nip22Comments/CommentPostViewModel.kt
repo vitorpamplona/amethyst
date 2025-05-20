@@ -118,7 +118,10 @@ open class CommentPostViewModel :
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
-                sendDraftSync()
+                // don't save the first
+                if (it > 0) {
+                    sendDraftSync()
+                }
             }
         }
     }
