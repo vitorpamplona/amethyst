@@ -216,6 +216,13 @@
     <string name="unfollow">取关</string>
     <string name="channel_created">频道已创建</string>
     <string name="channel_information_changed_to">"频道信息已更改为"</string>
+    <string name="ephemeral_relay_chat">临时聊天</string>
+    <string name="relay_chat">中继聊天</string>
+    <string name="relay_chat_title">中继聊天</string>
+    <string name="relay_chat_explainer">中继聊天是由主中继控制的聊天群。
+        它们对 Nostr 上的所有人可见，任何人均可加入它们。
+        它们对围绕特定话题的开放社区很好。这些群中的一些是临时存在的
+    因而，聊天消息会随着时间消失</string>
     <string name="public_chat">公共聊天</string>
     <string name="public_chat_title">公开聊天元数据</string>
     <string name="public_chat_explainer">公开聊天对所有 Nostr 用户都是可见的，任何人都可以：
@@ -489,9 +496,18 @@
     <string name="content_warning_hide_all_sensitive_content">始终隐藏敏感内容</string>
     <string name="content_warning_show_all_sensitive_content">始终显示敏感内容</string>
     <string name="content_warning_see_warnings">始终显示内容警告</string>
+    <string name="content_warning_hide_all_sensitive_content_option">隐藏</string>
+    <string name="content_warning_show_all_sensitive_content_option">显示</string>
+    <string name="content_warning_see_warnings_option">警告</string>
     <string name="recommended_apps">推荐：</string>
     <string name="filter_spam_from_strangers">过滤来自陌生人的垃圾信息</string>
     <string name="warn_when_posts_have_reports_from_your_follows">当帖子有你的关注的报告时警告</string>
+    <string name="filter_spam_from_strangers_title">过滤垃圾信息</string>
+    <string name="filter_spam_from_strangers_explainer">隐藏陌生人的五次或五次以上完全相同的帖子</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">举报警示</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">当帖子有来自你关注的五次及以上举报时显示警告消息</string>
+    <string name="show_sensitive_content_title">显示敏感内容</string>
+    <string name="show_sensitive_content_explainer">当帖子作者将帖子标记为敏感时显示警告消息</string>
     <string name="new_reaction_symbol">新回应符号</string>
     <string name="no_reaction_type_setup_long_press_to_change">未选择回应类型。长按可更改</string>
     <string name="zapraiser">Zapraiser</string>
@@ -543,6 +559,8 @@
     <string name="are_you_sure_you_want_to_log_out">登出将删除你的本地信息。 请确保备份你的私钥以避免失去你的帐户。你想要继续吗？</string>
     <string name="followed_tags">已关注的标签</string>
     <string name="relay_setup">中继器</string>
+    <string name="discover_follows">关注包</string>
+    <string name="discover_reads">次浏览</string>
     <string name="discover_content">笔记发现</string>
     <string name="discover_marketplace">市场</string>
     <string name="discover_live">直播</string>
@@ -606,6 +624,7 @@
     <string name="new_feature_nip17_activate">启用</string>
     <string name="messages_create_public_chat">公开</string>
     <string name="messages_create_public_private_chat_description">新建公开或私人群组</string>
+    <string name="messages_relay_based">中继</string>
     <string name="messages_new_message">私人</string>
     <string name="messages_new_message_to">至</string>
     <string name="messages_new_message_subject">主题</string>
@@ -948,4 +967,7 @@
     <string name="select_list_to_filter">选择一个用于过滤订阅源的列表</string>
     <string name="temporary_account">当设备锁定时注销</string>
     <string name="private_message">私信</string>
+    <string name="group_relay">聊天中继</string>
+    <string name="group_relay_explanation">此聊天所有用户都连接到的中继</string>
+    <string name="share_image">分享图片…</string>
 </resources>
