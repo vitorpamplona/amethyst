@@ -51,9 +51,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CloseButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding

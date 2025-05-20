@@ -25,12 +25,8 @@ import android.net.Uri
 import android.os.Parcelable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.Absolute.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -40,60 +36,46 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.util.Consumer
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUser
 import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialogEasy
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Nav
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
-import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.PollIcon
 import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
+import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -103,8 +85,8 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationAsHash
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrl
-import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewUrlFillWidth
+import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
+import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -118,20 +100,12 @@ import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.FillWidthQuoteBorderModifier
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
-import com.vitorpamplona.amethyst.ui.theme.Height100Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.SquaredQuoteBorderModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.mediumImportanceLink
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -358,7 +332,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                DisplayPreviews(postViewModel, accountViewModel, nav)
+                DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
 
                 if (postViewModel.wantsToMarkAsSensitive) {
                     Row(
@@ -549,83 +523,6 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
 }
 
 @Composable
-fun DisplayPreviews(
-    postViewModel: ShortNotePostViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val urlPreviews by postViewModel.urlPreviews.results.collectAsStateWithLifecycle(emptyList())
-
-    if (urlPreviews.isNotEmpty()) {
-        Row(HalfHorzPadding) {
-            if (urlPreviews.size > 1) {
-                LazyRow(Height100Modifier, horizontalArrangement = spacedBy(Size5dp)) {
-                    items(urlPreviews) {
-                        Box(SquaredQuoteBorderModifier) {
-                            PreviewUrl(it, accountViewModel, nav)
-                        }
-                    }
-                }
-            } else {
-                Box(FillWidthQuoteBorderModifier) {
-                    PreviewUrlFillWidth(urlPreviews[0], accountViewModel, nav)
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun Notifying(
-    baseMentions: ImmutableList<User>?,
-    accountViewModel: AccountViewModel,
-    onClick: (User) -> Unit,
-) {
-    val mentions = baseMentions?.toSet()
-
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        if (!mentions.isNullOrEmpty()) {
-            Text(
-                stringRes(R.string.reply_notify),
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.align(CenterVertically),
-            )
-
-            mentions.forEachIndexed { idx, user ->
-                Button(
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.mediumImportanceLink,
-                        ),
-                    onClick = { onClick(user) },
-                ) {
-                    DisplayUserNameWithDeleteMark(user, accountViewModel)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DisplayUserNameWithDeleteMark(
-    user: User,
-    accountViewModel: AccountViewModel,
-) {
-    val innerUserState by observeUser(user, accountViewModel)
-    innerUserState?.user?.let { myUser ->
-        CreateTextWithEmoji(
-            text = remember(innerUserState) { "✖ ${myUser.toBestDisplayName()}" },
-            tags = myUser.info?.tags,
-            color = Color.White,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
 private fun AddPollButton(
     isPollActive: Boolean,
     onClick: () -> Unit,
@@ -638,79 +535,5 @@ private fun AddPollButton(
         } else {
             RegularPostIcon()
         }
-    }
-}
-
-@Composable
-fun CloseButton(
-    onPress: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedButton(
-        onClick = onPress,
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = Size5dp),
-    ) {
-        CloseIcon()
-    }
-}
-
-@Composable
-fun PostButton(
-    onPost: () -> Unit = {},
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        modifier = modifier,
-        enabled = isActive,
-        onClick = onPost,
-    ) {
-        Text(text = stringRes(R.string.post))
-    }
-}
-
-@Composable
-fun SaveButton(
-    onPost: () -> Unit = {},
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        enabled = isActive,
-        modifier = modifier,
-        onClick = onPost,
-    ) {
-        Text(text = stringRes(R.string.save))
-    }
-}
-
-@Composable
-fun CreateButton(
-    onPost: () -> Unit = {},
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        enabled = isActive,
-        modifier = modifier,
-        onClick = onPost,
-    ) {
-        Text(text = stringRes(R.string.create))
-    }
-}
-
-@Composable
-fun JoinButton(
-    onPost: () -> Unit = {},
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        enabled = isActive,
-        modifier = modifier,
-        onClick = onPost,
-    ) {
-        Text(text = stringRes(R.string.join))
     }
 }

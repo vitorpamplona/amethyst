@@ -66,13 +66,13 @@ fun AnimatedSaveButton(
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
-        SaveButton(onSaveClick)
+        SaveMediaButton(onSaveClick)
     }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SaveButton(onSaveClick: (localContext: Context) -> Unit) {
+fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
     Box(modifier = PinBottomIconSize) {
         Box(
             Modifier
