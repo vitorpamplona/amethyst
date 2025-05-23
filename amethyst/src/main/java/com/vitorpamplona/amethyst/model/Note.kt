@@ -32,6 +32,7 @@ import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -149,6 +150,11 @@ open class Note(
     var reports = mapOf<User, List<Note>>()
         private set
 
+    var tips = listOf<Note>()
+        private set
+
+    var tipsAmount: BigDecimal = BigDecimal.ZERO
+
     var zaps = mapOf<Note, Note?>()
         private set
 
@@ -240,7 +246,7 @@ open class Note(
         }
     }
 
-    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty()
+    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty() || tips.isNotEmpty()
 
     fun countReactions(): Int {
         var total = 0
@@ -275,6 +281,7 @@ open class Note(
         val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
+        val tipsChanged = tips.isNotEmpty()
 
         val toBeRemoved =
             replies +
@@ -284,7 +291,8 @@ open class Note(
                 zaps.keys +
                 zaps.values.filterNotNull() +
                 zapPayments.keys +
-                zapPayments.values.filterNotNull()
+                zapPayments.values.filterNotNull() +
+                tips
 
         replies = listOf<Note>()
         reactions = mapOf<String, List<Note>>()
@@ -293,6 +301,8 @@ open class Note(
         zaps = mapOf<Note, Note?>()
         zapPayments = mapOf<Note, Note?>()
         zapsAmount = BigDecimal.ZERO
+        tips = listOf<Note>()
+        tipsAmount = BigDecimal.ZERO
         relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
@@ -300,6 +310,7 @@ open class Note(
         if (boostsChanged) flowSet?.boosts?.invalidateData()
         if (reportsChanged) flowSet?.reports?.invalidateData()
         if (zapsChanged) flowSet?.zaps?.invalidateData()
+        if (tipsChanged) flowSet?.tips?.invalidateData()
 
         return toBeRemoved
     }
@@ -332,6 +343,14 @@ open class Note(
                 reports = reports + Pair(author, it.minus(deleteNote))
                 flowSet?.reports?.invalidateData()
             }
+        }
+    }
+
+    fun removeTip(note: Note) {
+        if (note in tips) {
+            tips = tips - note
+            updateTipTotal()
+            flowSet?.tips?.invalidateData()
         }
     }
 
@@ -387,6 +406,26 @@ open class Note(
                 updateZapTotal()
                 flowSet?.zaps?.invalidateData()
             }
+        }
+    }
+
+    @Synchronized
+    private fun innerAddTip(tip: Note): Boolean {
+        if (tip !in tips) {
+            tips = tips + tip
+            return true
+        }
+
+        return false
+    }
+
+    fun addTip(tip: Note) {
+        checkNotInMainThread()
+
+        val inserted = innerAddTip(tip)
+        if (inserted) {
+            updateTipTotal()
+            flowSet?.tips?.invalidateData()
         }
     }
 
@@ -545,6 +584,18 @@ open class Note(
         }
     }
 
+    fun isTippedBy(
+        user: User,
+        onWasTippedByAuthor: () -> Unit,
+    ) {
+        tips.forEach {
+            if (it.author?.pubkeyHex == user.pubkeyHex) {
+                onWasTippedByAuthor()
+                return
+            }
+        }
+    }
+
     suspend fun isZappedBy(
         user: User,
         account: Account,
@@ -589,6 +640,19 @@ open class Note(
                     null
                 }
             }.flatten()
+
+    private fun updateTipTotal() {
+        var sumOfAmounts = BigDecimal.ZERO
+
+        tips.forEach {
+            val noteEvent = it.event
+            if (noteEvent is TipEvent) {
+                sumOfAmounts += noteEvent.amount
+            }
+        }
+
+        tipsAmount = sumOfAmounts
+    }
 
     private fun updateZapTotal() {
         var sumOfAmounts = BigDecimal.ZERO
@@ -813,6 +877,11 @@ open class Note(
             it.key.replyTo = it.key.replyTo?.replace(this, note)
             it.value?.replyTo = it.value?.replyTo?.replace(this, note)
         }
+        tips.forEach {
+            note.addTip(it)
+            it.replyTo = it.replyTo?.replace(this, note)
+            it.replyTo = it.replyTo?.replace(this, note)
+        }
 
         replyTo = null
         replies = emptyList()
@@ -821,6 +890,8 @@ open class Note(
         reports = emptyMap()
         zaps = emptyMap()
         zapsAmount = BigDecimal.ZERO
+        tips = emptyList()
+        tipsAmount = BigDecimal.ZERO
     }
 
     fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
@@ -955,6 +1026,7 @@ class NoteFlowSet(
     val boosts = NoteBundledRefresherFlow(u)
     val replies = NoteBundledRefresherFlow(u)
     val zaps = NoteBundledRefresherFlow(u)
+    val tips = NoteBundledRefresherFlow(u)
     val ots = NoteBundledRefresherFlow(u)
     val edits = NoteBundledRefresherFlow(u)
 
@@ -976,6 +1048,7 @@ class NoteFlowSet(
             boosts.hasObservers() ||
             replies.hasObservers() ||
             zaps.hasObservers() ||
+            tips.hasObservers() ||
             ots.hasObservers() ||
             edits.hasObservers()
 }

@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
 import com.vitorpamplona.amethyst.ui.note.RelayBadgesHorizontal
 import com.vitorpamplona.amethyst.ui.note.RenderZapRaiser
@@ -229,6 +230,7 @@ fun NormalChatNote(
                             LikeReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav)
 
                             ZapReaction(note, MaterialTheme.colorScheme.placeholderText, accountViewModel, nav = nav)
+                            MoneroTippingReaction(note = note, grayTint = MaterialTheme.colorScheme.placeholderText, accountViewModel = accountViewModel)
 
                             val geo = remember(note) { note.event?.geoHashOrScope() }
                             if (geo != null) {
