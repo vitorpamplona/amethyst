@@ -24,7 +24,6 @@ import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.indexDraftAsRealEvent
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
