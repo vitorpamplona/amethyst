@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud06Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud16Tag
+import com.vitorpamplona.quartz.nip01Core.metadata.tags.MoneroAddressesTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.NameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Nip05Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.PictureTag
@@ -99,6 +100,7 @@ class MetadataEvent(
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
+            moneroAddress: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -115,9 +117,10 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it.trim()) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it.trim()) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it.trim()) }
+            moneroAddress?.let { addIfNotBlank(currentMetadata, MoneroAddressesTag.TAG_NAME, it.trim()) }
 
             return eventTemplate(KIND, currentMetadata.toString(), createdAt) {
-                alt("User profile for ${currentMetadata.get("name").asText() ?: "Anonymous"}")
+                alt("User profile for ${currentMetadata.get("name")?.asText() ?: "Anonymous"}")
 
                 // For https://github.com/nostr-protocol/nips/pull/1770
                 currentMetadata.get(NameTag.TAG_NAME)?.asText()?.let { name(it) }
@@ -130,7 +133,7 @@ class MetadataEvent(
                 currentMetadata.get(Nip05Tag.TAG_NAME)?.asText()?.let { nip05(it) }
                 currentMetadata.get(Lud16Tag.TAG_NAME)?.asText()?.let { lud16(it) }
                 currentMetadata.get(Lud06Tag.TAG_NAME)?.asText()?.let { lud06(it) }
-
+                currentMetadata.get(MoneroAddressesTag.TAG_NAME)?.asText()?.let { monero(it) }
                 twitter?.let { twitterClaim(it) }
                     ?: mastodon?.let { mastodonClaim(it) }
                 github?.let { githubClaim(it) }
@@ -157,6 +160,7 @@ class MetadataEvent(
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
+            moneroAddress: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -173,10 +177,11 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it.trim()) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it.trim()) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it.trim()) }
+            moneroAddress?.let { addIfNotBlank(currentMetadata, MoneroAddressesTag.TAG_NAME, it.trim()) }
 
             val tags =
                 latest.tags.builder {
-                    alt("User profile for ${currentMetadata.get("name").asText() ?: "Anonymous"}")
+                    alt("User profile for ${currentMetadata.get("name")?.asText() ?: "Anonymous"}")
 
                     // For https://github.com/nostr-protocol/nips/pull/1770
                     currentMetadata.get(NameTag.TAG_NAME)?.asText()?.let { name(it) } ?: run { remove(NameTag.TAG_NAME) }
@@ -189,6 +194,7 @@ class MetadataEvent(
                     currentMetadata.get(Nip05Tag.TAG_NAME)?.asText()?.let { nip05(it) } ?: run { remove(Nip05Tag.TAG_NAME) }
                     currentMetadata.get(Lud16Tag.TAG_NAME)?.asText()?.let { lud16(it) } ?: run { remove(Lud16Tag.TAG_NAME) }
                     currentMetadata.get(Lud06Tag.TAG_NAME)?.asText()?.let { lud06(it) } ?: run { remove(Lud06Tag.TAG_NAME) }
+                    currentMetadata.get(MoneroAddressesTag.TAG_NAME)?.asText()?.let { monero(it) } ?: run { remove(MoneroAddressesTag.TAG_NAME) }
 
                     val newClaims = latest.replaceClaims(twitter, mastodon, github)
                     remove(IdentityClaimTag.TAG_NAME)

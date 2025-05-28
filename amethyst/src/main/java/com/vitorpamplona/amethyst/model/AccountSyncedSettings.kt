@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -34,6 +35,7 @@ class AccountSyncedSettings(
     internalSettings: AccountSyncedSettingsInternal,
 ) {
     val reactions = AccountReactionPreferences(MutableStateFlow(internalSettings.reactions.reactionChoices.toImmutableList()))
+    val tips = AccountTipPreferences(MutableStateFlow(internalSettings.tips.tipAmountChoices.toImmutableList()), MutableStateFlow(internalSettings.tips.defaultTipType))
     val zaps =
         AccountZapPreferences(
             MutableStateFlow(internalSettings.zaps.zapAmountChoices.toImmutableList()),
@@ -60,6 +62,11 @@ class AccountSyncedSettings(
                     zaps.zapAmountChoices.value,
                     zaps.defaultZapType.value,
                 ),
+            tips =
+                AccountTipPreferencesInternal(
+                    tips.tipAmountChoices.value,
+                    tips.defaultTipType.value,
+                ),
             languages =
                 AccountLanguagePreferencesInternal(
                     languages.dontTranslateFrom,
@@ -83,6 +90,15 @@ class AccountSyncedSettings(
         val newZapChoices = syncedSettingsInternal.zaps.zapAmountChoices.toImmutableList()
         if (!equalImmutableLists(zaps.zapAmountChoices.value, newZapChoices)) {
             zaps.zapAmountChoices.tryEmit(newZapChoices)
+        }
+
+        val newTipChoices = syncedSettingsInternal.tips.tipAmountChoices.toImmutableList()
+        if (!equalImmutableLists(tips.tipAmountChoices.value, newTipChoices)) {
+            tips.tipAmountChoices.tryEmit(newTipChoices)
+        }
+
+        if (tips.defaultTipType.value != syncedSettingsInternal.tips.defaultTipType) {
+            tips.defaultTipType.tryEmit(syncedSettingsInternal.tips.defaultTipType)
         }
 
         if (zaps.defaultZapType.value != syncedSettingsInternal.zaps.defaultZapType) {
@@ -118,6 +134,12 @@ class AccountSyncedSettings(
 @Stable
 class AccountReactionPreferences(
     var reactionChoices: MutableStateFlow<ImmutableList<String>>,
+)
+
+@Stable
+class AccountTipPreferences(
+    var tipAmountChoices: MutableStateFlow<ImmutableList<Double>>,
+    var defaultTipType: MutableStateFlow<TipEvent.TipType>,
 )
 
 @Stable
