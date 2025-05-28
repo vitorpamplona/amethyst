@@ -613,6 +613,8 @@
     <string name="geohash_explainer">Lägger till en Geohash av din plats i inlägget. Allmänheten kommer att veta att du befinner dig inom 5 km från nuvarande plats</string>
     <string name="geohash_exclusive">Plats-exklusivt inlägg</string>
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
+    <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
+    <string name="hashtag_exclusive_explainer">Endast anhängare av hashtaggen kommer att se den. Dina generella följare kommer inte att se den.</string>
     <string name="loading_location">Laddar position</string>
     <string name="lack_location_permissions">Inga platsbehörigheter</string>
     <string name="add_sensitive_content_explainer">Lägger till en varning för känsligt innehåll innan ditt innehåll visas. Detta är idealiskt för NSFW-innehåll (inte säkert för arbete) eller innehåll som vissa personer kan uppleva som stötande eller störande</string>
@@ -815,6 +817,7 @@
     <string name="new_short">Nya kort: bilder eller videor</string>
     <string name="new_community_note">Nytt Community-meddelande</string>
     <string name="new_product">Ny produkt</string>
+    <string name="new_exclusive_geo_note">Nytt Geo-Exklusivt inlägg</string>
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
@@ -967,4 +970,5 @@
     <string name="group_relay">Chatt Relä</string>
     <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
     <string name="share_image">Dela bild…</string>
+    <string name="search_by_hashtag">Sök hashtag: #%1$s</string>
 </resources>

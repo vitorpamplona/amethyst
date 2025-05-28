@@ -611,6 +611,8 @@
     <string name="geohash_explainer">Dodaje Geohash twojej lokalizacji do wpisu. Użytkownicy będą wiedzieli, że jesteś mniej niż 5 km od bieżącej lokalizacji</string>
     <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji zobaczą to. Twoi ogólni obserwatorzy tego nie zobaczą.</string>
+    <string name="hashtag_exclusive">Wpis hashtagowy</string>
+    <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag zobaczą go. Twoi ogólni obserwujący go nie zobaczą.</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
@@ -964,4 +966,5 @@
     <string name="private_message">Wiadomość prywatna</string>
     <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
+    <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
 </resources>
