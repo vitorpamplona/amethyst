@@ -616,6 +616,8 @@
     <string name="geohash_explainer">将你所在位置的地理位置添加到帖子。公众会知道你在当前位置的5公里之内（3英里）</string>
     <string name="geohash_exclusive">位置限定帖子</string>
     <string name="geohash_exclusive_explainer">只有处于同一地理位置的关注者才能看到贴文。其他追随者无法看到。</string>
+    <string name="hashtag_exclusive">话题标签专属帖子</string>
+    <string name="hashtag_exclusive_explainer">只有话题标签的关注者才会看到它。您的一般关注者不会看到它。</string>
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
@@ -818,6 +820,7 @@
     <string name="new_short">新短篇媒体：图像或视频</string>
     <string name="new_community_note">新社区笔记</string>
     <string name="new_product">新产品</string>
+    <string name="new_exclusive_geo_note">新建地理位置专属帖子</string>
     <string name="open_all_reactions_to_this_post">展开对此帖子的所有回应</string>
     <string name="close_all_reactions_to_this_post">收起对此帖子的所有回应</string>
     <string name="reply_description">回复</string>
@@ -970,4 +973,5 @@
     <string name="group_relay">聊天中继</string>
     <string name="group_relay_explanation">此聊天所有用户都连接到的中继</string>
     <string name="share_image">分享图片…</string>
+    <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
 </resources>

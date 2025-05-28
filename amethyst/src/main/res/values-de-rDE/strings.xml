@@ -619,6 +619,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="geohash_explainer">Fügt dem Beitrag einen Geohash Ihres Standorts hinzu. Die Öffentlichkeit wird wissen, dass Sie sich innerhalb von 5 km (3 mi) vom aktuellen Standort befinden</string>
     <string name="geohash_exclusive">Standort-exklusiver Beitrag</string>
     <string name="geohash_exclusive_explainer">Nur Anhänger des Ortes werden es sehen. Deine allgemeinen Anhänger werden es nicht sehen.</string>
+    <string name="hashtag_exclusive">Hashtag-exklusive Beitrag</string>
+    <string name="hashtag_exclusive_explainer">Nur die Anhänger des Hashtags werden ihn sehen. Deine allgemeinen Follower werden ihn nicht sehen.</string>
     <string name="loading_location">Standort wird geladen</string>
     <string name="lack_location_permissions">Keine Standortberechtigungen</string>
     <string name="add_sensitive_content_explainer">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor Ihr Inhalt angezeigt wird. Dies ist ideal für NSFW-Inhalte (nicht sicher für die Arbeit) oder Inhalte, die manche Menschen als anstößig oder verstörend empfinden könnten</string>
@@ -821,6 +823,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="new_short">Neue Kurzfilme: Bilder oder Videos</string>
     <string name="new_community_note">Neue Community-Notiz</string>
     <string name="new_product">Neues Produkt</string>
+    <string name="new_exclusive_geo_note">Neuer Geo-Exklusiver Beitrag</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
     <string name="close_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag schließen</string>
     <string name="reply_description">Antworten</string>
@@ -973,4 +976,5 @@ anz der Bedingungen ist erforderlich</string>
     <string name="group_relay">Chat-Relais</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
     <string name="share_image">Bild teilen…</string>
+    <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
 </resources>
