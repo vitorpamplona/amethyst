@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.R.attr.version
 import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
