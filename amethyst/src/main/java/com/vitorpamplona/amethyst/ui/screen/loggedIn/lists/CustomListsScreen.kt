@@ -61,7 +61,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.screen.NostrUserListFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.followsets.FollowSetScreen
@@ -69,6 +68,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -77,10 +78,10 @@ fun ListsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsViewModel: NostrUserListFeedViewModel =
+    val followSetsViewModel: NostrListFeedViewModel =
         viewModel(
             key = "NostrUserListFeedViewModel",
-            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
+            factory = NostrListFeedViewModel.Factory(accountViewModel.account),
         )
 
     val currentCoroutineScope = rememberCoroutineScope()
@@ -107,7 +108,7 @@ fun ListsScreen(
 
     // TODO: Replace this with nav-based solution.
     val isFollowSetSelected = remember { mutableStateOf(false) }
-    val selectedFollowListWithIndex = remember { mutableStateOf<Pair<Int, FollowSet>?>(null) }
+    val selectedFollowList = remember { mutableStateOf<FollowSet?>(null) }
 
     CustomListsScreen(
         followSets,
@@ -119,50 +120,67 @@ fun ListsScreen(
                 setName = title,
                 setDescription = description,
                 setType = listType,
+                account = accountViewModel.account,
             )
         },
         openItem = {
-            val selectedFollowSet = followSetsViewModel.findFollowSet(identifier = it)
-            if (selectedFollowSet != null) {
-                selectedFollowListWithIndex.value = selectedFollowSet
-                isFollowSetSelected.value = true
-            } else {
-                println("This list has not been found. Could it not have been added/deleted properly?")
+            // TODO: Same as the next TODO below, as they are related.
+            currentCoroutineScope.launch(Dispatchers.IO) {
+                val selectedFollowSetNote =
+                    followSetsViewModel.getFollowSetNote(
+                        noteIdentifier = it,
+                        account = accountViewModel.account,
+                    )
+
+                if (selectedFollowSetNote != null) {
+                    val event = selectedFollowSetNote.event as PeopleListEvent
+                    println("Found list, with title: ${event.nameOrTitle()}")
+                    val selectedFollowSet =
+                        FollowSet.mapEventToSet(
+                            event,
+                            accountViewModel.account.signer,
+                        )
+                    selectedFollowList.value = selectedFollowSet
+                    isFollowSetSelected.value = true
+                } else {
+                    println("No corresponding note found for this list.")
+                }
             }
-//            currentCoroutineScope.launch(Dispatchers.IO) {
-//                val note = followSetsViewModel.getFollowSetAddressable(it, accountViewModel.account)
-//                if (note != null) {
-//                    val event = note.event as PeopleListEvent
-//                    println("Found list, with title: ${event.nameOrTitle()}")
-//                } else {
-//                    println("No corresponding note found for this list.")
-//                }
-//            }
         },
-        renameItem = { index, newValue ->
-            followSetsViewModel.renameFollowSet(newName = newValue, setIndex = index)
+        renameItem = { followSet, newValue ->
+            followSetsViewModel.renameFollowSet(
+                newName = newValue,
+                followSet = followSet,
+                account = accountViewModel.account,
+            )
         },
-        deleteItem = {
-            followSetsViewModel.deleteFollowSet(it)
+        deleteItem = { identifier ->
+            followSetsViewModel.deleteFollowSet(
+                listIdentifier = identifier,
+                account = accountViewModel.account,
+            )
         },
         accountViewModel,
         nav,
     )
 
     // TODO: Replace this with nav-based solution.
-    if (isFollowSetSelected.value && selectedFollowListWithIndex.value != null) {
-        val leFollowSetIndex = selectedFollowListWithIndex.value!!.first
+    if (isFollowSetSelected.value && selectedFollowList.value != null) {
+        val leFollowSet = selectedFollowList.value
         FollowSetScreen(
             onClose = {
                 isFollowSetSelected.value = false
-                selectedFollowListWithIndex.value = null
+                selectedFollowList.value = null
             },
             accountViewModel = accountViewModel,
             navigator = nav,
-            selectedSet = selectedFollowListWithIndex.value!!.second,
+            selectedSet = leFollowSet!!,
             onProfileRemove = {
-                val newSet = followSetsViewModel.removeUserFromSet(it, leFollowSetIndex)
-                selectedFollowListWithIndex.value = Pair(leFollowSetIndex, newSet)
+                followSetsViewModel.removeUserFromSet(
+                    it,
+                    leFollowSet.identifierTag,
+                    accountViewModel.account,
+                )
             },
             onListSave = {
                 accountViewModel.toastManager.toast("List Changes", "Changes already saved.")
@@ -172,7 +190,10 @@ fun ListsScreen(
             },
             onListDelete = {
                 isFollowSetSelected.value = false
-                followSetsViewModel.deleteFollowSet(leFollowSetIndex)
+                followSetsViewModel.deleteFollowSet(
+                    leFollowSet.identifierTag,
+                    accountViewModel.account,
+                )
             },
         )
     }
@@ -184,8 +205,8 @@ fun CustomListsScreen(
     refresh: () -> Unit,
     addItem: (title: String, description: String?, listType: ListVisibility) -> Unit,
     openItem: (identifier: String) -> Unit,
-    renameItem: (Int, String) -> Unit,
-    deleteItem: (Int) -> Unit,
+    renameItem: (targetSet: FollowSet, newName: String) -> Unit,
+    deleteItem: (setIdentifier: String) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

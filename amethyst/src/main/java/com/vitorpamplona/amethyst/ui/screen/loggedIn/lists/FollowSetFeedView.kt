@@ -47,8 +47,8 @@ fun FollowSetFeedView(
     followSetState: FollowSetState,
     onRefresh: () -> Unit = {},
     onOpenItem: (String) -> Unit = {},
-    onRenameItem: (Int, String) -> Unit,
-    onDeleteItem: (Int) -> Unit,
+    onRenameItem: (targetSet: FollowSet, newName: String) -> Unit,
+    onDeleteItem: (setIdentifier: String) -> Unit,
 ) {
     when (followSetState) {
         FollowSetState.Loading -> LoadingFeed()
@@ -88,9 +88,9 @@ fun FollowListLoaded(
     modifier: Modifier = Modifier,
     loadedFeedState: List<FollowSet>,
     onRefresh: () -> Unit = {},
-    onItemClick: (String) -> Unit = {},
-    onItemRename: (index: Int, newName: String) -> Unit,
-    onItemDelete: (itemIndex: Int) -> Unit,
+    onItemClick: (itemIdentifier: String) -> Unit = {},
+    onItemRename: (followSet: FollowSet, newName: String) -> Unit,
+    onItemDelete: (itemIdentifier: String) -> Unit,
 ) {
     Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")
 
@@ -102,7 +102,7 @@ fun FollowListLoaded(
             state = listState,
             contentPadding = FeedPadding,
         ) {
-            itemsIndexed(loadedFeedState, key = { _, item -> item.identifierTag }) { index, set ->
+            itemsIndexed(loadedFeedState, key = { _, item -> item.identifierTag }) { _, set ->
                 CustomListItem(
                     modifier = Modifier.animateItem(),
                     followSet = set,
@@ -110,10 +110,10 @@ fun FollowListLoaded(
                         onItemClick(set.identifierTag)
                     },
                     onFollowSetRename = {
-                        onItemRename(index, it)
+                        onItemRename(set, it)
                     },
                     onFollowSetDelete = {
-                        onItemDelete(index)
+                        onItemDelete(set.identifierTag)
                     },
                 )
                 Spacer(modifier = StdVertSpacer)
