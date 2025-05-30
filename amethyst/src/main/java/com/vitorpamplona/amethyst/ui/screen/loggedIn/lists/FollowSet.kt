@@ -46,7 +46,7 @@ data class FollowSet(
             event.privateTaggedUsers(signer) { userList -> privateFollows.addAll(userList) }
             return if (publicFollows.isEmpty() && privateFollows.isNotEmpty()) {
                 FollowSet(
-                    identifierTag = address.toValue(),
+                    identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
                     visibility = ListVisibility.Private,
@@ -54,14 +54,14 @@ data class FollowSet(
                 )
             } else if (publicFollows.isNotEmpty() && privateFollows.isEmpty()) {
                 FollowSet(
-                    identifierTag = address.toValue(),
+                    identifierTag = dTag,
                     title = listTitle,
                     description = listDescription,
                     visibility = ListVisibility.Public,
                     profileList = publicFollows.toSet(),
                 )
             } else {
-                throw Exception("Mixed follow sets are not yet supported.")
+                throw Exception("Mixed follow sets are not supported.")
             }
         }
     }
