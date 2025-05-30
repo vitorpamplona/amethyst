@@ -370,8 +370,6 @@
     <string name="are_you_sure_you_want_to_log_out">ログアウトするとローカル情報はすべて削除されます。アカウントを紛失しないよう、秘密鍵のバックアップがあることを確認してください。続行しますか？</string>
     <string name="followed_tags">フォロー済みタグ</string>
     <string name="relay_setup">リレー</string>
-    <string name="discover_live">ライブ</string>
-    <string name="discover_community">コミュニティ</string>
     <string name="discover_chat">チャット</string>
     <string name="community_approved_posts">承認済みの投稿</string>
     <string name="groups_no_descriptor">このグループには説明またはルールがありません。追加するには管理者に相談してください</string>

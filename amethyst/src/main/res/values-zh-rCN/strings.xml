@@ -300,7 +300,6 @@
     <string name="quick_action_unfollow">取关</string>
     <string name="quick_action_follow">关注</string>
     <string name="quick_action_request_deletion_gallery_title">从相册中删除</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">从相册中删除此媒体，但仍然可供浏览</string>
     <string name="quick_action_request_deletion_alert_title">请求删贴</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 将请求你的记录从当前连接的中继器中删除。不能保证你发布的笔记将被永久从那些中继器或其他存储笔记的中继器中删除。</string>
     <string name="quick_action_block_dialog_btn">阻止</string>
@@ -561,10 +560,7 @@
     <string name="relay_setup">中继器</string>
     <string name="discover_follows">关注包</string>
     <string name="discover_reads">次浏览</string>
-    <string name="discover_content">笔记发现</string>
     <string name="discover_marketplace">市场</string>
-    <string name="discover_live">直播</string>
-    <string name="discover_community">社区</string>
     <string name="discover_chat">聊天</string>
     <string name="community_approved_posts">批准的帖子</string>
     <string name="groups_no_descriptor">此群组没有描述或规则。联系群主来添加</string>

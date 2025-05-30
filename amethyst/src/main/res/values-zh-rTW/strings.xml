@@ -256,7 +256,6 @@
     <string name="quick_action_unfollow">取關</string>
     <string name="quick_action_follow">關注</string>
     <string name="quick_action_request_deletion_gallery_title">從相冊中刪除</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">從相冊中刪除此媒體，但仍然可供瀏覽</string>
     <string name="quick_action_request_deletion_alert_title">請求刪貼</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 將請求您的記錄從當前連接的中繼器中刪除。不能保證您發佈的筆記將被永久從那些中繼器或其他存儲筆記的中繼器中刪除。</string>
     <string name="quick_action_block_dialog_btn">屏蔽</string>
@@ -446,10 +445,7 @@
     <string name="are_you_sure_you_want_to_log_out">登出將刪除你的本地信息。請確保備份你的私鑰以避免失去你的帳戶。你想要繼續嗎？</string>
     <string name="followed_tags">以關注的標籤</string>
     <string name="relay_setup">中繼器</string>
-    <string name="discover_content">筆記發現</string>
     <string name="discover_marketplace">市場</string>
-    <string name="discover_live">直播</string>
-    <string name="discover_community">社群</string>
     <string name="discover_chat">聊天</string>
     <string name="community_approved_posts">批准的帖子</string>
     <string name="groups_no_descriptor">此群組沒有描述或規則。聯繫群主來添加</string>

@@ -258,7 +258,6 @@
     <string name="quick_action_unfollow">เลิกติดตาม</string>
     <string name="quick_action_follow">ติดตาม</string>
     <string name="quick_action_request_deletion_gallery_title">ลบออกจากคลังภาพ</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">เอาออกจากคลังภาพ คุณสามารถเพิ่มใหม่ได้ภายหลัง</string>
     <string name="quick_action_request_deletion_alert_title">ส่งคำขอให้ลบ</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst จะขอให้ลบโน้ตของคุณออกจากรีเลย์ที่คุณเชื่อมต่ออยู่ ไม่มีการรับประกันว่าโน้ตของคุณจะถูกลบออกอย่างถาวรจากรีเลย์เหล่านั้น หรือ จากรีเลย์อื่น ๆ ที่อาจเก็บไว้</string>
     <string name="quick_action_block_dialog_btn">บล๊อก</string>
@@ -455,10 +454,7 @@
     <string name="are_you_sure_you_want_to_log_out">การออกจากระบบจะลบข้อมูลทั้งหมดของคุณ ตรวจสอบให้แน่ใจว่าได้สํารองข้อมูล private key ไว้เพื่อหลีกเลี่ยงการสูญเสียบัญชีของคุณ คุณต้องการดําเนินการต่อหรือไม่?</string>
     <string name="followed_tags">ติดตามแท็ก</string>
     <string name="relay_setup">รีเลย์</string>
-    <string name="discover_content">ค้นหาโน๊ตใหม่ ๆ</string>
     <string name="discover_marketplace">ตลาด</string>
-    <string name="discover_live">ถ่ายทอดสด</string>
-    <string name="discover_community">ชุมชน</string>
     <string name="discover_chat">ช่องสนทนา</string>
     <string name="community_approved_posts">อนุมัติโพสต์</string>
     <string name="groups_no_descriptor">ชุมชนนี้ไม่มีคำอธิบายหรือกฏ พูดคุยกับเจ้าของเพื่อเพิ่มเติมสิ่งนี้</string>

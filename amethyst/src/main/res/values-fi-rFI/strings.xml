@@ -391,7 +391,6 @@
     <string name="followed_tags">Seuratut tagit</string>
     <string name="relay_setup">Releet</string>
     <string name="discover_marketplace">Markkinapaikka</string>
-    <string name="discover_community">Yhteisö</string>
     <string name="discover_chat">Keskustelut</string>
     <string name="community_approved_posts">Hyväksytyt viestit</string>
     <string name="groups_no_descriptor">Tällä ryhmällä ei ole kuvausta tai sääntöjä. Keskustele omistajan kanssa sen lisäämiseksi</string>
