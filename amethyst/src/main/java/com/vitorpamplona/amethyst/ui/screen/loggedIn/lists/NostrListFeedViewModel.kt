@@ -22,18 +22,23 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists
 
 import android.util.Log
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +47,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 // TODO: Investigate the addition of feed filters, for bookmark sets and general ones.
-abstract class NostrListFeedViewModel(
+class NostrListFeedViewModel(
     val dataSource: FeedFilter<FollowSet>,
 ) : ViewModel(),
     InvalidatableContent {
@@ -57,13 +63,26 @@ abstract class NostrListFeedViewModel(
         }
     }
 
-    fun getFollowSetAddressable(
-        addressValue: String,
+    fun getFollowSetNote(
+        noteIdentifier: String,
         account: Account,
     ): AddressableNote? {
         checkNotInMainThread()
-        val potentialNote = LocalCache.getAddressableNoteIfExists(Address.parse(addressValue)!!)
+        val potentialNote = account.userProfile().followSetNotes.find { it.dTag() == noteIdentifier }
         return potentialNote
+    }
+
+    fun followSetExistsWithName(
+        setName: String,
+        account: Account,
+    ): Boolean {
+        checkNotInMainThread()
+        val potentialNote =
+            account
+                .userProfile()
+                .followSetNotes
+                .find { (it.event as PeopleListEvent).nameOrTitle() == setName }
+        return potentialNote != null
     }
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
@@ -96,6 +115,90 @@ abstract class NostrListFeedViewModel(
         }
     }
 
+    fun addFollowSet(
+        setName: String,
+        setDescription: String?,
+        setType: ListVisibility,
+        account: Account,
+    ) {
+        if (account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            PeopleListEvent.createListWithDescription(
+                dTag = UUID.randomUUID().toString(),
+                key = "title",
+                tag = setName,
+                description = setDescription,
+                isPrivate = setType == ListVisibility.Private,
+                signer = account.signer,
+            ) {
+                Amethyst.instance.client.send(it)
+                LocalCache.consume(it, null)
+            }
+        }
+    }
+
+    fun renameFollowSet(
+        newName: String,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+        } else {
+            val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+            PeopleListEvent.modifyTag(
+                earlierVersion = setEvent,
+                key = "title",
+                tag = newName,
+                isPrivate = followSet.visibility == ListVisibility.Private,
+                account.signer,
+            ) {
+                Amethyst.instance.client.send(it)
+                LocalCache.consume(it, null)
+            }
+        }
+    }
+
+    fun deleteFollowSet(
+        listIdentifier: String,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+            return
+        } else {
+            val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
+            account.signer.sign(
+                DeletionEvent.build(listOf(followSetEvent)),
+            ) {
+                Amethyst.instance.client.send(it)
+                LocalCache.justConsume(it, null)
+            }
+        }
+    }
+
+    fun removeUserFromSet(
+        userProfileHex: String,
+        listIdentifier: String,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+            return
+        } else {
+            val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
+            PeopleListEvent.removeUser(
+                earlierVersion = followSetEvent,
+                pubKeyHex = userProfileHex,
+                signer = account.signer,
+            ) {
+                Amethyst.instance.client.send(it)
+                LocalCache.consume(it, null)
+            }
+        }
+    }
+
     private fun updateFeed(sets: ImmutableList<FollowSet>) {
         if (sets.isNotEmpty()) {
             _feedContent.update { FollowSetState.Loaded(sets) }
@@ -104,15 +207,16 @@ abstract class NostrListFeedViewModel(
         }
     }
 
-    private val bundler = BundledUpdate(1000, Dispatchers.IO)
+    private val bundler = BundledUpdate(2000, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-//        refresh()
-        bundler.invalidate(ignoreIfDoing) {
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            refreshSuspended()
-        }
+        refresh()
+//        bundler.invalidate(ignoreIfDoing) {
+//            // adds the time to perform the refresh into this delay
+//            // holding off new updates in case of heavy refresh routines.
+//            sampleRefresh()
+//            // refreshSuspended()
+//        }
     }
 
     var collectorJob: Job? = null
@@ -134,5 +238,12 @@ abstract class NostrListFeedViewModel(
         bundler.cancel()
         collectorJob?.cancel()
         super.onCleared()
+    }
+
+    @Stable
+    class Factory(
+        val account: Account,
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = NostrListFeedViewModel(FollowSetFeedFilter(account)) as T
     }
 }
