@@ -109,6 +109,49 @@ class PeopleListEvent(
             }
         }
 
+        fun createListWithDescription(
+            dTag: String,
+            key: String,
+            tag: String,
+            description: String? = null,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            if (description == null) {
+                createListWithTag(name = dTag, key, tag, isPrivate, signer, createdAt, onReady)
+            } else {
+                if (isPrivate) {
+                    encryptTags(
+                        arrayOf(arrayOf(key, tag), arrayOf("description", description)),
+                        signer,
+                    ) { encryptedTags ->
+                        create(
+                            content = encryptedTags,
+                            tags = arrayOf(arrayOf("d", dTag)),
+                            signer = signer,
+                            createdAt = createdAt,
+                            onReady = onReady,
+                        )
+                    }
+                } else {
+                    create(
+                        content = "",
+                        tags =
+                            arrayOf(
+                                arrayOf("d", dTag),
+                                arrayOf(key, tag),
+                                arrayOf("description", description),
+                            ),
+                        signer = signer,
+                        createdAt = createdAt,
+                        onReady = onReady,
+                    )
+                }
+            }
+        }
+
         fun createListWithUser(
             name: String,
             pubKeyHex: String,
@@ -269,6 +312,61 @@ class PeopleListEvent(
                 }
             }
         }
+
+        fun modifyTag(
+            earlierVersion: PeopleListEvent,
+            key: String,
+            tag: String,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            onReady: (PeopleListEvent) -> Unit,
+        ) {
+            if (isPrivate) {
+                earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
+                    val modifiedPrivateTags =
+                        privateTags.replaceElementIf(
+                            { it.size > 1 && it.contains(key) },
+                            arrayOf(key, tag),
+                        )
+
+                    encryptTags(
+                        privateTags = modifiedPrivateTags,
+                        signer = signer,
+                    ) { encryptedTags ->
+                        create(
+                            content = encryptedTags,
+                            tags = earlierVersion.tags,
+                            signer = signer,
+                            createdAt = createdAt,
+                            onReady = onReady,
+                        )
+                    }
+                }
+            } else {
+                val modifiedPublicTags =
+                    earlierVersion.tags.replaceElementIf(
+                        { it.size > 1 && it.contains(key) },
+                        arrayOf(key, tag),
+                    )
+
+                create(
+                    content = earlierVersion.content,
+                    tags = modifiedPublicTags,
+                    signer = signer,
+                    createdAt = createdAt,
+                    onReady = onReady,
+                )
+            }
+        }
+
+        private inline fun <reified T> Array<T>.replaceElementIf(
+            predicate: (T) -> Boolean,
+            newElem: T,
+        ): Array<T> =
+            map {
+                if (predicate(it)) newElem else it
+            }.toTypedArray()
 
         fun create(
             content: String,
