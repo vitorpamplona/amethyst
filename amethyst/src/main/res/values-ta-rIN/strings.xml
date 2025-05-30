@@ -365,8 +365,6 @@
     <string name="are_you_sure_you_want_to_log_out">வெளியேறுவதல் உங்கள் அனைத்து விவரங்களையும் நீக்கிவிடும். வெளியேறும் முன் உங்கள் கணக்கைத் தொலையாமல் இருக்க ரகசியசாவியை பத்திரமாக பிரதி செய்து சேமிக்கப்பட்டுள்ளதா என்று சரிபார்க்கவும். வெளியேற வேண்டுமா?</string>
     <string name="followed_tags">பின்பற்றப்படும் சிட்டைகள்</string>
     <string name="relay_setup">ரிலேகள்</string>
-    <string name="discover_live">நேரலை</string>
-    <string name="discover_community">சமூகம்</string>
     <string name="discover_chat">அரட்டை</string>
     <string name="community_approved_posts">அங்கீகரிக்கப்பட்ட குறிப்பு</string>
     <string name="groups_no_descriptor">இந்த அரட்டைக் குழுவின் விளக்கமும் விதிகளும் இன்னும் சேர்க்கபடவில்லை. உரிமையாளரை அணுகி அவற்றை சேர்க்க கோரவும் </string>

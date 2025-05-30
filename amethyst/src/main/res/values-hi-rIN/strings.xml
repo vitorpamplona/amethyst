@@ -300,7 +300,6 @@
     <string name="quick_action_unfollow">अनुचरण ना करें</string>
     <string name="quick_action_follow">अनुचरण करें</string>
     <string name="quick_action_request_deletion_gallery_title">चित्रालय से मिटाएँ</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">इस अभिलेख को चित्रालय से हटाएँ। तत्पश्चात कभी भी आप इसे पुनः जोड सकते हैं</string>
     <string name="quick_action_request_deletion_alert_title">हटाने की याचना</string>
     <string name="quick_action_request_deletion_alert_body">अमेथिस्ट अनुरोध करेगा कि आपका टीका मिटा दिया जाए उन पुनःप्रसारकों से जिनके साथ आप अब जुडे हुए हैं। कोई आश्वासन नहीं कि आपका टीका सर्वदा के लिए मिटा दिया जाएगा उन पुनःप्रसारकों से, अथवा अन्य पुनःप्रसारकों में से जहाँ यह रखा गया हो।</string>
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
@@ -561,10 +560,7 @@
     <string name="relay_setup">पुनःप्रसारक</string>
     <string name="discover_follows">अनुचरण पोटलियाँ</string>
     <string name="discover_reads">पठितव्य</string>
-    <string name="discover_content">लेख आविष्करण</string>
     <string name="discover_marketplace">पण्यक्षेत्र</string>
-    <string name="discover_live">तत्क्षणप्रसार</string>
-    <string name="discover_community">समुदाय</string>
     <string name="discover_chat">चर्चाएँ</string>
     <string name="community_approved_posts">अनुमति प्राप्त पत्र</string>
     <string name="groups_no_descriptor">इस झुण्ड का कोई विवरण नहीं नियम नहीं। इसके अधिपति से बात करें इनहें जोडने के लिए</string>

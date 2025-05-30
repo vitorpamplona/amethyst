@@ -380,8 +380,6 @@
     <string name="are_you_sure_you_want_to_log_out">Η Αποσύνδεση διαγράφει όλες τις τοπικές πληροφορίες σας. Βεβαιωθείτε ότι έχετε Αντίγραφο Ασφαλείας από το \"Μυστικό Κλειδί\" σας για να αποφύγετε απώλεια του λογαριασμού σας. Θέλετε να συνεχίσετε?</string>
     <string name="followed_tags">Ετικέτες που Ακολουθώ</string>
     <string name="relay_setup">Διαμοιραστές</string>
-    <string name="discover_live">Ζωντανά</string>
-    <string name="discover_community">Κοινότητα</string>
     <string name="discover_chat">Συνομιλίες</string>
     <string name="community_approved_posts">Εγκεκριμένες Δημοσιεύσεις</string>
     <string name="groups_no_descriptor">Αυτή η ομάδα δεν έχει περιγραφή ή κανόνες. Μιλήστε με τον ιδιοκτήτη για να προσθέσετε μία</string>

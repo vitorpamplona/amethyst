@@ -290,7 +290,6 @@
     <string name="quick_action_unfollow">Ne plus suivre</string>
     <string name="quick_action_follow">Suivre</string>
     <string name="quick_action_request_deletion_gallery_title">Supprimer de la galerie</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Retirer ce média de votre galerie, vous pourrez le réajouter plus tard</string>
     <string name="quick_action_request_deletion_alert_title">Demande de Suppression</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst demandera que votre note soit supprimée des relais auxquels vous êtes actuellement connecté. Il n\'y a aucune garantie que votre note sera définitivement supprimée de ces relais, ou d\'autres relais où elle peut être stockée.</string>
     <string name="quick_action_block_dialog_btn">Bloquer</string>
@@ -540,10 +539,7 @@
     <string name="are_you_sure_you_want_to_log_out">Se déconnecter supprime toutes vos informations locales. Assurez-vous d\'avoir vos clés privées sauvegardées pour éviter de perdre votre compte. Voulez-vous continuer ?</string>
     <string name="followed_tags">Tags suivis</string>
     <string name="relay_setup">Relais</string>
-    <string name="discover_content">Découverte de notes</string>
     <string name="discover_marketplace">Place de Marché</string>
-    <string name="discover_live">Direct</string>
-    <string name="discover_community">Communauté</string>
     <string name="discover_chat">Salons</string>
     <string name="community_approved_posts">Messages approuvés</string>
     <string name="groups_no_descriptor">Ce groupe n\'a pas de description ou de règles. Parlez au propriétaire pour en ajouter une</string>

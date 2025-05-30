@@ -417,8 +417,6 @@
     <string name="are_you_sure_you_want_to_log_out">লগ আউট করলে আপনার সমস্ত স্থানীয় তথ্য মুছে যাবে। অ্যাকাউন্ট সুরক্ষিত রাখতে আপনার ব্যক্তিগত চাবিটি নিরাপদে সংরক্ষিত আছে কিনা নিশ্চিত হোন। সামনে আগাতে চান?</string>
     <string name="followed_tags">অনুসৃত ট্যাগগুলি</string>
     <string name="relay_setup">রিলেগুলি</string>
-    <string name="discover_live">লাইভ</string>
-    <string name="discover_community">কম্যুনিটি</string>
     <string name="discover_chat">বার্তালাপগুলি</string>
     <string name="community_approved_posts">অনুমোদিত পোস্টগুলি</string>
     <string name="groups_no_descriptor">এই দলটির কোনো বিবরণ কিংবা নীতিমালা নেই। এগুলো যুক্ত করতে দলনেতার সাথে কথা বলুন</string>

@@ -298,7 +298,6 @@
     <string name="quick_action_unfollow">Remover seguidor</string>
     <string name="quick_action_follow">Seguir</string>
     <string name="quick_action_request_deletion_gallery_title">Excluir da Galeria</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Remover essa mídia de sua galeria, você pode adicionar mais tarde</string>
     <string name="quick_action_request_deletion_alert_title">Pedir para excluir</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que sua nota seja excluída dos relays aos quais você está conectado no momento. Não há garantia de que sua nota será excluída permanentemente desses relays ou de outros relays onde possa estar armazenada.</string>
     <string name="quick_action_block_dialog_btn">Bloquear</string>
@@ -559,10 +558,7 @@
     <string name="relay_setup">Relés</string>
     <string name="discover_follows">Pacotes Seguir</string>
     <string name="discover_reads">Leituras</string>
-    <string name="discover_content">Descoberta de Notas</string>
     <string name="discover_marketplace">Mercado</string>
-    <string name="discover_live">Ao vivo</string>
-    <string name="discover_community">Comunidade</string>
     <string name="discover_chat">Conversas</string>
     <string name="community_approved_posts">Postagens Aprovadas</string>
     <string name="groups_no_descriptor">Este grupo não tem uma descrição ou regras. Fale com o proprietário para adicionar</string>

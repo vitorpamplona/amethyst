@@ -290,7 +290,6 @@
     <string name="quick_action_unfollow">Ontvolgen</string>
     <string name="quick_action_follow">Volgen</string>
     <string name="quick_action_request_deletion_gallery_title">Verwijderen uit galerij</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Verwijder deze media uit je galerij, je kunt het terug zien in je feed.</string>
     <string name="quick_action_request_deletion_alert_title">Verzoek om te verwijderen</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst zal vragen om uw note te verwijderen van de relays waarmee u momenteel verbonden bent. Er is geen garantie dat uw note permanent wordt verwijderd van deze relays, of van andere relays waar het kan worden opgeslagen.</string>
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
@@ -540,10 +539,7 @@
     <string name="are_you_sure_you_want_to_log_out">Uitloggen verwijdert al je lokale informatie. Zorg ervoor dat je een back-up hebt van je geheime sleutels om te voorkomen dat je je account kwijtraakt. Wilt u doorgaan?</string>
     <string name="followed_tags">Gevolgde tags</string>
     <string name="relay_setup">Relays</string>
-    <string name="discover_content">Note ontdekking</string>
     <string name="discover_marketplace">Marktplaats</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Community</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Goedgekeurde berichten</string>
     <string name="groups_no_descriptor">Deze groep heeft geen beschrijving of regels. Praat met de eigenaar om er een toe te voegen</string>
