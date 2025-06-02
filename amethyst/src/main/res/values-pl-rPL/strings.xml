@@ -297,6 +297,7 @@
     <string name="quick_action_unfollow">Porzuć</string>
     <string name="quick_action_follow">Śledź</string>
     <string name="quick_action_request_deletion_gallery_title">Usuń z Galerii</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Usuń ten plik z Galerii.</string>
     <string name="quick_action_request_deletion_alert_title">Poproś o usunięcie</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst poprosi o usunięcie Twojego wpisu z aktualnie podłączonych transmiterów. Nie ma gwarancji, że Twój wpis zostanie trwale usunięty z tych lub z innych transmiterów, gdzie może być przechowywany.</string>
     <string name="quick_action_block_dialog_btn">Zablokuj</string>
@@ -556,6 +557,8 @@
     <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
     <string name="discover_marketplace">Market</string>
+    <string name="discover_live_v2">Transmisja na żywo</string>
+    <string name="discover_community_v2">Społeczności</string>
     <string name="discover_chat">Czaty</string>
     <string name="community_approved_posts">Zatwierdzone posty</string>
     <string name="groups_no_descriptor">Ta grupa nie ma opisu ani reguł. Porozmawiaj z właścicielem, aby je dodać</string>
