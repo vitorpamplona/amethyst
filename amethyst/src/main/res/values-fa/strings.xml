@@ -270,7 +270,6 @@
     <string name="quick_action_unfollow">دنبال نکردن</string>
     <string name="quick_action_follow">دنبال کردن</string>
     <string name="quick_action_request_deletion_gallery_title">حذف از گالری</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">حذف این رسانه از گالری، بعدا می توانید آن را بخوانید</string>
     <string name="quick_action_request_deletion_alert_title">درخواست حذف</string>
     <string name="quick_action_request_deletion_alert_body">آماتیست درخواست می کند که یادداشت شما از رله هایی که درحال حاضر به آن متصل هستید حذف شود. هیچ تضمینی نیست که یادداشت شما برای همیشه از آن رله ها یا از رله های دیگری که ممکن است در آنها ذخیره شده باشد حذف خواهد شد.. </string>
     <string name="quick_action_block_dialog_btn">بلاک</string>
@@ -519,10 +518,7 @@
     <string name="are_you_sure_you_want_to_log_out">خروج همه اطلاعات محلی شما را پاک می کند. مطمئن شوید که کلید خصوصی خود را بکاپ گرفته و ذخیره کرده اید تا حساب کاربری تان را از دست ندهید. می خواهید ادامه دهید؟</string>
     <string name="followed_tags">برچسب های دنبال شده</string>
     <string name="relay_setup">رله ها</string>
-    <string name="discover_content">اکتشاف یادداشت</string>
     <string name="discover_marketplace">بازار</string>
-    <string name="discover_live">زنده</string>
-    <string name="discover_community">انجمن</string>
     <string name="discover_chat">گپ</string>
     <string name="community_approved_posts">یادداشت های تایید شده</string>
     <string name="groups_no_descriptor">این گروه هیچ توصیف و قوانینی ندارد. با مالک گروه برای افزودن آن صحبت کنید.</string>
