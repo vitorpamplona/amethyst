@@ -302,6 +302,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_unfollow">Entfolgen</string>
     <string name="quick_action_follow">Folgen</string>
     <string name="quick_action_request_deletion_gallery_title">Aus Galerie löschen</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Entferne dieses Medium von deiner Galerie.</string>
     <string name="quick_action_request_deletion_alert_title">Löschung anfordern</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst wird beantragen, dass Ihre Notiz von den Relays gelöscht wird, mit denen Sie derzeit verbunden sind. Es gibt keine Garantie dafür, dass Ihre Notiz dauerhaft von diesen Relays oder anderen Relays, in denen sie gespeichert sein kann, gelöscht wird.</string>
     <string name="quick_action_block_dialog_btn">Blockieren</string>
@@ -563,7 +564,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="relay_setup">Relais</string>
     <string name="discover_follows">Folge Paketen</string>
     <string name="discover_reads">Lesungen</string>
+    <string name="discover_content_v2">Feedalgorithmen</string>
     <string name="discover_marketplace">Marktplatz</string>
+    <string name="discover_live_v2">Live-Streams</string>
+    <string name="discover_community_v2">Gemeinschaften</string>
     <string name="discover_chat">Plaudern</string>
     <string name="community_approved_posts">Genehmigte Beiträge</string>
     <string name="groups_no_descriptor">Diese Gruppe hat keine Beschreibung oder Regeln. Sprechen Sie mit dem Eigentümer, um eine hinzuzufügen.</string>

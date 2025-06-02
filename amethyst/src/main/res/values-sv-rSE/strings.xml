@@ -298,6 +298,7 @@
     <string name="quick_action_unfollow">Sluta följa</string>
     <string name="quick_action_follow">Följ</string>
     <string name="quick_action_request_deletion_gallery_title">Ta bort från galleriet</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Ta bort detta media från ditt galleri.</string>
     <string name="quick_action_request_deletion_alert_title">Begär radering</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst kommer att begära att din anteckning tas bort från de reläer du för närvarande är ansluten till. Det finns ingen garanti för att din anteckning kommer att raderas permanent från dessa reläer eller från andra reläer där den kan lagras.</string>
     <string name="quick_action_block_dialog_btn">Blockera</string>
@@ -557,7 +558,10 @@
     <string name="relay_setup">Reläer</string>
     <string name="discover_follows">Följpaket</string>
     <string name="discover_reads">Läsningar</string>
+    <string name="discover_content_v2">Feed algoritmer</string>
     <string name="discover_marketplace">Marknadsplats</string>
+    <string name="discover_live_v2">Live-streams</string>
+    <string name="discover_community_v2">Grupper</string>
     <string name="discover_chat">Chattar</string>
     <string name="community_approved_posts">Godkända Inlägg</string>
     <string name="groups_no_descriptor">Denna grupp har ingen beskrivning eller regler. Prata med ägaren för att lägga till en.</string>
