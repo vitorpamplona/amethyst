@@ -124,16 +124,18 @@ class NostrListFeedViewModel(
         if (account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
         } else {
-            PeopleListEvent.createListWithDescription(
-                dTag = UUID.randomUUID().toString(),
-                key = "title",
-                tag = setName,
-                description = setDescription,
-                isPrivate = setType == ListVisibility.Private,
-                signer = account.signer,
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+            viewModelScope.launch {
+                PeopleListEvent.createListWithDescription(
+                    dTag = UUID.randomUUID().toString(),
+                    key = "title",
+                    tag = setName,
+                    description = setDescription,
+                    isPrivate = setType == ListVisibility.Private,
+                    signer = account.signer,
+                ) {
+                    Amethyst.instance.client.send(it)
+                    LocalCache.consume(it, null)
+                }
             }
         }
     }
@@ -146,16 +148,18 @@ class NostrListFeedViewModel(
         if (!account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
         } else {
-            val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
-            PeopleListEvent.modifyTag(
-                earlierVersion = setEvent,
-                key = "title",
-                tag = newName,
-                isPrivate = followSet.visibility == ListVisibility.Private,
-                account.signer,
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+            viewModelScope.launch {
+                val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.modifyTag(
+                    earlierVersion = setEvent,
+                    key = "title",
+                    tag = newName,
+                    isPrivate = followSet.visibility == ListVisibility.Private,
+                    account.signer,
+                ) {
+                    Amethyst.instance.client.send(it)
+                    LocalCache.consume(it, null)
+                }
             }
         }
     }
@@ -168,12 +172,38 @@ class NostrListFeedViewModel(
             println("You are in read-only mode. Please login to make modifications.")
             return
         } else {
-            val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
-            account.signer.sign(
-                DeletionEvent.build(listOf(followSetEvent)),
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.justConsume(it, null)
+            viewModelScope.launch {
+                val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
+                account.signer.sign(
+                    DeletionEvent.build(listOf(followSetEvent)),
+                ) {
+                    Amethyst.instance.client.send(it)
+                    LocalCache.justConsume(it, null)
+                }
+            }
+        }
+    }
+
+    fun addUserToSet(
+        userProfileHex: String,
+        followSet: FollowSet,
+        account: Account,
+    ) {
+        if (!account.settings.isWriteable()) {
+            println("You are in read-only mode. Please login to make modifications.")
+            return
+        } else {
+            viewModelScope.launch {
+                val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
+                PeopleListEvent.addUser(
+                    earlierVersion = followSetEvent,
+                    pubKeyHex = userProfileHex,
+                    isPrivate = followSet.visibility == ListVisibility.Private,
+                    signer = account.signer,
+                ) {
+                    Amethyst.instance.client.send(it)
+                    LocalCache.consume(it, null)
+                }
             }
         }
     }
@@ -187,14 +217,16 @@ class NostrListFeedViewModel(
             println("You are in read-only mode. Please login to make modifications.")
             return
         } else {
-            val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
-            PeopleListEvent.removeUser(
-                earlierVersion = followSetEvent,
-                pubKeyHex = userProfileHex,
-                signer = account.signer,
-            ) {
-                Amethyst.instance.client.send(it)
-                LocalCache.consume(it, null)
+            viewModelScope.launch {
+                val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
+                PeopleListEvent.removeUser(
+                    earlierVersion = followSetEvent,
+                    pubKeyHex = userProfileHex,
+                    signer = account.signer,
+                ) {
+                    Amethyst.instance.client.send(it)
+                    LocalCache.consume(it, null)
+                }
             }
         }
     }

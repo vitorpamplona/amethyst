@@ -61,9 +61,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.ListVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.BackButton
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +68,7 @@ fun FollowSetScreen(
     onClose: () -> Unit,
     accountViewModel: AccountViewModel,
     navigator: INav,
+    // TODO: Investigate passing follow set properties rather than follow set object.
     selectedSet: FollowSet,
     onProfileRemove: (String) -> Unit,
     onListSave: () -> Unit,
@@ -79,8 +77,8 @@ fun FollowSetScreen(
 ) {
     BackHandler { onClose() }
 
-    // TODO: Remove this line and the function it calls, as they are hacks.
-    val users = selectedSet.profileList.mapToUsers()
+    // TODO: Investigate moving the mapping function to a VM.(related to above TODO).
+    val users = selectedSet.profileList.mapToUsers(accountViewModel).filterNotNull()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -142,12 +140,7 @@ fun FollowSetScreen(
     }
 }
 
-fun Set<String>.mapToUsers(): List<User> =
-    map {
-        User(Random.nextBytes(32).toHexKey()).apply {
-            info = UserMetadata().apply { name = it }
-        }
-    }
+fun Set<String>.mapToUsers(accountViewModel: AccountViewModel): List<User?> = map { accountViewModel.checkGetOrCreateUser(it) }
 
 @Composable
 private fun FollowSetListView(
