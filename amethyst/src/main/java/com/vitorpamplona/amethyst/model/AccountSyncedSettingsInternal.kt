@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import java.util.Locale
 
@@ -38,6 +39,9 @@ val DefaultReactions =
 
 val DefaultZapAmounts = listOf(100L, 500L, 1000L)
 
+val DefaultTipAmounts = listOf(0.1, 0.5, 1.0)
+val DefaultTipType = TipEvent.TipType.ANONYMOUS
+
 fun getLanguagesSpokenByUser(): Set<String> {
     val languageList = ConfigurationCompat.getLocales(Resources.getSystem().getConfiguration())
     val codedList = mutableSetOf<String>()
@@ -52,10 +56,16 @@ class AccountSyncedSettingsInternal(
     val zaps: AccountZapPreferencesInternal = AccountZapPreferencesInternal(),
     val languages: AccountLanguagePreferencesInternal = AccountLanguagePreferencesInternal(),
     val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
+    val tips: AccountTipPreferencesInternal = AccountTipPreferencesInternal(),
 )
 
 class AccountReactionPreferencesInternal(
     var reactionChoices: List<String> = DefaultReactions,
+)
+
+class AccountTipPreferencesInternal(
+    var tipAmountChoices: List<Double> = DefaultTipAmounts,
+    var defaultTipType: TipEvent.TipType = DefaultTipType,
 )
 
 class AccountZapPreferencesInternal(

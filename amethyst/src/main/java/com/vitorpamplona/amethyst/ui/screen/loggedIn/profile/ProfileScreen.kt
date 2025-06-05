@@ -92,6 +92,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays.TabRelays
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.ReportsTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.TabReports
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.reports.dal.UserProfileReportFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.tips.TabReceivedTips
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.tips.TipTabHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.tips.dal.UserProfileTipsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.TabReceivedZaps
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.ZapTabHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.zaps.dal.UserProfileZapsFeedViewModel
@@ -182,6 +185,15 @@ fun PrepareViewModels(
                 ),
         )
 
+    val tipFeedViewModel: UserProfileTipsFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserProfileTipsFeedViewModel",
+            factory =
+                UserProfileTipsFeedViewModel.Factory(
+                    baseUser,
+                ),
+        )
+
     val threadsViewModel: UserProfileNewThreadsFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileNewThreadsFeedViewModel",
@@ -243,6 +255,7 @@ fun PrepareViewModels(
         bookmarksFeedViewModel,
         galleryFeedViewModel,
         reportsFeedViewModel,
+        tipFeedViewModel,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -261,6 +274,7 @@ fun ProfileScreen(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
+    tipFeedViewModel: UserProfileTipsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -291,6 +305,7 @@ fun ProfileScreen(
             bookmarksFeedViewModel,
             galleryFeedViewModel,
             reportsFeedViewModel,
+            tipFeedViewModel,
             accountViewModel,
             nav,
         )
@@ -384,10 +399,11 @@ private fun RenderScreen(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
+    tipFeedViewModel: UserProfileTipsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pagerState = rememberPagerState { 11 }
+    val pagerState = rememberPagerState { 12 }
 
     Column {
         ProfileHeader(baseUser, appRecommendations, nav, accountViewModel)
@@ -421,6 +437,7 @@ private fun RenderScreen(
                 bookmarksFeedViewModel,
                 galleryFeedViewModel,
                 reportsFeedViewModel,
+                tipFeedViewModel,
                 accountViewModel,
                 nav,
             )
@@ -441,6 +458,7 @@ private fun CreateAndRenderPages(
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
+    tipFeedViewModel: UserProfileTipsFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -459,10 +477,11 @@ private fun CreateAndRenderPages(
         4 -> TabFollows(baseUser, followsFeedViewModel, accountViewModel, nav)
         5 -> TabFollowers(baseUser, followersFeedViewModel, accountViewModel, nav)
         6 -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
-        7 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
-        8 -> TabFollowedTags(baseUser, accountViewModel, nav)
-        9 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
-        10 -> TabRelays(baseUser, accountViewModel, nav)
+        7 -> TabReceivedTips(baseUser, tipFeedViewModel, accountViewModel, nav)
+        8 -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
+        9 -> TabFollowedTags(baseUser, accountViewModel, nav)
+        10 -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
+        11 -> TabRelays(baseUser, accountViewModel, nav)
     }
 }
 
@@ -498,6 +517,7 @@ private fun CreateAndRenderTabs(
             { FollowTabHeader(baseUser, accountViewModel) },
             { FollowersTabHeader(baseUser, accountViewModel) },
             { ZapTabHeader(baseUser, accountViewModel) },
+            { TipTabHeader(baseUser, accountViewModel) },
             { BookmarkTabHeader(baseUser, accountViewModel) },
             { FollowedTagsTabHeader(baseUser, accountViewModel) },
             { ReportsTabHeader(baseUser, accountViewModel) },
