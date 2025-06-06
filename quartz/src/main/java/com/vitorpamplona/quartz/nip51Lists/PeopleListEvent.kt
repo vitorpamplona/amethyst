@@ -270,46 +270,62 @@ class PeopleListEvent(
         fun removeWord(
             earlierVersion: PeopleListEvent,
             word: String,
+            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "word", word, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "word", word, isPrivate, signer, createdAt, onReady)
 
         fun removeUser(
             earlierVersion: PeopleListEvent,
             pubKeyHex: String,
+            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
-        ) = removeTag(earlierVersion, "p", pubKeyHex, signer, createdAt, onReady)
+        ) = removeTag(earlierVersion, "p", pubKeyHex, isPrivate, signer, createdAt, onReady)
 
         fun removeTag(
             earlierVersion: PeopleListEvent,
             key: String,
             tag: String,
+            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PeopleListEvent) -> Unit,
         ) {
-            earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
-                encryptTags(
-                    privateTags =
-                        privateTags
-                            .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
-                            .toTypedArray(),
-                    signer = signer,
-                ) { encryptedTags ->
-                    create(
-                        content = encryptedTags,
-                        tags =
-                            earlierVersion.tags
+            if (isPrivate) {
+                earlierVersion.privateTagsOrEmpty(signer) { privateTags ->
+                    encryptTags(
+                        privateTags =
+                            privateTags
                                 .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
                                 .toTypedArray(),
                         signer = signer,
-                        createdAt = createdAt,
-                        onReady = onReady,
-                    )
+                    ) { encryptedTags ->
+                        create(
+                            content = encryptedTags,
+                            tags =
+                                earlierVersion.tags
+                                    .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
+                                    .toTypedArray(),
+                            signer = signer,
+                            createdAt = createdAt,
+                            onReady = onReady,
+                        )
+                    }
                 }
+            } else {
+                create(
+                    content = earlierVersion.content,
+                    tags =
+                        earlierVersion.tags
+                            .filter { it.size > 1 && !(it[0] == key && it[1] == tag) }
+                            .toTypedArray(),
+                    signer,
+                    createdAt,
+                    onReady,
+                )
             }
         }
 

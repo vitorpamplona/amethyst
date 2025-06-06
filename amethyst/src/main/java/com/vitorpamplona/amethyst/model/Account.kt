@@ -3125,6 +3125,8 @@ class Account(
             PeopleListEvent.removeWord(
                 earlierVersion = blockList,
                 word = word,
+                // It is true here, since PeopleListEvent.removeTag(..) defaulted to private tags.
+                isPrivate = true,
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
@@ -3178,6 +3180,8 @@ class Account(
             PeopleListEvent.removeUser(
                 earlierVersion = blockList,
                 pubKeyHex = pubkeyHex,
+                // Reason: refer to showWord(..) above.
+                isPrivate = true,
                 signer = signer,
             ) {
                 Amethyst.instance.client.send(it)
