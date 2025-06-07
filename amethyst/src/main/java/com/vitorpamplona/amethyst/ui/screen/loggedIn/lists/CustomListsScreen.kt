@@ -154,9 +154,9 @@ fun ListsScreen(
                 account = accountViewModel.account,
             )
         },
-        deleteItem = { identifier ->
+        deleteItem = { followSet ->
             followSetsViewModel.deleteFollowSet(
-                listIdentifier = identifier,
+                followSet = followSet,
                 account = accountViewModel.account,
             )
         },
@@ -178,7 +178,7 @@ fun ListsScreen(
             onProfileRemove = {
                 followSetsViewModel.removeUserFromSet(
                     it,
-                    leFollowSet.identifierTag,
+                    leFollowSet,
                     accountViewModel.account,
                 )
             },
@@ -191,7 +191,7 @@ fun ListsScreen(
             onListDelete = {
                 isFollowSetSelected.value = false
                 followSetsViewModel.deleteFollowSet(
-                    leFollowSet.identifierTag,
+                    leFollowSet,
                     accountViewModel.account,
                 )
             },
@@ -205,8 +205,8 @@ fun CustomListsScreen(
     refresh: () -> Unit,
     addItem: (title: String, description: String?, listType: ListVisibility) -> Unit,
     openItem: (identifier: String) -> Unit,
-    renameItem: (targetSet: FollowSet, newName: String) -> Unit,
-    deleteItem: (setIdentifier: String) -> Unit,
+    renameItem: (followSet: FollowSet, newName: String) -> Unit,
+    deleteItem: (followSet: FollowSet) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

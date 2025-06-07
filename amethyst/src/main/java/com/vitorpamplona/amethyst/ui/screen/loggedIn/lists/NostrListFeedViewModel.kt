@@ -124,7 +124,7 @@ class NostrListFeedViewModel(
         if (account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
         } else {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 PeopleListEvent.createListWithDescription(
                     dTag = UUID.randomUUID().toString(),
                     key = "title",
@@ -148,7 +148,7 @@ class NostrListFeedViewModel(
         if (!account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
         } else {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 val setEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
                 PeopleListEvent.modifyTag(
                     earlierVersion = setEvent,
@@ -165,15 +165,15 @@ class NostrListFeedViewModel(
     }
 
     fun deleteFollowSet(
-        listIdentifier: String,
+        followSet: FollowSet,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
             return
         } else {
-            viewModelScope.launch {
-                val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
+            viewModelScope.launch(Dispatchers.IO) {
+                val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
                 account.signer.sign(
                     DeletionEvent.build(listOf(followSetEvent)),
                 ) {
@@ -193,7 +193,7 @@ class NostrListFeedViewModel(
             println("You are in read-only mode. Please login to make modifications.")
             return
         } else {
-            viewModelScope.launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
                 PeopleListEvent.addUser(
                     earlierVersion = followSetEvent,
@@ -210,18 +210,19 @@ class NostrListFeedViewModel(
 
     fun removeUserFromSet(
         userProfileHex: String,
-        listIdentifier: String,
+        followSet: FollowSet,
         account: Account,
     ) {
         if (!account.settings.isWriteable()) {
             println("You are in read-only mode. Please login to make modifications.")
             return
         } else {
-            viewModelScope.launch {
-                val followSetEvent = getFollowSetNote(listIdentifier, account)?.event as PeopleListEvent
+            viewModelScope.launch(Dispatchers.IO) {
+                val followSetEvent = getFollowSetNote(followSet.identifierTag, account)?.event as PeopleListEvent
                 PeopleListEvent.removeUser(
                     earlierVersion = followSetEvent,
                     pubKeyHex = userProfileHex,
+                    isPrivate = followSet.visibility == ListVisibility.Private,
                     signer = account.signer,
                 ) {
                     Amethyst.instance.client.send(it)
@@ -242,13 +243,13 @@ class NostrListFeedViewModel(
     private val bundler = BundledUpdate(2000, Dispatchers.IO)
 
     override fun invalidateData(ignoreIfDoing: Boolean) {
-        refresh()
-//        bundler.invalidate(ignoreIfDoing) {
-//            // adds the time to perform the refresh into this delay
-//            // holding off new updates in case of heavy refresh routines.
-//            sampleRefresh()
-//            // refreshSuspended()
-//        }
+//        refresh()
+        bundler.invalidate(ignoreIfDoing) {
+            // adds the time to perform the refresh into this delay
+            // holding off new updates in case of heavy refresh routines.
+
+            refreshSuspended()
+        }
     }
 
     var collectorJob: Job? = null

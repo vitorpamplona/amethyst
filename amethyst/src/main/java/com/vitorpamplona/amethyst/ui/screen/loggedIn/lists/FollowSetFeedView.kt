@@ -48,7 +48,7 @@ fun FollowSetFeedView(
     onRefresh: () -> Unit = {},
     onOpenItem: (String) -> Unit = {},
     onRenameItem: (targetSet: FollowSet, newName: String) -> Unit,
-    onDeleteItem: (setIdentifier: String) -> Unit,
+    onDeleteItem: (followSet: FollowSet) -> Unit,
 ) {
     when (followSetState) {
         FollowSetState.Loading -> LoadingFeed()
@@ -90,7 +90,7 @@ fun FollowListLoaded(
     onRefresh: () -> Unit = {},
     onItemClick: (itemIdentifier: String) -> Unit = {},
     onItemRename: (followSet: FollowSet, newName: String) -> Unit,
-    onItemDelete: (itemIdentifier: String) -> Unit,
+    onItemDelete: (followSet: FollowSet) -> Unit,
 ) {
     Log.d("FollowSetComposable", "FollowListLoaded: Follow Set size: ${loadedFeedState.size}")
 
@@ -113,7 +113,7 @@ fun FollowListLoaded(
                         onItemRename(set, it)
                     },
                     onFollowSetDelete = {
-                        onItemDelete(set.identifierTag)
+                        onItemDelete(set)
                     },
                 )
                 Spacer(modifier = StdVertSpacer)
