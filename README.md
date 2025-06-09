@@ -17,6 +17,7 @@ Join the social network you control.
 [![JitPack version](https://jitpack.io/v/vitorpamplona/amethyst.svg)](https://jitpack.io/#vitorpamplona/amethyst)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: Apache-2.0](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/vitorpamplona/amethyst)
 
 ## Download and Install
 
