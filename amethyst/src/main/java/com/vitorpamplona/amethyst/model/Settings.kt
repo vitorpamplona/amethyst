@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.R
 data class Settings(
     val theme: ThemeType = ThemeType.SYSTEM,
     val preferredLanguage: String? = null,
+    val dontTranslateFrom: Set<String> = emptySet(),
     val automaticallyShowImages: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyStartPlayback: ConnectivityType = ConnectivityType.ALWAYS,
     val automaticallyShowUrlPreview: ConnectivityType = ConnectivityType.ALWAYS,

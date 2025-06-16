@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.model.ThemeType
 class SharedSettingsState {
     var theme by mutableStateOf(ThemeType.SYSTEM)
     var language by mutableStateOf<String?>(null)
-
+    var dontTranslateFrom by mutableStateOf<Set<String>>(emptySet())
     var automaticallyShowImages by mutableStateOf(ConnectivityType.ALWAYS)
     var automaticallyStartPlayback by mutableStateOf(ConnectivityType.ALWAYS)
     var automaticallyShowUrlPreview by mutableStateOf(ConnectivityType.ALWAYS)

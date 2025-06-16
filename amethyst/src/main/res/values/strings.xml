@@ -1178,4 +1178,8 @@
     <string name="share_image">Share image…</string>
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
+
+    <string name="dont_translate_from">Don\'t Translate From</string>
+    <string name="dont_translate_from_description">Languages selected here will not be translated</string>
+    <string name="add_a_language">Add a language</string>
 </resources>
