@@ -20,22 +20,31 @@
  */
 package com.vitorpamplona.quartz.nip01Core.jackson
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.verify
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import org.junit.Test
 
 class EventDeserializerTest {
     @Test
-    fun testUnsignedEvent() {
-        val unsignedEventJson = """{"kind":"1","content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
-        val event = Event.fromJson(unsignedEventJson)
-        assert(event.id.isEmpty())
-        assert(event.pubKey.isEmpty())
-        assert(event.sig.isEmpty())
-        assert(!event.verify())
+    fun testEventTemplateToJson() {
+        val templateJson = """{"created_at":1234,"kind":1,"tags":[],"content":"This is an unsigned event."}"""
+        val template = EventTemplate.fromJson(templateJson)
+
+        val json = template.toJson()
+
+        assert(json == templateJson)
+    }
+
+    @Test
+    fun testEventTemplate() {
+        val templateJson = """{"kind":"1","content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
+        val template = EventTemplate.fromJson(templateJson)
+
+        assert(template.kind == 1)
+        assert(template.content == "This is an unsigned event.")
+        assert(template.tags.isEmpty())
     }
 
     @Test
@@ -43,14 +52,14 @@ class EventDeserializerTest {
         val keyPair = KeyPair()
         val signer = NostrSignerInternal(keyPair)
 
-        val unsignedEvent = TextNoteEvent.build("test")
-        val signedEvent = signer.signerSync.sign(unsignedEvent)!!
-        val eventJson = signedEvent.toJson()
-        val event = Event.fromJson(eventJson)
+        val templateJson = """{"kind":"1","content":"This is an unsigned event.","created_at":1234,"tags":[]}"""
+        val template = EventTemplate.fromJson(templateJson)
 
-        assert(event.id.isNotEmpty())
-        assert(event.sig.isNotEmpty())
-        assert(event.pubKey.isNotEmpty())
-        assert(event.verify())
+        val signedEvent = signer.signerSync.sign(template)!!
+
+        assert(signedEvent.id.isNotEmpty())
+        assert(signedEvent.sig.isNotEmpty())
+        assert(signedEvent.pubKey.isNotEmpty())
+        assert(signedEvent.verify())
     }
 }

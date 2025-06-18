@@ -18,22 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip46RemoteSigner
+package com.vitorpamplona.quartz.nip01Core.signers
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import java.util.UUID
+import com.vitorpamplona.quartz.nip01Core.jackson.toTypedArray
 
-class BunkerRequestSign(
-    id: String = UUID.randomUUID().toString(),
-    val event: EventTemplate<Event>,
-) : BunkerRequest(id, METHOD_NAME, arrayOf(event.toJson())) {
+class EventTemplateManualDeserializer {
     companion object {
-        val METHOD_NAME = "sign_event"
-
-        fun parse(
-            id: String,
-            params: Array<String>,
-        ): BunkerRequestSign = BunkerRequestSign(id, EventTemplate.fromJson(params[0]))
+        fun fromJson(jsonObject: JsonNode): EventTemplate<Event> =
+            EventTemplate(
+                createdAt = jsonObject.get("created_at").asLong(),
+                kind = jsonObject.get("kind").asInt(),
+                tags =
+                    jsonObject.get("tags").toTypedArray {
+                        it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
+                    },
+                content = jsonObject.get("content").asText(),
+            )
     }
 }

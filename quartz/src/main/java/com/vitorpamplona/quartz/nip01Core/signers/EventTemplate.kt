@@ -20,19 +20,28 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class EventTemplate<T : Event>(
+    @JsonProperty("created_at")
     val createdAt: Long,
     val kind: Int,
     val tags: TagArray,
     val content: String,
-)
+) {
+    fun toJson(): String = EventMapper.mapper.writeValueAsString(this)
+
+    companion object {
+        fun fromJson(json: String): EventTemplate<Event> = EventTemplateManualDeserializer.fromJson(EventMapper.mapper.readTree(json))
+    }
+}
 
 inline fun <T : Event> eventTemplate(
     kind: Int,

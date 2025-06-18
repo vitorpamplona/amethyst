@@ -18,16 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.jackson
+package com.vitorpamplona.quartz.nip01Core.signers
 
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
-class UnsignedEventDeserializer : StdDeserializer<Event>(Event::class.java) {
+class EventTemplateDeserializer : StdDeserializer<EventTemplate<Event>>(EventTemplate::class.java) {
     override fun deserialize(
         jp: JsonParser,
         ctxt: DeserializationContext,
-    ): Event = UnsignedEventManualDeserializer.fromJson(jp.codec.readTree(jp))
+    ): EventTemplate<Event> = EventTemplateManualDeserializer.fromJson(jp.codec.readTree(jp))
 }

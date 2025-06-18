@@ -18,26 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.jackson
+package com.vitorpamplona.quartz.nip46RemoteSigner
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import org.junit.Test
 
-class UnsignedEventManualDeserializer {
-    companion object {
-        fun fromJson(jsonObject: JsonNode): Event =
-            EventFactory.create(
-                id = jsonObject.get("id")?.asText()?.intern() ?: "",
-                pubKey = jsonObject.get("pubkey")?.asText()?.intern() ?: "",
-                createdAt = jsonObject.get("created_at").asLong(),
-                kind = jsonObject.get("kind").asInt(),
-                tags =
-                    jsonObject.get("tags").toTypedArray {
-                        it.toTypedArray { s -> if (s.isNull) "" else s.asText().intern() }
-                    },
-                content = jsonObject.get("content").asText(),
-                sig = jsonObject.get("sig")?.asText()?.intern() ?: "",
-            )
+class BunkerRequestTest {
+    @Test
+    fun testBunkerRequestDeSerialization() {
+        val requestJson = """{"id":"123","method":"sign_event","params":["{\"created_at\":1234,\"kind\":1,\"tags\":[],\"content\":\"This is an unsigned event.\"}"]}"""
+        val bunkerRequest = EventMapper.mapper.readValue(requestJson, BunkerRequest::class.java)
+
+        assert(bunkerRequest is BunkerRequestSign)
+        assert((bunkerRequest as BunkerRequestSign).event.kind == 1)
     }
 }
