@@ -60,7 +60,8 @@ class EventMapper {
                         .addSerializer(BunkerRequest::class.java, BunkerRequest.BunkerRequestSerializer())
                         .addDeserializer(BunkerRequest::class.java, BunkerRequest.BunkerRequestDeserializer())
                         .addSerializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseSerializer())
-                        .addDeserializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseDeserializer()),
+                        .addDeserializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseDeserializer())
+                        .addDeserializer(Event::class.java, UnsignedEventDeserializer()),
                 )
 
         fun fromJson(json: String): Event = mapper.readValue(json, Event::class.java)
