@@ -50,6 +50,8 @@ class UserMetadata {
 
     var twitter: String? = null
 
+    var monero: String? = null
+
     @Transient
     var tags: ImmutableListOfLists<String>? = null
 
@@ -96,5 +98,6 @@ class UserMetadata {
         if (website?.isBlank() == true) website = null
         if (domain?.isBlank() == true) domain = null
         if (pronouns?.isBlank() == true) pronouns = null
+        if (monero?.isEmpty() == true) monero = null
     }
 }

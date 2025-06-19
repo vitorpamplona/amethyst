@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.MoneroTippingReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
@@ -170,6 +171,12 @@ fun RenderChannelThumb(
                     nav,
                 )
             }
+            Spacer(modifier = StdHorzSpacer)
+            MoneroTippingReaction(
+                note = baseNote,
+                grayTint = MaterialTheme.colorScheme.onSurface,
+                accountViewModel = accountViewModel,
+            )
             Spacer(modifier = StdHorzSpacer)
             ZapReaction(
                 baseNote = baseNote,
