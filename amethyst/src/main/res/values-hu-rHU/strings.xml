@@ -300,6 +300,7 @@
     <string name="quick_action_unfollow">Követés megszüntetése</string>
     <string name="quick_action_follow">Követés</string>
     <string name="quick_action_request_deletion_gallery_title">Törlés a galériából</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Távolítsa el ezt a médiát a galériából.</string>
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy a bejegyzését töröljék azokról az átjátszókról, amelyekhez jelenleg csatlakozik. Nem garantálható, hogy a bejegyzése véglegesen törlődik ezekről az átjátszókról, vagy más átjátszókról, ahol esetleg tárolva van.</string>
     <string name="quick_action_block_dialog_btn">Letiltás</string>
@@ -560,7 +561,10 @@
     <string name="relay_setup">Átjátszók</string>
     <string name="discover_follows">Követett csomagok</string>
     <string name="discover_reads">Olvasmányok</string>
+    <string name="discover_content_v2">Hírforrás-algoritmus</string>
     <string name="discover_marketplace">Piac</string>
+    <string name="discover_live_v2">Élő közvetítések</string>
+    <string name="discover_community_v2">Közösségek</string>
     <string name="discover_chat">Csevegések</string>
     <string name="community_approved_posts">Elfogadott bejegyzések</string>
     <string name="groups_no_descriptor">Ennek a csoportnak nincs leírása vagy szabályai. Kérje meg a tulajdonosát, hogy adjon hozzá egyet</string>
