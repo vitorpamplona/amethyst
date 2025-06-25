@@ -32,18 +32,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -85,7 +77,6 @@ import kotlinx.collections.immutable.toImmutableMap
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
-import java.util.Locale as JavaLocale
 
 fun Context.getLocaleListFromXml(): LocaleListCompat {
     val tagsList = mutableListOf<CharSequence>()
@@ -128,7 +119,7 @@ fun getLanguageIndex(
     sharedPreferencesViewModel: SharedPreferencesViewModel,
 ): Int {
     val language = sharedPreferencesViewModel.sharedPrefs.language
-    var languageIndex = -1
+    var languageIndex: Int
     if (language != null) {
         languageIndex = languageEntries.values.toTypedArray().indexOf(language)
     } else {
@@ -242,10 +233,6 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
 
         Spacer(modifier = HalfVertSpacer)
 
-        DontTranslateFromSetting(sharedPreferencesViewModel)
-
-        Spacer(modifier = HalfVertSpacer)
-
         SettingsRow(
             R.string.theme,
             R.string.theme_description,
@@ -332,48 +319,6 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
         }
 
         PushNotificationSettingsRow(sharedPreferencesViewModel)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DontTranslateFromSetting(sharedPreferencesViewModel: SharedPreferencesViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedLanguages = sharedPreferencesViewModel.sharedPrefs.dontTranslateFrom
-
-    Column {
-        SettingsRow(
-            name = R.string.dont_translate_from,
-            description = R.string.dont_translate_from_description,
-        ) {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-            ) {
-                OutlinedTextField(
-                    value = stringRes(R.string.add_a_language),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor(),
-                )
-
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                ) {
-                    selectedLanguages.forEach { languageCode ->
-                        DropdownMenuItem(
-                            text = { Text(text = JavaLocale.forLanguageTag(languageCode).displayName) },
-                            onClick = {
-                                sharedPreferencesViewModel.removeDontTranslateFrom(languageCode)
-                                expanded = false
-                            },
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

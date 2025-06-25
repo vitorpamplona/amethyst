@@ -898,6 +898,8 @@ class AccountViewModel(
 
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
 
+    fun toggleDontTranslateFrom(languageCode: String) = account.toggleDontTranslateFrom(languageCode)
+
     fun translateTo() = account.settings.syncedSettings.languages.translateTo
 
     fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value

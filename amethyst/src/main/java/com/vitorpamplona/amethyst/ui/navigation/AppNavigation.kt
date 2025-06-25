@@ -253,9 +253,6 @@ private fun NavigateIfIntentRequested(
         }
 
         nav.newStack(Route.NewPost(message = message, attachment = media.toString()))
-
-        media = null
-        message = null
     } else {
         var newAccount by remember { mutableStateOf<String?>(null) }
 

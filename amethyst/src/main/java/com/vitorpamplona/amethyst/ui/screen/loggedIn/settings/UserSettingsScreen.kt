@@ -21,9 +21,22 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -31,6 +44,9 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import java.util.Locale as JavaLocale
 
 @Composable
 fun UserSettingsScreen(
@@ -46,6 +62,58 @@ fun UserSettingsScreen(
     ) {
         Column(Modifier.padding(it)) {
             Text("Hello World!")
+
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(top = Size10dp, start = Size20dp, end = Size20dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                DontTranslateFromSetting(accountViewModel)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLanguages = accountViewModel.dontTranslateFrom()
+
+    Column {
+        SettingsRow(
+            name = R.string.dont_translate_from,
+            description = R.string.dont_translate_from_description,
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+            ) {
+                OutlinedTextField(
+                    value = stringRes(R.string.add_a_language),
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor(),
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    selectedLanguages.forEach { languageCode ->
+                        DropdownMenuItem(
+                            text = { Text(text = JavaLocale.forLanguageTag(languageCode).displayName) },
+                            onClick = {
+                                accountViewModel.toggleDontTranslateFrom(languageCode)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 }
