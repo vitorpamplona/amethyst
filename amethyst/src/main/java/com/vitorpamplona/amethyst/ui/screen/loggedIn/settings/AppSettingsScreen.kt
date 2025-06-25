@@ -120,11 +120,12 @@ fun getLanguageIndex(
 ): Int {
     val language = sharedPreferencesViewModel.sharedPrefs.language
     var languageIndex: Int
-    if (language != null) {
-        languageIndex = languageEntries.values.toTypedArray().indexOf(language)
-    } else {
-        languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
-    }
+    languageIndex =
+        if (language != null) {
+            languageEntries.values.toTypedArray().indexOf(language)
+        } else {
+            languageEntries.values.toTypedArray().indexOf(Locale.current.toLanguageTag())
+        }
     if (languageIndex == -1) {
         languageIndex = languageEntries.values.toTypedArray().indexOf(Locale.current.language)
     }

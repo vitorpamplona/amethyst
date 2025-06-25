@@ -52,7 +52,6 @@ class SharedPreferencesViewModel : ViewModel() {
 
             sharedPrefs.theme = savedSettings.theme
             sharedPrefs.language = savedSettings.preferredLanguage
-            sharedPrefs.dontTranslateFrom = savedSettings.dontTranslateFrom
             sharedPrefs.automaticallyShowImages = savedSettings.automaticallyShowImages
             sharedPrefs.automaticallyStartPlayback = savedSettings.automaticallyStartPlayback
             sharedPrefs.automaticallyShowUrlPreview = savedSettings.automaticallyShowUrlPreview
@@ -79,14 +78,6 @@ class SharedPreferencesViewModel : ViewModel() {
         if (sharedPrefs.language != newLanguage) {
             sharedPrefs.language = newLanguage
             updateLanguageInTheUI()
-            saveSharedSettings()
-        }
-    }
-
-    fun removeDontTranslateFrom(languageCode: String) {
-        val newSet = sharedPrefs.dontTranslateFrom.minus(languageCode)
-        if (newSet != sharedPrefs.dontTranslateFrom) {
-            sharedPrefs.dontTranslateFrom = newSet
             saveSharedSettings()
         }
     }
@@ -197,7 +188,6 @@ class SharedPreferencesViewModel : ViewModel() {
                 Settings(
                     sharedPrefs.theme,
                     sharedPrefs.language,
-                    sharedPrefs.dontTranslateFrom,
                     sharedPrefs.automaticallyShowImages,
                     sharedPrefs.automaticallyStartPlayback,
                     sharedPrefs.automaticallyShowUrlPreview,
