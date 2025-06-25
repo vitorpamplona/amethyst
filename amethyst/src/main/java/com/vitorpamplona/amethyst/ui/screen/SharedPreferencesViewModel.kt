@@ -83,14 +83,6 @@ class SharedPreferencesViewModel : ViewModel() {
         }
     }
 
-    fun addDontTranslateFrom(languageCode: String) {
-        val newSet = sharedPrefs.dontTranslateFrom.plus(languageCode)
-        if (newSet != sharedPrefs.dontTranslateFrom) {
-            sharedPrefs.dontTranslateFrom = newSet
-            saveSharedSettings()
-        }
-    }
-
     fun removeDontTranslateFrom(languageCode: String) {
         val newSet = sharedPrefs.dontTranslateFrom.minus(languageCode)
         if (newSet != sharedPrefs.dontTranslateFrom) {

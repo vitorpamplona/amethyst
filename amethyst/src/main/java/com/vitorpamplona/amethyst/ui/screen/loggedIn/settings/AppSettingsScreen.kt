@@ -32,14 +32,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -246,7 +242,7 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
 
         Spacer(modifier = HalfVertSpacer)
 
-        DontTranslateFromSetting(sharedPreferencesViewModel, languageEntries)
+        DontTranslateFromSetting(sharedPreferencesViewModel)
 
         Spacer(modifier = HalfVertSpacer)
 
@@ -341,10 +337,7 @@ fun SettingsScreen(sharedPreferencesViewModel: SharedPreferencesViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DontTranslateFromSetting(
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-    languageEntries: ImmutableMap<String, String>,
-) {
+fun DontTranslateFromSetting(sharedPreferencesViewModel: SharedPreferencesViewModel) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLanguages = sharedPreferencesViewModel.sharedPrefs.dontTranslateFrom
 
@@ -369,42 +362,15 @@ fun DontTranslateFromSetting(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {
-                    languageEntries.forEach { (displayName, languageCode) ->
-                        if (!selectedLanguages.contains(languageCode)) {
-                            DropdownMenuItem(
-                                text = { Text(text = displayName) },
-                                onClick = {
-                                    sharedPreferencesViewModel.addDontTranslateFrom(languageCode)
-                                    expanded = false
-                                },
-                            )
-                        }
+                    selectedLanguages.forEach { languageCode ->
+                        DropdownMenuItem(
+                            text = { Text(text = JavaLocale.forLanguageTag(languageCode).displayName) },
+                            onClick = {
+                                sharedPreferencesViewModel.removeDontTranslateFrom(languageCode)
+                                expanded = false
+                            },
+                        )
                     }
-                }
-            }
-        }
-
-        selectedLanguages.forEach { languageCode ->
-            val displayName =
-                languageEntries.entries.find { it.value == languageCode }?.key
-                    ?: JavaLocale.forLanguageTag(languageCode).displayName
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = Size10dp),
-            ) {
-                Text(
-                    text = displayName,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = { sharedPreferencesViewModel.removeDontTranslateFrom(languageCode) }) {
-                    Icon(
-                        imageVector = Icons.Default.Clear,
-                        contentDescription = stringRes(R.string.remove),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
                 }
             }
         }
