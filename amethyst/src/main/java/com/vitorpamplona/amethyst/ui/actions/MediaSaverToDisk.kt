@@ -201,10 +201,11 @@ object MediaSaverToDisk {
         contentSource: BufferedSource,
         contentResolver: ContentResolver,
     ) {
+        val cleanMimeType = contentType.substringBefore(";").trim()
         val contentValues =
             ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                put(MediaStore.MediaColumns.MIME_TYPE, contentType)
+                put(MediaStore.MediaColumns.MIME_TYPE, cleanMimeType)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
                     Environment.DIRECTORY_PICTURES + File.separatorChar + PICTURES_SUBDIRECTORY,
