@@ -57,10 +57,12 @@ import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
+import com.vitorpamplona.amethyst.service.MoneroValidator
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.TipPaymentHandler
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
@@ -78,12 +80,14 @@ import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.Tip
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
+import com.vitorpamplona.quartz.experimental.tipping.TipEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -415,6 +419,13 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.delete(account.boostsTo(note)) }
     }
 
+    fun calculateIfNoteWasTippedByAccount(
+        tippedNote: Note,
+        onWasTipped: (Boolean) -> Unit,
+    ) {
+        account.calculateIfNoteWasTippedByAccount(tippedNote) { onWasTipped(true) }
+    }
+
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
         onWasZapped: (Boolean) -> Unit,
@@ -434,6 +445,19 @@ class AccountViewModel(
             }
         } else {
             onZapAmount(showAmount(zappedNote.zapsAmount))
+        }
+    }
+
+    suspend fun calculateTipAmount(
+        tippedNote: Note,
+        onTipAmount: (String) -> Unit,
+    ) {
+        if (tippedNote.tips.isNotEmpty()) {
+            withContext(Dispatchers.Default) {
+                onTipAmount(tippedNote.tipsAmount.toString())
+            }
+        } else {
+            onTipAmount(tippedNote.tipsAmount.toString())
         }
     }
 
@@ -522,6 +546,28 @@ class AccountViewModel(
         }
     }
 
+    fun tippedAmount(
+        tips: ImmutableList<Tip>,
+        onNewState: (ImmutableList<ZapAmountCommentNotification>) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val initialResults =
+                tips
+                    .associate {
+                        it.tip to
+                            ZapAmountCommentNotification(
+                                it.tip.author,
+                                it.tip.event
+                                    ?.content
+                                    ?.ifBlank { null },
+                                (it.tip.event as? TipEvent)?.amount?.toString(),
+                            )
+                    }.toMutableMap()
+
+            onNewState(initialResults.values.toImmutableList())
+        }
+    }
+
     fun cachedDecryptAmountMessageInGroup(zapNotes: List<CombinedZap>): ImmutableList<ZapAmountCommentNotification> =
         zapNotes
             .map {
@@ -586,6 +632,35 @@ class AccountViewModel(
                         showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
                     )
                 }
+            }.toImmutableList()
+    }
+
+    fun tippedAmount(tipNotes: List<Tip>): ImmutableList<ZapAmountCommentNotification> =
+        tipNotes
+            .map {
+                val request = it.tip.event as? TipEvent
+                ZapAmountCommentNotification(
+                    it.tip.author,
+                    it.tip.event
+                        ?.content
+                        ?.ifBlank { null },
+                    (it.tip.event as? TipEvent)?.amount?.toString(),
+                )
+            }.toImmutableList()
+
+    fun tippedAmount(baseNote: Note): ImmutableList<ZapAmountCommentNotification> {
+        val myList = baseNote.tips.toList()
+
+        return myList
+            .map {
+                val request = it.event as? TipEvent
+                ZapAmountCommentNotification(
+                    it.author,
+                    it.event
+                        ?.content
+                        ?.ifBlank { null },
+                    request?.amount?.toString(),
+                )
             }.toImmutableList()
     }
 
@@ -665,6 +740,45 @@ class AccountViewModel(
                         ),
                     )
                 }
+            }
+        }
+    }
+
+    fun tip(
+        note: Note,
+        amount: Double,
+        context: Context,
+        onError: (String, String, User?) -> Unit,
+        tipType: TipEvent.TipType,
+        message: String = "",
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val address = note.author?.info?.monero ?: ""
+            if (!MoneroValidator.isValidAddress(address)) {
+                if (address.isBlank()) {
+                    onError(context.getString(R.string.monero), context.getString(R.string.user_doesnt_have_monero_address), note.author)
+                } else {
+                    onError(context.getString(R.string.monero), context.getString(R.string.invalid_monero_address), note.author)
+                }
+                return@launch
+            }
+
+            TipPaymentHandler
+                .tip(
+                    note = note,
+                    amount = amount,
+                    context = context,
+                    onError = onError,
+                )
+
+            note.author?.let {
+                account.sendTip(
+                    tipType,
+                    note.event,
+                    amount,
+                    message,
+                    it,
+                )
             }
         }
     }
@@ -902,11 +1016,17 @@ class AccountViewModel(
 
     fun defaultZapType() = account.settings.syncedSettings.zaps.defaultZapType.value
 
+    fun defaultTipType() = account.settings.syncedSettings.tips.defaultTipType.value
+
     fun showSensitiveContent(): MutableStateFlow<Boolean?> = account.settings.syncedSettings.security.showSensitiveContent
 
     fun zapAmountChoicesFlow() = account.settings.syncedSettings.zaps.zapAmountChoices
 
     fun zapAmountChoices() = zapAmountChoicesFlow().value
+
+    fun tipAmountChoicesFlow() = account.settings.syncedSettings.tips.tipAmountChoices
+
+    fun tipAmountChoices() = tipAmountChoicesFlow().value
 
     fun reactionChoicesFlow() = account.settings.syncedSettings.reactions.reactionChoices
 
