@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -46,6 +47,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale as JavaLocale
 
 @Composable
@@ -61,8 +64,6 @@ fun UserSettingsScreen(
         accountViewModel = accountViewModel,
     ) {
         Column(Modifier.padding(it)) {
-            Text("Hello World!")
-
             Column(
                 Modifier
                     .fillMaxSize()
@@ -107,7 +108,11 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                         DropdownMenuItem(
                             text = { Text(text = JavaLocale.forLanguageTag(languageCode).displayName) },
                             onClick = {
-                                accountViewModel.toggleDontTranslateFrom(languageCode)
+                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                    accountViewModel.toggleDontTranslateFrom(
+                                        languageCode,
+                                    )
+                                }
                                 expanded = false
                             },
                         )
