@@ -556,6 +556,7 @@
     <string name="are_you_sure_you_want_to_log_out">Wylogowanie usuwa wszystkie informacje lokalne. Upewnij się, że masz kopię zapasową kluczy prywatnych, aby uniknąć utraty konta. Czy chcesz kontynuować?</string>
     <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
+    <string name="discover_follows">Obserwowani</string>
     <string name="discover_reads">Wyświetlenia</string>
     <string name="discover_content_v2">Algorytmy kanału</string>
     <string name="discover_marketplace">Market</string>
