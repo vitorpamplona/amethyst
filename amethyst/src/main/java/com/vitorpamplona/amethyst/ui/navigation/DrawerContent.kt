@@ -508,6 +508,14 @@ fun ListContent(
             route = Route.Settings,
         )
 
+        NavigationRow(
+            title = R.string.user_preferences,
+            icon = Icons.Outlined.Settings,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.UserSettings,
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
