@@ -96,7 +96,7 @@ fun UserSettingsScreen(
 @Composable
 fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedLanguages = accountViewModel.dontTranslateFrom()
+    val selectedLanguages = accountViewModel.dontTranslateFrom().toMutableSet()
 
     Column {
         SettingsRow(
@@ -128,6 +128,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                                         languageCode,
                                     )
                                 }
+                                selectedLanguages.remove(languageCode)
                                 expanded = false
                             },
                         )
