@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
@@ -38,18 +40,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale as JavaLocale
+
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
+@Composable
+fun UserSettingsScreenPreview() {
+    val accountViewModel = mockAccountViewModel()
+    val nav = EmptyNav
+    ThemeComparisonRow {
+        UserSettingsScreen(accountViewModel, nav)
+    }
+}
 
 @Composable
 fun UserSettingsScreen(
@@ -93,11 +110,11 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                 onExpandedChange = { expanded = !expanded },
             ) {
                 OutlinedTextField(
-                    value = stringRes(R.string.add_a_language),
+                    value = stringRes(R.string.quick_action_select),
                     onValueChange = {},
                     readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor(),
+                    modifier = Modifier.windowInsetsPadding(WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)),
                 )
 
                 ExposedDropdownMenu(
