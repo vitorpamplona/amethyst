@@ -51,6 +51,7 @@ import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Drafts
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -66,7 +67,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,7 +74,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -427,8 +426,6 @@ fun ListContent(
 
     var backupDialogOpen by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-
     Column(modifier) {
         NavigationRow(
             title = R.string.profile,
@@ -508,6 +505,14 @@ fun ListContent(
             route = Route.Settings,
         )
 
+        NavigationRow(
+            title = R.string.user_preferences,
+            icons = listOf(Icons.Outlined.Person, Icons.Outlined.Settings),
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.UserSettings,
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         IconRow(
@@ -585,10 +590,27 @@ fun NavigationRow(
     nav: INav,
     route: Route,
 ) {
+    NavigationRow(
+        title = title,
+        icons = listOf(icon),
+        tint = tint,
+        nav = nav,
+        route = route,
+    )
+}
+
+@Composable
+fun NavigationRow(
+    title: Int,
+    icons: List<ImageVector>,
+    tint: Color,
+    nav: INav,
+    route: Route,
+) {
     IconRow(
-        title,
-        icon,
-        tint,
+        title = title,
+        icons = icons,
+        tint = tint,
         onClick = {
             nav.closeDrawer()
             nav.nav(route)
@@ -637,6 +659,21 @@ fun IconRow(
     tint: Color,
     onClick: () -> Unit,
 ) {
+    IconRow(
+        title = title,
+        icons = listOf(icon),
+        tint = tint,
+        onClick = onClick,
+    )
+}
+
+@Composable
+fun IconRow(
+    title: Int,
+    icons: List<ImageVector>,
+    tint: Color,
+    onClick: () -> Unit,
+) {
     Row(
         modifier =
             Modifier
@@ -650,12 +687,15 @@ fun IconRow(
             modifier = IconRowModifier,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = stringRes(title),
-                modifier = Size22Modifier,
-                tint = tint,
-            )
+            icons.forEach { icon ->
+                Icon(
+                    imageVector = icon,
+                    contentDescription = stringRes(title),
+                    modifier = Size22Modifier.padding(end = 4.dp),
+                    tint = tint,
+                )
+            }
+
             Text(
                 modifier = IconRowTextModifier,
                 text = stringRes(title),
@@ -709,8 +749,6 @@ fun BottomContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
     // store the dialog open or close state
     var dialogOpen by remember { mutableStateOf(false) }
 

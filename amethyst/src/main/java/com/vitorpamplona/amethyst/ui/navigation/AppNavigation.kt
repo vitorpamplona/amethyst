@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
@@ -123,6 +124,7 @@ fun AppNavigation(
             composableFromEnd<Route.Bookmarks> { BookmarkListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Drafts> { DraftListScreen(accountViewModel, nav) }
             composableFromEnd<Route.Settings> { SettingsScreen(sharedPreferencesViewModel, accountViewModel, nav) }
+            composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
             composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
             composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(it.toAdd, accountViewModel, nav) }
 
@@ -251,9 +253,6 @@ private fun NavigateIfIntentRequested(
         }
 
         nav.newStack(Route.NewPost(message = message, attachment = media.toString()))
-
-        media = null
-        message = null
     } else {
         var newAccount by remember { mutableStateOf<String?>(null) }
 

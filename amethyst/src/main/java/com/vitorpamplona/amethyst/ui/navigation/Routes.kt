@@ -62,6 +62,8 @@ sealed class Route {
 
     @Serializable object Settings : Route()
 
+    @Serializable object UserSettings : Route()
+
     @Serializable object EditProfile : Route()
 
     @Serializable data class EditRelays(
