@@ -152,6 +152,7 @@ class NostrClient(
         onDone: (() -> Unit)? = null,
         additionalListener: Listener? = null,
         timeoutInSeconds: Long = 15,
+        onAuth: ((Relay, String) -> Unit)? = null,
     ): Boolean {
         checkNotInMainThread()
 
@@ -164,6 +165,16 @@ class NostrClient(
 
         val subscription =
             object : Listener {
+                override fun onAuth(
+                    relay: Relay,
+                    challenge: String,
+                ) {
+                    onAuth?.let {
+                        it(relay, challenge)
+                    }
+                    Log.d("sendAndWaitForResponse", "onAuth Auth from relay ${relay.url} count: ${latch.count} challenge: $challenge")
+                }
+
                 override fun onError(
                     error: Error,
                     subscriptionId: String,
@@ -225,7 +236,7 @@ class NostrClient(
                 } else if (relay == null) {
                     send(signedEvent)
                 } else {
-                    sendSingle(signedEvent, RelaySetupInfoToConnect(relay, forceProxy, true, true, emptySet()), onDone ?: {})
+                    sendSingle(signedEvent, RelaySetupInfoToConnect(relay, forceProxy, true, true, feedTypes ?: emptySet()), onDone ?: {})
                 }
             }
         job.join()
