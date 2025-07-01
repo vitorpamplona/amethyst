@@ -113,6 +113,10 @@ class AccountSyncedSettings(
             security.warnAboutPostsWithReports = syncedSettingsInternal.security.warnAboutPostsWithReports
         }
     }
+
+    fun dontTranslateFromFilteredBySpokenLanguages(): Set<String> {
+        return languages.dontTranslateFrom - getLanguagesSpokenByUser()
+    }
 }
 
 @Stable

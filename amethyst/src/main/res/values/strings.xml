@@ -675,6 +675,7 @@
     <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
 
     <string name="preferences">App Preferences</string>
+    <string name="user_preferences">User Preferences</string>
 
     <string name="settings">Settings</string>
     <string name="connectivity_type_always">Always</string>
@@ -1178,4 +1179,7 @@
     <string name="share_image">Share image…</string>
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
+
+    <string name="dont_translate_from">Don\'t Translate From</string>
+    <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
 </resources>
