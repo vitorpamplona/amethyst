@@ -244,15 +244,13 @@ fun RenderRelayLinePublicChat(
     var openRelayDialog by remember { mutableStateOf(false) }
 
     if (openRelayDialog) {
-        relayInfo?.let {
-            RelayInformationDialog(
-                onClose = { openRelayDialog = false },
-                relayInfo = it,
-                relay = relay,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RelayInformationDialog(
+            onClose = { openRelayDialog = false },
+            relayInfo = relayInfo,
+            relay = relay,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 
     val clipboardManager = LocalClipboardManager.current
@@ -263,11 +261,10 @@ fun RenderRelayLinePublicChat(
                     clipboardManager.setText(AnnotatedString(relay.url))
                 },
                 onClick = {
+                    openRelayDialog = true
                     accountViewModel.retrieveRelayDocument(
                         relay = relay,
-                        onInfo = {
-                            openRelayDialog = true
-                        },
+                        onInfo = {},
                         onError = { relay, errorCode, exceptionMessage ->
                             accountViewModel.toastManager.toast(
                                 R.string.unable_to_download_relay_document,

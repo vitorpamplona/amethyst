@@ -29,9 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.service.Nip11Retriever
-import com.vitorpamplona.amethyst.ui.actions.RelayInfoDialog
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -42,14 +42,17 @@ fun BasicRelaySetupInfoDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
     val context = LocalContext.current
 
-    relayInfo?.let {
+    val relayInfo by loadRelayInfo(item.relay, accountViewModel)
+
+    var openRelayDialog by remember { mutableStateOf(false) }
+
+    if (openRelayDialog) {
         RelayInformationDialog(
-            onClose = { relayInfo = null },
-            relayInfo = it.relayInfo,
-            relay = it.relay,
+            onClose = { openRelayDialog = false },
+            relayInfo = relayInfo,
+            relay = item.relay,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -62,11 +65,10 @@ fun BasicRelaySetupInfoDialog(
         onDelete = onDelete,
         accountViewModel = accountViewModel,
         onClick = {
+            openRelayDialog = true
             accountViewModel.retrieveRelayDocument(
                 relay = item.relay,
-                onInfo = {
-                    relayInfo = RelayInfoDialog(item.relay, it)
-                },
+                onInfo = { },
                 onError = { relay, errorCode, exceptionMessage ->
                     val msg =
                         when (errorCode) {

@@ -47,13 +47,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.google.common.collect.Multimaps.index
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -84,8 +87,6 @@ fun RelaySelectionDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-
     var relays by remember {
         mutableStateOf(
             accountViewModel.account.client.connectedRelayList().map {
@@ -98,18 +99,6 @@ fun RelaySelectionDialog(
     }
 
     val hasSelectedRelay by remember { derivedStateOf { relays.any { it.isSelected } } }
-
-    var relayInfo: RelayInfoDialog? by remember { mutableStateOf(null) }
-
-    relayInfo?.let {
-        RelayInformationDialog(
-            onClose = { relayInfo = null },
-            relayInfo = it.relayInfo,
-            relay = it.relay,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
 
     var selected by remember { mutableStateOf(true) }
 
@@ -156,7 +145,7 @@ fun RelaySelectionDialog(
                     Modifier.padding(pad).padding(start = 10.dp, end = 10.dp, top = 10.dp),
             ) {
                 RelaySwitch(
-                    text = stringRes(context, R.string.select_deselect_all),
+                    text = stringRes(R.string.select_deselect_all),
                     checked = selected,
                     onClick = {
                         selected = !selected
@@ -171,9 +160,8 @@ fun RelaySelectionDialog(
                         relays,
                         key = { _, item -> item.relay },
                     ) { index, item ->
-                        RelaySwitch(
-                            text = item.relay.displayUrl(),
-                            checked = item.isSelected,
+                        RenderRelaySwitch(
+                            item,
                             onClick = {
                                 relays =
                                     relays.mapIndexed { j, item ->
@@ -184,62 +172,89 @@ fun RelaySelectionDialog(
                                         }
                                     }
                             },
-                            onLongPress = {
-                                accountViewModel.retrieveRelayDocument(
-                                    relay = item.relay,
-                                    onInfo = {
-                                        relayInfo =
-                                            RelayInfoDialog(
-                                                item.relay,
-                                                it,
-                                            )
-                                    },
-                                    onError = { relay, errorCode, exceptionMessage ->
-                                        val msg =
-                                            when (errorCode) {
-                                                Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                                    stringRes(
-                                                        context,
-                                                        R.string.relay_information_document_error_assemble_url,
-                                                        relay.url,
-                                                        exceptionMessage,
-                                                    )
-                                                Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                                    stringRes(
-                                                        context,
-                                                        R.string.relay_information_document_error_assemble_url,
-                                                        relay.url,
-                                                        exceptionMessage,
-                                                    )
-                                                Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                                    stringRes(
-                                                        context,
-                                                        R.string.relay_information_document_error_assemble_url,
-                                                        relay.url,
-                                                        exceptionMessage,
-                                                    )
-                                                Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                                    stringRes(
-                                                        context,
-                                                        R.string.relay_information_document_error_assemble_url,
-                                                        relay.url,
-                                                        exceptionMessage,
-                                                    )
-                                            }
-
-                                        accountViewModel.toastManager.toast(
-                                            stringRes(context, R.string.unable_to_download_relay_document),
-                                            msg,
-                                        )
-                                    },
-                                )
-                            },
+                            accountViewModel,
+                            nav,
                         )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+fun RenderRelaySwitch(
+    item: RelayList,
+    onClick: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val context = LocalContext.current
+
+    val relayInfo by loadRelayInfo(item.relay, accountViewModel)
+
+    var openRelayDialog by remember { mutableStateOf(false) }
+
+    if (openRelayDialog) {
+        RelayInformationDialog(
+            onClose = { openRelayDialog = false },
+            relayInfo = relayInfo,
+            relay = item.relay,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    RelaySwitch(
+        text = item.relay.displayUrl(),
+        checked = item.isSelected,
+        onClick = onClick,
+        onLongPress = {
+            openRelayDialog = true
+            accountViewModel.retrieveRelayDocument(
+                relay = item.relay,
+                onInfo = { },
+                onError = { relay, errorCode, exceptionMessage ->
+                    val msg =
+                        when (errorCode) {
+                            Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
+                                stringRes(
+                                    context,
+                                    R.string.relay_information_document_error_assemble_url,
+                                    relay.url,
+                                    exceptionMessage,
+                                )
+                            Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
+                                stringRes(
+                                    context,
+                                    R.string.relay_information_document_error_assemble_url,
+                                    relay.url,
+                                    exceptionMessage,
+                                )
+                            Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
+                                stringRes(
+                                    context,
+                                    R.string.relay_information_document_error_assemble_url,
+                                    relay.url,
+                                    exceptionMessage,
+                                )
+                            Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
+                                stringRes(
+                                    context,
+                                    R.string.relay_information_document_error_assemble_url,
+                                    relay.url,
+                                    exceptionMessage,
+                                )
+                        }
+
+                    accountViewModel.toastManager.toast(
+                        stringRes(context, R.string.unable_to_download_relay_document),
+                        msg,
+                    )
+                },
+            )
+        },
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
