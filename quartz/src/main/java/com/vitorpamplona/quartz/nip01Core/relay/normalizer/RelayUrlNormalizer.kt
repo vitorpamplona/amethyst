@@ -32,7 +32,8 @@ class RelayUrlNormalizer {
                 url.contains("localhost") ||
                 url.contains("//umbrel:") ||
                 url.contains("192.168.") ||
-                url.contains(".local:")
+                url.contains(".local:") ||
+                url.contains(".local/")
 
         fun isOnion(url: String) = url.endsWith(".onion") || url.contains(".onion/")
 
