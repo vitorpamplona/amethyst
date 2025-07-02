@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.utils.ensure
 import kotlin.text.isBlank
 
@@ -79,6 +80,10 @@ class AdvertisedRelayInfo(
             ensure(match(tag)) { return null }
             ensure(AdvertisedRelayType.isRead(tag.getOrNull(2))) { return null }
 
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
+
+            ensure(relay != null && !relay.isLocalHost()) { return null }
+
             return RelayUrlNormalizer.normalizeOrNull(tag[1])
         }
 
@@ -87,7 +92,11 @@ class AdvertisedRelayInfo(
             ensure(match(tag)) { return null }
             ensure(AdvertisedRelayType.isWrite(tag.getOrNull(2))) { return null }
 
-            return RelayUrlNormalizer.normalizeOrNull(tag[1])
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
+
+            ensure(relay != null && !relay.isLocalHost()) { return null }
+
+            return relay
         }
 
         @JvmStatic

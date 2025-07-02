@@ -41,6 +41,6 @@ fun NormalizedRelayUrl.toHttp() =
         "https://$url"
     }
 
-fun NormalizedRelayUrl.isOnion() = url.endsWith(".onion/")
+fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
 
-fun NormalizedRelayUrl.isLocalHost() = url.contains("127.0.0.1") || url.contains("localhost") || url.contains(".local:")
+fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)

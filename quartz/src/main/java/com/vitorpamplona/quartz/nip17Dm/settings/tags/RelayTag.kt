@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip17Dm.settings.tags
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.utils.ensure
 
 class RelayTag {
@@ -41,7 +42,9 @@ class RelayTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
-            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1]) ?: return null
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[1])
+
+            ensure(relay != null && !relay.isLocalHost()) { return null }
 
             return relay
         }
