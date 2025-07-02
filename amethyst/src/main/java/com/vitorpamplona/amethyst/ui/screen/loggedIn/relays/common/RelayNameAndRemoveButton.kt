@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,10 +73,22 @@ fun RelayNameAndRemoveButton(
             if (item.paidRelay) {
                 Icon(
                     imageVector = Icons.Default.Paid,
-                    null,
+                    contentDescription = stringRes(id = R.string.paid_relay),
                     modifier =
                         Modifier
-                            .padding(start = 5.dp, top = 1.dp)
+                            .padding(start = 5.dp)
+                            .size(14.dp),
+                    tint = MaterialTheme.colorScheme.allGoodColor,
+                )
+            }
+
+            if (item.forcesTor) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_tor),
+                    contentDescription = stringRes(id = R.string.tor_relay),
+                    modifier =
+                        Modifier
+                            .padding(start = 5.dp)
                             .size(14.dp),
                     tint = MaterialTheme.colorScheme.allGoodColor,
                 )

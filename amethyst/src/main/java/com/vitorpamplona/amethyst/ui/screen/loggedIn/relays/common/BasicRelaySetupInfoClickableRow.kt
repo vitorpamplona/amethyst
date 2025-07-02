@@ -72,8 +72,8 @@ fun BasicRelaySetupInfoClickableRow(
             val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, accountViewModel)
 
             RenderRelayIcon(
-                item.relay.displayUrl(),
-                iconUrlFromRelayInfoDoc?.icon,
+                iconUrlFromRelayInfoDoc.id ?: item.relay.displayUrl(),
+                iconUrlFromRelayInfoDoc.icon,
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,

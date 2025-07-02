@@ -244,6 +244,9 @@
     <string name="public_chat_relays_explainer">Insert between 1–3 relays that host this group.
         Nostr clients use this setting to know where to download messages from and send your messages to.</string>
 
+    <string name="paid_relay">Paid relay</string>
+    <string name="tor_relay">Forces Tor when connecting</string>
+
     <string name="posts_received">posts received</string>
     <string name="remove">Remove</string>
     <string name="sats" translatable="false">sats</string>

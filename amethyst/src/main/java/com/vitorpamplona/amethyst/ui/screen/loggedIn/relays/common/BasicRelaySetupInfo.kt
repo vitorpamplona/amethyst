@@ -30,10 +30,15 @@ data class BasicRelaySetupInfo(
     val relay: NormalizedRelayUrl,
     val relayStat: RelayStat,
     val paidRelay: Boolean = false,
+    val forcesTor: Boolean = false,
 )
 
-fun relaySetupInfoBuilder(normalized: NormalizedRelayUrl): BasicRelaySetupInfo =
+fun relaySetupInfoBuilder(
+    normalized: NormalizedRelayUrl,
+    forcesTor: Boolean = false,
+): BasicRelaySetupInfo =
     BasicRelaySetupInfo(
-        normalized,
-        RelayStats.get(normalized),
+        relay = normalized,
+        relayStat = RelayStats.get(normalized),
+        forcesTor = forcesTor,
     )

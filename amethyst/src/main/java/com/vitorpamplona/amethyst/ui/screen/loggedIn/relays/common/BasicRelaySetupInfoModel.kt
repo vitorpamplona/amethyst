@@ -78,13 +78,18 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     }
 
     fun clear() {
-        var hasModified = false
         _relays.update {
             val relayList = getRelayList() ?: emptyList()
 
             relayList
-                .map { relaySetupInfoBuilder(it) }
-                .distinctBy { it.relay }
+                .map {
+                    relaySetupInfoBuilder(
+                        normalized = it,
+                        forcesTor =
+                            account.torRelayState.flow.value
+                                .useTor(it),
+                    )
+                }.distinctBy { it.relay }
                 .sortedBy { it.relayStat.receivedBytes }
                 .reversed()
         }
