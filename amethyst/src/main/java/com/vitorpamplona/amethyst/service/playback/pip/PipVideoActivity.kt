@@ -67,11 +67,6 @@ class PipVideoActivity : ComponentActivity() {
         super.finish()
     }
 
-    override fun onBackPressed() {
-        super.onBackPressed()
-        finishAndRemoveTask()
-    }
-
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         finishAndRemoveTask()

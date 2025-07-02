@@ -89,14 +89,14 @@ object PushDistributorHandler : PushDistributorActions {
 
     override fun saveDistributor(distributor: String) {
         unifiedPush.saveDistributor(appContext(), distributor)
-        unifiedPush.registerApp(appContext())
+        unifiedPush.register(appContext())
     }
 
     override fun removeSavedDistributor() {
-        unifiedPush.safeRemoveDistributor(appContext())
+        unifiedPush.removeDistributor(appContext())
     }
 
     fun forceRemoveDistributor(context: Context) {
-        unifiedPush.forceRemoveDistributor(context)
+        UnifiedPush.removeDistributor(context)
     }
 }
