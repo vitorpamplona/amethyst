@@ -75,11 +75,12 @@ fun filterLongFormByAllCommunities(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return communitySet.set.mapNotNull {
-        filterLongFormAllCommunities(
-            relay = it.key,
-            communities = it.value.communities,
-            since = since?.get(it.key)?.time ?: defaultSince,
-        )
-    }.flatten()
+    return communitySet.set
+        .mapNotNull {
+            filterLongFormAllCommunities(
+                relay = it.key,
+                communities = it.value.communities,
+                since = since?.get(it.key)?.time ?: defaultSince,
+            )
+        }.flatten()
 }

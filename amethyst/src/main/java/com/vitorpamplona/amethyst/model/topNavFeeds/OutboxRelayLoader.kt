@@ -35,19 +35,20 @@ class OutboxRelayLoader {
         private fun authorsPerRelay(
             outboxRelayNotes: Array<NoteState>,
             cache: LocalCache,
-        ): Map<NormalizedRelayUrl, Set<HexKey>> {
-            return mapOfSet {
+        ): Map<NormalizedRelayUrl, Set<HexKey>> =
+            mapOfSet {
                 outboxRelayNotes.forEach { outboxNote ->
                     val relays =
                         (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.ifEmpty { null }
-                            ?: outboxNote.note.author?.pubkeyHex ?.let { cache.relayHints.hintsForKey(it) }
+                            ?: outboxNote.note.author
+                                ?.pubkeyHex
+                                ?.let { cache.relayHints.hintsForKey(it) }
 
                     relays?.forEach {
                         add(it, outboxNote.note.idHex)
                     }
                 }
             }
-        }
 
         fun <T> authorsPerRelaySnapshot(
             authors: Set<HexKey>,
@@ -55,9 +56,13 @@ class OutboxRelayLoader {
             transformation: (Map<NormalizedRelayUrl, Set<HexKey>>) -> T,
         ): T {
             val noteMetadata =
-                authors.map { pubkeyHex ->
-                    cache.getOrCreateAddressableNote(AdvertisedRelayListEvent.createAddress(pubkeyHex)).flow().metadata.stateFlow.value
-                }.toTypedArray()
+                authors
+                    .map { pubkeyHex ->
+                        cache
+                            .getOrCreateAddressableNote(AdvertisedRelayListEvent.createAddress(pubkeyHex))
+                            .flow()
+                            .metadata.stateFlow.value
+                    }.toTypedArray()
             return transformation(authorsPerRelay(noteMetadata, cache))
         }
 

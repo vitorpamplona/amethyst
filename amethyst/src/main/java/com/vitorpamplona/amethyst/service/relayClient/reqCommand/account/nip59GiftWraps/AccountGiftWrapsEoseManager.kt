@@ -43,15 +43,14 @@ class AccountGiftWrapsEoseManager(
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> {
-        return key.account.dmRelays.flow.value.flatMap { relay ->
+    ): List<RelayBasedFilter> =
+        key.account.dmRelays.flow.value.flatMap { relay ->
             filterGiftWrapsToPubkey(
                 relay = relay,
                 pubkey = user(key).pubkeyHex,
                 since = since?.get(relay)?.time,
             )
         }
-    }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 

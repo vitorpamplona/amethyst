@@ -49,9 +49,7 @@ class TrustedRelayListsState(
         local: Set<NormalizedRelayUrl>,
         dm: Set<NormalizedRelayUrl>,
         search: Set<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> {
-        return nip65 + private + local + dm + search
-    }
+    ): Set<NormalizedRelayUrl> = nip65 + private + local + dm + search
 
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
@@ -61,19 +59,17 @@ class TrustedRelayListsState(
             dmRelayList.flow,
             searchRelayListState.flow,
             ::mergeLists,
-        )
-            .onStart {
-                emit(
-                    mergeLists(
-                        nip65RelayList.allFlow.value,
-                        privateOutboxRelayList.flow.value,
-                        localRelayList.flow.value,
-                        dmRelayList.flow.value,
-                        searchRelayListState.flow.value,
-                    ),
-                )
-            }
-            .flowOn(Dispatchers.Default)
+        ).onStart {
+            emit(
+                mergeLists(
+                    nip65RelayList.allFlow.value,
+                    privateOutboxRelayList.flow.value,
+                    localRelayList.flow.value,
+                    dmRelayList.flow.value,
+                    searchRelayListState.flow.value,
+                ),
+            )
+        }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -167,7 +167,9 @@ class AccountViewModel(
             .flow()
             .relays.stateFlow
             .map { contactListState ->
-                contactListState.user.latestContactList?.relays()?.keys ?: emptySet()
+                contactListState.user.latestContactList
+                    ?.relays()
+                    ?.keys ?: emptySet()
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 viewModelScope,
@@ -1664,27 +1666,29 @@ class AccountViewModel(
 
     fun relayStatusFlow() = app.client.relayStatusFlow()
 
-    fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> {
-        return loggedInAccounts?.mapNotNull {
-            try {
-                it.npub.bechToBytes().toHexKey()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
-        }?.toSet() ?: emptySet()
-    }
+    fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> =
+        loggedInAccounts
+            ?.mapNotNull {
+                try {
+                    it.npub.bechToBytes().toHexKey()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    null
+                }
+            }?.toSet() ?: emptySet()
 
     val trustedAccounts: StateFlow<Set<HexKey>> =
-        LocalPreferences.accountsFlow().map { loggedInAccounts ->
-            convertAccounts(loggedInAccounts)
-        }.onStart {
-            emit(convertAccounts(LocalPreferences.allSavedAccounts()))
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            emptySet<HexKey>(),
-        )
+        LocalPreferences
+            .accountsFlow()
+            .map { loggedInAccounts ->
+                convertAccounts(loggedInAccounts)
+            }.onStart {
+                emit(convertAccounts(LocalPreferences.allSavedAccounts()))
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptySet<HexKey>(),
+            )
 
     val draftNoteCache = CachedDraftNotes(this)
 

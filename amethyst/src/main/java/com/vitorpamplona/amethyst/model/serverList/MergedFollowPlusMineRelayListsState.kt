@@ -47,9 +47,7 @@ class MergedFollowPlusMineRelayListsState(
         inbox: Set<NormalizedRelayUrl>,
         private: Set<NormalizedRelayUrl>,
         local: Set<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> {
-        return kind3 + outbox + inbox + private + local
-    }
+    ): Set<NormalizedRelayUrl> = kind3 + outbox + inbox + private + local
 
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
@@ -59,19 +57,17 @@ class MergedFollowPlusMineRelayListsState(
             privateOutboxRelayList.flow,
             localRelayList.flow,
             ::mergeLists,
-        )
-            .onStart {
-                emit(
-                    mergeLists(
-                        followsOutboxRelayList.flow.value,
-                        nip65RelayList.outboxFlow.value,
-                        nip65RelayList.inboxFlow.value,
-                        privateOutboxRelayList.flow.value,
-                        localRelayList.flow.value,
-                    ),
-                )
-            }
-            .flowOn(Dispatchers.Default)
+        ).onStart {
+            emit(
+                mergeLists(
+                    followsOutboxRelayList.flow.value,
+                    nip65RelayList.outboxFlow.value,
+                    nip65RelayList.inboxFlow.value,
+                    privateOutboxRelayList.flow.value,
+                    localRelayList.flow.value,
+                ),
+            )
+        }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

@@ -72,15 +72,16 @@ fun filterPictureAndVideoByGeohash(
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
-    return geoSet.set.mapNotNull {
-        if (it.value.geotags.isEmpty()) {
-            null
-        } else {
-            filterPictureAndVideoGeohash(
-                relay = it.key,
-                geotags = it.value.geotags,
-                since = since?.get(it.key)?.time,
-            )
-        }
-    }.flatten()
+    return geoSet.set
+        .mapNotNull {
+            if (it.value.geotags.isEmpty()) {
+                null
+            } else {
+                filterPictureAndVideoGeohash(
+                    relay = it.key,
+                    geotags = it.value.geotags,
+                    since = since?.get(it.key)?.time,
+                )
+            }
+        }.flatten()
 }

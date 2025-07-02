@@ -64,10 +64,9 @@ fun <K, V> mapOfSet(init: MapOfSetBuilder<K, V>.() -> Unit): Map<K, Set<V>> {
     return data.build()
 }
 
-fun <K, V> merge(maps: List<Map<K, Set<V>>>): Map<K, Set<V>> {
-    return mapOfSet {
+fun <K, V> merge(maps: List<Map<K, Set<V>>>): Map<K, Set<V>> =
+    mapOfSet {
         maps.forEach { map ->
             add(map)
         }
     }
-}

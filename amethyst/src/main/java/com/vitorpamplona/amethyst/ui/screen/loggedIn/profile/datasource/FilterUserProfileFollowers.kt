@@ -31,8 +31,8 @@ val UserProfileFollowersKinds = listOf(ContactListEvent.KIND)
 fun filterUserProfileFollowers(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return user.inboxRelays().map {
+): List<RelayBasedFilter> =
+    user.inboxRelays().map {
         RelayBasedFilter(
             relay = it,
             filter =
@@ -43,4 +43,3 @@ fun filterUserProfileFollowers(
                 ),
         )
     }
-}

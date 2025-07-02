@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class ProxySettingsAnchor() {
+class ProxySettingsAnchor {
     val flow: MutableStateFlow<StateFlow<TorRelayEvaluation>> =
         MutableStateFlow(
             MutableStateFlow(

@@ -139,7 +139,8 @@ class UpdateZapAmountViewModel : ViewModel() {
                 ?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectRelay =
             myAccount.settings.zapPaymentRequest
-                ?.relayUri?.url
+                ?.relayUri
+                ?.url
                 ?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectSecret =
             myAccount.settings.zapPaymentRequest

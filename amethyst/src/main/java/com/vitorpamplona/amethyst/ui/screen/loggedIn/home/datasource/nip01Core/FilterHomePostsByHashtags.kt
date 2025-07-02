@@ -86,22 +86,23 @@ fun filterHomePostsByHashtags(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return hashtagSet.set.mapNotNull {
-        if (it.value.hashtags.isEmpty()) {
-            null
-        } else {
-            val since = since?.get(it.key)?.time ?: defaultSince
+    return hashtagSet.set
+        .mapNotNull {
+            if (it.value.hashtags.isEmpty()) {
+                null
+            } else {
+                val since = since?.get(it.key)?.time ?: defaultSince
 
-            return filterHomePostsByHashtags(
-                relay = it.key,
-                hashToLoad = it.value.hashtags,
-                since = since,
-            ) +
-                filterHomePostsByScopes(
+                return filterHomePostsByHashtags(
                     relay = it.key,
-                    scopesToLoad = it.value.hashtagScopes,
+                    hashToLoad = it.value.hashtags,
                     since = since,
-                )
-        }
-    }.flatten()
+                ) +
+                    filterHomePostsByScopes(
+                        relay = it.key,
+                        scopesToLoad = it.value.hashtagScopes,
+                        since = since,
+                    )
+            }
+        }.flatten()
 }

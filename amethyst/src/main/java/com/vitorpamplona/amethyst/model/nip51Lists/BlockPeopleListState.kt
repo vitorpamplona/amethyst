@@ -49,19 +49,17 @@ class BlockPeopleListState(
 
     fun getBlockList(): PeopleListEvent? = getBlockListNote().event as? PeopleListEvent
 
-    suspend fun blockListWithBackup(note: Note): PeopleListEvent.UsersAndWords {
-        return blockList(
+    suspend fun blockListWithBackup(note: Note): PeopleListEvent.UsersAndWords =
+        blockList(
             note.event as? PeopleListEvent,
         )
-    }
 
-    suspend fun blockList(event: PeopleListEvent?): PeopleListEvent.UsersAndWords {
-        return tryAndWait { continuation ->
+    suspend fun blockList(event: PeopleListEvent?): PeopleListEvent.UsersAndWords =
+        tryAndWait { continuation ->
             event?.publicAndPrivateUsersAndWords(signer) {
                 continuation.resume(it)
             }
         } ?: PeopleListEvent.UsersAndWords()
-    }
 
     val flow =
         getBlockListFlow()

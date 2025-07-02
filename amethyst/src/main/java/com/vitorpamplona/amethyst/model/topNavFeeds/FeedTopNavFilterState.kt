@@ -71,13 +71,12 @@ class FeedTopNavFilterState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<IFeedTopNavFilter> =
-        feedFilterListName.transformLatest { listName ->
-            emitAll(loadFlowsFor(listName).flow())
-        }
-            .onStart {
+        feedFilterListName
+            .transformLatest { listName ->
+                emitAll(loadFlowsFor(listName).flow())
+            }.onStart {
                 loadFlowsFor(feedFilterListName.value).startValue(this)
-            }
-            .flowOn(Dispatchers.Default)
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

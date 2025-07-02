@@ -31,8 +31,8 @@ class RelayListRecommendationProcessor {
         fun transpose(
             userList: Map<HexKey, Set<NormalizedRelayUrl>>,
             ignore: Set<NormalizedRelayUrl> = setOf(),
-        ): Map<NormalizedRelayUrl, Set<HexKey>> {
-            return mapOfSet {
+        ): Map<NormalizedRelayUrl, Set<HexKey>> =
+            mapOfSet {
                 userList.forEach { event ->
                     event.value.forEach { relay ->
                         if (relay !in ignore) {
@@ -41,7 +41,6 @@ class RelayListRecommendationProcessor {
                     }
                 }
             }
-        }
 
         /**
          * filter onion and local host from write relays
@@ -50,8 +49,8 @@ class RelayListRecommendationProcessor {
         private fun filterValidRelays(
             userList: List<AdvertisedRelayListEvent>,
             hasOnionConnection: Boolean = false,
-        ): Map<HexKey, Set<NormalizedRelayUrl>> {
-            return mapOfSet {
+        ): Map<HexKey, Set<NormalizedRelayUrl>> =
+            mapOfSet {
                 userList.forEach { event ->
                     event.writeRelaysNorm()?.forEach { relay ->
                         if (!relay.isLocalHost() && (hasOnionConnection || !relay.isOnion())) {
@@ -60,7 +59,6 @@ class RelayListRecommendationProcessor {
                     }
                 }
             }
-        }
 
         fun reliableRelaySetFor(
             usersAndRelays: Map<HexKey, Set<NormalizedRelayUrl>>,

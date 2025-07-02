@@ -42,8 +42,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeClassifiedsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return when (feedSettings) {
+): List<RelayBasedFilter> =
+    when (feedSettings) {
         is AllCommunitiesTopNavPerRelayFilterSet -> filterClassifiedsByAllCommunities(feedSettings, since)
         is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterClassifiedsByFollows(feedSettings, since)
         is AuthorsByOutboxTopNavPerRelayFilterSet -> filterClassifiedsByAuthors(feedSettings, since)
@@ -54,4 +54,3 @@ fun makeClassifiedsFilter(
         is SingleCommunityTopNavPerRelayFilterSet -> filterClassifiedsByCommunity(feedSettings, since)
         else -> emptyList()
     }
-}

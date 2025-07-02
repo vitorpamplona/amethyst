@@ -68,15 +68,18 @@ class FollowListOutboxRelays(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
-        kind3Follows.flow.transformLatest { followList ->
-            val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList.authors)
-            val relayListFlows = combineAllFlows(flows)
-            emitAll(relayListFlows)
-        }.onStart {
-            kind3Follows.flow.value.authors.mapNotNull {
-                getNIP65RelayList(it)?.writeRelaysNorm()
-            }.flatten().toSet()
-        }.flowOn(Dispatchers.Default)
+        kind3Follows.flow
+            .transformLatest { followList ->
+                val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList.authors)
+                val relayListFlows = combineAllFlows(flows)
+                emitAll(relayListFlows)
+            }.onStart {
+                kind3Follows.flow.value.authors
+                    .mapNotNull {
+                        getNIP65RelayList(it)?.writeRelaysNorm()
+                    }.flatten()
+                    .toSet()
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -85,13 +88,16 @@ class FollowListOutboxRelays(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flowSet: StateFlow<Set<String>> =
-        flow.map { relayList ->
-            relayList.map { it.url }.toSet()
-        }.onStart {
-            kind3Follows.flow.value.authors.mapNotNull {
-                getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
-            }.flatten().toSet()
-        }.flowOn(Dispatchers.Default)
+        flow
+            .map { relayList ->
+                relayList.map { it.url }.toSet()
+            }.onStart {
+                kind3Follows.flow.value.authors
+                    .mapNotNull {
+                        getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
+                    }.flatten()
+                    .toSet()
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

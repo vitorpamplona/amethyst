@@ -38,15 +38,13 @@ class GlobalTopNavFilter(
 
     override fun match(noteEvent: Event) = true
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> {
-        return relays.map {
+    override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
+        relays.map {
             GlobalTopNavPerRelayFilterSet(it.associateWith { GlobalTopNavPerRelayFilter })
         }
-    }
 
-    override fun startValue(cache: LocalCache): GlobalTopNavPerRelayFilterSet {
-        return GlobalTopNavPerRelayFilterSet(
+    override fun startValue(cache: LocalCache): GlobalTopNavPerRelayFilterSet =
+        GlobalTopNavPerRelayFilterSet(
             relays.value.associateWith { GlobalTopNavPerRelayFilter },
         )
-    }
 }

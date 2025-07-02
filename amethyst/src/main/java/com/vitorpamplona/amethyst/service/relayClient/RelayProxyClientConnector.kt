@@ -53,16 +53,17 @@ class RelayProxyClientConnector(
             connManager.status,
         ) { torSettings, torConnection, clearConnection, connectivity ->
             torSettings.hashCode() + torConnection.hashCode() + clearConnection.hashCode() + connectivity.hashCode()
-        }.debounce(100).onEach {
-            Log.d("ManageRelayServices", "Relay Services have changed")
-            client.reconnect(true)
-        }.onStart {
-            Log.d("ManageRelayServices", "Resuming Relay Services")
-            client.connect()
-        }.onCompletion {
-            Log.d("ManageRelayServices", "Pausing Relay Services")
-            client.disconnect()
-        }.flowOn(Dispatchers.IO)
+        }.debounce(100)
+            .onEach {
+                Log.d("ManageRelayServices", "Relay Services have changed")
+                client.reconnect(true)
+            }.onStart {
+                Log.d("ManageRelayServices", "Resuming Relay Services")
+                client.connect()
+            }.onCompletion {
+                Log.d("ManageRelayServices", "Pausing Relay Services")
+                client.disconnect()
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.WhileSubscribed(30000),

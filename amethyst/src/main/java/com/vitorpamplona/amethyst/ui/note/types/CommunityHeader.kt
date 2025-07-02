@@ -361,7 +361,8 @@ fun WatchAddressableNoteFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val state by accountViewModel.account.kind3FollowList.flow.collectAsStateWithLifecycle()
+    val state by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
 
     onFollowChanges(state.communities.contains(note.idHex))
 }

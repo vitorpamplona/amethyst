@@ -82,20 +82,21 @@ fun filterHomePostsByGeohashes(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return geoSet.set.mapNotNull {
-        if (it.value.geotags.isEmpty()) {
-            null
-        } else {
-            filterHomePostsByGeohashes(
-                relay = it.key,
-                geotags = it.value.geotags,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            ) +
-                filterHomePostsByScopes(
+    return geoSet.set
+        .mapNotNull {
+            if (it.value.geotags.isEmpty()) {
+                null
+            } else {
+                filterHomePostsByGeohashes(
                     relay = it.key,
-                    scopesToLoad = it.value.geotagScopes,
+                    geotags = it.value.geotags,
                     since = since?.get(it.key)?.time ?: defaultSince,
-                )
-        }
-    }.flatten()
+                ) +
+                    filterHomePostsByScopes(
+                        relay = it.key,
+                        scopesToLoad = it.value.geotagScopes,
+                        since = since?.get(it.key)?.time ?: defaultSince,
+                    )
+            }
+        }.flatten()
 }

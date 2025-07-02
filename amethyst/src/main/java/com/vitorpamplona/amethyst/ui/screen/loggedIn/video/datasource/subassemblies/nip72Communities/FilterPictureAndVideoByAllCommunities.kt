@@ -107,11 +107,12 @@ fun filterPictureAndVideoByAllCommunities(
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
-    return communitySet.set.mapNotNull {
-        filterPictureAndVideoAllCommunities(
-            relay = it.key,
-            communities = it.value.communities,
-            since = since?.get(it.key)?.time,
-        )
-    }.flatten()
+    return communitySet.set
+        .mapNotNull {
+            filterPictureAndVideoAllCommunities(
+                relay = it.key,
+                communities = it.value.communities,
+                since = since?.get(it.key)?.time,
+            )
+        }.flatten()
 }

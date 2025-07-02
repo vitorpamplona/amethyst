@@ -60,29 +60,30 @@ val UserProfilePostKinds2 =
 fun filterUserProfilePosts(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return user.outboxRelays().map { relay ->
-        listOf(
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = UserProfilePostKinds1,
-                        authors = listOf(user.pubkeyHex),
-                        limit = 200,
-                        since = since?.get(relay)?.time,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = UserProfilePostKinds2,
-                        authors = listOf(user.pubkeyHex),
-                        limit = 50,
-                        since = since?.get(relay)?.time,
-                    ),
-            ),
-        )
-    }.flatten()
-}
+): List<RelayBasedFilter> =
+    user
+        .outboxRelays()
+        .map { relay ->
+            listOf(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = UserProfilePostKinds1,
+                            authors = listOf(user.pubkeyHex),
+                            limit = 200,
+                            since = since?.get(relay)?.time,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = UserProfilePostKinds2,
+                            authors = listOf(user.pubkeyHex),
+                            limit = 50,
+                            since = since?.get(relay)?.time,
+                        ),
+                ),
+            )
+        }.flatten()

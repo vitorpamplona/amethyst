@@ -72,17 +72,18 @@ fun filterLiveActivitiesByAuthors(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return authorSet.set.mapNotNull {
-        if (it.value.authors.isEmpty()) {
-            null
-        } else {
-            filterLiveActivitiesAuthors(
-                relay = it.key,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterLiveActivitiesAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }
 
 fun filterLiveActivitiesByAuthors(
@@ -93,15 +94,16 @@ fun filterLiveActivitiesByAuthors(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return authorSet.set.mapNotNull {
-        if (it.value.authors.isEmpty()) {
-            null
-        } else {
-            filterLiveActivitiesAuthors(
-                relay = it.key,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterLiveActivitiesAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

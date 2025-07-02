@@ -60,15 +60,16 @@ fun filterContentDVMsByGeohash(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return geoSet.set.mapNotNull {
-        if (it.value.geotags.isEmpty()) {
-            null
-        } else {
-            filterContentDVMsByGeohash(
-                relay = it.key,
-                geotags = it.value.geotags,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return geoSet.set
+        .mapNotNull {
+            if (it.value.geotags.isEmpty()) {
+                null
+            } else {
+                filterContentDVMsByGeohash(
+                    relay = it.key,
+                    geotags = it.value.geotags,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

@@ -59,15 +59,14 @@ data class MarkedETag(
         ;
 
         companion object {
-            fun parse(code: String): MARKER? {
-                return when (code) {
+            fun parse(code: String): MARKER? =
+                when (code) {
                     ROOT.code -> ROOT
                     REPLY.code -> REPLY
                     MENTION.code -> MENTION
                     FORK.code -> FORK
                     else -> null
                 }
-            }
         }
     }
 

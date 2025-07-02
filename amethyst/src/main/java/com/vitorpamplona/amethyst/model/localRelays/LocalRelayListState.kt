@@ -38,9 +38,7 @@ class LocalRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
-    fun normalizeLocalRelayListWithBackup(relayList: Set<String>): Set<NormalizedRelayUrl> {
-        return relayList.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
-    }
+    fun normalizeLocalRelayListWithBackup(relayList: Set<String>): Set<NormalizedRelayUrl> = relayList.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
 
     val flow =
         settings.localRelayServers

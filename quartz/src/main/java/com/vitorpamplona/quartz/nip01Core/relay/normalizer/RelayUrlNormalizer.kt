@@ -31,7 +31,14 @@ class RelayUrlNormalizer {
 
         fun isOnion(url: String) = url.endsWith(".onion") || url.endsWith(".onion/")
 
-        private fun norm(url: String) = NormalizedRelayUrl(URIReference.parse(url).normalize().toString().intern())
+        private fun norm(url: String) =
+            NormalizedRelayUrl(
+                URIReference
+                    .parse(url)
+                    .normalize()
+                    .toString()
+                    .intern(),
+            )
 
         fun fix(url: String): String {
             val trimmed = url.trim()

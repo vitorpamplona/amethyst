@@ -41,15 +41,14 @@ class SingleCommunityTopNavFilter(
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = authors == null || pubkey in authors
 
-    override fun match(noteEvent: Event): Boolean {
-        return if (noteEvent is LiveActivitiesEvent) {
+    override fun match(noteEvent: Event): Boolean =
+        if (noteEvent is LiveActivitiesEvent) {
             (authors != null && noteEvent.participantsIntersect(authors)) || noteEvent.isTaggedAddressableNote(community)
         } else if (noteEvent is CommentEvent) {
             (authors != null && noteEvent.pubKey in authors) || noteEvent.isTaggedAddressableNote(community)
         } else {
             (authors != null && noteEvent.pubKey in authors) || noteEvent.isTaggedAddressableNote(community)
         }
-    }
 
     override fun toPerRelayFlow(cache: LocalCache): Flow<SingleCommunityTopNavPerRelayFilterSet> {
         // relay field takes priority

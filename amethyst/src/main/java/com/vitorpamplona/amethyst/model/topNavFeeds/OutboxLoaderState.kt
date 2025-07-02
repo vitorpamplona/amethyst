@@ -40,11 +40,12 @@ class OutboxLoaderState(
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<IFeedTopNavPerRelayFilterSet> =
-        topNavFilter.transformLatest { filterSettings ->
-            emitAll(filterSettings.toPerRelayFlow(cache))
-        }.onStart {
-            emit(topNavFilter.value.startValue(cache))
-        }.flowOn(Dispatchers.Default)
+        topNavFilter
+            .transformLatest { filterSettings ->
+                emitAll(filterSettings.toPerRelayFlow(cache))
+            }.onStart {
+                emit(topNavFilter.value.startValue(cache))
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,

@@ -228,10 +228,13 @@ fun HomeScreenFloatingButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val list = accountViewModel.account.settings.defaultHomeFollowList.collectAsStateWithLifecycle()
+    val list =
+        accountViewModel.account.settings.defaultHomeFollowList
+            .collectAsStateWithLifecycle()
 
     if (list.value == AROUND_ME) {
-        val location by Amethyst.instance.locationManager.geohashStateFlow.collectAsStateWithLifecycle()
+        val location by Amethyst.instance.locationManager.geohashStateFlow
+            .collectAsStateWithLifecycle()
 
         when (val myLocation = location) {
             is LocationState.LocationResult.Success -> NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)

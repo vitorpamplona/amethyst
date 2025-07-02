@@ -29,7 +29,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.LargeCache
 
-class OutboxProtector(listener: IRelayClientListener) : RedirectRelayClientListener(listener) {
+class OutboxProtector(
+    listener: IRelayClientListener,
+) : RedirectRelayClientListener(listener) {
     /**
      * Auth procedures require us to keep track of the outgoing events
      * to make sure the relay waits for the auth to finish and send them.

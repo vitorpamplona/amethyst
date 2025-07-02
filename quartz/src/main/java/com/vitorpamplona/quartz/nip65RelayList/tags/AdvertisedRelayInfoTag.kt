@@ -94,13 +94,12 @@ class AdvertisedRelayInfo(
         fun assemble(
             relay: NormalizedRelayUrl,
             type: AdvertisedRelayType,
-        ): Array<String> {
-            return if (type == AdvertisedRelayType.BOTH) {
+        ): Array<String> =
+            if (type == AdvertisedRelayType.BOTH) {
                 arrayOf(TAG_NAME, relay.url)
             } else {
                 arrayOf(TAG_NAME, relay.url, type.code)
             }
-        }
     }
 }
 

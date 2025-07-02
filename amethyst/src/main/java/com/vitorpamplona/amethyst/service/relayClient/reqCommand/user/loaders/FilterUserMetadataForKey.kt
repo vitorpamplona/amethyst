@@ -36,11 +36,10 @@ val MetadataAndRelayListKinds =
         AdvertisedRelayListEvent.KIND,
     )
 
-fun filterFindUserMetadataForKey(author: HexKey): List<RelayBasedFilter> {
-    return LocalCache.checkGetOrCreateUser(author)?.let {
+fun filterFindUserMetadataForKey(author: HexKey): List<RelayBasedFilter> =
+    LocalCache.checkGetOrCreateUser(author)?.let {
         filterFindUserMetadataForKey(setOf(it))
     } ?: emptyList()
-}
 
 fun filterFindUserMetadataForKey(authors: Set<User>): List<RelayBasedFilter> {
     val perRelayKeys =

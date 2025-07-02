@@ -33,11 +33,10 @@ class RelayBasedFilter(
     // This only exists because some relays confuse empty lists with null lists
     fun isValidFor(relay: NormalizedRelayUrl) = relay == this.relay
 
-    fun toFilter(relay: NormalizedRelayUrl): Filter? {
-        return if (isValidFor(relay)) {
+    fun toFilter(relay: NormalizedRelayUrl): Filter? =
+        if (isValidFor(relay)) {
             filter
         } else {
             null
         }
-    }
 }

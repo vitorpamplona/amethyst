@@ -62,15 +62,16 @@ fun filterLiveActivitiesByHashtag(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return hashSet.set.mapNotNull { relayHashSet ->
-        if (relayHashSet.value.hashtags.isEmpty()) {
-            null
-        } else {
-            filterLiveActivitiesByHashtag(
-                relay = relayHashSet.key,
-                hashtags = relayHashSet.value.hashtags,
-                since = since?.get(relayHashSet.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return hashSet.set
+        .mapNotNull { relayHashSet ->
+            if (relayHashSet.value.hashtags.isEmpty()) {
+                null
+            } else {
+                filterLiveActivitiesByHashtag(
+                    relay = relayHashSet.key,
+                    hashtags = relayHashSet.value.hashtags,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

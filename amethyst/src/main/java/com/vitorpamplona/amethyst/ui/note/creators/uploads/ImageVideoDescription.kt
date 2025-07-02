@@ -98,7 +98,8 @@ fun ImageVideoDescription(
 ) {
     val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
 
-    val fileServers by accountViewModel.account.serverLists.liveServerList.collectAsState()
+    val fileServers by accountViewModel.account.serverLists.liveServerList
+        .collectAsState()
 
     val fileServerOptions =
         remember(fileServers, includeNIP95) {

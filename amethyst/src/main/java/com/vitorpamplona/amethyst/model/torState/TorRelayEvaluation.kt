@@ -30,8 +30,8 @@ class TorRelayEvaluation(
     val trustedRelayList: Set<NormalizedRelayUrl>,
     val dmRelayList: Set<NormalizedRelayUrl>,
 ) {
-    fun useTor(relay: NormalizedRelayUrl): Boolean {
-        return if (torSettings.torType == TorType.OFF) {
+    fun useTor(relay: NormalizedRelayUrl): Boolean =
+        if (torSettings.torType == TorType.OFF) {
             false
         } else {
             if (relay.isLocalHost()) {
@@ -46,5 +46,4 @@ class TorRelayEvaluation(
                 torSettings.newRelaysViaTor
             }
         }
-    }
 }

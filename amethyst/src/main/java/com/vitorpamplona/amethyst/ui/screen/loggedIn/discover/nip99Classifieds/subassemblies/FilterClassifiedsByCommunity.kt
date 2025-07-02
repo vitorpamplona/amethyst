@@ -77,12 +77,13 @@ fun filterClassifiedsByCommunity(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return communitySet.set.mapNotNull {
-        filterClassifiedsByCommunity(
-            relay = it.key,
-            community = it.value.community,
-            authors = it.value.authors,
-            since = since?.get(it.key)?.time ?: defaultSince,
-        )
-    }.flatten()
+    return communitySet.set
+        .mapNotNull {
+            filterClassifiedsByCommunity(
+                relay = it.key,
+                community = it.value.community,
+                authors = it.value.authors,
+                since = since?.get(it.key)?.time ?: defaultSince,
+            )
+        }.flatten()
 }

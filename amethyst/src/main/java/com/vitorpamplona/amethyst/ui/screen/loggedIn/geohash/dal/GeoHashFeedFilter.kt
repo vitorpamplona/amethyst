@@ -79,7 +79,8 @@ class GeoHashFeedFilter(
                 event is PrivateDmEvent ||
                 event is PollNoteEvent ||
                 event is AudioHeaderEvent
-        ) && event.isTaggedGeoHash(geohash)
+        ) &&
+            event.isTaggedGeoHash(geohash)
 
     fun acceptableViaScope(
         event: Event?,

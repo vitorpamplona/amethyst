@@ -40,8 +40,8 @@ val UserProfileListKinds =
 fun filterUserProfileLists(
     users: Map<NormalizedRelayUrl, Set<String>>,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return users.map {
+): List<RelayBasedFilter> =
+    users.map {
         RelayBasedFilter(
             relay = it.key,
             filter =
@@ -53,4 +53,3 @@ fun filterUserProfileLists(
                 ),
         )
     }
-}

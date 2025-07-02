@@ -36,24 +36,20 @@ class AllCommunitiesTopNavFilter(
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
-    override fun match(noteEvent: Event): Boolean {
-        return noteEvent.isTaggedAddressableNotes(communities)
-    }
+    override fun match(noteEvent: Event): Boolean = noteEvent.isTaggedAddressableNotes(communities)
 
     fun convert(map: Map<NormalizedRelayUrl, Set<HexKey>>) =
         AllCommunitiesTopNavPerRelayFilterSet(
             map.mapValues { AllCommunitiesTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllCommunitiesTopNavPerRelayFilterSet> {
-        return CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) {
+    override fun toPerRelayFlow(cache: LocalCache): Flow<AllCommunitiesTopNavPerRelayFilterSet> =
+        CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) {
             convert(it)
         }
-    }
 
-    override fun startValue(cache: LocalCache): AllCommunitiesTopNavPerRelayFilterSet {
-        return CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) {
+    override fun startValue(cache: LocalCache): AllCommunitiesTopNavPerRelayFilterSet =
+        CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) {
             convert(it)
         }
-    }
 }

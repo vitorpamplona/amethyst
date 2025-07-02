@@ -108,7 +108,7 @@ class MediaCompressor {
                         //    videoName = "compressed_video" // => required name
                         // ),
                         // OR AND NOT BOTH
-                        appSpecificStorageConfiguration = AppSpecificStorageConfiguration(),
+                        storageConfiguration = AppSpecificStorageConfiguration(),
                         configureWith =
                             Configuration(
                                 quality = videoQuality,

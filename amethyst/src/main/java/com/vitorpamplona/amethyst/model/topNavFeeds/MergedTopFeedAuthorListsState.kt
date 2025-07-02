@@ -47,8 +47,8 @@ class MergedTopFeedAuthorListsState(
     val notificationNavFilter: StateFlow<IFeedTopNavPerRelayFilterSet>,
     val scope: CoroutineScope,
 ) {
-    fun authorList(navFilter: IFeedTopNavPerRelayFilterSet): Map<NormalizedRelayUrl, Set<HexKey>?> {
-        return when (navFilter) {
+    fun authorList(navFilter: IFeedTopNavPerRelayFilterSet): Map<NormalizedRelayUrl, Set<HexKey>?> =
+        when (navFilter) {
             is AllCommunitiesTopNavPerRelayFilterSet -> emptyMap()
             is AllFollowsByOutboxTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
             is AuthorsByOutboxTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
@@ -59,15 +59,14 @@ class MergedTopFeedAuthorListsState(
             is SingleCommunityTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
             else -> emptyMap()
         }
-    }
 
     fun mergeLists(
         homeNavFilter: IFeedTopNavPerRelayFilterSet,
         videoNavFilter: IFeedTopNavPerRelayFilterSet,
         discoveryNavFilter: IFeedTopNavPerRelayFilterSet,
         notificationNavFilter: IFeedTopNavPerRelayFilterSet,
-    ): Map<NormalizedRelayUrl, Set<HexKey>> {
-        return mapOfSet {
+    ): Map<NormalizedRelayUrl, Set<HexKey>> =
+        mapOfSet {
             authorList(homeNavFilter).forEach { (relay, authors) ->
                 authors?.let { add(relay, authors) }
             }
@@ -84,7 +83,6 @@ class MergedTopFeedAuthorListsState(
                 authors?.let { add(relay, authors) }
             }
         }
-    }
 
     val flow: StateFlow<Map<NormalizedRelayUrl, Set<HexKey>>> =
         combine(
@@ -102,8 +100,7 @@ class MergedTopFeedAuthorListsState(
                     notificationNavFilter.value,
                 ),
             )
-        }
-            .flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

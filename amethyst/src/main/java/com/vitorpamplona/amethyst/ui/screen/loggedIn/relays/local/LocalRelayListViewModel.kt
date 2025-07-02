@@ -24,7 +24,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class LocalRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl> = account.localRelayList.flow.value.toList()
+    override fun getRelayList(): List<NormalizedRelayUrl> =
+        account.localRelayList.flow.value
+            .toList()
 
     override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.localRelayList.saveRelayList(urlList) {}

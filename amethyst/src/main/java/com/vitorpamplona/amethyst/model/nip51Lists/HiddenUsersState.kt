@@ -65,14 +65,13 @@ class HiddenUsersState(
         muteList: PeopleListEvent.UsersAndWords,
         transientHiddenUsers: Set<String>,
         showSensitiveContent: Boolean?,
-    ): LiveHiddenUsers {
-        return LiveHiddenUsers(
+    ): LiveHiddenUsers =
+        LiveHiddenUsers(
             hiddenUsers = blockList.users + muteList.users,
             hiddenWords = blockList.words + muteList.words,
             spammers = transientHiddenUsers,
             showSensitiveContent = showSensitiveContent,
         )
-    }
 
     val flow: StateFlow<LiveHiddenUsers> by lazy {
         combineTransform(

@@ -335,8 +335,10 @@ fun WatchAccountAndBlockList(
     accountViewModel: AccountViewModel,
     invalidate: () -> Unit,
 ) {
-    val transientSpammers by accountViewModel.account.hiddenUsers.transientHiddenUsers.collectAsStateWithLifecycle()
-    val blockListState by accountViewModel.account.hiddenUsers.flow.collectAsStateWithLifecycle()
+    val transientSpammers by accountViewModel.account.hiddenUsers.transientHiddenUsers
+        .collectAsStateWithLifecycle()
+    val blockListState by accountViewModel.account.hiddenUsers.flow
+        .collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, transientSpammers, blockListState) {
         invalidate()

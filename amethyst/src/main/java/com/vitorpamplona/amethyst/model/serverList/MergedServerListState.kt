@@ -62,8 +62,7 @@ class MergedServerListState(
     val liveServerList: StateFlow<List<ServerName>> by lazy {
         combine(fileServers, blossomServers) { nip96s, blossoms ->
             mergeServerList(nip96s, blossoms)
-        }
-            .onStart { emit(mergeServerList(fileServers.value, blossomServers.value)) }
+        }.onStart { emit(mergeServerList(fileServers.value, blossomServers.value)) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

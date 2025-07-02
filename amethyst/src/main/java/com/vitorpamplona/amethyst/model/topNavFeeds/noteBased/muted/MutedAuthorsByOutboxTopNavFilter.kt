@@ -36,24 +36,19 @@ class MutedAuthorsByOutboxTopNavFilter(
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = pubkey in authors
 
-    override fun match(noteEvent: Event): Boolean {
-        return if (noteEvent is LiveActivitiesEvent) {
+    override fun match(noteEvent: Event): Boolean =
+        if (noteEvent is LiveActivitiesEvent) {
             noteEvent.participantsIntersect(authors)
         } else {
             noteEvent.pubKey in authors
         }
-    }
 
     fun convert(map: Map<NormalizedRelayUrl, Set<HexKey>>) =
         MutedAuthorsByOutboxTopNavPerRelayFilterSet(
             map.mapValues { MutedAuthorsByOutboxTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsByOutboxTopNavPerRelayFilterSet> {
-        return OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache, ::convert)
-    }
+    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsByOutboxTopNavPerRelayFilterSet> = OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache, ::convert)
 
-    override fun startValue(cache: LocalCache): MutedAuthorsByOutboxTopNavPerRelayFilterSet {
-        return OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache, ::convert)
-    }
+    override fun startValue(cache: LocalCache): MutedAuthorsByOutboxTopNavPerRelayFilterSet = OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache, ::convert)
 }

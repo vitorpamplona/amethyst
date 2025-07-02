@@ -107,17 +107,18 @@ fun filterHomePostsByAuthors(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return authorSet.set.mapNotNull {
-        if (it.value.authors.isEmpty()) {
-            null
-        } else {
-            filterHomePostsByAuthors(
-                relay = it.key,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterHomePostsByAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }
 
 fun filterHomePostsByAuthors(
@@ -128,15 +129,16 @@ fun filterHomePostsByAuthors(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return authorSet.set.mapNotNull {
-        if (it.value.authors.isEmpty()) {
-            null
-        } else {
-            filterHomePostsByAuthors(
-                relay = it.key,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterHomePostsByAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

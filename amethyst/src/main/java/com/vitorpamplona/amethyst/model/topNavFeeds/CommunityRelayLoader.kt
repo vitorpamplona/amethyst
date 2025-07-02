@@ -36,11 +36,12 @@ class CommunityRelayLoader {
         fun communitiesPerRelay(
             communityNotes: Array<NoteState>,
             cache: LocalCache,
-        ): Map<NormalizedRelayUrl, Set<HexKey>> {
-            return mapOfSet {
+        ): Map<NormalizedRelayUrl, Set<HexKey>> =
+            mapOfSet {
                 communityNotes.forEach { communityNote ->
                     val relays =
-                        (communityNote.note.event as? CommunityDefinitionEvent)?.relayUrls()
+                        (communityNote.note.event as? CommunityDefinitionEvent)
+                            ?.relayUrls()
                             ?.ifEmpty { null }
                             ?: cache.relayHints.hintsForAddress(communityNote.note.idHex)
 
@@ -49,7 +50,6 @@ class CommunityRelayLoader {
                     }
                 }
             }
-        }
 
         fun <T> communitiesPerRelaySnapshot(
             communities: Set<HexKey>,
@@ -57,9 +57,15 @@ class CommunityRelayLoader {
             transformation: (Map<NormalizedRelayUrl, Set<HexKey>>) -> T,
         ): T {
             val noteMetadata =
-                communities.mapNotNull { addressId ->
-                    cache.checkGetOrCreateAddressableNote(addressId)?.flow()?.metadata?.stateFlow?.value
-                }.toTypedArray()
+                communities
+                    .mapNotNull { addressId ->
+                        cache
+                            .checkGetOrCreateAddressableNote(addressId)
+                            ?.flow()
+                            ?.metadata
+                            ?.stateFlow
+                            ?.value
+                    }.toTypedArray()
             return transformation(communitiesPerRelay(noteMetadata, cache))
         }
 
@@ -70,7 +76,11 @@ class CommunityRelayLoader {
         ): Flow<T> {
             val noteMetadataFlows =
                 communities.mapNotNull { addressId ->
-                    cache.checkGetOrCreateAddressableNote(addressId)?.flow()?.metadata?.stateFlow
+                    cache
+                        .checkGetOrCreateAddressableNote(addressId)
+                        ?.flow()
+                        ?.metadata
+                        ?.stateFlow
                 }
 
             return combine(noteMetadataFlows) { communityNotes ->

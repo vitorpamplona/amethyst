@@ -80,8 +80,10 @@ class EventWatcherSubAssembler(
         notes: Iterable<Note>,
         eoseCache: EOSEAccountFast<Note>,
     ): Collection<List<Note>> =
-        notes.groupBy { eoseCache.since(it)?.keys?.hashCode() }
-            .values.map {
+        notes
+            .groupBy { eoseCache.since(it)?.keys?.hashCode() }
+            .values
+            .map {
                 // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
                 it.sortedBy { it.idHex }
             }

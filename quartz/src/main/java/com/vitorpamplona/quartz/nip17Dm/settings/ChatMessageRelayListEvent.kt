@@ -58,8 +58,7 @@ class ChatMessageRelayListEvent(
                     RelayTag.assemble(it)
                 }.plusElement(
                     AltTag.assemble("Relay list to receive private messages"),
-                )
-                .toTypedArray()
+                ).toTypedArray()
 
         fun updateRelayList(
             earlierVersion: ChatMessageRelayListEvent,
@@ -69,7 +68,8 @@ class ChatMessageRelayListEvent(
             onReady: (ChatMessageRelayListEvent) -> Unit,
         ) {
             val tags =
-                earlierVersion.tags.filter(RelayTag::notMatch)
+                earlierVersion.tags
+                    .filter(RelayTag::notMatch)
                     .plus(
                         relays.map {
                             RelayTag.assemble(it)

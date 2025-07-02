@@ -129,7 +129,11 @@ fun EditPostView(
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     var showRelaysDialog by remember { mutableStateOf(false) }
-    var relayList = remember { accountViewModel.account.outboxRelays.flow.value.toImmutableList() }
+    var relayList =
+        remember {
+            accountViewModel.account.outboxRelays.flow.value
+                .toImmutableList()
+        }
 
     LaunchedEffect(Unit) {
         postViewModel.load(edit, versionLookingAt, accountViewModel)

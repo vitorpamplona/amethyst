@@ -59,19 +59,17 @@ class EphemeralChatListState(
 
     fun getEphemeralChatList(): EphemeralChatListEvent? = getEphemeralChatListNote().event as? EphemeralChatListEvent
 
-    suspend fun ephemeralChatListWithBackup(note: Note): Set<RoomId> {
-        return ephemeralChatList(
+    suspend fun ephemeralChatListWithBackup(note: Note): Set<RoomId> =
+        ephemeralChatList(
             note.event as? EphemeralChatListEvent ?: settings.backupEphemeralChatList,
         )
-    }
 
-    suspend fun ephemeralChatList(event: EphemeralChatListEvent?): Set<RoomId> {
-        return tryAndWait { continuation ->
+    suspend fun ephemeralChatList(event: EphemeralChatListEvent?): Set<RoomId> =
+        tryAndWait { continuation ->
             event?.publicAndPrivateRoomIds(signer) {
                 continuation.resume(it)
             }
         } ?: emptySet()
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveEphemeralChatList: StateFlow<Set<RoomId>> by lazy {

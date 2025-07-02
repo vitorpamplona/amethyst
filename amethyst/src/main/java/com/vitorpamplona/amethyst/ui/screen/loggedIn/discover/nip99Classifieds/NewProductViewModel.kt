@@ -475,7 +475,9 @@ open class NewProductViewModel :
     fun reloadRelaySet() {
         val account = accountViewModel?.account ?: return
 
-        relayList = account.outboxRelays.flow.value.toImmutableList()
+        relayList =
+            account.outboxRelays.flow.value
+                .toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {

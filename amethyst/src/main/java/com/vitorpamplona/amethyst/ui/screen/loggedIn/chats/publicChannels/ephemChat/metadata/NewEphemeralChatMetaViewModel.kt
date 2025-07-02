@@ -44,7 +44,8 @@ class NewEphemeralChatMetaViewModel : ViewModel() {
     }
 
     fun buildRoom() =
-        RelayUrlNormalizer.normalizeOrNull(relayUrl.value.text)
+        RelayUrlNormalizer
+            .normalizeOrNull(relayUrl.value.text)
             ?.let { RoomId(channelName.value.text, it) }
 
     /*

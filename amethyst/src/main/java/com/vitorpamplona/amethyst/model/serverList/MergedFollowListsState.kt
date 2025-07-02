@@ -46,15 +46,14 @@ class MergedFollowListsState(
         hashtages: Set<String>,
         geohashes: Set<String>,
         community: Set<AddressHint>,
-    ): FollowListState.Kind3Follows {
-        return FollowListState.Kind3Follows(
+    ): FollowListState.Kind3Follows =
+        FollowListState.Kind3Follows(
             kind3.authors,
             kind3.authorsPlusMe,
             kind3.hashtags + hashtages,
             kind3.geotags + geohashes,
             kind3.communities + community.map { it.addressId },
         )
-    }
 
     val flow: StateFlow<FollowListState.Kind3Follows> =
         combine(
@@ -64,18 +63,16 @@ class MergedFollowListsState(
             communityList.flow,
         ) { kind3, hashtag, geohash, community ->
             mergeLists(kind3, hashtag, geohash, community)
-        }
-            .onStart {
-                emit(
-                    mergeLists(
-                        kind3List.flow.value,
-                        hashtagList.flow.value,
-                        geohashList.flow.value,
-                        communityList.flow.value,
-                    ),
-                )
-            }
-            .flowOn(Dispatchers.Default)
+        }.onStart {
+            emit(
+                mergeLists(
+                    kind3List.flow.value,
+                    hashtagList.flow.value,
+                    geohashList.flow.value,
+                    communityList.flow.value,
+                ),
+            )
+        }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

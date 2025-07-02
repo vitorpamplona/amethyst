@@ -70,23 +70,21 @@ class HashtagId(
             return encoded.indexOf(value, 1) > 0
         }
 
-        fun parse(encoded: String): String? {
-            return if (encoded.length > 1 && encoded[0] == KIND_CHR) {
+        fun parse(encoded: String): String? =
+            if (encoded.length > 1 && encoded[0] == KIND_CHR) {
                 encoded.substring(1)
             } else {
                 null
             }
-        }
 
         fun parse(
             encoded: String,
             hint: String?,
-        ): HashtagId? {
-            return if (encoded.length > 1 && encoded[0] == KIND_CHR) {
+        ): HashtagId? =
+            if (encoded.length > 1 && encoded[0] == KIND_CHR) {
                 HashtagId(encoded.substring(1), hint)
             } else {
                 null
             }
-        }
     }
 }

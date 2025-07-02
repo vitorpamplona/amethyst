@@ -60,17 +60,18 @@ fun filterFollowSetsByAuthors(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return authorSet.set.mapNotNull {
-        if (it.value.authors.isEmpty()) {
-            null
-        } else {
-            filterFollowSetsAuthors(
-                relay = it.key,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterFollowSetsAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }
 
 fun filterFollowSetsByAuthors(
@@ -81,15 +82,16 @@ fun filterFollowSetsByAuthors(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return authorSet.set.mapNotNull {
-        if (it.value.authors.isEmpty()) {
-            null
-        } else {
-            filterFollowSetsAuthors(
-                relay = it.key,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }
-    }.flatten()
+    return authorSet.set
+        .mapNotNull {
+            if (it.value.authors.isEmpty()) {
+                null
+            } else {
+                filterFollowSetsAuthors(
+                    relay = it.key,
+                    authors = it.value.authors,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

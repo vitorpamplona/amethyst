@@ -30,8 +30,8 @@ fun filterNip04DMsToMe(
     user: User,
     relay: NormalizedRelayUrl,
     since: Long?,
-): RelayBasedFilter {
-    return RelayBasedFilter(
+): RelayBasedFilter =
+    RelayBasedFilter(
         relay = relay,
         filter =
             Filter(
@@ -40,4 +40,3 @@ fun filterNip04DMsToMe(
                 since = since,
             ),
     )
-}

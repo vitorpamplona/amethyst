@@ -36,9 +36,7 @@ class UnknownTopNavFilter(
 
     override fun match(noteEvent: Event) = false
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<UnknownTopNavPerRelayFilterSet> {
-        return MutableStateFlow(UnknownTopNavPerRelayFilterSet)
-    }
+    override fun toPerRelayFlow(cache: LocalCache): Flow<UnknownTopNavPerRelayFilterSet> = MutableStateFlow(UnknownTopNavPerRelayFilterSet)
 
     override fun startValue(cache: LocalCache) = UnknownTopNavPerRelayFilterSet
 }

@@ -42,8 +42,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeLongFormFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return when (feedSettings) {
+): List<RelayBasedFilter> =
+    when (feedSettings) {
         is AllCommunitiesTopNavPerRelayFilterSet -> filterLongFormByAllCommunities(feedSettings, since)
         is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterLongFormByFollows(feedSettings, since)
         is AuthorsByOutboxTopNavPerRelayFilterSet -> filterLongFormByAuthors(feedSettings, since)
@@ -54,4 +54,3 @@ fun makeLongFormFilter(
         is SingleCommunityTopNavPerRelayFilterSet -> filterLongFormByCommunity(feedSettings, since)
         else -> emptyList()
     }
-}

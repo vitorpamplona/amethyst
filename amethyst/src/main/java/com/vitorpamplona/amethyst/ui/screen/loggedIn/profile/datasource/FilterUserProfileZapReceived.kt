@@ -31,8 +31,8 @@ val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND)
 fun filterUserProfileZapsReceived(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return user.inboxRelays().map { relay ->
+): List<RelayBasedFilter> =
+    user.inboxRelays().map { relay ->
         RelayBasedFilter(
             relay = relay,
             filter =
@@ -44,4 +44,3 @@ fun filterUserProfileZapsReceived(
                 ),
         )
     }
-}

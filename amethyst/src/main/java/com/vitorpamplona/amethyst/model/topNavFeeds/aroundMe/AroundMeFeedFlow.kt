@@ -32,8 +32,8 @@ class AroundMeFeedFlow(
     val location: StateFlow<LocationState.LocationResult>,
     val allFollowRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
-    fun convert(result: LocationState.LocationResult): LocationTopNavFilter {
-        return if (result is LocationState.LocationResult.Success) {
+    fun convert(result: LocationState.LocationResult): LocationTopNavFilter =
+        if (result is LocationState.LocationResult.Success) {
             // 2 neighbors deep = 25x25km
             LocationTopNavFilter(
                 geotags = compute50kmRange(result.geoHash).toSet(),
@@ -46,7 +46,6 @@ class AroundMeFeedFlow(
                 relays = allFollowRelays,
             )
         }
-    }
 
     override fun flow() = location.map(::convert)
 

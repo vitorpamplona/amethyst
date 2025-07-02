@@ -53,13 +53,10 @@ class LocationTopNavFilter(
         }
     }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<LocationTopNavPerRelayFilterSet> {
-        return relays.map {
+    override fun toPerRelayFlow(cache: LocalCache): Flow<LocationTopNavPerRelayFilterSet> =
+        relays.map {
             LocationTopNavPerRelayFilterSet(it.associateWith { LocationTopNavPerRelayFilter(geotags) })
         }
-    }
 
-    override fun startValue(cache: LocalCache): LocationTopNavPerRelayFilterSet {
-        return LocationTopNavPerRelayFilterSet(relays.value.associateWith { LocationTopNavPerRelayFilter(geotags) })
-    }
+    override fun startValue(cache: LocalCache): LocationTopNavPerRelayFilterSet = LocationTopNavPerRelayFilterSet(relays.value.associateWith { LocationTopNavPerRelayFilter(geotags) })
 }

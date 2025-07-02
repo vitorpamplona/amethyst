@@ -50,30 +50,31 @@ fun filterLastMessageFollowingPublicChats(
             }
         }
 
-    return relayRoomDTags.map {
-        listOf(
-            RelayBasedFilter(
-                // Metadata comes from any relay
-                relay = it.key,
-                filter =
-                    Filter(
-                        kinds = listOf(ChannelMetadataEvent.KIND),
-                        tags = mapOf("e" to it.value.sorted()),
-                        since = since?.get(it.key)?.time,
-                        limit = 1,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = it.key,
-                filter =
-                    Filter(
-                        kinds = listOf(ChannelMessageEvent.KIND),
-                        tags = mapOf("e" to it.value.sorted()),
-                        since = since?.get(it.key)?.time,
-                        // Remember to consider spam that is being removed from the UI
-                        limit = 100,
-                    ),
-            ),
-        )
-    }.flatten()
+    return relayRoomDTags
+        .map {
+            listOf(
+                RelayBasedFilter(
+                    // Metadata comes from any relay
+                    relay = it.key,
+                    filter =
+                        Filter(
+                            kinds = listOf(ChannelMetadataEvent.KIND),
+                            tags = mapOf("e" to it.value.sorted()),
+                            since = since?.get(it.key)?.time,
+                            limit = 1,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = it.key,
+                    filter =
+                        Filter(
+                            kinds = listOf(ChannelMessageEvent.KIND),
+                            tags = mapOf("e" to it.value.sorted()),
+                            since = since?.get(it.key)?.time,
+                            // Remember to consider spam that is being removed from the UI
+                            limit = 100,
+                        ),
+                ),
+            )
+        }.flatten()
 }

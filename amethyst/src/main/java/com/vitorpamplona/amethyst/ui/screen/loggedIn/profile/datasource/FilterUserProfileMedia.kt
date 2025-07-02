@@ -40,8 +40,8 @@ val UserProfileMediaKinds =
 fun filterUserProfileMedia(
     user: User,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return user.outboxRelays().map { relay ->
+): List<RelayBasedFilter> =
+    user.outboxRelays().map { relay ->
         RelayBasedFilter(
             relay = relay,
             filter =
@@ -53,4 +53,3 @@ fun filterUserProfileMedia(
                 ),
         )
     }
-}

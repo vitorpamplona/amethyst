@@ -498,13 +498,14 @@ open class CommentPostViewModel :
                 multiOrchestrator = null
             } else {
                 val errorMessages =
-                    results.errors.map {
-                        stringRes(
-                            context,
-                            it.errorResource,
-                            *it.params,
-                        )
-                    }.distinct()
+                    results.errors
+                        .map {
+                            stringRes(
+                                context,
+                                it.errorResource,
+                                *it.params,
+                            )
+                        }.distinct()
 
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
@@ -555,7 +556,9 @@ open class CommentPostViewModel :
     fun reloadRelaySet() {
         val account = accountViewModel?.account ?: return
 
-        relayList = account.outboxRelays.flow.value.toImmutableList()
+        relayList =
+            account.outboxRelays.flow.value
+                .toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
@@ -626,7 +629,10 @@ open class CommentPostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.link.url,
-                { Amethyst.Companion.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
+                {
+                    Amethyst.Companion.instance.okHttpClients
+                        .getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false)
+                },
             )
         }
 

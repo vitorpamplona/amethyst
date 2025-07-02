@@ -42,8 +42,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeContentDVMsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return when (feedSettings) {
+): List<RelayBasedFilter> =
+    when (feedSettings) {
         is AllCommunitiesTopNavPerRelayFilterSet -> filterContentDVMsByAllCommunities(feedSettings, since)
         is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByFollows(feedSettings, since)
         is AuthorsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since)
@@ -54,4 +54,3 @@ fun makeContentDVMsFilter(
         is SingleCommunityTopNavPerRelayFilterSet -> filterContentDVMsByCommunity(feedSettings, since)
         else -> emptyList()
     }
-}

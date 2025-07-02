@@ -71,21 +71,22 @@ class FollowsPerOutboxRelay(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Map<NormalizedRelayUrl, Set<HexKey>>> =
-        kind3Follows.flow.transformLatest { followList ->
-            val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList.authors)
-            val relayListFlows = combineAllFlows(flows)
-            emitAll(relayListFlows)
-        }.onStart {
-            emit(
-                mapOfSet {
-                    kind3Follows.flow.value.authors.map { authorHex ->
-                        getNIP65RelayList(authorHex)?.writeRelaysNorm()?.forEach { relay ->
-                            add(relay, authorHex)
+        kind3Follows.flow
+            .transformLatest { followList ->
+                val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList.authors)
+                val relayListFlows = combineAllFlows(flows)
+                emitAll(relayListFlows)
+            }.onStart {
+                emit(
+                    mapOfSet {
+                        kind3Follows.flow.value.authors.map { authorHex ->
+                            getNIP65RelayList(authorHex)?.writeRelaysNorm()?.forEach { relay ->
+                                add(relay, authorHex)
+                            }
                         }
-                    }
-                },
-            )
-        }.flowOn(Dispatchers.Default)
+                    },
+                )
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

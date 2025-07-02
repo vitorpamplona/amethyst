@@ -32,5 +32,7 @@ class SpammerAccountsFeedFilter(
 
     override fun showHiddenKey(): Boolean = true
 
-    override fun feed(): List<User> = account.hiddenUsers.transientHiddenUsers.value.map { LocalCache.getOrCreateUser(it) }
+    override fun feed(): List<User> =
+        account.hiddenUsers.transientHiddenUsers.value
+            .map { LocalCache.getOrCreateUser(it) }
 }

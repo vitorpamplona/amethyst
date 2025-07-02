@@ -30,8 +30,8 @@ fun filterCommunityPosts(
     relay: NormalizedRelayUrl,
     community: CommunityDefinitionEvent,
     since: Long?,
-): RelayBasedFilter {
-    return RelayBasedFilter(
+): RelayBasedFilter =
+    RelayBasedFilter(
         relay = relay,
         filter =
             Filter(
@@ -42,4 +42,3 @@ fun filterCommunityPosts(
                 since = since,
             ),
     )
-}

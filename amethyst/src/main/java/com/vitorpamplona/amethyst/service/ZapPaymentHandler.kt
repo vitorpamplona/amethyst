@@ -175,15 +175,14 @@ class ZapPaymentHandler(
         val user: User? = null,
     )
 
-    fun receivingRelaySet(userHex: HexKey): Set<NormalizedRelayUrl>? {
-        return (
+    fun receivingRelaySet(userHex: HexKey): Set<NormalizedRelayUrl>? =
+        (
             LocalCache
                 .getAddressableNoteIfExists(
                     AdvertisedRelayListEvent.createAddressTag(userHex),
                 )?.event as? AdvertisedRelayListEvent
-        )
-            ?.readRelaysNorm()?.toSet()
-    }
+        )?.readRelaysNorm()
+            ?.toSet()
 
     suspend fun signAllZapRequests(
         note: Note,

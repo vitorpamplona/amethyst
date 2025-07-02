@@ -60,19 +60,17 @@ class CommunityListState(
 
     fun getCommunityList(): CommunityListEvent? = getCommunityListNote().event as? CommunityListEvent
 
-    suspend fun communityListWithBackup(note: Note): Set<AddressHint> {
-        return communityList(
+    suspend fun communityListWithBackup(note: Note): Set<AddressHint> =
+        communityList(
             note.event as? CommunityListEvent ?: settings.backupCommunityList,
         )
-    }
 
-    suspend fun communityList(event: CommunityListEvent?): Set<AddressHint> {
-        return tryAndWait { continuation ->
+    suspend fun communityList(event: CommunityListEvent?): Set<AddressHint> =
+        tryAndWait { continuation ->
             event?.publicAndPrivateCommunities(signer) {
                 continuation.resume(it)
             }
         } ?: emptySet()
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<AddressHint>> by lazy {

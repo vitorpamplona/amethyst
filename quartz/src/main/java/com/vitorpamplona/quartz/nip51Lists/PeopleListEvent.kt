@@ -64,13 +64,12 @@ class PeopleListEvent(
         }
     }
 
-    suspend fun publicAndPrivateUsersAndWords(signer: NostrSigner): UsersAndWords? {
-        return tryAndWait { continuation ->
+    suspend fun publicAndPrivateUsersAndWords(signer: NostrSigner): UsersAndWords? =
+        tryAndWait { continuation ->
             publicAndPrivateUsersAndWords(signer) { privateTagList ->
                 continuation.resume(privateTagList)
             }
         }
-    }
 
     fun isTaggedWord(
         word: String,

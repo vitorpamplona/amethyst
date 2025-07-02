@@ -42,27 +42,24 @@ class HashtagTopNavFilter(
 
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
-    override fun match(noteEvent: Event): Boolean {
-        return if (noteEvent is CommentEvent) {
+    override fun match(noteEvent: Event): Boolean =
+        if (noteEvent is CommentEvent) {
             noteEvent.isTaggedHashes(hashtags) || noteEvent.isTaggedScopes(hashtagScopes)
         } else {
             noteEvent.isTaggedHashes(hashtags)
         }
-    }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<HashtagTopNavPerRelayFilterSet> {
-        return relays.map {
+    override fun toPerRelayFlow(cache: LocalCache): Flow<HashtagTopNavPerRelayFilterSet> =
+        relays.map {
             HashtagTopNavPerRelayFilterSet(
                 it.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
             )
         }
-    }
 
-    override fun startValue(cache: LocalCache): HashtagTopNavPerRelayFilterSet {
-        return HashtagTopNavPerRelayFilterSet(
+    override fun startValue(cache: LocalCache): HashtagTopNavPerRelayFilterSet =
+        HashtagTopNavPerRelayFilterSet(
             relays.value.associateWith {
                 HashtagTopNavPerRelayFilter(hashtags)
             },
         )
-    }
 }

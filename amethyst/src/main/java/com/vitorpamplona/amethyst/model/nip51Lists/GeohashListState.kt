@@ -57,19 +57,17 @@ class GeohashListState(
 
     fun getGeohashList(): GeohashListEvent? = getGeohashListNote().event as? GeohashListEvent
 
-    suspend fun geohashListWithBackup(note: Note): Set<String> {
-        return geohashList(
+    suspend fun geohashListWithBackup(note: Note): Set<String> =
+        geohashList(
             note.event as? GeohashListEvent ?: settings.backupGeohashList,
         )
-    }
 
-    suspend fun geohashList(event: GeohashListEvent?): Set<String> {
-        return tryAndWait { continuation ->
+    suspend fun geohashList(event: GeohashListEvent?): Set<String> =
+        tryAndWait { continuation ->
             event?.publicAndPrivateGeohash(signer) {
                 continuation.resume(it)
             }
         } ?: emptySet()
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<String>> by lazy {

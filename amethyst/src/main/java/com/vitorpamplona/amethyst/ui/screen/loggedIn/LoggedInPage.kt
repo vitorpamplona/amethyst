@@ -130,7 +130,8 @@ fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
 @Composable
 fun SetProxyDeterminator(accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
-        Amethyst.instance.torProxySettingsAnchor.flow.tryEmit(accountViewModel.account.torRelayState.flow)
+        Amethyst.instance.torProxySettingsAnchor.flow
+            .tryEmit(accountViewModel.account.torRelayState.flow)
     }
 }
 
@@ -143,7 +144,8 @@ fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
 
 @Composable
 fun ManageRelayServices(accountViewModel: AccountViewModel) {
-    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices.collectAsStateWithLifecycle()
+    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices
+        .collectAsStateWithLifecycle()
     Log.d("ManageRelayServices", "Relay Services changed $relayServices")
 }
 

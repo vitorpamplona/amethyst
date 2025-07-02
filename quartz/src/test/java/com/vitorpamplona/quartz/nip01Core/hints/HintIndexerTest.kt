@@ -63,7 +63,8 @@ class HintIndexerTest {
                 .getResourceAsStream("relayDB.txt")
                 ?.readAllBytes()
                 .toString()
-                .split("\n").mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                .split("\n")
+                .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
 
         val indexer by lazy {
             System.gc()

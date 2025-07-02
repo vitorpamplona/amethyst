@@ -42,8 +42,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makePublicChatsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
-): List<RelayBasedFilter> {
-    return when (feedSettings) {
+): List<RelayBasedFilter> =
+    when (feedSettings) {
         is AllCommunitiesTopNavPerRelayFilterSet -> filterPublicChatsByAllCommunities(feedSettings, since)
         is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByFollows(feedSettings, since)
         is AuthorsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByAuthors(feedSettings, since)
@@ -54,4 +54,3 @@ fun makePublicChatsFilter(
         is SingleCommunityTopNavPerRelayFilterSet -> filterPublicChatsByCommunity(feedSettings, since)
         else -> emptyList()
     }
-}

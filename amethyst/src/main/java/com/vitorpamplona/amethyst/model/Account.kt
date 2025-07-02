@@ -463,7 +463,18 @@ class Account(
         if (!isWriteable()) return
 
         userMetadata.sendNewUserMetadata(
-            name, picture, banner, website, pronouns, about, nip05, lnAddress, lnURL, twitter, mastodon, github,
+            name,
+            picture,
+            banner,
+            website,
+            pronouns,
+            about,
+            nip05,
+            lnAddress,
+            lnURL,
+            twitter,
+            mastodon,
+            github,
             ::sendMyPublicAndPrivateOutbox,
         )
     }
@@ -582,11 +593,13 @@ class Account(
                         relay = nip47.relayUri,
                     )
 
-                Amethyst.instance.sources.nwc.subscribe(filter)
+                Amethyst.instance.sources.nwc
+                    .subscribe(filter)
 
                 GlobalScope.launch(Dispatchers.IO) {
                     delay(60000) // waits 1 minute to complete payment.
-                    Amethyst.instance.sources.nwc.unsubscribe(filter)
+                    Amethyst.instance.sources.nwc
+                        .unsubscribe(filter)
                 }
 
                 cache.consume(event, zappedNote, true, nip47.relayUri) {
@@ -723,7 +736,11 @@ class Account(
                 if (pubkey == userProfile().pubkeyHex) {
                     notificationRelays.flow.value
                 } else {
-                    LocalCache.getUserIfExists(pubkey)?.inboxRelays()?.ifEmpty { null }?.toSet()
+                    LocalCache
+                        .getUserIfExists(pubkey)
+                        ?.inboxRelays()
+                        ?.ifEmpty { null }
+                        ?.toSet()
                         ?: cache.relayHints.hintsForKey(pubkey).toSet()
                 }
             }
@@ -749,7 +766,10 @@ class Account(
                             outboxRelays.flow.value
                         } else {
                             replyToAuthor.outboxRelays().ifEmpty { null }?.toSet()
-                                ?: cache.relayHints.hintsForKey(replyToAuthor.pubkeyHex).ifEmpty { null }?.toSet()
+                                ?: cache.relayHints
+                                    .hintsForKey(replyToAuthor.pubkeyHex)
+                                    .ifEmpty { null }
+                                    ?.toSet()
                                 ?: emptySet()
                         }
                     } else {
@@ -776,11 +796,17 @@ class Account(
                     outboxRelays.flow.value
                 } else {
                     author.outboxRelays().ifEmpty { null }?.toSet()
-                        ?: cache.relayHints.hintsForKey(author.pubkeyHex).ifEmpty { null }?.toSet()
+                        ?: cache.relayHints
+                            .hintsForKey(author.pubkeyHex)
+                            .ifEmpty { null }
+                            ?.toSet()
                         ?: emptySet()
                 }
             } else {
-                cache.relayHints.hintsForKey(event.pubKey).ifEmpty { null }?.toSet()
+                cache.relayHints
+                    .hintsForKey(event.pubKey)
+                    .ifEmpty { null }
+                    ?.toSet()
                 emptySet()
             }
 
@@ -789,7 +815,11 @@ class Account(
                 if (pubkey == userProfile().pubkeyHex) {
                     notificationRelays.flow.value
                 } else {
-                    LocalCache.getUserIfExists(pubkey)?.inboxRelays()?.ifEmpty { null }?.toSet()
+                    LocalCache
+                        .getUserIfExists(pubkey)
+                        ?.inboxRelays()
+                        ?.ifEmpty { null }
+                        ?.toSet()
                         ?: cache.relayHints.hintsForKey(pubkey).toSet()
                 }
             }
@@ -832,7 +862,10 @@ class Account(
                             outboxRelays.flow.value
                         } else {
                             replyToAuthor.outboxRelays().ifEmpty { null }?.toSet()
-                                ?: cache.relayHints.hintsForKey(replyToAuthor.pubkeyHex).ifEmpty { null }?.toSet()
+                                ?: cache.relayHints
+                                    .hintsForKey(replyToAuthor.pubkeyHex)
+                                    .ifEmpty { null }
+                                    ?.toSet()
                                 ?: emptySet()
                         }
                     } else {
@@ -854,7 +887,10 @@ class Account(
                     outboxRelays.flow.value
                 } else {
                     author.outboxRelays().ifEmpty { null }?.toSet()
-                        ?: cache.relayHints.hintsForKey(author.pubkeyHex).ifEmpty { null }?.toSet()
+                        ?: cache.relayHints
+                            .hintsForKey(author.pubkeyHex)
+                            .ifEmpty { null }
+                            ?.toSet()
                         ?: emptySet()
                 }
             } else {
@@ -866,7 +902,11 @@ class Account(
                 if (pubkey == userProfile().pubkeyHex) {
                     notificationRelays.flow.value
                 } else {
-                    LocalCache.getUserIfExists(pubkey)?.inboxRelays()?.ifEmpty { null }?.toSet()
+                    LocalCache
+                        .getUserIfExists(pubkey)
+                        ?.inboxRelays()
+                        ?.ifEmpty { null }
+                        ?.toSet()
                         ?: cache.relayHints.hintsForKey(pubkey).toSet()
                 }
             } ?: emptySet()
@@ -892,7 +932,10 @@ class Account(
                             outboxRelays.flow.value
                         } else {
                             replyToAuthor.outboxRelays().ifEmpty { null }?.toSet()
-                                ?: cache.relayHints.hintsForKey(replyToAuthor.pubkeyHex).ifEmpty { null }?.toSet()
+                                ?: cache.relayHints
+                                    .hintsForKey(replyToAuthor.pubkeyHex)
+                                    .ifEmpty { null }
+                                    ?.toSet()
                                 ?: emptySet()
                         }
                     } else {
@@ -1675,7 +1718,11 @@ class Account(
                             if (pubkey == userProfile().pubkeyHex) {
                                 notificationRelays.flow.value
                             } else {
-                                LocalCache.getUserIfExists(pubkey)?.inboxRelays()?.ifEmpty { null }?.toSet()
+                                LocalCache
+                                    .getUserIfExists(pubkey)
+                                    ?.inboxRelays()
+                                    ?.ifEmpty { null }
+                                    ?.toSet()
                                     ?: cache.relayHints.hintsForKey(pubkey).toSet()
                             }
                         }
@@ -1888,9 +1935,11 @@ class Account(
         val relays = nip65RelayList.inboxFlow.value.toSet()
         NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey.pubkeyHex, signer.pubKey, relays, signer) {
             val relayList =
-                dvmPublicKey.inboxRelays().ifEmpty {
-                    LocalCache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex)
-                }.toSet()
+                dvmPublicKey
+                    .inboxRelays()
+                    .ifEmpty {
+                        LocalCache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex)
+                    }.toSet()
 
             client.send(it, relayList)
             cache.justConsumeMyOwnEvent(it)

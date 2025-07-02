@@ -108,12 +108,13 @@ fun filterHomePostsByCommunity(
 
     val defaultSince = TimeUtils.oneWeekAgo()
 
-    return communitySet.set.mapNotNull {
-        filterHomePostsFromCommunity(
-            relay = it.key,
-            community = it.value.community,
-            authors = it.value.authors,
-            since = since?.get(it.key)?.time ?: defaultSince,
-        )
-    }.flatten()
+    return communitySet.set
+        .mapNotNull {
+            filterHomePostsFromCommunity(
+                relay = it.key,
+                community = it.value.community,
+                authors = it.value.authors,
+                since = since?.get(it.key)?.time ?: defaultSince,
+            )
+        }.flatten()
 }

@@ -250,14 +250,13 @@ class AccountSettings(
     // ---
     // proxy settings
     // ---
-    fun setTorSettings(newTorSettings: TorSettings): Boolean {
-        return if (torSettings.update(newTorSettings)) {
+    fun setTorSettings(newTorSettings: TorSettings): Boolean =
+        if (torSettings.update(newTorSettings)) {
             saveAccountSettings()
             true
         } else {
             false
         }
-    }
 
     // ---
     // language services

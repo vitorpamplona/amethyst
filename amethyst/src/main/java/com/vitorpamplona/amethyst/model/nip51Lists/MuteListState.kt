@@ -56,19 +56,17 @@ class MuteListState(
 
     fun getMuteList(): MuteListEvent? = getMuteListNote().event as? MuteListEvent
 
-    suspend fun muteListWithBackup(note: Note): PeopleListEvent.UsersAndWords {
-        return muteList(
+    suspend fun muteListWithBackup(note: Note): PeopleListEvent.UsersAndWords =
+        muteList(
             note.event as? MuteListEvent ?: settings.backupMuteList,
         )
-    }
 
-    suspend fun muteList(event: MuteListEvent?): PeopleListEvent.UsersAndWords {
-        return tryAndWait { continuation ->
+    suspend fun muteList(event: MuteListEvent?): PeopleListEvent.UsersAndWords =
+        tryAndWait { continuation ->
             event?.publicAndPrivateUsersAndWords(signer) {
                 continuation.resume(it)
             }
         } ?: PeopleListEvent.UsersAndWords()
-    }
 
     val flow =
         getMuteListFlow()

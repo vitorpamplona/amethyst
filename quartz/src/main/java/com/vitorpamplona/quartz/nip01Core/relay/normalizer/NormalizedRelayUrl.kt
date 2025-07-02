@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.normalizer
 
-data class NormalizedRelayUrl(val url: String) : Comparable<NormalizedRelayUrl> {
+data class NormalizedRelayUrl(
+    val url: String,
+) : Comparable<NormalizedRelayUrl> {
     override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
 }
 

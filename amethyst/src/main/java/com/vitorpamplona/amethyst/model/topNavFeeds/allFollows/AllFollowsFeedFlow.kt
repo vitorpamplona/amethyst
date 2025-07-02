@@ -32,8 +32,8 @@ class AllFollowsFeedFlow(
     val allFollows: StateFlow<FollowListState.Kind3Follows?>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
-    fun convert(kind3: FollowListState.Kind3Follows?): AllFollowsByOutboxTopNavFilter {
-        return if (kind3 != null) {
+    fun convert(kind3: FollowListState.Kind3Follows?): AllFollowsByOutboxTopNavFilter =
+        if (kind3 != null) {
             AllFollowsByOutboxTopNavFilter(
                 authors = kind3.authors,
                 hashtags = kind3.hashtags,
@@ -47,7 +47,6 @@ class AllFollowsFeedFlow(
                 defaultRelays = followsRelays,
             )
         }
-    }
 
     override fun flow() = allFollows.map(::convert)
 

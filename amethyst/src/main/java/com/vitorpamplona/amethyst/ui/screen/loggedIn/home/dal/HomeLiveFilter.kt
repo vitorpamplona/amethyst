@@ -68,9 +68,10 @@ class HomeLiveFilter(
         filterParams: FilterByListParams,
         timeLimit: Long,
     ): Boolean =
-        channel.notes.filter { key, value ->
-            acceptableEvent(value, filterParams, timeLimit)
-        }.isNotEmpty()
+        channel.notes
+            .filter { key, value ->
+                acceptableEvent(value, filterParams, timeLimit)
+            }.isNotEmpty()
 
     override fun updateListWith(
         oldList: List<Channel>,

@@ -54,12 +54,10 @@ class AllFollowsByOutboxTopNavFilter(
     val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.Companion.toScope(it) }
     val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.Companion.toScope(it) }
 
-    override fun matchAuthor(pubkey: HexKey): Boolean {
-        return authors == null || pubkey in authors
-    }
+    override fun matchAuthor(pubkey: HexKey): Boolean = authors == null || pubkey in authors
 
-    override fun match(noteEvent: Event): Boolean {
-        return if (noteEvent is LiveActivitiesEvent) {
+    override fun match(noteEvent: Event): Boolean =
+        if (noteEvent is LiveActivitiesEvent) {
             (authors != null && noteEvent.participantsIntersect(authors)) ||
                 (hashtags != null && noteEvent.isTaggedHashes(hashtags)) ||
                 (geotags != null && noteEvent.isTaggedGeoHashes(geotags)) ||
@@ -78,7 +76,6 @@ class AllFollowsByOutboxTopNavFilter(
                 (geotags != null && noteEvent.isTaggedGeoHashes(geotags)) ||
                 (communities != null && noteEvent.isTaggedAddressableNotes(communities))
         }
-    }
 
     override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsByOutboxTopNavPerRelayFilterSet> {
         val authorsPerRelay =

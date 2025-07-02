@@ -30,9 +30,7 @@ import kotlinx.serialization.encoding.Encoder
 object NormalizedRelayUrlSerializer : KSerializer<NormalizedRelayUrl> {
     override val descriptor = PrimitiveSerialDescriptor("NormalizedRelayUrl", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): NormalizedRelayUrl {
-        return NormalizedRelayUrl(decoder.decodeString())
-    }
+    override fun deserialize(decoder: Decoder): NormalizedRelayUrl = NormalizedRelayUrl(decoder.decodeString())
 
     override fun serialize(
         encoder: Encoder,

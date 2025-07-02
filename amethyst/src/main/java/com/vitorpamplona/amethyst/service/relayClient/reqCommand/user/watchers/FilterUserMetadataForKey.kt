@@ -45,14 +45,16 @@ fun filterUserMetadataForKey(
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter> {
     val relays =
-        authors.map {
-            val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
-            val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
+        authors
+            .map {
+                val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
+                val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
 
-            authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
-                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
-        }.flatten().toSet()
+                authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
+                    ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                    ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+            }.flatten()
+            .toSet()
 
     return relays.map {
         RelayBasedFilter(

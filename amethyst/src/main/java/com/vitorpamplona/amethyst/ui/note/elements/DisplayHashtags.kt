@@ -50,7 +50,8 @@ fun DisplayFollowingHashtagsInPost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userFollowState by accountViewModel.account.allFollows.flow.collectAsStateWithLifecycle()
+    val userFollowState by accountViewModel.account.allFollows.flow
+        .collectAsStateWithLifecycle()
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {

@@ -38,15 +38,14 @@ class LiveActivityWatcherSubAssembly(
     override fun updateFilter(
         key: ChannelFinderQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> {
-        return if (key.channel is LiveActivitiesChannel) {
+    ): List<RelayBasedFilter> =
+        if (key.channel is LiveActivitiesChannel) {
             key.channel.relays().flatMap {
                 filterLiveStreamUpdatesByAddress(it, listOf(key.channel), since?.get(it)?.time)
             }
         } else {
             emptyList()
         }
-    }
 
     /**
      * Only one key per channel.

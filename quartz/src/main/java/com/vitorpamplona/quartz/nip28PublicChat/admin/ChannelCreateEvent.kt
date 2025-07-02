@@ -46,16 +46,15 @@ class ChannelCreateEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider {
-    override fun eventHints() = channelInfo().relays?.mapNotNull { EventIdHint(id, it) } ?: emptyList()
+    override fun eventHints() = channelInfo().relays?.map { EventIdHint(id, it) } ?: emptyList()
 
-    fun channelInfo(): ChannelDataNorm {
-        return try {
+    fun channelInfo(): ChannelDataNorm =
+        try {
             ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
         } catch (e: JsonParseException) {
-            Log.e("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
+            Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
             ChannelDataNorm()
         }
-    }
 
     companion object {
         const val KIND = 40

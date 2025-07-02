@@ -48,11 +48,11 @@ class TorRelayState(
             settings.torSettings.trustedRelaysViaTor,
             settings.torSettings.newRelaysViaTor,
         ) {
-                torType: TorType,
-                onionRelaysViaTor: Boolean,
-                dmRelaysViaTor: Boolean,
-                trustedRelaysViaTor: Boolean,
-                newRelaysViaTor: Boolean,
+            torType: TorType,
+            onionRelaysViaTor: Boolean,
+            dmRelaysViaTor: Boolean,
+            trustedRelaysViaTor: Boolean,
+            newRelaysViaTor: Boolean,
             ->
             TorRelaySettings(torType, onionRelaysViaTor, dmRelaysViaTor, trustedRelaysViaTor, newRelaysViaTor)
         }.onStart {
@@ -65,8 +65,7 @@ class TorRelayState(
                     settings.torSettings.newRelaysViaTor.value,
                 ),
             )
-        }
-            .flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

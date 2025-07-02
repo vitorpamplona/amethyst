@@ -61,19 +61,17 @@ class PublicChatListState(
 
     fun getChannelList(): ChannelListEvent? = getChannelListNote().event as? ChannelListEvent
 
-    suspend fun publicChatListWithBackup(note: Note): Set<EventIdHint> {
-        return publicChatList(
+    suspend fun publicChatListWithBackup(note: Note): Set<EventIdHint> =
+        publicChatList(
             note.event as? ChannelListEvent ?: settings.backupChannelList,
         )
-    }
 
-    suspend fun publicChatList(event: ChannelListEvent?): Set<EventIdHint> {
-        return tryAndWait { continuation ->
+    suspend fun publicChatList(event: ChannelListEvent?): Set<EventIdHint> =
+        tryAndWait { continuation ->
             event?.publicAndPrivateChannels(signer) {
                 continuation.resume(it)
             }
         } ?: emptySet()
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<EventIdHint>> by lazy {

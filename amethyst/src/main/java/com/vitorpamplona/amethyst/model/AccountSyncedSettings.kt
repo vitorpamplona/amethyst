@@ -114,9 +114,7 @@ class AccountSyncedSettings(
         }
     }
 
-    fun dontTranslateFromFilteredBySpokenLanguages(): Set<String> {
-        return languages.dontTranslateFrom - getLanguagesSpokenByUser()
-    }
+    fun dontTranslateFromFilteredBySpokenLanguages(): Set<String> = languages.dontTranslateFrom - getLanguagesSpokenByUser()
 }
 
 @Stable

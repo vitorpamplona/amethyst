@@ -57,19 +57,17 @@ class HashtagListState(
 
     fun getHashtagList(): HashtagListEvent? = getHashtagListNote().event as? HashtagListEvent
 
-    suspend fun hashtagListWithBackup(note: Note): Set<String> {
-        return hashtagList(
+    suspend fun hashtagListWithBackup(note: Note): Set<String> =
+        hashtagList(
             note.event as? HashtagListEvent ?: settings.backupHashtagList,
         )
-    }
 
-    suspend fun hashtagList(event: HashtagListEvent?): Set<String> {
-        return tryAndWait { continuation ->
+    suspend fun hashtagList(event: HashtagListEvent?): Set<String> =
+        tryAndWait { continuation ->
             event?.publicAndPrivateHashtag(signer) {
                 continuation.resume(it)
             }
         } ?: emptySet()
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<String>> by lazy {

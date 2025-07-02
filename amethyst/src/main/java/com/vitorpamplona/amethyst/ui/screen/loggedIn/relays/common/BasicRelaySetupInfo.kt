@@ -32,9 +32,8 @@ data class BasicRelaySetupInfo(
     val paidRelay: Boolean = false,
 )
 
-fun relaySetupInfoBuilder(normalized: NormalizedRelayUrl): BasicRelaySetupInfo {
-    return BasicRelaySetupInfo(
+fun relaySetupInfoBuilder(normalized: NormalizedRelayUrl): BasicRelaySetupInfo =
+    BasicRelaySetupInfo(
         normalized,
         RelayStats.get(normalized),
     )
-}

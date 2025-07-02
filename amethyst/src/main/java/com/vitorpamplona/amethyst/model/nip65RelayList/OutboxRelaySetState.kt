@@ -67,17 +67,20 @@ class OutboxRelaySetState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
-        usersToLoad.transformLatest { followList ->
-            val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList)
-            val relayListFlows = combineAllFlows(flows)
-            emitAll(relayListFlows)
-        }.onStart {
-            emit(
-                usersToLoad.value.mapNotNull {
-                    getNIP65RelayList(it)?.writeRelaysNorm()
-                }.flatten().toSet(),
-            )
-        }.flowOn(Dispatchers.Default)
+        usersToLoad
+            .transformLatest { followList ->
+                val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList)
+                val relayListFlows = combineAllFlows(flows)
+                emitAll(relayListFlows)
+            }.onStart {
+                emit(
+                    usersToLoad.value
+                        .mapNotNull {
+                            getNIP65RelayList(it)?.writeRelaysNorm()
+                        }.flatten()
+                        .toSet(),
+                )
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,
@@ -86,15 +89,18 @@ class OutboxRelaySetState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flowSet: StateFlow<Set<String>> =
-        flow.map { relayList ->
-            relayList.map { it.url }.toSet()
-        }.onStart {
-            emit(
-                usersToLoad.value.mapNotNull {
-                    getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
-                }.flatten().toSet(),
-            )
-        }.flowOn(Dispatchers.Default)
+        flow
+            .map { relayList ->
+                relayList.map { it.url }.toSet()
+            }.onStart {
+                emit(
+                    usersToLoad.value
+                        .mapNotNull {
+                            getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
+                        }.flatten()
+                        .toSet(),
+                )
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,

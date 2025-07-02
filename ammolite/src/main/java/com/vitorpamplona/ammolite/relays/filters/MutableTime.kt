@@ -23,7 +23,9 @@ package com.vitorpamplona.ammolite.relays.filters
 /*
 * Wrapper class to allow changing in EOSE without modifying the list it is included within
 */
-class MutableTime(startTime: Long) {
+class MutableTime(
+    startTime: Long,
+) {
     var time: Long = startTime
         private set
 
