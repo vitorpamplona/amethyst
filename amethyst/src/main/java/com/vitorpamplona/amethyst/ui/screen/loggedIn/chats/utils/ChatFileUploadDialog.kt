@@ -148,7 +148,7 @@ private fun ImageVideoPostChat(
     fileUploadState: ChatFileUploadState,
     accountViewModel: AccountViewModel,
 ) {
-    val fileServers by accountViewModel.account.liveServerList.collectAsState()
+    val fileServers by accountViewModel.account.serverLists.liveServerList.collectAsState()
 
     val fileServerOptions =
         remember(fileServers) {

@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.CommentKinds
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -39,58 +40,67 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
+val PostsByHashtagsKinds =
+    listOf(
+        TextNoteEvent.KIND,
+        ChannelMessageEvent.KIND,
+        LongTextNoteEvent.KIND,
+        PollNoteEvent.KIND,
+        LiveActivitiesChatMessageEvent.KIND,
+        ClassifiedsEvent.KIND,
+        HighlightEvent.KIND,
+        WikiNoteEvent.KIND,
+        CommentEvent.KIND,
+    )
+
+val PostsByHashtagKinds2 =
+    listOf(
+        InteractiveStorySceneEvent.KIND,
+        AudioTrackEvent.KIND,
+        AudioHeaderEvent.KIND,
+    )
+
 fun filterPostsByHashtags(
     hashtag: String,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    val hashtagsToFollow = hashtagAlts(hashtag).toList()
+    relays: Set<NormalizedRelayUrl>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    val hashtagsToFollowMap = mapOf("t" to hashtagAlts(hashtag).sorted())
+    val hashtagScoreMap = mapOf("I" to listOf(HashtagId.toScope(hashtag)))
 
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    tags = mapOf("t" to hashtagsToFollow),
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            ChannelMessageEvent.KIND,
-                            LongTextNoteEvent.KIND,
-                            PollNoteEvent.KIND,
-                            LiveActivitiesChatMessageEvent.KIND,
-                            ClassifiedsEvent.KIND,
-                            HighlightEvent.KIND,
-                            WikiNoteEvent.KIND,
-                            CommentEvent.KIND,
-                        ),
-                    limit = 400,
-                    since = since,
-                ),
-        ),
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    tags = mapOf("t" to hashtagsToFollow),
-                    kinds =
-                        listOf(
-                            InteractiveStorySceneEvent.KIND,
-                            AudioTrackEvent.KIND,
-                            AudioHeaderEvent.KIND,
-                        ),
-                    limit = 100,
-                    since = since,
-                ),
-        ),
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    tags = mapOf("I" to listOf(HashtagId.toScope(hashtag))),
-                    kinds = listOf(CommentEvent.KIND),
-                    limit = 200,
-                    since = since,
-                ),
-        ),
-    )
+    return relays.flatMap { relay ->
+        val since = since?.get(relay)?.time
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        tags = hashtagsToFollowMap,
+                        kinds = PostsByHashtagsKinds,
+                        limit = 400,
+                        since = since,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        tags = hashtagsToFollowMap,
+                        kinds = PostsByHashtagKinds2,
+                        limit = 100,
+                        since = since,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        tags = hashtagScoreMap,
+                        kinds = CommentKinds,
+                        limit = 200,
+                        since = since,
+                    ),
+            ),
+        )
+    }
 }

@@ -64,7 +64,7 @@ fun LazyListScope.renderDMItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "DM" + item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "DM" + item.relay }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },

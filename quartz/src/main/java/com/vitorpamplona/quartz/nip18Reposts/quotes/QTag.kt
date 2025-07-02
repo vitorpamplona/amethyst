@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip18Reposts.quotes
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -36,11 +37,14 @@ interface QTag {
         fun parse(tag: Array<String>): QTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
+
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
             return if (tag[1].length == 64) {
-                QEventTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+                QEventTag(tag[1], relayHint, tag.getOrNull(3))
             } else {
                 val address = Address.parse(tag[1]) ?: return null
-                QAddressableTag(address, tag.getOrNull(2))
+                QAddressableTag(address, relayHint)
             }
         }
 
@@ -53,21 +57,29 @@ interface QTag {
 
         @JvmStatic
         fun parseEventAsHint(tag: Array<String>): EventIdHint? {
-            ensure(tag.has(1)) { return null }
+            ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return EventIdHint(tag[1], tag[2])
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(relayHint != null) { return null }
+
+            return EventIdHint(tag[1], relayHint)
         }
 
         @JvmStatic
         fun parseAddressAsHint(tag: Array<String>): AddressHint? {
-            ensure(tag.has(1)) { return null }
+            ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length != 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
             ensure(!tag[1].contains(':')) { return null }
-            return AddressHint(tag[1], tag[2])
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(relayHint != null) { return null }
+
+            return AddressHint(tag[1], relayHint)
         }
     }
 }

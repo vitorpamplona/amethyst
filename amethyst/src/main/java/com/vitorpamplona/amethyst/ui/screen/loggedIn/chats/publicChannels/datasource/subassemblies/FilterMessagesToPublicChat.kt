@@ -21,25 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 fun filterMessagesToPublicChat(
     channel: PublicChatChannel,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? =
-    listOf(
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? =
+    channel.relays().toSet().map {
+        RelayBasedFilter(
+            relay = it,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(ChannelMessageEvent.KIND),
                     tags = mapOf("e" to listOfNotNull(channel.idHex)),
                     limit = 200,
-                    since = since,
+                    since = since?.get(it)?.time,
                 ),
-        ),
-    )
+        )
+    }

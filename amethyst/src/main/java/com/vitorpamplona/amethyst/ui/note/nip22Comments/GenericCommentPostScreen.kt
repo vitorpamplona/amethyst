@@ -56,7 +56,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialogEasy
+import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -210,10 +210,10 @@ fun GenericCommentPostScreen(
         },
     ) { pad ->
         if (postViewModel.showRelaysDialog) {
-            RelaySelectionDialogEasy(
+            RelaySelectionDialog(
                 preSelectedList = postViewModel.relayList ?: persistentListOf(),
                 onClose = { postViewModel.showRelaysDialog = false },
-                onPost = { postViewModel.relayList = it.map { it.url }.toImmutableList() },
+                onPost = { postViewModel.relayList = it },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -255,7 +255,7 @@ private fun GenericCommentPostBody(
             Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 postViewModel.externalIdentity?.let {
                     Row {
-                        DisplayExternalId(it, nav)
+                        DisplayExternalId(it, accountViewModel, nav)
                         Spacer(modifier = StdVertSpacer)
                     }
                 }

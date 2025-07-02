@@ -22,10 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -40,8 +40,8 @@ class FollowingEphemeralChatSubAssembler(
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
     override fun updateFilter(
         key: ChatroomListState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? =
         listOfNotNull(
             filterFollowingEphemeralChats(key.account.ephemeralChatList.liveEphemeralChatList.value, since),
         ).flatten()
@@ -69,7 +69,7 @@ class FollowingEphemeralChatSubAssembler(
         key: User,
         subId: String,
     ) {
-        return super.endSub(key, subId)
+        super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
     }
 }

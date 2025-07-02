@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 
 @Composable
 fun BasicRelaySetupInfoDialog(
@@ -50,7 +49,7 @@ fun BasicRelaySetupInfoDialog(
         RelayInformationDialog(
             onClose = { relayInfo = null },
             relayInfo = it.relayInfo,
-            relayBriefInfo = it.relayBriefInfo,
+            relay = it.relay,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -64,18 +63,18 @@ fun BasicRelaySetupInfoDialog(
         accountViewModel = accountViewModel,
         onClick = {
             accountViewModel.retrieveRelayDocument(
-                item.url,
+                relay = item.relay,
                 onInfo = {
-                    relayInfo = RelayInfoDialog(RelayBriefInfoCache.RelayBriefInfo(item.url), it)
+                    relayInfo = RelayInfoDialog(item.relay, it)
                 },
-                onError = { url, errorCode, exceptionMessage ->
+                onError = { relay, errorCode, exceptionMessage ->
                     val msg =
                         when (errorCode) {
                             Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
                                 stringRes(
                                     context,
                                     R.string.relay_information_document_error_assemble_url,
-                                    url,
+                                    relay.url,
                                     exceptionMessage,
                                 )
 
@@ -83,7 +82,7 @@ fun BasicRelaySetupInfoDialog(
                                 stringRes(
                                     context,
                                     R.string.relay_information_document_error_assemble_url,
-                                    url,
+                                    relay.url,
                                     exceptionMessage,
                                 )
 
@@ -91,7 +90,7 @@ fun BasicRelaySetupInfoDialog(
                                 stringRes(
                                     context,
                                     R.string.relay_information_document_error_assemble_url,
-                                    url,
+                                    relay.url,
                                     exceptionMessage,
                                 )
 
@@ -99,7 +98,7 @@ fun BasicRelaySetupInfoDialog(
                                 stringRes(
                                     context,
                                     R.string.relay_information_document_error_assemble_url,
-                                    url,
+                                    relay.url,
                                     exceptionMessage,
                                 )
                         }

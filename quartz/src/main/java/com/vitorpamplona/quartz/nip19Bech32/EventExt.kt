@@ -22,10 +22,11 @@ package com.vitorpamplona.quartz.nip19Bech32
 
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 
-fun Event.toNIP19(relayHint: String? = null): String =
+fun Event.toNIP19(relayHint: NormalizedRelayUrl? = null): String =
     if (this is AddressableEvent) {
         ATag(kind, pubKey, dTag(), relayHint).toNAddr()
     } else {

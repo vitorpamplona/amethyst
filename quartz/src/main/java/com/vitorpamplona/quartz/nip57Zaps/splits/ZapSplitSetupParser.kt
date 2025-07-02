@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
 class ZapSplitSetupParser {
@@ -40,9 +41,11 @@ class ZapSplitSetupParser {
                 if (isLnAddress) {
                     ZapSplitSetupLnAddress(tags[1], 1.0)
                 } else {
+                    val relayHint = tags.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
                     ZapSplitSetup(
                         tags[1],
-                        tags.getOrNull(2),
+                        relayHint,
                         weight,
                     )
                 }

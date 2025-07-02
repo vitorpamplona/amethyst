@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -86,8 +87,8 @@ class GenericRepostEvent(
 
         fun build(
             boostedPost: Event,
-            eventSourceRelay: String?,
-            authorHomeRelay: String?,
+            eventSourceRelay: NormalizedRelayUrl?,
+            authorHomeRelay: NormalizedRelayUrl?,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<GenericRepostEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, boostedPost.toJson(), createdAt) {

@@ -20,43 +20,17 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 
 fun filterByAddress(address: NAddress) =
-    listOf(
-        TypedFilter(
-            types = ALL_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(MetadataEvent.KIND),
-                    authors = listOfNotNull(address.author),
-                    limit = 1,
-                ),
+    filterMissingAddressables(
+        setOf(
+            Address(
+                address.kind,
+                address.author,
+                address.dTag,
+            ),
         ),
-        if (address.kind < 25000 && address.dTag.isBlank()) {
-            TypedFilter(
-                types = ALL_FEED_TYPES,
-                filter =
-                    SincePerRelayFilter(
-                        kinds = listOf(address.kind),
-                        authors = listOf(address.author),
-                        limit = 5,
-                    ),
-            )
-        } else {
-            TypedFilter(
-                types = ALL_FEED_TYPES,
-                filter =
-                    SincePerRelayFilter(
-                        kinds = listOf(address.kind),
-                        tags = mapOf("d" to listOf(address.dTag)),
-                        authors = listOf(address.author),
-                        limit = 5,
-                    ),
-            )
-        },
     )

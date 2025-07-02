@@ -229,7 +229,7 @@ private fun ChannelMetadataScaffold(
                 )
             }
 
-            itemsIndexed(feedState, key = { _, item -> "ChatRelays" + item.url }) { index, item ->
+            itemsIndexed(feedState, key = { _, item -> "ChatRelays" + item.relay }) { index, item ->
                 BasicRelaySetupInfoDialog(
                     item,
                     onDelete = { postViewModel.deleteHomeRelay(item) },

@@ -20,25 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.mapNotNull
 
 fun filterContentDVMsByGeohash(
-    hashToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (hashToLoad == null || hashToLoad.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    geotags: Set<String>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    if (geotags.isEmpty()) return emptyList()
 
-    val geoHashes = hashToLoad.toList()
+    val geoHashes = geotags.sorted()
 
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(AppDefinitionEvent.KIND),
                     tags = mapOf("k" to listOf("5300"), "g" to geoHashes),
                     limit = 300,
@@ -46,4 +50,25 @@ fun filterContentDVMsByGeohash(
                 ),
         ),
     )
+}
+
+fun filterContentDVMsByGeohash(
+    geoSet: LocationTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (geoSet.set.isEmpty()) return emptyList()
+
+    val defaultSince = TimeUtils.oneWeekAgo()
+
+    return geoSet.set.mapNotNull {
+        if (it.value.geotags.isEmpty()) {
+            null
+        } else {
+            filterContentDVMsByGeohash(
+                relay = it.key,
+                geotags = it.value.geotags,
+                since = since?.get(it.key)?.time ?: defaultSince,
+            )
+        }
+    }.flatten()
 }

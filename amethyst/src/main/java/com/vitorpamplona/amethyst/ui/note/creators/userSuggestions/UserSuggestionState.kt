@@ -42,7 +42,7 @@ class UserSuggestionState(
 ) {
     val invalidations = MutableStateFlow<Int>(0)
     val currentWord = MutableStateFlow("")
-    val searchDataSourceState = SearchQueryState(MutableStateFlow(""))
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(""), accountViewModel.account)
 
     @OptIn(FlowPreview::class)
     val searchTerm =

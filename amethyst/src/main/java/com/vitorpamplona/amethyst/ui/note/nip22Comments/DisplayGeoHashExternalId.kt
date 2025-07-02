@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
@@ -42,6 +43,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -50,10 +52,21 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 @Composable
 fun DisplayGeohashExternalId(
     externalId: GeohashId,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    DisplayGeohashExternalId(externalId.geohash) {
+        nav.nav(Route.Geohash(externalId.geohash))
+    }
+}
+
+@Composable
+fun DisplayGeohashExternalId(
+    geohash: String,
+    linkInteractionListener: LinkInteractionListener,
+) {
     Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        LoadCityName(externalId.geohash) { cityName ->
+        LoadCityName(geohash) { cityName ->
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = stringRes(id = R.string.geohash_exclusive),
@@ -67,7 +80,7 @@ fun DisplayGeohashExternalId(
                 text =
                     buildAnnotatedString {
                         withLink(
-                            LinkAnnotation.Clickable("cityname") { nav.nav(Route.Geohash(externalId.geohash)) },
+                            LinkAnnotation.Clickable("cityname", null, linkInteractionListener),
                         ) {
                             append(cityName)
                         }

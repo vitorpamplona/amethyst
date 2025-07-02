@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHintOptional
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -33,6 +34,7 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.map
 
 @Immutable
 class ChannelListEvent(
@@ -99,7 +101,7 @@ class ChannelListEvent(
         )
 
         fun createChannel(
-            channel: EventIdHint,
+            channel: EventIdHintOptional,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -113,7 +115,7 @@ class ChannelListEvent(
         )
 
         fun createChannels(
-            channels: List<EventIdHint>,
+            channels: List<EventIdHintOptional>,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -178,7 +180,7 @@ class ChannelListEvent(
 
         fun addChannel(
             earlierVersion: ChannelListEvent,
-            channel: EventIdHint,
+            channel: EventIdHintOptional,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -194,7 +196,7 @@ class ChannelListEvent(
 
         fun addChannels(
             earlierVersion: ChannelListEvent,
-            channels: List<EventIdHint>,
+            channels: List<EventIdHintOptional>,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),

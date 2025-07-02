@@ -20,38 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 
-fun filterUserProfileLists(
-    keys: Set<HexKey>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    if (keys.isEmpty()) return emptyList()
-
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            BookmarkListEvent.KIND,
-                            PeopleListEvent.KIND,
-                            FollowListEvent.KIND,
-                            AppRecommendationEvent.KIND,
-                        ),
-                    authors = keys.toList(),
-                    limit = 100,
-                    since = since,
-                ),
-        ),
+val UserProfileListKinds =
+    listOf(
+        BookmarkListEvent.KIND,
+        PeopleListEvent.KIND,
+        FollowListEvent.KIND,
+        AppRecommendationEvent.KIND,
     )
+
+fun filterUserProfileLists(
+    users: Map<NormalizedRelayUrl, Set<String>>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    return users.map {
+        RelayBasedFilter(
+            relay = it.key,
+            filter =
+                Filter(
+                    kinds = UserProfileListKinds,
+                    authors = it.value.sorted(),
+                    limit = 100,
+                    since = since?.get(it.key)?.time,
+                ),
+        )
+    }
 }

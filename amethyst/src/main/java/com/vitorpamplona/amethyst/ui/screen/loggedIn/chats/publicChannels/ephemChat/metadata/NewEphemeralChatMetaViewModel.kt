@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 class NewEphemeralChatMetaViewModel : ViewModel() {
     private var account: Account? = null
@@ -42,7 +43,9 @@ class NewEphemeralChatMetaViewModel : ViewModel() {
         this.account = account
     }
 
-    fun buildRoom() = RoomId(channelName.value.text, relayUrl.value.text)
+    fun buildRoom() =
+        RelayUrlNormalizer.normalizeOrNull(relayUrl.value.text)
+            ?.let { RoomId(channelName.value.text, it) }
 
     /*
     fun createOrUpdate(onDone: (RoomId) -> Unit) {

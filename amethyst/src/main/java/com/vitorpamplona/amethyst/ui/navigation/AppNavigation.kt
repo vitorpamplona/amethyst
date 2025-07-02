@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -129,13 +130,17 @@ fun AppNavigation(
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
+            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.Community> { CommunityScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Room> { ChatroomScreen(it.id.toString(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
             composableFromEndArgs<Route.Channel> { ChannelScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.EphemeralChat> { EphemeralChatScreen(RoomId(it.id, it.relayUrl), accountViewModel, nav) }
+            composableFromEndArgs<Route.EphemeralChat> {
+                RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
+                    EphemeralChatScreen(RoomId(it.id, relay), accountViewModel, nav)
+                }
+            }
 
             composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
             composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
@@ -268,7 +273,7 @@ private fun NavigateIfIntentRequested(
 
         currentIntentNextPage?.let { intentNextPage ->
             var actionableNextPage by remember {
-                mutableStateOf(uriToRoute(intentNextPage))
+                mutableStateOf(uriToRoute(intentNextPage, accountViewModel.account))
             }
 
             LaunchedEffect(intentNextPage) {
@@ -326,7 +331,7 @@ private fun NavigateIfIntentRequested(
 
                         if (!uri.isNullOrBlank()) {
                             // navigation functions
-                            val newPage = uriToRoute(uri)
+                            val newPage = uriToRoute(uri, accountViewModel.account)
 
                             if (newPage != null) {
                                 scope.launch {

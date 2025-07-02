@@ -164,7 +164,7 @@ fun WatchAccountForVideoScreen(
     accountViewModel: AccountViewModel,
 ) {
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
-    val hiddenUsers = accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
+    val hiddenUsers = accountViewModel.account.hiddenUsers.flow.collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         videoFeedContentState.checkKeysInvalidateDataAndSendToTop()

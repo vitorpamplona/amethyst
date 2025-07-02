@@ -23,6 +23,10 @@ package com.vitorpamplona.quartz.nip89AppHandlers.recommendation.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -30,7 +34,7 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 class RecommendationTag(
     val address: Address,
-    val relay: String? = null,
+    val relay: NormalizedRelayUrl? = null,
     val platform: String? = null,
 ) {
     fun toTagArray() = assemble(address, relay, platform)
@@ -47,7 +51,8 @@ class RecommendationTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             val address = Address.parse(tag[1]) ?: return null
-            return RecommendationTag(address, tag.getOrNull(2), tag.getOrNull(3))
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return RecommendationTag(address, relayHint, tag.getOrNull(3))
         }
 
         @JvmStatic
@@ -59,17 +64,30 @@ class RecommendationTag(
         }
 
         @JvmStatic
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == ATag.Companion.TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            ensure(tag[1].contains(':')) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+
+            return AddressHint(tag[1], relayHint)
+        }
+
+        @JvmStatic
         fun assemble(
             addressId: String,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
             platform: String?,
-        ) = arrayOfNotNull(TAG_NAME, addressId, relay, platform)
+        ) = arrayOfNotNull(TAG_NAME, addressId, relay?.url, platform)
 
         @JvmStatic
         fun assemble(
             address: Address,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
             platform: String?,
-        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay, platform)
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay?.url, platform)
     }
 }

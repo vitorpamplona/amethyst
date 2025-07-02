@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip96FileStorage.actions.PartialEvent
 import com.vitorpamplona.quartz.nip96FileStorage.actions.UploadResult
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.delay
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -49,10 +50,6 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.source
 import java.io.InputStream
-
-val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-
-fun randomChars() = List(16) { charPool.random() }.joinToString("")
 
 class Nip96Uploader {
     suspend fun upload(
@@ -138,7 +135,7 @@ class Nip96Uploader {
     ): MediaUploadResult {
         checkNotInMainThread()
 
-        val fileName = randomChars()
+        val fileName = RandomInstance.randomChars(16)
         val extension = contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 
         val client = okHttpClient(server.apiUrl)

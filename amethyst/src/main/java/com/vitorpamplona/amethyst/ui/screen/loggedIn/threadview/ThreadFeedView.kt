@@ -479,7 +479,7 @@ private fun FullBleedNoteCompose(
 
                     val geo = remember { noteEvent.geoHashOrScope() }
                     if (geo != null) {
-                        DisplayLocation(geo, nav)
+                        DisplayLocation(geo, accountViewModel, nav)
                     }
 
                     val baseReward = remember { noteEvent.bountyBaseReward()?.let { Reward(it) } }

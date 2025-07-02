@@ -60,7 +60,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialogEasy
+import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -96,7 +96,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
@@ -212,10 +211,10 @@ fun NewProductScreen(
         },
     ) { pad ->
         if (showRelaysDialog) {
-            RelaySelectionDialogEasy(
+            RelaySelectionDialog(
                 preSelectedList = postViewModel.relayList ?: persistentListOf(),
                 onClose = { showRelaysDialog = false },
-                onPost = { postViewModel.relayList = it.map { it.url }.toImmutableList() },
+                onPost = { postViewModel.relayList = it },
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

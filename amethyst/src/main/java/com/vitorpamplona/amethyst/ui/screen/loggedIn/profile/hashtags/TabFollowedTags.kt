@@ -40,11 +40,11 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 @Composable
 fun TabFollowedTags(
     baseUser: User,
-    account: AccountViewModel,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items =
-        remember(baseUser) {
+        remember(baseUser.latestContactList?.id) {
             baseUser.latestContactList?.unverifiedFollowTagSet()
         }
 
@@ -58,7 +58,7 @@ fun TabFollowedTags(
                 itemsIndexed(items) { index, hashtag ->
                     HashtagHeader(
                         tag = hashtag,
-                        account = account,
+                        account = accountViewModel,
                         onClick = { nav.nav(Route.Hashtag(hashtag)) },
                     )
                     HorizontalDivider(

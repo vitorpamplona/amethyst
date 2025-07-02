@@ -34,6 +34,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
@@ -145,7 +146,10 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun uriToRoute(uri: String?): Route? =
+fun uriToRoute(
+    uri: String?,
+    account: Account,
+): Route? =
     if (uri?.startsWith("notifications", true) == true || uri?.startsWith("nostr:notifications", true) == true) {
         Route.Notification
     } else {
@@ -153,6 +157,9 @@ fun uriToRoute(uri: String?): Route? =
             Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id="))
         } else {
             val nip19 = Nip19Parser.uriToRoute(uri)?.entity
+            if (nip19 != null) {
+                LocalCache.consume(nip19)
+            }
             when (nip19) {
                 is NPub -> Route.Profile(nip19.hex)
                 is NProfile -> Route.Profile(nip19.hex)
@@ -181,12 +188,7 @@ fun uriToRoute(uri: String?): Route? =
                     }
                 }
 
-                is NEmbed -> {
-                    if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
-                        LocalCache.justConsume(nip19.event, null, false)
-                    }
-                    Route.EventRedirect(nip19.event.id)
-                }
+                is NEmbed -> Route.EventRedirect(nip19.event.id)
 
                 else -> null
             }

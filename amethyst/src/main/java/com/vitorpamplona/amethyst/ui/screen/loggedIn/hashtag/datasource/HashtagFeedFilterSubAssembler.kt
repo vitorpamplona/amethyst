@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class HashtagFeedFilterSubAssembler(
     client: NostrClient,
@@ -31,8 +31,8 @@ class HashtagFeedFilterSubAssembler(
 ) : PerUniqueIdEoseManager<HashtagQueryState>(client, allKeys) {
     override fun updateFilter(
         key: HashtagQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter> = filterPostsByHashtags(key.hashtag, since)
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> = filterPostsByHashtags(key.hashtag, key.relays, since)
 
     /**
      * Only one key per hashtag.

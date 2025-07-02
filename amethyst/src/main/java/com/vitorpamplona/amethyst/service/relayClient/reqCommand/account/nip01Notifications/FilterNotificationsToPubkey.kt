@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -47,62 +46,69 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
+val NotificationsPerKeyKinds =
+    listOf(
+        TextNoteEvent.KIND,
+        ReactionEvent.KIND,
+        RepostEvent.KIND,
+        GenericRepostEvent.KIND,
+        ReportEvent.KIND,
+        LnZapEvent.KIND,
+        LnZapPaymentResponseEvent.KIND,
+        ChannelMessageEvent.KIND,
+        EphemeralChatEvent.KIND,
+        BadgeAwardEvent.KIND,
+    )
+
+val NotificationsPerKeyKinds2 =
+    listOf(
+        GitReplyEvent.KIND,
+        GitIssueEvent.KIND,
+        GitPatchEvent.KIND,
+        HighlightEvent.KIND,
+        CommentEvent.KIND,
+        CalendarDateSlotEvent.KIND,
+        CalendarTimeSlotEvent.KIND,
+        CalendarRSVPEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
+        InteractiveStorySceneEvent.KIND,
+    )
+
+val NotificationsPerKeyKinds3 = listOf(PollNoteEvent.KIND)
+
 fun filterNotificationsToPubkey(
+    relay: NormalizedRelayUrl,
     pubkey: HexKey?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (pubkey == null || pubkey.isEmpty()) return null
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
 
     return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            ReactionEvent.KIND,
-                            RepostEvent.KIND,
-                            GenericRepostEvent.KIND,
-                            ReportEvent.KIND,
-                            LnZapEvent.KIND,
-                            LnZapPaymentResponseEvent.KIND,
-                            ChannelMessageEvent.KIND,
-                            EphemeralChatEvent.KIND,
-                            BadgeAwardEvent.KIND,
-                        ),
+                Filter(
+                    kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 2000,
                     since = since,
                 ),
         ),
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            GitReplyEvent.KIND,
-                            GitIssueEvent.KIND,
-                            GitPatchEvent.KIND,
-                            HighlightEvent.KIND,
-                            CommentEvent.KIND,
-                            CalendarDateSlotEvent.KIND,
-                            CalendarTimeSlotEvent.KIND,
-                            CalendarRSVPEvent.KIND,
-                            InteractiveStoryPrologueEvent.KIND,
-                            InteractiveStorySceneEvent.KIND,
-                        ),
+                Filter(
+                    kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 400,
                     since = since,
                 ),
         ),
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(PollNoteEvent.KIND),
+                Filter(
+                    kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 100,
                     since = since,

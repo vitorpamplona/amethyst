@@ -22,31 +22,41 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28P
 
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun filterMissingChannelsById(keys: List<ChannelFinderQueryState>): List<TypedFilter>? {
-    val firstTimers =
-        keys.mapNotNullTo(mutableSetOf()) {
-            if (it.channel is PublicChatChannel && it.channel.event == null) {
-                it.channel.idHex
-            } else {
-                null
+val filterMissingPublicChannelsByIdKinds = listOf(ChannelCreateEvent.KIND)
+
+fun filterMissingChannelsById(keys: List<ChannelFinderQueryState>): List<RelayBasedFilter> {
+    val relayPerChannel =
+        mapOfSet {
+            keys.forEach { key ->
+                if (key.channel is PublicChatChannel && key.channel.event == null) {
+                    key.channel.relays().forEach {
+                        add(it, key.channel.idHex)
+                    }
+                } else {
+                    null
+                }
             }
         }
 
-    if (firstTimers.isEmpty()) return null
+    if (relayPerChannel.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ChannelCreateEvent.KIND),
-                    ids = firstTimers.toList(),
-                ),
-        ),
-    )
+    return relayPerChannel.mapNotNull {
+        if (it.value.isEmpty()) {
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds = filterMissingPublicChannelsByIdKinds,
+                        ids = it.value.sorted(),
+                    ),
+            )
+        } else {
+            null
+        }
+    }
 }

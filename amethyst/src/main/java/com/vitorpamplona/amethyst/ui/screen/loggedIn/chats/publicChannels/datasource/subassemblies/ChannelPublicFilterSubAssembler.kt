@@ -24,10 +24,10 @@ import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class ChannelPublicFilterSubAssembler(
     client: NostrClient,
@@ -35,8 +35,8 @@ class ChannelPublicFilterSubAssembler(
 ) : PerUniqueIdEoseManager<ChannelQueryState>(client, allKeys) {
     override fun updateFilter(
         key: ChannelQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? =
         when (val channel = key.channel) {
             is EphemeralChatChannel -> filterMessagesToEphemeralChat(channel, since)
             is PublicChatChannel -> filterMessagesToPublicChat(channel, since)

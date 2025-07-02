@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -74,7 +76,20 @@ class ContactListEvent(
 
     fun followsTags() = hashtags()
 
-    fun relays(): Map<String, ReadWrite>? = RelaySet.parse(content)
+    fun relays(): Map<NormalizedRelayUrl, ReadWrite>? {
+        val regular = RelaySet.parse(content)
+
+        val normalized = mutableMapOf<NormalizedRelayUrl, ReadWrite>()
+
+        regular?.forEach {
+            val key = RelayUrlNormalizer.normalizeOrNull(it.key)
+            if (key != null) {
+                normalized.put(key, it.value)
+            }
+        }
+
+        return normalized
+    }
 
     companion object {
         const val KIND = 3
@@ -252,7 +267,7 @@ class ContactListEvent(
                 content = earlierVersion.content,
                 tags =
                     earlierVersion.tags.plus(
-                        element = listOfNotNull("a", aTag.toTag(), aTag.relay).toTypedArray(),
+                        element = aTag.toATagArray(),
                     ),
                 signer = signer,
                 createdAt = createdAt,

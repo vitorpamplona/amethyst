@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -32,7 +34,7 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 class ReplyAddressTag(
     val addressId: String,
-    val relay: String? = null,
+    val relay: NormalizedRelayUrl? = null,
 ) {
     fun toTagArray() = assemble(addressId, relay)
 
@@ -47,7 +49,10 @@ class ReplyAddressTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ReplyAddressTag(tag[1], tag.getOrNull(2))
+
+            val relayHint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+            return ReplyAddressTag(tag[1], relayHint)
         }
 
         @JvmStatic
@@ -64,21 +69,25 @@ class ReplyAddressTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return AddressHint(tag[1], tag[2])
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(relayHint != null) { return null }
+
+            return AddressHint(tag[1], relayHint)
         }
 
         @JvmStatic
         fun assemble(
             addressId: HexKey,
-            relay: String?,
-        ) = arrayOfNotNull(TAG_NAME, addressId, relay)
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, addressId, relay?.url)
 
         @JvmStatic
         fun assemble(
             kind: Int,
             pubKey: String,
             dTag: String,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
         ) = assemble(Address.assemble(kind, pubKey, dTag), relay)
     }
 }

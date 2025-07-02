@@ -20,29 +20,36 @@
  */
 package com.vitorpamplona.amethyst.model.emphChat
 
+import android.util.Log
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 
 class EphemeralChatListState(
     val signer: NostrSigner,
     val cache: LocalCache,
     val scope: CoroutineScope,
+    val settings: AccountSettings,
 ) {
     fun getEphemeralChatListAddress() = EphemeralChatListEvent.createAddress(signer.pubKey)
 
@@ -52,31 +59,27 @@ class EphemeralChatListState(
 
     fun getEphemeralChatList(): EphemeralChatListEvent? = getEphemeralChatListNote().event as? EphemeralChatListEvent
 
+    suspend fun ephemeralChatListWithBackup(note: Note): Set<RoomId> {
+        return ephemeralChatList(
+            note.event as? EphemeralChatListEvent ?: settings.backupEphemeralChatList,
+        )
+    }
+
+    suspend fun ephemeralChatList(event: EphemeralChatListEvent?): Set<RoomId> {
+        return tryAndWait { continuation ->
+            event?.publicAndPrivateRoomIds(signer) {
+                continuation.resume(it)
+            }
+        } ?: emptySet()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveEphemeralChatList: StateFlow<Set<RoomId>> by lazy {
         getEphemeralChatListFlow()
             .transformLatest { noteState ->
-                val set =
-                    tryAndWait { continuation ->
-                        (noteState.note.event as? EphemeralChatListEvent)?.publicAndPrivateRoomIds(signer) {
-                            continuation.resume(it)
-                        }
-                    }
-
-                if (set != null) {
-                    emit(set)
-                }
+                emit(ephemeralChatListWithBackup(noteState.note))
             }.onStart {
-                val set =
-                    tryAndWait { continuation ->
-                        getEphemeralChatList()?.publicAndPrivateRoomIds(signer) {
-                            continuation.resume(it)
-                        }
-                    }
-
-                if (set != null) {
-                    emit(set)
-                }
+                emit(ephemeralChatListWithBackup(getEphemeralChatListNote()))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -89,6 +92,7 @@ class EphemeralChatListState(
         channel: EphemeralChatChannel,
         onDone: (EphemeralChatListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val ephemeralChatList = getEphemeralChatList()
 
         if (ephemeralChatList == null) {
@@ -113,6 +117,7 @@ class EphemeralChatListState(
         channel: EphemeralChatChannel,
         onDone: (EphemeralChatListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val ephemeralChatList = getEphemeralChatList()
 
         if (ephemeralChatList != null) {
@@ -123,6 +128,28 @@ class EphemeralChatListState(
                 signer = signer,
                 onReady = onDone,
             )
+        }
+    }
+
+    init {
+        settings.backupEphemeralChatList?.let { event ->
+            Log.d("AccountRegisterObservers", "Loading saved ephemeral chat list")
+            @OptIn(DelicateCoroutinesApi::class)
+            GlobalScope.launch(Dispatchers.IO) {
+                event.privateTags(signer) {
+                    LocalCache.justConsumeMyOwnEvent(event)
+                }
+            }
+        }
+
+        scope.launch(Dispatchers.Default) {
+            Log.d("AccountRegisterObservers", "EphemeralChatList Collector Start")
+            getEphemeralChatListFlow().collect {
+                Log.d("AccountRegisterObservers", "EphemeralChatList List for ${signer.pubKey}")
+                (it.note.event as? EphemeralChatListEvent)?.let {
+                    settings.updateEphemeralChatListTo(it)
+                }
+            }
         }
     }
 }

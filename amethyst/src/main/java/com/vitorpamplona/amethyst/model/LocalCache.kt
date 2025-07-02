@@ -20,19 +20,16 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.R.attr.version
 import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.ammolite.relays.BundledInsert
-import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.quartz.blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
@@ -56,7 +53,15 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.mapTaggedAddress
@@ -86,6 +91,14 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
+import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -118,6 +131,8 @@ import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
@@ -135,13 +150,13 @@ import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -154,6 +169,7 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -175,11 +191,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.compareTo
+import kotlin.text.get
 
 interface ILocalCache {
     fun markAsSeen(
-        string: String,
-        relay: RelayBriefInfoCache.RelayBriefInfo,
+        eventId: String,
+        relay: NormalizedRelayUrl,
     ) {}
 }
 
@@ -188,9 +206,15 @@ object LocalCache : ILocalCache {
 
     val users = LargeCache<HexKey, User>()
     val notes = LargeCache<HexKey, Note>()
-    val addressables = LargeCache<String, AddressableNote>()
-    val channels = LargeCache<HexKey, Channel>()
+    val addressables = LargeCache<Address, AddressableNote>()
+
+    val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
+    val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
+    val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
+
     val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
+
+    val relayHints = HintIndexer()
 
     val deletionIndex = DeletionIndex()
 
@@ -287,17 +311,19 @@ object LocalCache : ILocalCache {
         return users.get(key)
     }
 
-    fun getAddressableNoteIfExists(key: String): AddressableNote? = addressables.get(key)
+    fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
-    fun getAddressableNoteIfExists(address: Address): AddressableNote? = getAddressableNoteIfExists(address.toValue())
+    fun getAddressableNoteIfExists(address: Address): AddressableNote? = getAddressableNoteIfExists(address)
 
-    fun getNoteIfExists(key: String): Note? = addressables.get(key) ?: notes.get(key)
+    fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
-    fun getChannelIfExists(key: String): Channel? = channels.get(key)
+    fun getChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
-    fun getChannelIfExists(key: RoomId): Channel? = channels.get(key.toKey())
+    fun getChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
+
+    fun getChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
         if (event is AddressableEvent) {
@@ -372,17 +398,18 @@ object LocalCache : ILocalCache {
         }
     }
 
-    fun getOrCreateChannel(
-        key: String,
-        channelFactory: (String) -> Channel,
-    ): Channel {
-        checkNotInMainThread()
+    fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel =
+        publicChatChannels.getOrCreate(key) {
+            PublicChatChannel(key)
+        }
 
-        return channels.getOrCreate(key, channelFactory)
-    }
+    fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel =
+        liveChatChannels.getOrCreate(key) {
+            LiveActivitiesChannel(key)
+        }
 
-    fun checkGetOrCreateChannel(key: RoomId): Channel? =
-        channels.getOrCreate(key.toKey()) {
+    fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel =
+        ephemeralChannels.getOrCreate(key) {
             EphemeralChatChannel(key)
         }
 
@@ -390,19 +417,23 @@ object LocalCache : ILocalCache {
         checkNotInMainThread()
 
         if (key.contains("@")) {
-            return channels.getOrCreate(key) {
-                val idParts = key.split("@")
-                EphemeralChatChannel(RoomId(idParts[0], idParts[1]))
+            val idParts = key.split("@")
+            val relay = RelayUrlNormalizer.normalizeOrNull(idParts[1])
+
+            if (relay == null) {
+                return null
+            } else {
+                getOrCreateEphemeralChannel(RoomId(idParts[0], relay))
             }
         }
 
         if (isValidHex(key)) {
-            return channels.getOrCreate(key) { PublicChatChannel(key) }
+            return getOrCreatePublicChatChannel(key)
         }
 
         val address = Address.parse(key)
         if (address != null) {
-            return channels.getOrCreate(address.toValue()) { LiveActivitiesChannel(address) }
+            return getOrCreateLiveChannel(address)
         }
         return null
     }
@@ -427,10 +458,7 @@ object LocalCache : ILocalCache {
             null
         }
 
-    fun getOrCreateAddressableNoteInternal(key: Address): AddressableNote =
-        addressables.getOrCreate(key.toValue()) {
-            AddressableNote(key)
-        }
+    fun getOrCreateAddressableNoteInternal(key: Address): AddressableNote = addressables.getOrCreate(key) { AddressableNote(key) }
 
     fun getOrCreateAddressableNote(key: Address): AddressableNote {
         val note = getOrCreateAddressableNoteInternal(key)
@@ -449,16 +477,15 @@ object LocalCache : ILocalCache {
             note.author = checkGetOrCreateUser(possibleAuthor)
         }
         val relayHint = key.relay
-        if (!relayHint.isNullOrBlank()) {
-            val relay = RelayBriefInfoCache.get(RelayUrlFormatter.normalize(relayHint))
-            note.addRelay(relay)
+        if (relayHint != null) {
+            note.addRelay(relayHint)
         }
         return note
     }
 
     fun consume(
         event: MetadataEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         // new event
@@ -473,8 +500,8 @@ object LocalCache : ILocalCache {
                 oldUser.updateUserInfo(newUserMetadata, event)
                 if (relay != null) {
                     oldUser.addRelayBeingUsed(relay, event.createdAt)
-                    if (!RelayUrlFormatter.isLocalHost(relay.url)) {
-                        oldUser.latestMetadataRelay = relay.url
+                    if (!relay.isLocalHost()) {
+                        oldUser.latestMetadataRelay = relay
                     }
                 }
 
@@ -487,7 +514,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ContactListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val user = getOrCreateUser(event.pubKey)
@@ -507,7 +534,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: BookmarkListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val user = getOrCreateUser(event.pubKey)
@@ -531,37 +558,37 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: TextNoteEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo? = null,
+        relay: NormalizedRelayUrl? = null,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: TorrentEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: InteractiveStoryPrologueEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: InteractiveStorySceneEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: InteractiveStoryReadingStateEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consumeRegularEvent(
         event: Event,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -597,67 +624,73 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: PictureEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: TorrentCommentEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: NIP90ContentDiscoveryResponseEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: NIP90ContentDiscoveryRequestEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: NIP90StatusEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: NIP90UserDiscoveryResponseEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: NIP90UserDiscoveryRequestEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: GoalEvent,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: GitPatchEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: GitIssueEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: GitReplyEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: LongTextNoteEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val version = getOrCreateNote(event.id)
@@ -702,7 +735,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: WikiNoteEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val version = getOrCreateNote(event.id)
@@ -806,13 +839,13 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: PollNoteEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     private fun consume(
         event: LiveActivitiesEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val version = getOrCreateNote(event.id)
@@ -833,15 +866,15 @@ object LocalCache : ILocalCache {
         if (event.createdAt > (note.createdAt() ?: 0) && (isVerified || justVerify(event))) {
             note.loadEvent(event, author, emptyList())
 
-            val channel = getOrCreateChannel(note.idHex) { LiveActivitiesChannel(note.address) } as? LiveActivitiesChannel
+            val channel = getOrCreateLiveChannel(note.address)
 
             if (relay != null) {
-                channel?.addRelay(relay)
+                channel.addRelay(relay)
             }
 
             val creator = event.host()?.let { checkGetOrCreateUser(it.pubKey) } ?: author
 
-            channel?.updateChannelInfo(creator, event, event.createdAt)
+            channel.updateChannelInfo(creator, event, event.createdAt)
 
             refreshObservers(note)
 
@@ -853,139 +886,151 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: MuteListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: CommunityListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: GitRepositoryEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: ChannelListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: BlossomServersEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: FileServersEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: PeopleListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: EphemeralChatListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: FollowListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: AdvertisedRelayListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: ChatMessageRelayListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: PrivateOutboxRelayListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: HashtagListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: GeohashListEvent,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: SearchRelayListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: CommunityDefinitionEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: EmojiPackSelectionEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: EmojiPackEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: ClassifiedsEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: PinListEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: RelaySetEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: AudioTrackEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: VideoVerticalEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: VideoHorizontalEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: StatusEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val version = getOrCreateNote(event.id)
@@ -1019,13 +1064,13 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: RelationshipStatusEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: OtsEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val version = getOrCreateNote(event.id)
@@ -1049,61 +1094,61 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: BadgeDefinitionEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: BadgeProfilesEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: BadgeAwardEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     private fun consume(
         event: NNSEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: AppDefinitionEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: CalendarEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: CalendarDateSlotEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: CalendarTimeSlotEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consume(
         event: CalendarRSVPEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     private fun consumeBaseReplaceable(
         event: BaseAddressableEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val version = getOrCreateNote(event.id)
@@ -1140,19 +1185,19 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: AppRecommendationEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: AppSpecificDataEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun consume(
         event: PrivateDmEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1190,7 +1235,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: DeletionEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         if (deletionIndex.add(event, wasVerified)) {
@@ -1207,7 +1252,7 @@ object LocalCache : ILocalCache {
                             // Counts the replies
                             deleteNote(addressableNote)
 
-                            addressables.remove(addressableNote.idHex)
+                            addressables.remove(addressableNote.address)
 
                             deletedAtLeastOne = true
                         }
@@ -1233,7 +1278,7 @@ object LocalCache : ILocalCache {
                         // Counts the replies
                         deleteNote(deleteNote)
 
-                        addressables.remove(deleteNote.idHex)
+                        addressables.remove(deleteNote.address)
 
                         deletedAtLeastOne = true
                     }
@@ -1340,7 +1385,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: RepostEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1358,7 +1403,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addBoost(note) }
 
             event.containedPost()?.let {
-                justConsumeInner(it, relay, false)
+                justConsumeAndUpdateIndexes(it, relay, false)
             }
 
             refreshObservers(note)
@@ -1370,7 +1415,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: GenericRepostEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1388,7 +1433,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addBoost(note) }
 
             event.containedPost()?.let {
-                justConsumeInner(it, relay, false)
+                justConsumeAndUpdateIndexes(it, relay, false)
             }
 
             refreshObservers(note)
@@ -1401,7 +1446,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: CommunityPostApprovalEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1423,7 +1468,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addBoost(note) }
 
             event.containedPost()?.let {
-                justConsumeInner(it, relay, false)
+                justConsumeAndUpdateIndexes(it, relay, false)
             }
 
             refreshObservers(note)
@@ -1436,7 +1481,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ReactionEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1462,7 +1507,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ReportEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1506,11 +1551,11 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ChannelCreateEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         // Log.d("MT", "New Event ${event.content} ${event.id.toHex()}")
-        val oldChannel = getOrCreateChannel(event.id) { PublicChatChannel(it) }
+        val oldChannel = getOrCreatePublicChatChannel(event.id)
         val author = getOrCreateUser(event.pubKey)
         val note = getOrCreateNote(event.id)
 
@@ -1530,7 +1575,7 @@ object LocalCache : ILocalCache {
         }
 
         if (oldChannel.creator == null || oldChannel.creator == author) {
-            if (oldChannel is PublicChatChannel && (isVerified || justVerify(event))) {
+            if (isVerified || justVerify(event)) {
                 oldChannel.updateChannelInfo(author, event)
             }
         }
@@ -1540,7 +1585,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ChannelMetadataEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val channelId = event.channelId()
@@ -1575,7 +1620,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: ChannelMessageEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val channelId = event.channelId()
@@ -1620,14 +1665,14 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: EphemeralChatEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        val relayUrl = event.relay().ifBlank { return false }
+        val roomId = event.roomId()
+        if (roomId == null) return false
 
-        val channelId = RoomId(event.room(), relayUrl)
-
-        val channel = checkGetOrCreateChannel(channelId) ?: return false
+        val channelId = roomId
+        val channel = getOrCreateEphemeralChannel(channelId) ?: return false
 
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
@@ -1659,18 +1704,18 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: CommentEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: LiveActivitiesChatMessageEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val activityAddress = event.activityAddress() ?: return false
 
-        val channel = getOrCreateChannel(activityAddress.toValue()) { LiveActivitiesChannel(activityAddress) }
+        val channel = getOrCreateLiveChannel(activityAddress)
 
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
@@ -1708,20 +1753,20 @@ object LocalCache : ILocalCache {
     @Suppress("UNUSED_PARAMETER")
     fun consume(
         event: ChannelHideMessageEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean = false
 
     @Suppress("UNUSED_PARAMETER")
     fun consume(
         event: ChannelMuteUserEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean = false
 
     fun consume(
         event: LnZapEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1734,7 +1779,7 @@ object LocalCache : ILocalCache {
             if (existingZapRequest == null || existingZapRequest.event == null) {
                 // tries to add it
                 event.zapRequest?.let {
-                    justConsumeInner(it, relay, false)
+                    justConsumeAndUpdateIndexes(it, relay, false)
                 }
             }
 
@@ -1764,7 +1809,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: LnZapRequestEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1792,37 +1837,37 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: AudioHeaderEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: FileHeaderEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: ProfileGalleryEntryEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: FileStorageHeaderEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: FhirResourceEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: TextNoteModificationEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1857,13 +1902,13 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: HighlightEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: FileStorageEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1885,7 +1930,7 @@ object LocalCache : ILocalCache {
                     stream.close()
                     Log.i(
                         "FileStorageEvent",
-                        "NIP95 File received from ${relay?.url} and saved to disk as $file",
+                        "NIP95 File received from $relay and saved to disk as $file",
                     )
                     true
                 } else {
@@ -1916,7 +1961,7 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: ChatMessageEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -1966,7 +2011,7 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: ChatMessageEncryptedFileHeaderEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -2016,7 +2061,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: SealedRumorEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -2041,7 +2086,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: GiftWrapEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -2065,7 +2110,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: LnZapPaymentRequestEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         // Does nothing without a response callback.
@@ -2076,6 +2121,7 @@ object LocalCache : ILocalCache {
         event: LnZapPaymentRequestEvent,
         zappedNote: Note?,
         wasVerified: Boolean,
+        relay: NormalizedRelayUrl?,
         onResponse: (LnZapPaymentResponseEvent) -> Unit,
     ): Boolean {
         val note = getOrCreateNote(event.id)
@@ -2086,6 +2132,10 @@ object LocalCache : ILocalCache {
 
         if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
+
+            relay?.let {
+                note.addRelay(relay)
+            }
 
             zappedNote?.addZapPayment(note, null)
 
@@ -2101,7 +2151,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: LnZapPaymentResponseEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
@@ -2154,7 +2204,7 @@ object LocalCache : ILocalCache {
                         user.pubkeyHex.startsWith(username, true) ||
                         user.pubkeyNpub().startsWith(username, true)
                 ) &&
-                    (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.flowHiddenUsers.value.hiddenWordsCase)))
+                    (forAccount == null || (!forAccount.isHidden(user) && !user.containsAny(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
             }
 
         return finds.sortedWith(
@@ -2184,7 +2234,7 @@ object LocalCache : ILocalCache {
 
     fun findNotesStartingWith(
         text: String,
-        forAccount: Account,
+        hiddenUsers: HiddenUsersState,
     ): List<Note> {
         checkNotInMainThread()
 
@@ -2207,7 +2257,7 @@ object LocalCache : ILocalCache {
             if (note.event?.tags?.tagValueContains(text, true) == true ||
                 note.idHex.startsWith(text, true)
             ) {
-                if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                if (!note.isHiddenFor(hiddenUsers.flow.value)) {
                     return@filter true
                 } else {
                     return@filter false
@@ -2215,7 +2265,7 @@ object LocalCache : ILocalCache {
             }
 
             if (note.event?.isContentEncoded() == false) {
-                if (!note.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                if (!note.isHiddenFor(hiddenUsers.flow.value)) {
                     return@filter note.event?.content?.contains(text, true) ?: false
                 } else {
                     return@filter false
@@ -2232,7 +2282,7 @@ object LocalCache : ILocalCache {
                 if (addressable.event?.tags?.tagValueContains(text, true) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
-                    if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                    if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
                         return@filter true
                     } else {
                         return@filter false
@@ -2240,7 +2290,7 @@ object LocalCache : ILocalCache {
                 }
 
                 if (addressable.event?.isContentEncoded() == false) {
-                    if (!addressable.isHiddenFor(forAccount.flowHiddenUsers.value)) {
+                    if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
                         return@filter addressable.event?.content?.contains(text, true) ?: false
                     } else {
                         return@filter false
@@ -2261,11 +2311,21 @@ object LocalCache : ILocalCache {
             return listOfNotNull(getChannelIfExists(key))
         }
 
-        return channels.filter { _, channel ->
+        return publicChatChannels.filter { _, channel ->
             channel.anyNameStartsWith(text) ||
                 channel.idHex.startsWith(text, true) ||
                 channel.idNote().startsWith(text, true)
-        }
+        } +
+            ephemeralChannels.filter { _, channel ->
+                channel.anyNameStartsWith(text) ||
+                    channel.idHex.startsWith(text, true) ||
+                    channel.idNote().startsWith(text, true)
+            } +
+            liveChatChannels.filter { _, channel ->
+                channel.anyNameStartsWith(text) ||
+                    channel.idHex.startsWith(text, true) ||
+                    channel.idNote().startsWith(text, true)
+            }
     }
 
     suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {
@@ -2358,49 +2418,76 @@ object LocalCache : ILocalCache {
         }
     }
 
+    fun pruneHiddenMessagesChannel(
+        channel: Channel,
+        account: Account,
+    ) {
+        val toBeRemoved = channel.pruneHiddenMessages(account)
+
+        val childrenToBeRemoved = mutableListOf<Note>()
+
+        toBeRemoved.forEach {
+            removeFromCache(it)
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeFromCache(childrenToBeRemoved)
+
+        if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
+            println(
+                "PRUNE: ${toBeRemoved.size} hidden messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
+            )
+        }
+    }
+
     fun pruneHiddenMessages(account: Account) {
-        channels.forEach { _, channel ->
-            val toBeRemoved = channel.pruneHiddenMessages(account)
+        ephemeralChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
 
-            val childrenToBeRemoved = mutableListOf<Note>()
+        liveChatChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
 
-            toBeRemoved.forEach {
-                removeFromCache(it)
+        publicChatChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
+    }
 
-                childrenToBeRemoved.addAll(it.removeAllChildNotes())
-            }
+    fun pruneOldMessagesChannel(channel: Channel) {
+        val toBeRemoved = channel.pruneOldMessages()
 
-            removeFromCache(childrenToBeRemoved)
+        val childrenToBeRemoved = mutableListOf<Note>()
 
-            if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
-                println(
-                    "PRUNE: ${toBeRemoved.size} hidden messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
-                )
-            }
+        toBeRemoved.forEach {
+            removeFromCache(it)
+
+            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+        }
+
+        removeFromCache(childrenToBeRemoved)
+
+        if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
+            println(
+                "PRUNE: ${toBeRemoved.size} old messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
+            )
         }
     }
 
     fun pruneOldMessages() {
         checkNotInMainThread()
 
-        channels.forEach { _, channel ->
-            val toBeRemoved = channel.pruneOldMessages()
+        ephemeralChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
+        }
 
-            val childrenToBeRemoved = mutableListOf<Note>()
+        liveChatChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
+        }
 
-            toBeRemoved.forEach {
-                removeFromCache(it)
-
-                childrenToBeRemoved.addAll(it.removeAllChildNotes())
-            }
-
-            removeFromCache(childrenToBeRemoved)
-
-            if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
-                println(
-                    "PRUNE: ${toBeRemoved.size} old messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
-                )
-            }
+        publicChatChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
         }
 
         users.forEach { _, user ->
@@ -2452,7 +2539,7 @@ object LocalCache : ILocalCache {
                 val noteEvent = note.event
                 if (noteEvent is AddressableEvent) {
                     noteEvent.createdAt <
-                        (addressables.get(noteEvent.aTag().toTag())?.event?.createdAt ?: 0)
+                        (addressables.get(noteEvent.address())?.event?.createdAt ?: 0)
                 } else {
                     false
                 }
@@ -2461,7 +2548,7 @@ object LocalCache : ILocalCache {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            val newerVersion = (it.event as? AddressableEvent)?.aTag()?.toTag()?.let { tag -> addressables.get(tag) }
+            val newerVersion = (it.event as? AddressableEvent)?.address()?.let { tag -> addressables.get(tag) }
             if (newerVersion != null) {
                 it.moveAllReferencesTo(newerVersion)
             }
@@ -2579,7 +2666,7 @@ object LocalCache : ILocalCache {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         val toBeRemoved =
-            account.flowHiddenUsers.value.hiddenUsers
+            account.hiddenUsers.flow.value.hiddenUsers
                 .map { userHex ->
                     (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
                 }.flatten()
@@ -2614,7 +2701,7 @@ object LocalCache : ILocalCache {
 
     override fun markAsSeen(
         eventId: String,
-        relay: RelayBriefInfoCache.RelayBriefInfo,
+        relay: NormalizedRelayUrl,
     ) {
         val note = getNoteIfExists(eventId)
 
@@ -2655,7 +2742,7 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: DraftEvent,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
         if (!event.isDeleted()) {
@@ -2722,7 +2809,9 @@ object LocalCache : ILocalCache {
                 }
             }
             is EphemeralChatEvent -> {
-                checkGetOrCreateChannel(draft.roomId().toKey())?.addNote(note, null)
+                draft.roomId()?.toKey()?.let {
+                    checkGetOrCreateChannel(it)?.addNote(note, null)
+                }
             }
             is ChannelMessageEvent -> {
                 draft.channelId()?.let { channelId ->
@@ -2802,7 +2891,9 @@ object LocalCache : ILocalCache {
                 }
             }
             is EphemeralChatEvent -> {
-                checkGetOrCreateChannel(draft.roomId())?.removeNote(draftWrap)
+                draft.roomId()?.let {
+                    getOrCreateEphemeralChannel(it).removeNote(draftWrap)
+                }
             }
             is TextNoteEvent -> {
                 val replyTo = computeReplyTo(draft)
@@ -2811,11 +2902,45 @@ object LocalCache : ILocalCache {
         }
     }
 
-    fun justConsumeMyOwnEvent(event: Event) = justConsumeInner(event, null, true)
+    fun consume(nip19: Entity) {
+        when (nip19) {
+            is NSec -> getOrCreateUser(nip19.toPubKeyHex())
+            is NPub -> getOrCreateUser(nip19.hex)
+            is NProfile -> {
+                nip19.relay.forEach { relayHint ->
+                    relayHints.addKey(nip19.hex, relayHint)
+                }
+                getOrCreateUser(nip19.hex)
+            }
+            is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
+                getOrCreateNote(nip19.hex)
+            }
+            is NEvent -> {
+                nip19.relay.forEach { relayHint ->
+                    relayHints.addEvent(nip19.hex, relayHint)
+                }
+                getOrCreateNote(nip19.hex)
+            }
+            is NEmbed -> {
+                justConsume(nip19.event, null, false)
+            }
+            is NRelay -> {}
+            is NAddress -> {
+                val aTag = nip19.aTag()
+                nip19.relay.forEach { relayHint ->
+                    relayHints.addAddress(aTag, relayHint)
+                }
+                getOrCreateAddressableNote(nip19.address())
+            }
+            else -> { }
+        }
+    }
+
+    fun justConsumeMyOwnEvent(event: Event) = justConsumeAndUpdateIndexes(event, null, true)
 
     fun justConsume(
         event: Event,
-        relay: Relay?,
+        relay: IRelayClient?,
         wasVerified: Boolean,
     ): Boolean {
         if (deletionIndex.hasBeenDeleted(event)) {
@@ -2833,7 +2958,7 @@ object LocalCache : ILocalCache {
             // updates relay with a new event.
             getAddressableNoteIfExists(event.addressTag())?.let { note ->
                 note.event?.let { existingEvent ->
-                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.brief)) {
+                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url)) {
                         Log.d("LocalCache", "Updating ${relay.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
                         relay.send(existingEvent)
                     }
@@ -2841,12 +2966,44 @@ object LocalCache : ILocalCache {
             }
         }
 
-        return justConsumeInner(event, relay?.brief, wasVerified)
+        return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
     }
 
-    fun justConsumeInner(
+    private fun justConsumeAndUpdateIndexes(
         event: Event,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val wasNew = justConsumeInnerInner(event, relay, wasVerified)
+
+        if (wasNew && relay != null) {
+            updateHintIndexes(event)
+        }
+
+        return wasNew
+    }
+
+    fun updateHintIndexes(event: Event) {
+        if (event is EventHintProvider) {
+            event.eventHints().forEach {
+                relayHints.addEvent(it.eventId, it.relay)
+            }
+        }
+        if (event is AddressHintProvider) {
+            event.addressHints().forEach {
+                relayHints.addAddress(it.addressId, it.relay)
+            }
+        }
+        if (event is PubKeyHintProvider) {
+            event.pubKeyHints().forEach {
+                relayHints.addKey(it.pubkey, it.relay)
+            }
+        }
+    }
+
+    private fun justConsumeInnerInner(
+        event: Event,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean =
         try {
@@ -2895,11 +3052,14 @@ object LocalCache : ILocalCache {
                 is FileStorageEvent -> consume(event, relay, wasVerified)
                 is FileStorageHeaderEvent -> consume(event, relay, wasVerified)
                 is FollowListEvent -> consume(event, relay, wasVerified)
+                is GeohashListEvent -> consume(event, relay, wasVerified)
+                is GoalEvent -> consume(event, relay, wasVerified)
                 is GiftWrapEvent -> consume(event, relay, wasVerified)
                 is GitIssueEvent -> consume(event, relay, wasVerified)
                 is GitReplyEvent -> consume(event, relay, wasVerified)
                 is GitPatchEvent -> consume(event, relay, wasVerified)
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
+                is HashtagListEvent -> consume(event, relay, wasVerified)
                 is HighlightEvent -> consume(event, relay, wasVerified)
                 is InteractiveStoryPrologueEvent -> consume(event, relay, wasVerified)
                 is InteractiveStorySceneEvent -> consume(event, relay, wasVerified)
@@ -2954,7 +3114,7 @@ object LocalCache : ILocalCache {
 
     fun hasConsumed(notificationEvent: Event): Boolean =
         if (notificationEvent is AddressableEvent) {
-            val note = addressables.get(notificationEvent.addressTag())
+            val note = addressables.get(notificationEvent.address())
             val noteEvent = note?.event
             noteEvent != null && notificationEvent.createdAt <= noteEvent.createdAt
         } else {

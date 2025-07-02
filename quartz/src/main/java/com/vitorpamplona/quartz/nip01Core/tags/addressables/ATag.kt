@@ -24,33 +24,32 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
-import com.vitorpamplona.quartz.utils.removeTrailingNullsAndEmptyOthers
 
 @Immutable
 data class ATag(
     val kind: Int,
-    val pubKeyHex: String,
+    val pubKeyHex: HexKey,
     val dTag: String,
-    val relay: String? = null,
+    val relay: NormalizedRelayUrl? = null,
 ) {
-    constructor(address: Address, relayHint: String? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
+    constructor(address: Address, relayHint: NormalizedRelayUrl? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)
 
     fun countMemory(): Long =
         5 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
             8L + // kind
             pubKeyHex.bytesUsedInMemory() +
             dTag.bytesUsedInMemory() +
-            (relay?.bytesUsedInMemory() ?: 0)
+            (relay?.url?.bytesUsedInMemory() ?: 0)
 
     fun toTag() = Address.assemble(kind, pubKeyHex, dTag)
 
-    fun toATagArray() = removeTrailingNullsAndEmptyOthers(TAG_NAME, toTag(), relay)
-
-    fun toQTagArray() = removeTrailingNullsAndEmptyOthers("q", toTag(), relay)
+    fun toATagArray() = assemble(toTag(), relay)
 
     companion object {
         const val TAG_NAME = "a"
@@ -109,7 +108,14 @@ data class ATag(
         fun parse(
             aTagId: String,
             relay: String?,
-        ) = Address.parse(aTagId)?.let { ATag(it.kind, it.pubKeyHex, it.dTag, relay) }
+        ) = Address.parse(aTagId)?.let {
+            ATag(
+                it.kind,
+                it.pubKeyHex,
+                it.dTag,
+                relay?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+            )
+        }
 
         @JvmStatic
         fun parse(tag: Array<String>): ATag? {
@@ -150,21 +156,31 @@ data class ATag(
             ensure(tag[1].isNotEmpty()) { return null }
             ensure(tag[1].contains(':')) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return AddressHint(tag[1], tag[2])
+
+            val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(relayHint != null) { return null }
+
+            return AddressHint(tag[1], relayHint)
         }
 
         @JvmStatic
         fun assemble(
             aTagId: HexKey,
-            relay: String?,
-        ) = arrayOfNotNull(TAG_NAME, aTagId, relay)
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, aTagId, relay?.url)
+
+        @JvmStatic
+        fun assemble(
+            address: Address,
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay?.url)
 
         @JvmStatic
         fun assemble(
             kind: Int,
             pubKey: String,
             dTag: String,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
         ) = assemble(Address.assemble(kind, pubKey, dTag), relay)
     }
 }

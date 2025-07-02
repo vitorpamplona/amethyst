@@ -39,7 +39,7 @@ class ThreadFeedFilter(
 
     override fun feed(): List<Note> {
         val cachedSignatures: MutableMap<Note, LevelSignature> = mutableMapOf()
-        val followingKeySet = account.liveKind3Follows.value.authors
+        val followingKeySet = account.kind3FollowList.flow.value.authors
         val eventsToWatch = ThreadAssembler().findThreadFor(noteId) ?: return emptyList()
 
         // Filter out drafts made by other accounts on device

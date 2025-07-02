@@ -22,8 +22,9 @@ package com.vitorpamplona.quartz.nip21UriScheme
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.toNIP19
 
-fun Event.toNostrUri(relayHint: String? = null): String = "nostr:${toNIP19(relayHint)}"
+fun Event.toNostrUri(relayHint: NormalizedRelayUrl? = null): String = "nostr:${toNIP19(relayHint)}"
 
 fun EventHintBundle<Event>.toNostrUri(): String = "nostr:${toNEvent()}"

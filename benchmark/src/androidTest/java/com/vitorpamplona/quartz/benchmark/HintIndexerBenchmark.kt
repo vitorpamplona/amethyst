@@ -74,7 +74,7 @@ class HintIndexerBenchmark {
         val key = keys.random()
 
         benchmarkRule.measureRepeated {
-            indexer.getKey(key)
+            indexer.hintsForKey(key)
         }
     }
 

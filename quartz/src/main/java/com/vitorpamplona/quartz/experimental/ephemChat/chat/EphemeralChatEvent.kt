@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.tags.RoomTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -39,11 +40,13 @@ class EphemeralChatEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun hasHomeRelay() = tags.any(RelayTag::match)
+
     fun room() = tags.firstNotNullOfOrNull(RoomTag::parse) ?: DEFAULT_ROOM
 
-    fun relay() = tags.firstNotNullOfOrNull(RelayTag::parse) ?: ""
+    fun relay() = tags.firstNotNullOfOrNull(RelayTag::parse)
 
-    fun roomId() = RoomId(room(), relay())
+    fun roomId() = relay()?.let { RoomId(room(), it) }
 
     companion object {
         const val KIND = 23333
@@ -53,7 +56,7 @@ class EphemeralChatEvent(
 
         fun build(
             message: String,
-            relay: String,
+            relay: NormalizedRelayUrl,
             room: String = DEFAULT_ROOM,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EphemeralChatEvent>.() -> Unit = {},

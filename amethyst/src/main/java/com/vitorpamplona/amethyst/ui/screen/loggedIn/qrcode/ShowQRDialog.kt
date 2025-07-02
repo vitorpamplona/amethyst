@@ -220,7 +220,7 @@ fun ShowQRDialog(
                                 }
                             }
                         } else {
-                            NIP19QrCodeScanner {
+                            NIP19QrCodeScanner(accountViewModel) {
                                 if (it == null) {
                                     presenting = true
                                 } else {

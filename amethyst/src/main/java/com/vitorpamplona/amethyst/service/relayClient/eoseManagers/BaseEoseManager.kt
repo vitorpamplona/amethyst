@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.ammolite.relays.datasources.SubscriptionController
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 abstract class BaseEoseManager<T>(
     val client: NostrClient,

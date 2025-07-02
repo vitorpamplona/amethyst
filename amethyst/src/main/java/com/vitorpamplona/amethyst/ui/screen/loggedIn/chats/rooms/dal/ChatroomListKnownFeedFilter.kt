@@ -57,7 +57,7 @@ class ChatroomListKnownFeedFilter(
 
         val publicChannels =
             account
-                .publicChatList.livePublicChatList.value
+                .publicChatList.flow.value
                 .mapNotNull { LocalCache.getChannelIfExists(it.eventId) }
                 .mapNotNull { it ->
                     it.notes
@@ -168,7 +168,7 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
-        val followingChannels = account.publicChatList.livePublicChatEventIdSet.value
+        val followingChannels = account.publicChatList.flowSet.value
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems
             .filter { it.event is ChannelMessageEvent }
@@ -201,7 +201,7 @@ class ChatroomListKnownFeedFilter(
 
                 if (noteEvent != null) {
                     val room = noteEvent.roomId()
-                    if (room in followingEphemeralChats && account.isAcceptable(newNote)) {
+                    if (room != null && room in followingEphemeralChats && account.isAcceptable(newNote)) {
                         val lastNote = newRelevantEphemeralChats.get(room)
                         if (lastNote != null) {
                             if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {

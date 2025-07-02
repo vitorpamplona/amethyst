@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -31,7 +33,7 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 data class ParticipantTag(
     override val pubKey: String,
-    override val relayHint: String?,
+    override val relayHint: NormalizedRelayUrl?,
 ) : PubKeyReferenceTag {
     fun toTagArray() = assemble(pubKey, relayHint)
 
@@ -43,7 +45,7 @@ data class ParticipantTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ParticipantTag(tag[1], tag.getOrNull(2))
+            return ParticipantTag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) })
         }
 
         @JvmStatic
@@ -57,7 +59,7 @@ data class ParticipantTag(
         @JvmStatic
         fun assemble(
             pubkey: HexKey,
-            relayHint: String? = null,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint)
+            relayHint: NormalizedRelayUrl? = null,
+        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url)
     }
 }

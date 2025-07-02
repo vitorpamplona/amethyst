@@ -23,10 +23,12 @@ package com.vitorpamplona.quartz.experimental.edits
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.quartz.experimental.edits.tags.RelayTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -53,22 +55,11 @@ class PrivateOutboxRelayListEvent(
         super.countMemory() +
             pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
 
-    fun relays(): List<String>? =
+    fun relays(): List<NormalizedRelayUrl>? =
         tags
-            .mapNotNull {
-                if (it.size > 1 && it[0] == "relay") {
-                    it[1]
-                } else {
-                    null
-                }
-            }.plus(
-                privateTagsCache?.mapNotNull {
-                    if (it.size > 1 && it[0] == "relay") {
-                        it[1]
-                    } else {
-                        null
-                    }
-                } ?: emptyList(),
+            .mapNotNull(RelayTag::parse)
+            .plus(
+                privateTagsCache?.mapNotNull(RelayTag::parse) ?: emptyList(),
             ).ifEmpty { null }
 
     fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
@@ -125,25 +116,25 @@ class PrivateOutboxRelayListEvent(
             )
         }
 
-        fun createTagArray(relays: List<String>): Array<Array<String>> =
+        fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
             relays
                 .map {
-                    arrayOf("relay", it)
+                    RelayTag.assemble(it)
                 }.toTypedArray()
 
         fun updateRelayList(
             earlierVersion: PrivateOutboxRelayListEvent,
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PrivateOutboxRelayListEvent) -> Unit,
         ) {
             val tags =
                 earlierVersion.privateTagsCache
-                    ?.filter { it[0] != "relay" }
+                    ?.filter(RelayTag::notMatch)
                     ?.plus(
                         relays.map {
-                            arrayOf("relay", it)
+                            RelayTag.assemble(it)
                         },
                     )?.toTypedArray() ?: emptyArray()
 
@@ -156,7 +147,7 @@ class PrivateOutboxRelayListEvent(
         }
 
         fun createFromScratch(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PrivateOutboxRelayListEvent) -> Unit,
@@ -165,7 +156,7 @@ class PrivateOutboxRelayListEvent(
         }
 
         fun create(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (PrivateOutboxRelayListEvent) -> Unit,

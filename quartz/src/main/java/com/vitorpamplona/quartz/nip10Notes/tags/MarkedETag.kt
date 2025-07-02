@@ -24,43 +24,30 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.ensure
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 data class MarkedETag(
     override val eventId: HexKey,
 ) : GenericETag {
-    override var relay: String? = null
-    var marker: String? = null
+    override var relay: NormalizedRelayUrl? = null
+    var marker: MARKER? = null
     override var author: HexKey? = null
 
-    constructor(eventId: HexKey, relayHint: String? = null, marker: String? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
+    constructor(eventId: HexKey, relayHint: NormalizedRelayUrl? = null, marker: MARKER? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
         this.relay = relayHint
         this.marker = marker
         this.author = authorPubKeyHex
     }
 
-    constructor(eventId: HexKey, relayHint: String? = null, marker: MARKER? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
-        this.relay = relayHint
-        this.marker = marker?.code
-        this.author = authorPubKeyHex
-    }
-
-    fun countMemory(): Long =
-        4 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
-            eventId.bytesUsedInMemory() +
-            (relay?.bytesUsedInMemory() ?: 0) +
-            (marker?.bytesUsedInMemory() ?: 0) +
-            (author?.bytesUsedInMemory() ?: 0)
-
     fun toNEvent(): String = NEvent.create(eventId, author, null, relay)
 
-    override fun toTagArray() = arrayOfNotNull(TAG_NAME, eventId, relay, marker, author)
+    override fun toTagArray() = assemble(eventId, relay, marker, author)
 
     enum class MARKER(
         val code: String,
@@ -69,6 +56,19 @@ data class MarkedETag(
         REPLY("reply"),
         MENTION("mention"),
         FORK("fork"),
+        ;
+
+        companion object {
+            fun parse(code: String): MARKER? {
+                return when (code) {
+                    ROOT.code -> ROOT
+                    REPLY.code -> REPLY
+                    MENTION.code -> MENTION
+                    FORK.code -> FORK
+                    else -> null
+                }
+            }
+        }
     }
 
     companion object {
@@ -92,11 +92,9 @@ data class MarkedETag(
 
             return MarkedETag(
                 tag[ORDER_EVT_ID],
-                tag[ORDER_RELAY],
-                tag[ORDER_MARKER],
-                tag.getOrNull(
-                    ORDER_PUBKEY,
-                ),
+                RelayUrlNormalizer.normalizeOrNull(tag[ORDER_RELAY]),
+                MARKER.parse(tag[ORDER_MARKER]),
+                tag.getOrNull(ORDER_PUBKEY),
             )
         }
 
@@ -112,38 +110,40 @@ data class MarkedETag(
             if (tag.size >= 2 && tag[0] == TAG_NAME) {
                 if (tag.size <= 3) {
                     // simple case ["e", "id", "relay"]
-                    MarkedETag(tag[1], tag.getOrNull(2), null as String?, null)
+                    MarkedETag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }, null, null)
                 } else if (tag.size == 4) {
+                    val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
                     if (tag[3].isEmpty()) {
                         // empty tags ["e", "id", "relay", ""]
-                        MarkedETag(tag[1], tag[2], null as String?, null)
+                        MarkedETag(tag[1], relayHint, null, null)
                     } else if (tag[3].length == 64) {
                         // updated case with pubkey instead of marker ["e", "id", "relay", "pubkey"]
-                        MarkedETag(tag[1], tag[2], null as String?, tag[3])
+                        MarkedETag(tag[1], relayHint, null, tag[3])
                     } else if (tag[3] == MARKER.ROOT.code) {
                         // corrent root ["e", "id", "relay", "root"]
-                        MarkedETag(tag[1], tag[2], tag[3])
+                        MarkedETag(tag[1], relayHint, MARKER.ROOT)
                     } else if (tag[3] == MARKER.REPLY.code) {
                         // correct reply ["e", "id", "relay", "reply"]
-                        MarkedETag(tag[1], tag[2], tag[3])
+                        MarkedETag(tag[1], relayHint, MARKER.REPLY)
                     } else {
                         // ignore "mention" and "fork" markers
                         null
                     }
                 } else {
+                    val relayHint = RelayUrlNormalizer.normalizeOrNull(tag[2])
                     // tag.size >= 5
                     if (tag[3].isEmpty()) {
                         // empty tags ["e", "id", "relay", "", "pubkey"]
-                        MarkedETag(tag[1], tag[2], null as String?, tag[4])
+                        MarkedETag(tag[1], relayHint, null, tag[4])
                     } else if (tag[3].length == 64) {
                         // updated case with pubkey instead of marker ["e", "id", "relay", "pubkey"]
-                        MarkedETag(tag[1], tag[2], null as String?, tag[3])
+                        MarkedETag(tag[1], relayHint, null, tag[3])
                     } else if (tag[3] == MARKER.ROOT.code) {
                         // corrent root ["e", "id", "relay", "root"]
-                        MarkedETag(tag[1], tag[2], tag[3], tag[4])
+                        MarkedETag(tag[1], relayHint, MARKER.ROOT, tag[4])
                     } else if (tag[3] == MARKER.REPLY.code) {
                         // correct reply ["e", "id", "relay", "reply"]
-                        MarkedETag(tag[1], tag[2], tag[3], tag[4])
+                        MarkedETag(tag[1], relayHint, MARKER.REPLY, tag[4])
                     } else {
                         // ignore "mention" and "fork" markers
                         null
@@ -189,21 +189,24 @@ data class MarkedETag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return EventIdHint(tag[1], tag[2])
+
+            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(hint != null) { return null }
+
+            return EventIdHint(tag[1], hint)
         }
 
         @JvmStatic
         fun parseRoot(tag: Array<String>): MarkedETag? {
             if (tag.size < TAG_SIZE || tag[0] != TAG_NAME) return null
             if (tag[ORDER_MARKER] != MARKER.ROOT.code) return null
+
             // ["e", id hex, relay hint, marker, pubkey]
             return MarkedETag(
-                tag[ORDER_EVT_ID],
-                tag[ORDER_RELAY],
-                tag[ORDER_MARKER],
-                tag.getOrNull(
-                    ORDER_PUBKEY,
-                ),
+                eventId = tag[ORDER_EVT_ID],
+                relayHint = RelayUrlNormalizer.normalizeOrNull(tag[ORDER_RELAY]),
+                marker = MARKER.ROOT,
+                authorPubKeyHex = tag.getOrNull(ORDER_PUBKEY),
             )
         }
 
@@ -213,7 +216,7 @@ data class MarkedETag(
         @JvmStatic
         fun parseUnmarkedRoot(tag: Array<String>): MarkedETag? =
             if (tag.size in 2..3 && tag[0] == TAG_NAME) {
-                MarkedETag(tag[1], tag.getOrNull(2), MARKER.ROOT)
+                MarkedETag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }, MARKER.ROOT)
             } else {
                 null
             }
@@ -225,8 +228,8 @@ data class MarkedETag(
             // ["e", id hex, relay hint, marker, pubkey]
             return MarkedETag(
                 tag[ORDER_EVT_ID],
-                tag[ORDER_RELAY],
-                tag[ORDER_MARKER],
+                RelayUrlNormalizer.normalizeOrNull(tag[ORDER_RELAY]),
+                MARKER.REPLY,
                 tag.getOrNull(
                     ORDER_PUBKEY,
                 ),
@@ -239,7 +242,7 @@ data class MarkedETag(
         @JvmStatic
         fun parseUnmarkedReply(tag: Array<String>): MarkedETag? =
             if (tag.size in 2..3 && tag[0] == TAG_NAME) {
-                MarkedETag(tag[1], tag.getOrNull(2), MARKER.REPLY)
+                MarkedETag(tag[1], tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }, MARKER.REPLY)
             } else {
                 null
             }
@@ -255,9 +258,17 @@ data class MarkedETag(
         @JvmStatic
         fun assemble(
             eventId: HexKey,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
+            marker: String?,
+            author: HexKey?,
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay?.url, marker, author)
+
+        @JvmStatic
+        fun assemble(
+            eventId: HexKey,
+            relay: NormalizedRelayUrl?,
             marker: MARKER?,
             author: HexKey?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relay, marker?.code, author)
+        ) = assemble(eventId, relay, marker?.code, author)
     }
 }

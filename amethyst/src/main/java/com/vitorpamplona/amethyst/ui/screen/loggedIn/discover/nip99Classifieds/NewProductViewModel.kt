@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -164,7 +165,7 @@ open class NewProductViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    var relayList by mutableStateOf<ImmutableList<String>?>(null)
+    var relayList by mutableStateOf<ImmutableList<NormalizedRelayUrl>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -474,17 +475,7 @@ open class NewProductViewModel :
     fun reloadRelaySet() {
         val account = accountViewModel?.account ?: return
 
-        val nip65 = account.normalizedNIP65WriteRelayList.value
-        val private = account.normalizedPrivateOutBoxRelaySet.value
-        val local = account.settings.localRelayServers
-
-        relayList =
-            if (nip65.isEmpty()) {
-                account.activeWriteRelays().map { it.url }.toImmutableList()
-            } else {
-                val combined: Set<String> = (nip65 + private + local)
-                combined.toImmutableList()
-            }
+        relayList = account.outboxRelays.flow.value.toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {

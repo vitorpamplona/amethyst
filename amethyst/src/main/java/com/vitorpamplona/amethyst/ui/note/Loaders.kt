@@ -212,7 +212,7 @@ fun LoadChannel(
     accountViewModel: AccountViewModel,
     content: @Composable (EphemeralChatChannel) -> Unit,
 ) {
-    var channel =
+    val channel =
         produceStateIfNotNull(accountViewModel.getChannelIfExists(id) as? EphemeralChatChannel, id) {
             value = accountViewModel.checkGetOrCreateChannel(id) as? EphemeralChatChannel
         }

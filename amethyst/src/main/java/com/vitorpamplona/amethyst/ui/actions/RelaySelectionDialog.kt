@@ -58,44 +58,29 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDial
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlin.collections.map
 
 data class RelayList(
-    val relay: RelaySetupInfo,
-    val relayInfo: RelayBriefInfoCache.RelayBriefInfo,
+    val relay: NormalizedRelayUrl,
     val isSelected: Boolean,
 )
 
 data class RelayInfoDialog(
-    val relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
+    val relay: NormalizedRelayUrl,
     val relayInfo: Nip11RelayInformation,
-)
-
-@Composable
-fun RelaySelectionDialog(
-    preSelectedList: ImmutableList<RelaySetupInfo>,
-    onClose: () -> Unit,
-    onPost: (list: ImmutableList<RelaySetupInfo>) -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = RelaySelectionDialogEasy(
-    preSelectedList.map { it.url }.toImmutableList(),
-    onClose,
-    onPost,
-    accountViewModel,
-    nav,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RelaySelectionDialogEasy(
-    preSelectedList: ImmutableList<String>,
+fun RelaySelectionDialog(
+    preSelectedList: ImmutableList<NormalizedRelayUrl>,
     onClose: () -> Unit,
-    onPost: (list: ImmutableList<RelaySetupInfo>) -> Unit,
+    onPost: (list: ImmutableList<NormalizedRelayUrl>) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -103,11 +88,10 @@ fun RelaySelectionDialogEasy(
 
     var relays by remember {
         mutableStateOf(
-            accountViewModel.account.connectToRelays.value.map {
+            accountViewModel.account.client.connectedRelayList().map {
                 RelayList(
                     relay = it,
-                    relayInfo = RelayBriefInfoCache.RelayBriefInfo(it.url),
-                    isSelected = preSelectedList.any { relayUrl -> it.url == relayUrl },
+                    isSelected = preSelectedList.any { relayUrl -> it == relayUrl },
                 )
             },
         )
@@ -121,7 +105,7 @@ fun RelaySelectionDialogEasy(
         RelayInformationDialog(
             onClose = { relayInfo = null },
             relayInfo = it.relayInfo,
-            relayBriefInfo = it.relayBriefInfo,
+            relay = it.relay,
             accountViewModel = accountViewModel,
             nav = nav,
         )
@@ -147,8 +131,8 @@ fun RelaySelectionDialogEasy(
                     actions = {
                         SaveButton(
                             onPost = {
-                                val selectedRelays = relays.filter { it.isSelected }
-                                onPost(selectedRelays.map { it.relay }.toImmutableList())
+                                val selectedRelays = relays.filter { it.isSelected }.map { it.relay }.toImmutableList()
+                                onPost(selectedRelays)
                                 onClose()
                             },
                             isActive = hasSelectedRelay,
@@ -185,10 +169,10 @@ fun RelaySelectionDialogEasy(
                 ) {
                     itemsIndexed(
                         relays,
-                        key = { _, item -> item.relay.url },
+                        key = { _, item -> item.relay },
                     ) { index, item ->
                         RelaySwitch(
-                            text = item.relayInfo.displayUrl,
+                            text = item.relay.displayUrl(),
                             checked = item.isSelected,
                             onClick = {
                                 relays =
@@ -202,45 +186,43 @@ fun RelaySelectionDialogEasy(
                             },
                             onLongPress = {
                                 accountViewModel.retrieveRelayDocument(
-                                    item.relay.url,
+                                    relay = item.relay,
                                     onInfo = {
                                         relayInfo =
                                             RelayInfoDialog(
-                                                RelayBriefInfoCache.RelayBriefInfo(
-                                                    item.relay.url,
-                                                ),
+                                                item.relay,
                                                 it,
                                             )
                                     },
-                                    onError = { url, errorCode, exceptionMessage ->
+                                    onError = { relay, errorCode, exceptionMessage ->
                                         val msg =
                                             when (errorCode) {
                                                 Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
                                                     stringRes(
                                                         context,
                                                         R.string.relay_information_document_error_assemble_url,
-                                                        url,
+                                                        relay.url,
                                                         exceptionMessage,
                                                     )
                                                 Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
                                                     stringRes(
                                                         context,
                                                         R.string.relay_information_document_error_assemble_url,
-                                                        url,
+                                                        relay.url,
                                                         exceptionMessage,
                                                     )
                                                 Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
                                                     stringRes(
                                                         context,
                                                         R.string.relay_information_document_error_assemble_url,
-                                                        url,
+                                                        relay.url,
                                                         exceptionMessage,
                                                     )
                                                 Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
                                                     stringRes(
                                                         context,
                                                         R.string.relay_information_document_error_assemble_url,
-                                                        url,
+                                                        relay.url,
                                                         exceptionMessage,
                                                     )
                                             }

@@ -33,9 +33,9 @@ import kotlin.time.measureTimedValue
 val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
 fun debugState(context: Context) {
-    Amethyst.instance.client
-        .allSubscriptions()
-        .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toDebugJson() }}") }
+    // Amethyst.instance.client
+    //    .allSubscriptions()
+    //    .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.filters.joinToString { it.filter.toJson() }}") }
 
     val totalMemoryMb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
     val freeMemoryMb = Runtime.getRuntime().freeMemory() / (1024 * 1024)

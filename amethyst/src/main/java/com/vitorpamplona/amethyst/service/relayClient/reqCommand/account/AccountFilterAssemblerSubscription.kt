@@ -37,7 +37,7 @@ fun AccountFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel) {
-            AccountQueryState(accountViewModel.account, accountViewModel.allAccountsSync().toSet())
+            AccountQueryState(accountViewModel.account, accountViewModel.trustedAccounts.value)
         }
 
     KeyDataSourceSubscription(state, dataSource)

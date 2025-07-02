@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -29,9 +30,9 @@ class NotifyRequestsCache {
 
     fun addPaymentRequestIfNew(
         description: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
     ) {
-        addPaymentRequestIfNew(NotifyRequest(description, relayUrl))
+        addPaymentRequestIfNew(NotifyRequest(relayUrl, description))
     }
 
     fun addPaymentRequestIfNew(paymentRequest: NotifyRequest) {

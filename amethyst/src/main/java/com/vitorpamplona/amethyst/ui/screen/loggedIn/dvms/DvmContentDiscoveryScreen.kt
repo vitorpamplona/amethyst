@@ -151,7 +151,7 @@ fun DvmContentDiscoveryScreen(
         }
 
     val onRefresh = {
-        accountViewModel.requestDVMContentDiscovery(noteAuthor.pubkeyHex) {
+        accountViewModel.requestDVMContentDiscovery(noteAuthor) {
             requestEventID = it
         }
     }

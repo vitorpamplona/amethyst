@@ -21,23 +21,25 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats
 
 import com.vitorpamplona.amethyst.model.PublicChatChannel
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 
+val channelMetadataKinds = listOf(ChannelMetadataEvent.KIND)
+
 fun filterChannelMetadataUpdatesById(
-    channel: PublicChatChannel,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> =
+    relay: NormalizedRelayUrl,
+    channels: List<PublicChatChannel>,
+    since: Long?,
+): List<RelayBasedFilter> =
     listOf(
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ChannelMetadataEvent.KIND),
-                    tags = mapOf("e" to listOf(channel.idHex)),
+                Filter(
+                    kinds = channelMetadataKinds,
+                    tags = mapOf("e" to channels.map { it.idHex }),
                     since = since,
                 ),
         ),

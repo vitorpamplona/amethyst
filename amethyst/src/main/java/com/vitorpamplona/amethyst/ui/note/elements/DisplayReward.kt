@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -181,7 +180,6 @@ class AddBountyAmountViewModel : ViewModel() {
                             newValue,
                             bountyInner,
                             draftTag = null,
-                            relayList = myAccount.activeWriteRelays().toImmutableList(),
                         )
                     }
                 }

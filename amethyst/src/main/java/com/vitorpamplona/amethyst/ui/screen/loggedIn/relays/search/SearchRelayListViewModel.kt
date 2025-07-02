@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search
 
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? = account.getSearchRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? = account.searchRelayList.getSearchRelayList()?.relays()
 
-    override fun saveRelayList(urlList: List<String>) {
+    override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveSearchRelayList(urlList)
     }
 }

@@ -22,10 +22,11 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.collections.distinctBy
 
 /**
@@ -49,9 +50,9 @@ abstract class PerUserEoseManager<T>(
 
     fun newEose(
         key: T,
-        relayUrl: String,
+        relay: NormalizedRelayUrl,
         time: Long,
-    ) = latestEOSEs.newEose(user(key), relayUrl, time)
+    ) = latestEOSEs.newEose(user(key), relay, time)
 
     open fun newSub(key: T): Subscription =
         orchestrator.requestNewSubscription { time, relayUrl ->
@@ -70,7 +71,7 @@ abstract class PerUserEoseManager<T>(
 
     fun findOrCreateSubFor(key: T): Subscription {
         val user = user(key)
-        var subId = userSubscriptionMap[user]
+        val subId = userSubscriptionMap[user]
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[user] = it.id }
         } else {
@@ -85,7 +86,7 @@ abstract class PerUserEoseManager<T>(
 
         uniqueSubscribedAccounts.forEach {
             val user = user(it)
-            findOrCreateSubFor(it).typedFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            findOrCreateSubFor(it).relayBasedFilters = updateFilter(it, since(it))?.ifEmpty { null }
 
             updated.add(user)
         }
@@ -99,8 +100,8 @@ abstract class PerUserEoseManager<T>(
 
     abstract fun updateFilter(
         key: T,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>?
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
 
     abstract fun user(key: T): User
 }

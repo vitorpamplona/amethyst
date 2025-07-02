@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.ephemChat.db
 
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
 
 class EphemeralRoomCache {
@@ -28,12 +29,12 @@ class EphemeralRoomCache {
 
     fun getRoomIfExists(
         roomId: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
     ): Room? = rooms.get(RoomId(roomId, relayUrl))
 
     fun getOrCreateRoom(
         roomId: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
     ): Room = rooms.getOrCreate(RoomId(roomId, relayUrl)) { Room(roomId, relayUrl) }
 
     fun findRoomsStartingWith(text: String): List<Room> {

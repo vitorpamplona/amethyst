@@ -49,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Constants
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.Nip11Retriever
@@ -68,14 +69,14 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.largeProfilePictureModifier
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 
 @Composable
 fun RenderCreateChannelNote(
@@ -110,11 +111,11 @@ fun RenderChannelDataPreview() {
             id = "bbaacc",
             uri = "nostr:nevent1...",
             channelInfo =
-                ChannelData(
+                ChannelDataNorm(
                     "My Group",
                     "Testing About me",
                     "http://test.com",
-                    listOf("wss://nostr.mom", "wss://nos.lol"),
+                    listOf(Constants.mom, Constants.nos),
                 ),
             tags = EmptyTagList,
             bgColor = remember { mutableStateOf(Color.Transparent) },
@@ -128,7 +129,7 @@ fun RenderChannelDataPreview() {
 fun RenderChannelData(
     id: HexKey,
     uri: String,
-    channelInfo: ChannelData,
+    channelInfo: ChannelDataNorm,
     tags: ImmutableListOfLists<String>,
     bgColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -233,26 +234,21 @@ fun RenderRelayLinePreview() {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RenderRelayLinePublicChat(
-    dirtyUrl: String,
+    relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo by loadRelayInfo(dirtyUrl, accountViewModel)
+    val relayInfo by loadRelayInfo(relay, accountViewModel)
 
     var openRelayDialog by remember { mutableStateOf(false) }
-
-    val info =
-        remember(dirtyUrl) {
-            RelayBriefInfoCache.get(RelayUrlFormatter.normalize(dirtyUrl))
-        }
 
     if (openRelayDialog) {
         relayInfo?.let {
             RelayInformationDialog(
                 onClose = { openRelayDialog = false },
                 relayInfo = it,
-                relayBriefInfo = info,
+                relay = relay,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -261,18 +257,18 @@ fun RenderRelayLinePublicChat(
 
     val clipboardManager = LocalClipboardManager.current
     val clickableModifier =
-        remember(dirtyUrl) {
+        remember(relay) {
             Modifier.combinedClickable(
                 onLongClick = {
-                    clipboardManager.setText(AnnotatedString(dirtyUrl))
+                    clipboardManager.setText(AnnotatedString(relay.url))
                 },
                 onClick = {
                     accountViewModel.retrieveRelayDocument(
-                        dirtyUrl,
+                        relay = relay,
                         onInfo = {
                             openRelayDialog = true
                         },
-                        onError = { url, errorCode, exceptionMessage ->
+                        onError = { relay, errorCode, exceptionMessage ->
                             accountViewModel.toastManager.toast(
                                 R.string.unable_to_download_relay_document,
                                 when (errorCode) {
@@ -288,7 +284,7 @@ fun RenderRelayLinePublicChat(
                                     Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
                                         R.string.relay_information_document_error_failed_with_http
                                 },
-                                url,
+                                relay.url,
                                 exceptionMessage ?: errorCode.toString(),
                             )
                         },
@@ -298,8 +294,8 @@ fun RenderRelayLinePublicChat(
         }
 
     RenderRelayLine(
-        info.displayUrl,
-        relayInfo?.icon ?: info.favIcon,
+        relay.displayUrl(),
+        relayInfo?.icon,
         clickableModifier,
         showPicture = accountViewModel.settings.showProfilePictures.value,
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,

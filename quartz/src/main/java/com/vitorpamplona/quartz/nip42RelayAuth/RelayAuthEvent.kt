@@ -23,7 +23,10 @@ package com.vitorpamplona.quartz.nip42RelayAuth
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip42RelayAuth.tags.ChallengeTag
+import com.vitorpamplona.quartz.nip42RelayAuth.tags.RelayTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -35,15 +38,15 @@ class RelayAuthEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun relay() = tags.firstOrNull { it.size > 1 && it[0] == "relay" }?.get(1)
+    fun relay() = tags.firstNotNullOfOrNull(RelayTag::parse)
 
-    fun challenge() = tags.firstOrNull { it.size > 1 && it[0] == "challenge" }?.get(1)
+    fun challenge() = tags.firstNotNullOfOrNull(ChallengeTag::parse)
 
     companion object {
         const val KIND = 22242
 
         fun create(
-            relay: String,
+            relay: NormalizedRelayUrl,
             challenge: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -52,14 +55,14 @@ class RelayAuthEvent(
             val content = ""
             val tags =
                 arrayOf(
-                    arrayOf("relay", relay),
-                    arrayOf("challenge", challenge),
+                    RelayTag.assemble(relay),
+                    ChallengeTag.assemble(challenge),
                 )
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
 
         fun create(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             challenge: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
@@ -68,11 +71,9 @@ class RelayAuthEvent(
             val content = ""
             val tags =
                 relays
-                    .map {
-                        arrayOf("relay", it)
-                    }.plusElement(
-                        arrayOf("challenge", challenge),
-                    ).toTypedArray()
+                    .map { RelayTag.assemble(it) }
+                    .plusElement(ChallengeTag.assemble(challenge))
+                    .toTypedArray()
             signer.sign(createdAt, KIND, tags, content, onReady)
         }
     }

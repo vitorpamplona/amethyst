@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 @Preview
 @Composable
@@ -57,7 +59,7 @@ fun RelayUrlEditFieldPreview() {
 }
 
 @Composable
-fun RelayUrlEditField(onNewRelay: (String) -> Unit) {
+fun RelayUrlEditField(onNewRelay: (NormalizedRelayUrl) -> Unit) {
     var url by remember { mutableStateOf("") }
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Size10dp)) {
@@ -85,8 +87,11 @@ fun RelayUrlEditField(onNewRelay: (String) -> Unit) {
                 KeyboardActions(
                     onGo = {
                         if (url.isNotBlank() && url != "/") {
-                            onNewRelay(url)
-                            url = ""
+                            val relay = RelayUrlNormalizer.normalizeOrNull(url)
+                            if (relay != null) {
+                                onNewRelay(relay)
+                                url = ""
+                            }
                         }
                     },
                 ),
@@ -95,8 +100,11 @@ fun RelayUrlEditField(onNewRelay: (String) -> Unit) {
         Button(
             onClick = {
                 if (url.isNotBlank() && url != "/") {
-                    onNewRelay(url)
-                    url = ""
+                    val relay = RelayUrlNormalizer.normalizeOrNull(url)
+                    if (relay != null) {
+                        onNewRelay(relay)
+                        url = ""
+                    }
                 }
             },
             shape = ButtonBorder,

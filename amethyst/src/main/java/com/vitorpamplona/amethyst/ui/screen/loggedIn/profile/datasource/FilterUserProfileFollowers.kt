@@ -20,28 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
-fun filterUserProfileFollowers(
-    key: HexKey,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    if (key.isEmpty()) return emptyList()
+val UserProfileFollowersKinds = listOf(ContactListEvent.KIND)
 
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+fun filterUserProfileFollowers(
+    user: User,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    return user.inboxRelays().map {
+        RelayBasedFilter(
+            relay = it,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ContactListEvent.KIND),
-                    tags = mapOf("p" to listOf(key)),
-                    since = since,
+                Filter(
+                    kinds = UserProfileFollowersKinds,
+                    tags = mapOf("p" to listOf(user.pubkeyHex)),
+                    since = since?.get(it)?.time,
                 ),
-        ),
-    )
+        )
+    }
 }

@@ -22,22 +22,24 @@ package com.vitorpamplona.amethyst.service.relays
 
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.ammolite.relays.filters.MutableTime
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.collections.plus
+
+typealias SincePerRelayMap = Map<NormalizedRelayUrl, MutableTime>
 
 class EOSERelayList {
-    var relayList: Map<String, EOSETime> = emptyMap()
+    var relayList: SincePerRelayMap = emptyMap()
 
     fun addOrUpdate(
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val eose = relayList[relayUrl]
         if (eose == null) {
-            relayList = relayList + Pair(relayUrl, EOSETime(time))
+            relayList = relayList + Pair(relayUrl, MutableTime(time))
         } else {
-            if (time > eose.time) {
-                eose.update(time)
-            }
+            eose.updateIfNewer(time)
         }
     }
 
@@ -48,9 +50,9 @@ class EOSERelayList {
     fun since() = relayList
 
     fun newEose(
-        relayUrl: String,
+        relay: NormalizedRelayUrl,
         time: Long,
-    ) = addOrUpdate(relayUrl, time)
+    ) = addOrUpdate(relay, time)
 }
 
 class EOSEFollowList(
@@ -60,7 +62,7 @@ class EOSEFollowList(
 
     fun addOrUpdate(
         listCode: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val relayList = followList[listCode]
@@ -77,7 +79,7 @@ class EOSEFollowList(
 
     fun newEose(
         listCode: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) = addOrUpdate(listCode, relayUrl, time)
 }
@@ -90,7 +92,7 @@ class EOSEAccount(
     fun addOrUpdate(
         user: User,
         listCode: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val followList = users[user]
@@ -115,7 +117,7 @@ class EOSEAccount(
     fun newEose(
         user: User,
         listCode: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) = addOrUpdate(user, listCode, relayUrl, time)
 }
@@ -127,7 +129,7 @@ class EOSEAccountFast<T : Any>(
 
     fun addOrUpdate(
         user: T,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val relayList = users[user]
@@ -149,7 +151,7 @@ class EOSEAccountFast<T : Any>(
 
     fun newEose(
         user: T,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) = addOrUpdate(user, relayUrl, time)
 }

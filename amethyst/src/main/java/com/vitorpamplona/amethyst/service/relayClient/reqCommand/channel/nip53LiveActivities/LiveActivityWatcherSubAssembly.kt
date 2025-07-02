@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53L
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
  * This assembler observes modifications to the LiveActivity root events
@@ -37,13 +37,16 @@ class LiveActivityWatcherSubAssembly(
 ) : PerUniqueIdEoseManager<ChannelFinderQueryState>(client, allKeys) {
     override fun updateFilter(
         key: ChannelFinderQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
-        if (key.channel is LiveActivitiesChannel) {
-            filterLiveStreamUpdatesByAddress(key.channel, since)
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> {
+        return if (key.channel is LiveActivitiesChannel) {
+            key.channel.relays().flatMap {
+                filterLiveStreamUpdatesByAddress(it, listOf(key.channel), since?.get(it)?.time)
+            }
         } else {
-            null
+            emptyList()
         }
+    }
 
     /**
      * Only one key per channel.

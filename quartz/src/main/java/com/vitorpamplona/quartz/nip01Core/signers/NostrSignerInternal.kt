@@ -32,6 +32,8 @@ class NostrSignerInternal(
 ) : NostrSigner(keyPair.pubKey.toHexKey()) {
     val signerSync = NostrSignerSync(keyPair)
 
+    override fun isWriteable(): Boolean = keyPair.privKey != null
+
     override fun <T : Event> sign(
         createdAt: Long,
         kind: Int,

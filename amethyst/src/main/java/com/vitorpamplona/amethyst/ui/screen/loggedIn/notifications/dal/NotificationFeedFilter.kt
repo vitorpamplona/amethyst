@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -63,10 +64,8 @@ class NotificationFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultNotificationFollowList.value,
             followLists = account.liveNotificationFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     override fun feed(): List<Note> {
@@ -108,7 +107,11 @@ class NotificationFeedFilter(
                     noteEvent.pubKey
                 }
             } else {
-                it.author?.pubkeyHex
+                if (it is AddressableNote) {
+                    it.address.pubKeyHex
+                } else {
+                    it.author?.pubkeyHex
+                }
             }
 
         return it.event !is ChannelCreateEvent &&
@@ -121,7 +124,7 @@ class NotificationFeedFilter(
             it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (filterParams.isGlobal || filterParams.followLists?.authors?.contains(notifAuthor) == true) &&
+            (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor) == true) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             tagsAnEventByUser(it, loggedInUserHex)

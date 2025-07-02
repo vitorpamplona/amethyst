@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28P
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 /**
  * This assembler observes loads missing public chats when needed.
@@ -38,7 +38,7 @@ class ChannelLoaderSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<ChannelFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun updateFilter(keys: List<ChannelFinderQueryState>): List<TypedFilter>? = filterMissingChannelsById(keys)
+    override fun updateFilter(keys: List<ChannelFinderQueryState>): List<RelayBasedFilter>? = filterMissingChannelsById(keys)
 
     override fun distinct(key: ChannelFinderQueryState) = key.channel.idHex
 }

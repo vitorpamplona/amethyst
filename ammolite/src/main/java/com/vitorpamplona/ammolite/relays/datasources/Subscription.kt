@@ -20,116 +20,46 @@
  */
 package com.vitorpamplona.ammolite.relays.datasources
 
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.NormalFilter
-import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import java.util.UUID
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.collections.forEachIndexed
 
 data class Subscription(
-    val id: String = UUID.randomUUID().toString().substring(0, 4),
-    val onEose: ((time: Long, relayUrl: String) -> Unit)? = null,
+    val id: String = newSubId(),
+    val onEose: ((time: Long, relayUrl: NormalizedRelayUrl) -> Unit)? = null,
 ) {
-    var typedFilters: List<TypedFilter>? = null // Inactive when null
+    var relayBasedFilters: List<RelayBasedFilter>? = null // Inactive when null
 
     fun reset() {
-        typedFilters = null
+        relayBasedFilters = null
     }
 
     fun callEose(
         time: Long,
-        relay: String,
+        relay: NormalizedRelayUrl,
     ) {
         onEose?.let { it(time, relay) }
     }
 
-    fun hasChangedFiltersFrom(otherFilters: List<TypedFilter>?): Boolean {
-        if (typedFilters == null && otherFilters == null) return false
-        if (typedFilters?.size != otherFilters?.size) return true
+    fun hasChangedFiltersFrom(otherFilters: List<RelayBasedFilter>?): Boolean {
+        if (relayBasedFilters == null && otherFilters == null) return false
+        if (relayBasedFilters?.size != otherFilters?.size) return true
 
-        typedFilters?.forEachIndexed { index, typedFilter ->
+        relayBasedFilters?.forEachIndexed { index, relaySetFilter ->
             val otherFilter = otherFilters?.getOrNull(index) ?: return true
 
-            if (typedFilter.filter is SincePerRelayFilter && otherFilter.filter is SincePerRelayFilter) {
-                return isDifferent(typedFilter.filter, otherFilter.filter)
-            }
+            if (relaySetFilter.relay != otherFilter.relay) return true
 
-            if (typedFilter.filter is SinceAuthorPerRelayFilter && otherFilter.filter is SinceAuthorPerRelayFilter) {
-                return isDifferent(typedFilter.filter, otherFilter.filter)
-            }
-
-            if (typedFilter.filter is NormalFilter && otherFilter.filter is NormalFilter) {
-                return isDifferent(typedFilter.filter, otherFilter.filter)
-            }
-
-            return true
+            return isDifferent(relaySetFilter.filter, otherFilter.filter)
         }
         return false
     }
 
     fun isDifferent(
-        filter1: SincePerRelayFilter,
-        filter2: SincePerRelayFilter,
-    ): Boolean {
-        // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
-        // fast check
-        if (filter1.authors?.size != filter2.authors?.size ||
-            filter1.ids?.size != filter2.ids?.size ||
-            filter1.tags?.size != filter2.tags?.size ||
-            filter1.kinds?.size != filter2.kinds?.size ||
-            filter1.limit != filter2.limit ||
-            filter1.search?.length != filter2.search?.length ||
-            filter1.until != filter2.until
-        ) {
-            return true
-        }
-
-        // deep check
-        if (filter1.ids != filter2.ids ||
-            filter1.authors != filter2.authors ||
-            filter1.tags != filter2.tags ||
-            filter1.kinds != filter2.kinds ||
-            filter1.search != filter2.search
-        ) {
-            return true
-        }
-
-        return false
-    }
-
-    fun isDifferent(
-        filter1: SinceAuthorPerRelayFilter,
-        filter2: SinceAuthorPerRelayFilter,
-    ): Boolean {
-        // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
-        // fast check
-        if (filter1.authors?.size != filter2.authors?.size ||
-            filter1.ids?.size != filter2.ids?.size ||
-            filter1.tags?.size != filter2.tags?.size ||
-            filter1.kinds?.size != filter2.kinds?.size ||
-            filter1.limit != filter2.limit ||
-            filter1.search?.length != filter2.search?.length ||
-            filter1.until != filter2.until
-        ) {
-            return true
-        }
-
-        // deep check
-        if (filter1.ids != filter2.ids ||
-            filter1.authors != filter2.authors ||
-            filter1.tags != filter2.tags ||
-            filter1.kinds != filter2.kinds ||
-            filter1.search != filter2.search
-        ) {
-            return true
-        }
-
-        return false
-    }
-
-    fun isDifferent(
-        filter1: NormalFilter,
-        filter2: NormalFilter,
+        filter1: Filter,
+        filter2: Filter,
     ): Boolean {
         // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
         // fast check

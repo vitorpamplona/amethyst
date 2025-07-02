@@ -32,11 +32,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
-import com.vitorpamplona.amethyst.service.uploads.nip96.randomChars
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -129,7 +129,7 @@ class BlossomUploader {
     ): MediaUploadResult {
         checkNotInMainThread()
 
-        val fileName = baseFileName ?: randomChars()
+        val fileName = baseFileName ?: RandomInstance.randomChars(16)
         val extension =
             contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
 

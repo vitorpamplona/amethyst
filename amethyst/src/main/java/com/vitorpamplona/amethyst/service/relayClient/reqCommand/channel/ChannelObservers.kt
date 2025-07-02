@@ -73,10 +73,12 @@ fun observeChannelNoteAuthors(
                         .toSet()
                         .toImmutableList()
                 }.onStart {
-                    baseChannel.notes
-                        .mapNotNull { key, value -> value.author }
-                        .toSet()
-                        .toImmutableList()
+                    emit(
+                        baseChannel.notes
+                            .mapNotNull { key, value -> value.author }
+                            .toSet()
+                            .toImmutableList(),
+                    )
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }

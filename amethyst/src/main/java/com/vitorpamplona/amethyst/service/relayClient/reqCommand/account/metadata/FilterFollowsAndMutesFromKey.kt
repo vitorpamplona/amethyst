@@ -20,12 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
@@ -33,27 +32,30 @@ import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 
+val FollowAndMutesFromKeyKinds =
+    listOf(
+        PeopleListEvent.KIND,
+        FollowListEvent.KIND,
+        MuteListEvent.KIND,
+        BadgeProfilesEvent.KIND,
+        EmojiPackSelectionEvent.KIND,
+        EphemeralChatListEvent.KIND,
+        ChannelListEvent.KIND,
+    )
+
 fun filterFollowsAndMutesFromKey(
-    pubkey: HexKey?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (pubkey == null || pubkey.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey.isEmpty()) return emptyList()
 
     return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            PeopleListEvent.KIND,
-                            FollowListEvent.KIND,
-                            MuteListEvent.KIND,
-                            BadgeProfilesEvent.KIND,
-                            EmojiPackSelectionEvent.KIND,
-                            EphemeralChatListEvent.KIND,
-                            ChannelListEvent.KIND,
-                        ),
+                Filter(
+                    kinds = FollowAndMutesFromKeyKinds,
                     authors = listOf(pubkey),
                     limit = 100,
                     since = since,

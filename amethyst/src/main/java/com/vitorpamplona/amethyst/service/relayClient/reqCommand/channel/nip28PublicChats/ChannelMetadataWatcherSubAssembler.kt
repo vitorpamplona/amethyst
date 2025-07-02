@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28P
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class ChannelMetadataWatcherSubAssembler(
     client: NostrClient,
@@ -33,12 +33,14 @@ class ChannelMetadataWatcherSubAssembler(
 ) : PerUniqueIdEoseManager<ChannelFinderQueryState>(client, allKeys) {
     override fun updateFilter(
         key: ChannelFinderQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> =
         if (key.channel is PublicChatChannel) {
-            filterChannelMetadataUpdatesById(key.channel, since)
+            key.channel.relays().flatMap {
+                filterChannelMetadataUpdatesById(it, listOf(key.channel), since?.get(it)?.time)
+            }
         } else {
-            null
+            emptyList()
         }
 
     /**

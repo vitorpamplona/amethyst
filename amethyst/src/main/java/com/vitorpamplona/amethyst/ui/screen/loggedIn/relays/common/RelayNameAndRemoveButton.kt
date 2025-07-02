@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.WarningColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -56,12 +57,12 @@ fun RelayNameAndRemoveButton(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = item.briefInfo.displayUrl,
+                text = item.relay.displayUrl(),
                 modifier =
                     Modifier.combinedClickable(
                         onClick = onClick,
                         onLongClick = {
-                            clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                            clipboardManager.setText(AnnotatedString(item.relay.url))
                         },
                     ),
                 maxLines = 1,

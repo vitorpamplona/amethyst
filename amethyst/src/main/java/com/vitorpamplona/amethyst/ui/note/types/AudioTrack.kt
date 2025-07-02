@@ -236,7 +236,7 @@ fun AudioHeader(
 
             if (noteEvent.hasHashtags()) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    DisplayUncitedHashtags(noteEvent, callbackUri, nav)
+                    DisplayUncitedHashtags(noteEvent, callbackUri, accountViewModel, nav)
                 }
             }
         }

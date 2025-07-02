@@ -109,7 +109,7 @@ fun LongLiveActivityChannelHeader(
             if (summary != null) {
                 baseChannel.info?.let {
                     if (it.hasHashtags()) {
-                        DisplayUncitedHashtags(it, summary, nav)
+                        DisplayUncitedHashtags(it, summary, accountViewModel, nav)
                     }
                 }
             }

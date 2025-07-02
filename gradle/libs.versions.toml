@@ -1,7 +1,7 @@
 [versions]
 accompanistAdaptive = "0.37.3"
 activityCompose = "1.10.1"
-agp = "8.10.0"
+agp = "8.10.1"
 android-compileSdk = "35"
 android-minSdk = "26"
 android-targetSdk = "35"
@@ -109,6 +109,7 @@ jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
 lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodiumAndroid" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }

@@ -37,17 +37,19 @@ import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
+import com.vitorpamplona.amethyst.service.okhttp.ProxySettingsAnchor
 import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
+import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.tor.TorManager
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -89,17 +91,25 @@ class Amethyst : Application() {
             scope = applicationIOScope,
         )
 
-    // Connects the NostrClient class with okHttp
-    val factory =
-        OkHttpWebSocket.BuilderFactory { _, useProxy ->
-            okHttpClients.getHttpClient(useProxy)
-        }
+    val torProxySettingsAnchor = ProxySettingsAnchor()
 
-    // Provides a relay pool
-    val client: NostrClient = NostrClient(factory)
+    // Connects the NostrClient class with okHttp
+    val websocketBuilder =
+        OkHttpWebSocket.Builder { url ->
+            okHttpClients.getHttpClient(torProxySettingsAnchor.useProxy(url))
+        }
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
+
+    // Organizes cache clearing
+    val trimmingService = MemoryTrimmingService(cache)
+
+    // Provides a relay pool
+    val client: NostrClient = NostrClient(websocketBuilder, applicationIOScope)
+
+    // Watches for changes on Tor and Relay List Settings
+    val relayProxyClientConnector = RelayProxyClientConnector(torProxySettingsAnchor, okHttpClients, connManager, client, applicationIOScope)
 
     // Verifies and inserts in the cache from all relays, all subscriptions
     val cacheClientConnector = CacheClientConnector(client, cache)
@@ -112,14 +122,8 @@ class Amethyst : Application() {
 
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 
-    // Organizes cache clearing
-    val trimmingService = MemoryTrimmingService(cache)
-
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator = RelaySubscriptionsCoordinator(LocalCache, client, applicationIOScope)
-
-    // Trash.
-    val serviceManager = ServiceManager(client, applicationIOScope)
 
     // saves the .content of NIP-95 blobs in disk to save memory
     val nip95cache: File by lazy { Nip95CacheFactory.new(this) }

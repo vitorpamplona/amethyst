@@ -20,18 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
-fun filterByEvent(eventId: HexKey) =
-    listOf(
-        TypedFilter(
-            types = ALL_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    ids = listOfNotNull(eventId),
-                ),
-        ),
-    )
+fun filterByEvent(eventId: HexKey) = filterMissingEvents(setOf(eventId))

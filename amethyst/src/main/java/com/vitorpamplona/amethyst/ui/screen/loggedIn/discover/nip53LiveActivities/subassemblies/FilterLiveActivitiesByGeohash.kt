@@ -20,35 +20,56 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.mapNotNull
 
 fun filterLiveActivitiesByGeohash(
-    hashToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (hashToLoad == null || hashToLoad.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    geotags: Set<String>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    if (geotags.isEmpty()) return emptyList()
 
-    val geoHashes = hashToLoad.toList()
+    val geoHashes = geotags.sorted()
 
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.GLOBAL),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            LiveActivitiesChatMessageEvent.KIND,
-                            LiveActivitiesEvent.KIND,
-                        ),
+                Filter(
+                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 300,
                     since = since,
                 ),
         ),
     )
+}
+
+fun filterLiveActivitiesByGeohash(
+    geoSet: LocationTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (geoSet.set.isEmpty()) return emptyList()
+
+    val defaultSince = TimeUtils.oneWeekAgo()
+
+    return geoSet.set.mapNotNull {
+        if (it.value.geotags.isEmpty()) {
+            null
+        } else {
+            filterLiveActivitiesByGeohash(
+                relay = it.key,
+                geotags = it.value.geotags,
+                since = since?.get(it.key)?.time ?: defaultSince,
+            )
+        }
+    }.flatten()
 }

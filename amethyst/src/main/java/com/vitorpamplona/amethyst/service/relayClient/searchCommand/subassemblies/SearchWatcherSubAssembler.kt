@@ -23,12 +23,10 @@ package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassembli
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -51,8 +49,8 @@ class SearchWatcherSubAssembler(
 ) : PerUniqueIdEoseManager<SearchQueryState>(client, allKeys) {
     override fun updateFilter(
         key: SearchQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? {
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
         val mySearchString = key.searchQuery.value
 
         if (mySearchString.isBlank()) return null
@@ -63,25 +61,34 @@ class SearchWatcherSubAssembler(
                     val key = Hex.decode(mySearchString).toHexKey()
                     filterByAuthor(key) + filterByEvent(key)
                 } else {
-                    when (val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity) {
-                        is NSec -> filterByAuthor(Nip01.pubKeyCreate(parsed.hex.hexToByteArray()).toHexKey())
-                        is NPub -> filterByAuthor(parsed.hex)
-                        is NProfile -> filterByAuthor(parsed.hex)
-                        is Note -> filterByEvent(parsed.hex)
-                        is NEvent -> filterByEvent(parsed.hex)
-                        is NEmbed -> {
-                            cache.justConsume(parsed.event, null, false)
-                            emptyList()
-                        }
+                    val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
+                    if (parsed != null) {
+                        cache.consume(parsed)
 
-                        is NRelay -> emptyList()
-                        is NAddress -> filterByAddress(parsed)
-                        else -> emptyList()
+                        when (parsed) {
+                            is NSec -> filterByAuthor(parsed.toPubKeyHex())
+                            is NPub -> filterByAuthor(parsed.hex)
+                            is NProfile -> filterByAuthor(parsed.hex)
+                            is Note -> filterByEvent(parsed.hex)
+                            is NEvent -> filterByEvent(parsed.hex)
+                            is NEmbed -> emptyList()
+                            is NRelay -> emptyList()
+                            is NAddress -> filterByAddress(parsed)
+                            else -> emptyList()
+                        }
+                    } else {
+                        emptyList()
                     }
                 }
             }.getOrDefault(emptyList())
 
-        val searchFilters = searchPeopleByName(mySearchString) + searchPostsByText(mySearchString)
+        val searchFilters =
+            key.account.searchRelayList.flow.value.flatMap {
+                searchPeopleByName(mySearchString, it)
+            } +
+                key.account.searchRelayList.flow.value.flatMap {
+                    searchPostsByText(mySearchString, it)
+                }
 
         return directFilters + searchFilters
     }

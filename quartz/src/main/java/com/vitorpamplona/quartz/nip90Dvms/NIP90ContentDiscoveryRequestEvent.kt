@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -45,7 +46,7 @@ class NIP90ContentDiscoveryRequestEvent(
         fun create(
             dvmPublicKey: HexKey,
             forUser: HexKey,
-            relays: Set<String>,
+            relays: Set<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (NIP90ContentDiscoveryRequestEvent) -> Unit,
@@ -54,7 +55,7 @@ class NIP90ContentDiscoveryRequestEvent(
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("p", dvmPublicKey))
             tags.add(AltTag.assemble(ALT))
-            tags.add(arrayOf("relays") + relays.toTypedArray())
+            tags.add(arrayOf("relays") + relays.map { it.url }.toTypedArray())
             tags.add(arrayOf("param", "max_results", "200"))
             tags.add(arrayOf("param", "user", forUser))
             signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)

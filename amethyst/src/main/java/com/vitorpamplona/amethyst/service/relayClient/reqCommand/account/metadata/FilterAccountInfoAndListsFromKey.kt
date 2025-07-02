@@ -20,15 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.blossom.BlossomServersEvent
+import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
@@ -36,42 +34,49 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+
+val AccountInfoAndListsFromKeyKinds =
+    listOf(
+        MetadataEvent.KIND,
+        ContactListEvent.KIND,
+        StatusEvent.KIND,
+        AdvertisedRelayListEvent.KIND,
+        ChatMessageRelayListEvent.KIND,
+        SearchRelayListEvent.KIND,
+        FileServersEvent.KIND,
+        BlossomServersEvent.KIND,
+        PrivateOutboxRelayListEvent.KIND,
+    )
+
+val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
+val AmethystMetadataTagMapFilter = mapOf("d" to listOf(APP_SPECIFIC_DATA_D_TAG))
 
 fun filterAccountInfoAndListsFromKey(
-    pubkey: HexKey?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (pubkey == null || pubkey.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey.isEmpty()) return emptyList()
 
     return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            MetadataEvent.KIND,
-                            ContactListEvent.KIND,
-                            StatusEvent.KIND,
-                            AdvertisedRelayListEvent.KIND,
-                            ChatMessageRelayListEvent.KIND,
-                            SearchRelayListEvent.KIND,
-                            FileServersEvent.KIND,
-                            BlossomServersEvent.KIND,
-                            PrivateOutboxRelayListEvent.KIND,
-                        ),
+                Filter(
+                    kinds = AccountInfoAndListsFromKeyKinds,
                     authors = listOf(pubkey),
                     limit = 20,
                     since = since,
                 ),
         ),
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(AppSpecificDataEvent.KIND),
+                Filter(
+                    kinds = AmethystMetadataKinds,
                     authors = listOf(pubkey),
-                    tags = mapOf("d" to listOf(Account.APP_SPECIFIC_DATA_D_TAG)),
+                    tags = AmethystMetadataTagMapFilter,
                     limit = 1,
                     since = since,
                 ),

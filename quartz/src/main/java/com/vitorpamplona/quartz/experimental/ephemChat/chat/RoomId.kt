@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.quartz.experimental.ephemChat.chat
 
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 data class RoomId(
     val id: String,
-    val relayUrl: String,
+    val relayUrl: NormalizedRelayUrl,
 ) {
     fun toKey() = "$id@$relayUrl"
 
-    fun toDisplayKey() = id + "@" + RelayUrlFormatter.displayUrl(relayUrl)
+    fun toDisplayKey() = id + "@" + relayUrl.displayUrl()
 }

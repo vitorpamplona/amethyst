@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -46,16 +45,12 @@ open class DiscoverChatFeedFilter(
         val params = buildFilterParams(account)
 
         val allChannelNotes =
-            LocalCache.channels.mapNotNullIntoSet { _, channel ->
-                if (channel is PublicChatChannel) {
-                    val note = LocalCache.getNoteIfExists(channel.idHex)
-                    val noteEvent = note?.event
+            LocalCache.publicChatChannels.mapNotNullIntoSet { _, channel ->
+                val note = LocalCache.getNoteIfExists(channel.idHex)
+                val noteEvent = note?.event
 
-                    if (noteEvent == null || params.match(noteEvent)) {
-                        note
-                    } else {
-                        null
-                    }
+                if (noteEvent == null || params.match(noteEvent)) {
+                    note
                 } else {
                     null
                 }
@@ -67,11 +62,9 @@ open class DiscoverChatFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultDiscoveryFollowList.value,
+        FilterByListParams.create(
             followLists = account.liveDiscoveryFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {

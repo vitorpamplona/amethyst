@@ -21,11 +21,10 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -35,51 +34,80 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
+
+val RepliesAndReactiionsToAddressesKinds1 =
+    listOf(
+        TextNoteEvent.KIND,
+        ReactionEvent.KIND,
+        RepostEvent.KIND,
+        GenericRepostEvent.KIND,
+        ReportEvent.KIND,
+        LnZapEvent.KIND,
+        PollNoteEvent.KIND,
+        CommunityPostApprovalEvent.KIND,
+        LiveActivitiesChatMessageEvent.KIND,
+    )
+
+val DeletionKindList =
+    listOf(
+        DeletionEvent.KIND,
+    )
+
+val TextNoteKindList = listOf(TextNoteEvent.KIND)
 
 fun filterRepliesAndReactionsToAddresses(
     keys: List<AddressableNote>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? {
     if (keys.isEmpty()) return null
 
-    val addresses = keys.mapTo(mutableSetOf<String>()) { it.address().toValue() }.sorted()
+    val notesPerRelay =
+        mapOfSet {
+            keys.forEach {
+                it.relayUrlsForReactions().forEach { relay ->
+                    add(relay, it.address().toValue())
+                }
+            }
+        }
 
-    return listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            ReactionEvent.KIND,
-                            RepostEvent.KIND,
-                            GenericRepostEvent.KIND,
-                            ReportEvent.KIND,
-                            LnZapEvent.KIND,
-                            PollNoteEvent.KIND,
-                            CommunityPostApprovalEvent.KIND,
-                            LiveActivitiesChatMessageEvent.KIND,
-                        ),
-                    tags = mapOf("a" to addresses),
-                    since = since,
-                    // Max amount of "replies" to download on a specific event.
-                    limit = 1000,
-                ),
-        ),
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            DeletionEvent.KIND,
-                        ),
-                    tags = mapOf("a" to addresses),
-                    since = since,
-                    // Max amount of "replies" to download on a specific event.
-                    limit = 10,
-                ),
-        ),
-    )
+    return notesPerRelay.flatMap {
+        val since = since?.get(it.key)?.time
+        val sortedList = it.value.sorted()
+        val relay = it.key
+        listOf(
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = RepliesAndReactiionsToAddressesKinds1,
+                        tags = mapOf("a" to sortedList),
+                        since = since,
+                        // Max amount of "replies" to download on a specific event.
+                        limit = 1000,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = DeletionKindList,
+                        tags = mapOf("a" to sortedList),
+                        since = since,
+                        // Max amount of "replies" to download on a specific event.
+                        limit = 10,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = TextNoteKindList,
+                        tags = mapOf("q" to sortedList),
+                        since = since,
+                        limit = 1000,
+                    ),
+            ),
+        )
+    }
 }

@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.MutableQueryState
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchWatcherSubAssembler
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +34,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Stable
 class SearchQueryState(
     val searchQuery: MutableStateFlow<String>,
+    val account: Account,
 ) : MutableQueryState {
     override fun flow(): Flow<String> = searchQuery
 }
 
 class SearchFilterAssembler(
-    val cache: LocalCache,
     client: NostrClient,
     scope: CoroutineScope,
+    val cache: LocalCache,
 ) : MutableComposeSubscriptionManager<SearchQueryState>(scope) {
     val group =
         listOf(

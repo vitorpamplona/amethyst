@@ -51,14 +51,14 @@ class OtsTest {
 
     @Test
     fun verifyNostrEvent2() {
-        val ots = Event.Companion.fromJson(otsEvent2) as OtsEvent
+        val ots = Event.fromJson(otsEvent2) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(1706322179L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrPendingEvent() {
-        val ots = Event.Companion.fromJson(otsPendingEvent) as OtsEvent
+        val ots = Event.fromJson(otsPendingEvent) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(null, ots.verify(resolver))
 

@@ -56,11 +56,9 @@ open class DiscoverFollowSetsFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
-            account.userProfile().pubkeyHex,
-            account.settings.defaultDiscoveryFollowList.value,
+        FilterByListParams.create(
             account.liveDiscoveryFollowLists.value,
-            account.flowHiddenUsers.value,
+            account.hiddenUsers.flow.value,
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {

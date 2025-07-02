@@ -20,26 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ui.dal
 
-import com.vitorpamplona.amethyst.model.AROUND_ME
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
+import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNotes
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class FilterByListParams(
-    val isGlobal: Boolean,
     val isHiddenList: Boolean,
-    val isAroundMe: Boolean,
-    val followLists: Account.LiveFollowList?,
-    val hiddenLists: Account.LiveHiddenUsers,
+    val followLists: IFeedTopNavFilter?,
+    val hiddenLists: HiddenUsersState.LiveHiddenUsers,
     val now: Long = TimeUtils.oneMinuteFromNow(),
 ) {
     fun isNotHidden(userHex: String) = !(hiddenLists.hiddenUsers.contains(userHex) || hiddenLists.spammers.contains(userHex))
@@ -48,45 +44,39 @@ class FilterByListParams(
 
     fun isEventInList(noteEvent: Event): Boolean {
         if (followLists == null) return false
-        if (isAroundMe && followLists.geotags.isEmpty()) return false
 
-        return if (noteEvent is LiveActivitiesEvent) {
-            noteEvent.participantsIntersect(followLists.authors) ||
-                noteEvent.isTaggedHashes(followLists.hashtags) ||
-                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
-                noteEvent.isTaggedAddressableNotes(followLists.addresses)
-        } else if (noteEvent is CommentEvent) {
-            // ignore follows and checks only the root scope
-            noteEvent.isTaggedHashes(followLists.hashtags) ||
-                noteEvent.isTaggedScopes(followLists.hashtagScopes) ||
-                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
-                noteEvent.isTaggedScopes(followLists.geotagScopes) ||
-                noteEvent.isTaggedAddressableNotes(followLists.addresses)
-        } else {
-            noteEvent.pubKey in followLists.authors ||
-                noteEvent.isTaggedHashes(followLists.hashtags) ||
-                noteEvent.isTaggedGeoHashes(followLists.geotags) ||
-                noteEvent.isTaggedAddressableNotes(followLists.addresses)
-        }
+        return followLists.match(noteEvent)
+    }
+
+    fun isAuthorInFollows(author: HexKey): Boolean {
+        if (followLists == null) return false
+
+        return followLists.matchAuthor(author)
     }
 
     fun isAuthorInFollows(address: Address): Boolean {
         if (followLists == null) return false
 
-        return address.pubKeyHex in followLists.authors
+        return followLists.matchAuthor(address.pubKeyHex)
     }
+
+    fun isGlobal(comingFrom: List<NormalizedRelayUrl>) =
+        followLists is GlobalTopNavFilter &&
+            comingFrom.any { followLists.relays.value.contains(it) }
 
     fun match(
         noteEvent: Event,
-        isGlobalRelay: Boolean = true,
-    ) = ((isGlobal && isGlobalRelay) || isEventInList(noteEvent)) &&
+        comingFrom: List<NormalizedRelayUrl> = emptyList(),
+    ) = ((isGlobal(comingFrom)) || isEventInList(noteEvent)) &&
         (isHiddenList || isNotHidden(noteEvent.pubKey)) &&
         isNotInTheFuture(noteEvent)
 
-    fun match(address: Address?) =
-        address != null &&
-            (isGlobal || isAuthorInFollows(address)) &&
-            (isHiddenList || isNotHidden(address.pubKeyHex))
+    fun match(
+        address: Address?,
+        comingFrom: List<NormalizedRelayUrl> = emptyList(),
+    ) = address != null &&
+        (isGlobal(comingFrom) || isAuthorInFollows(address)) &&
+        (isHiddenList || isNotHidden(address.pubKeyHex))
 
     companion object {
         fun showHiddenKey(
@@ -95,15 +85,11 @@ class FilterByListParams(
         ) = selectedListName == PeopleListEvent.blockListFor(userHex) || selectedListName == MuteListEvent.blockListFor(userHex)
 
         fun create(
-            userHex: String,
-            selectedListName: String,
-            followLists: Account.LiveFollowList?,
-            hiddenUsers: Account.LiveHiddenUsers,
+            followLists: IFeedTopNavFilter?,
+            hiddenUsers: HiddenUsersState.LiveHiddenUsers,
         ): FilterByListParams =
             FilterByListParams(
-                isGlobal = selectedListName == GLOBAL_FOLLOWS,
-                isHiddenList = showHiddenKey(selectedListName, userHex),
-                isAroundMe = selectedListName == AROUND_ME,
+                isHiddenList = followLists is MutedAuthorsByOutboxTopNavFilter,
                 followLists = followLists,
                 hiddenLists = hiddenUsers,
             )

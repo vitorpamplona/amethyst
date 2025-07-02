@@ -25,7 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent.UsersAndWords
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.tryAndWait
+import kotlin.coroutines.resume
 
 @Immutable
 class MuteListEvent(
@@ -38,14 +41,31 @@ class MuteListEvent(
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun dTag() = FIXED_D_TAG
 
+    fun publicUsersAndWords() =
+        PeopleListEvent.UsersAndWords(
+            filterTagList("p", tags),
+            filterTagList("word", tags),
+        )
+
     fun publicAndPrivateUsersAndWords(
         signer: NostrSigner,
         onReady: (PeopleListEvent.UsersAndWords) -> Unit,
     ) {
         privateTagsOrEmpty(signer) {
             onReady(
-                PeopleListEvent.UsersAndWords(filterTagList("p", it), filterTagList("word", it)),
+                PeopleListEvent.UsersAndWords(
+                    filterTagList("p", it),
+                    filterTagList("word", it),
+                ),
             )
+        }
+    }
+
+    suspend fun publicAndPrivateUsersAndWords(signer: NostrSigner): UsersAndWords? {
+        return tryAndWait { continuation ->
+            publicAndPrivateUsersAndWords(signer) { privateTagList ->
+                continuation.resume(privateTagList)
+            }
         }
     }
 

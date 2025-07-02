@@ -21,13 +21,15 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.MapOfSetBuilder
 
-fun filterMissingEvents(keys: List<EventFinderQueryState>): List<TypedFilter>? {
+fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
     val missingEvents = mutableSetOf<String>()
 
     keys.forEach {
@@ -46,13 +48,21 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<TypedFilter>? {
     return filterMissingEvents(missingEvents)
 }
 
-fun filterMissingEvents(missingEventIds: Set<HexKey>): List<TypedFilter>? {
-    if (missingEventIds.isEmpty()) return null
+fun filterMissingEvents(missingEventIds: Set<HexKey>): List<RelayBasedFilter> {
+    if (missingEventIds.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter = SincePerRelayFilter(ids = missingEventIds.sorted()),
-        ),
-    )
+    val relayHints = MapOfSetBuilder<NormalizedRelayUrl, HexKey>()
+
+    missingEventIds.forEach { eventId ->
+        LocalCache.relayHints.hintsForEvent(eventId).forEach { relayUrl ->
+            relayHints.add(relayUrl, eventId)
+        }
+    }
+
+    return relayHints.build().map {
+        RelayBasedFilter(
+            relay = it.key,
+            filter = Filter(ids = it.value.sorted()),
+        )
+    }
 }

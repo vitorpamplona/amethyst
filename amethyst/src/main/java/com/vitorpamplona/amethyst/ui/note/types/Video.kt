@@ -189,7 +189,7 @@ fun VideoDisplay(
                     Row(
                         Modifier.fillMaxWidth(),
                     ) {
-                        DisplayUncitedHashtags(event, summary, callbackUri, nav)
+                        DisplayUncitedHashtags(event, summary, callbackUri, accountViewModel, nav)
                     }
                 }
             }

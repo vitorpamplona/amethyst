@@ -81,9 +81,9 @@ class EphemeralChatListEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (EphemeralChatListEvent) -> Unit,
         ) {
-            val tags = arrayOf(RoomIdTag.Companion.assemble(room))
+            val tags = arrayOf(RoomIdTag.assemble(room))
             if (isPrivate) {
-                PrivateTagsInContent.Companion.encryptNip04(
+                PrivateTagsInContent.encryptNip04(
                     privateTags = tags,
                     signer = signer,
                 ) { encryptedTags ->
@@ -104,7 +104,7 @@ class EphemeralChatListEvent(
         ) {
             PrivateTagArrayBuilder.removeAll(
                 earlierVersion,
-                RoomIdTag.Companion.assemble(room.id, room.relayUrl),
+                RoomIdTag.assemble(room.id, room.relayUrl),
                 signer,
             ) { encryptedContent, newTags ->
                 create(encryptedContent, newTags, signer, createdAt, onReady)
@@ -121,7 +121,7 @@ class EphemeralChatListEvent(
         ) {
             PrivateTagArrayBuilder.add(
                 earlierVersion,
-                RoomIdTag.Companion.assemble(room.id, room.relayUrl),
+                RoomIdTag.assemble(room.id, room.relayUrl.url),
                 isPrivate,
                 signer,
             ) { encryptedContent, newTags ->
@@ -140,7 +140,7 @@ class EphemeralChatListEvent(
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
                 } else {
-                    tags + AltTag.Companion.assemble(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
             signer.sign(createdAt, KIND, newTags, content, onReady)

@@ -23,10 +23,12 @@ package com.vitorpamplona.quartz.nip17Dm.settings
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip17Dm.settings.tags.RelayTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,14 +41,7 @@ class ChatMessageRelayListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun relays(): List<String> =
-        tags.mapNotNull {
-            if (it.size > 1 && it[0] == "relay") {
-                it[1]
-            } else {
-                null
-            }
-        }
+    fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parse)
 
     companion object {
         const val KIND = 10050
@@ -57,26 +52,27 @@ class ChatMessageRelayListEvent(
 
         fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
-        fun createTagArray(relays: List<String>): Array<Array<String>> =
+        fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
             relays
                 .map {
-                    arrayOf("relay", it)
-                }.plusElement(AltTag.assemble("Relay list to receive private messages"))
+                    RelayTag.assemble(it)
+                }.plusElement(
+                    AltTag.assemble("Relay list to receive private messages"),
+                )
                 .toTypedArray()
 
         fun updateRelayList(
             earlierVersion: ChatMessageRelayListEvent,
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChatMessageRelayListEvent) -> Unit,
         ) {
             val tags =
-                earlierVersion.tags
-                    .filter { it[0] != "relay" }
+                earlierVersion.tags.filter(RelayTag::notMatch)
                     .plus(
                         relays.map {
-                            arrayOf("relay", it)
+                            RelayTag.assemble(it)
                         },
                     ).toTypedArray()
 
@@ -84,7 +80,7 @@ class ChatMessageRelayListEvent(
         }
 
         fun createFromScratch(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChatMessageRelayListEvent) -> Unit,
@@ -93,7 +89,7 @@ class ChatMessageRelayListEvent(
         }
 
         fun create(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (ChatMessageRelayListEvent) -> Unit,
@@ -102,7 +98,7 @@ class ChatMessageRelayListEvent(
         }
 
         fun create(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): ChatMessageRelayListEvent? = signer.sign(createdAt, KIND, createTagArray(relays), "")

@@ -24,8 +24,20 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.tags.ImageTag
@@ -44,7 +56,19 @@ class CommunityDefinitionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() =
+        tags.mapNotNull(ATag::parseAsHint) +
+            tags.mapNotNull(QTag::parseAddressAsHint) +
+            tags.mapNotNull(RelayTag::parse).mapNotNull { AddressHint(addressTag(), it.url) }
+
+    override fun pubKeyHints() = tags.mapNotNull(ModeratorTag::parseAsHint)
+
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
@@ -58,6 +82,8 @@ class CommunityDefinitionEvent(
     fun moderatorKeys() = tags.mapNotNull(ModeratorTag::parseKey)
 
     fun relays() = tags.mapNotNull(RelayTag::parse)
+
+    fun relayUrls() = tags.mapNotNull(RelayTag::parseUrls)
 
     companion object {
         const val KIND = 34550

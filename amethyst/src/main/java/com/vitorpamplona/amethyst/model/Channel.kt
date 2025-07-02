@@ -23,11 +23,11 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHintOptional
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
+import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
@@ -51,7 +51,7 @@ class EphemeralChatChannel(
 
     override fun idDisplayNote() = idNote().toShortenHex()
 
-    override fun relays() = listOf(roomId.relayUrl)
+    override fun relays() = setOf(roomId.relayUrl)
 
     override fun toBestDisplayName() = roomId.toDisplayKey()
 
@@ -68,17 +68,21 @@ class PublicChatChannel(
 ) : Channel(idHex) {
     var event: ChannelCreateEvent? = null
     var infoTags = EmptyTagList
-    var info = ChannelData(null, null, null, null)
+    var info = ChannelDataNorm(null, null, null, null)
 
-    override fun relays() = info.relays ?: super.relays()
+    override fun relays() = info.relays?.toSet() ?: super.relays()
 
-    fun toNEvent() = NEvent.create(idHex, event?.pubKey, ChannelCreateEvent.KIND, *relays().toTypedArray())
+    fun relayHintUrls() = relays().take(3)
+
+    fun relayHintUrl() = relays().firstOrNull()
+
+    fun toNEvent() = NEvent.create(idHex, event?.pubKey, ChannelCreateEvent.KIND, relayHintUrls())
 
     fun toNostrUri() = "nostr:${toNEvent()}"
 
-    fun toEventHint() = event?.let { EventHintBundle<ChannelCreateEvent>(it, relays().firstOrNull(), null) }
+    fun toEventHint() = event?.let { EventHintBundle(it, relayHintUrl(), null) }
 
-    fun toEventId() = EventIdHint(idHex, relays().firstOrNull())
+    fun toEventId() = EventIdHintOptional(idHex, relayHintUrl())
 
     fun updateChannelInfo(
         creator: User,
@@ -99,7 +103,7 @@ class PublicChatChannel(
 
     fun updateChannelInfo(
         creator: User,
-        channelInfo: ChannelData,
+        channelInfo: ChannelDataNorm,
         updatedAt: Long,
     ) {
         this.info = channelInfo
@@ -130,9 +134,11 @@ class LiveActivitiesChannel(
 
     fun address() = address
 
-    override fun relays() = info?.allRelayUrls() ?: super.relays()
+    override fun relays() = info?.allRelayUrls()?.toSet() ?: super.relays()
 
     fun relayHintUrl() = relays().firstOrNull()
+
+    fun relayHintUrls() = relays().take(3)
 
     fun updateChannelInfo(
         creator: User,
@@ -150,11 +156,10 @@ class LiveActivitiesChannel(
     override fun profilePicture(): String? = info?.image()?.ifBlank { null }
 
     override fun anyNameStartsWith(prefix: String): Boolean =
-        listOfNotNull(info?.title(), info?.summary())
-            .filter { it.contains(prefix, true) }
-            .isNotEmpty()
+        info?.title()?.contains(prefix, true) == true ||
+            info?.summary()?.contains(prefix, true) == true
 
-    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, *relays().toTypedArray())
+    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrls())
 
     fun toATag() = ATag(address, relayHintUrl())
 
@@ -173,7 +178,8 @@ abstract class Channel(
     var updatedMetadataAt: Long = 0
     val notes = LargeCache<HexKey, Note>()
     var lastNoteCreatedAt: Long = 0
-    private var relays = mapOf<RelayBriefInfoCache.RelayBriefInfo, Counter>()
+
+    private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
     open fun idNote() = Hex.decode(idHex).toNEvent()
 
@@ -187,13 +193,13 @@ abstract class Channel(
 
     open fun profilePicture(): String? = creator?.info?.banner
 
-    open fun relays() =
+    open fun relays(): Set<NormalizedRelayUrl> =
         relays.keys
             .toSortedSet { o1, o2 ->
                 val o1Count = relays[o1]?.number ?: 0
                 val o2Count = relays[o2]?.number ?: 0
                 o2Count.compareTo(o1Count) // descending
-            }.map { it.url }
+            }
 
     open fun updateChannelInfo(
         creator: User,
@@ -206,13 +212,13 @@ abstract class Channel(
     }
 
     @Synchronized
-    fun addRelaySync(briefInfo: RelayBriefInfoCache.RelayBriefInfo) {
+    fun addRelaySync(briefInfo: NormalizedRelayUrl) {
         if (briefInfo !in relays) {
             relays = relays + Pair(briefInfo, Counter(1))
         }
     }
 
-    fun addRelay(relay: RelayBriefInfoCache.RelayBriefInfo) {
+    fun addRelay(relay: NormalizedRelayUrl) {
         val counter = relays[relay]
         if (counter != null) {
             counter.number++
@@ -223,7 +229,7 @@ abstract class Channel(
 
     fun addNote(
         note: Note,
-        relay: RelayBriefInfoCache.RelayBriefInfo? = null,
+        relay: NormalizedRelayUrl? = null,
     ) {
         notes.put(note.idHex, note)
 

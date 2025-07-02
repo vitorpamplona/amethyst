@@ -55,6 +55,15 @@ class TlvBuilder {
         data: String?,
     ) = data?.let { addString(type, it) }
 
+    fun addStringIfNotBlank(
+        type: Byte,
+        data: String,
+    ) {
+        if (data.isNotBlank()) {
+            addString(type, data)
+        }
+    }
+
     fun addHexIfNotNull(
         type: Byte,
         data: HexKey?,

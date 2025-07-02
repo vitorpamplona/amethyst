@@ -20,34 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.flatMap
 
 fun filterCommunitiesByFollows(
-    follows: Map<String, List<HexKey>>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (follows != null && follows.isEmpty()) return null
+    followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    authors = follows,
-                    kinds =
-                        listOf(
-                            CommunityDefinitionEvent.KIND,
-                            CommunityPostApprovalEvent.KIND,
-                        ),
-                    limit = 300,
-                    since = since,
-                ),
-        ),
-    )
+    val defaultSince = TimeUtils.oneWeekAgo()
+
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
+
+        listOfNotNull(
+            it.value.authors?.let {
+                filterCommunitiesAuthors(relay, it, since)
+            },
+            it.value.geotags?.let {
+                filterCommunitiesByGeohash(relay, it, since)
+            },
+            it.value.hashtags?.let {
+                filterCommunitiesByHashtag(relay, it, since)
+            },
+            it.value.communities?.let {
+                filterCommunitiesAllCommunities(relay, it, since)
+            },
+        ).flatten()
+    }
 }

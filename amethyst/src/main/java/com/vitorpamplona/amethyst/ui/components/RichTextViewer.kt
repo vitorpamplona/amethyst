@@ -164,6 +164,7 @@ fun RenderStrangeNamePreview() {
 @Composable
 fun RenderRegularPreview() {
     val nav = EmptyNav
+    val accountViewModel = mockAccountViewModel()
 
     Column(modifier = Modifier.padding(10.dp)) {
         RenderRegular(
@@ -190,7 +191,7 @@ fun RenderRegularPreview() {
                     )
                 }
 
-                is HashTagSegment -> HashTag(word, nav)
+                is HashTagSegment -> HashTag(word, accountViewModel, nav)
                 // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
                 // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
                 is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -204,6 +205,7 @@ fun RenderRegularPreview() {
 @Composable
 fun RenderRegularPreview2() {
     val nav = EmptyNav
+    val accountViewModel = mockAccountViewModel()
     RenderRegular(
         "#Amethyst v0.84.1: ncryptsec support (NIP-49)",
         EmptyTagList,
@@ -218,7 +220,7 @@ fun RenderRegularPreview2() {
             is EmailSegment -> ClickableEmail(word.segmentText)
             is PhoneSegment -> ClickablePhone(word.segmentText)
             // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-            is HashTagSegment -> HashTag(word, nav)
+            is HashTagSegment -> HashTag(word, accountViewModel, nav)
             // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
             // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
             is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -259,7 +261,7 @@ fun RenderRegularPreview3() {
             is EmailSegment -> ClickableEmail(word.segmentText)
             is PhoneSegment -> ClickablePhone(word.segmentText)
             // is BechSegment -> BechLink(word.segmentText, true, backgroundColor, accountViewModel, nav)
-            is HashTagSegment -> HashTag(word, nav)
+            is HashTagSegment -> HashTag(word, accountViewModel, nav)
             // is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
             // is HashIndexEventSegment -> TagLink(word, true, backgroundColorState, accountViewModel, nav)
             is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -386,7 +388,7 @@ private fun RenderWordWithoutPreview(
         is SecretEmoji -> Text(word.segmentText)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
-        is HashTagSegment -> HashTag(word, nav)
+        is HashTagSegment -> HashTag(word, accountViewModel, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, false, 0, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -415,7 +417,7 @@ private fun RenderWordWithPreview(
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
-        is HashTagSegment -> HashTag(word, nav)
+        is HashTagSegment -> HashTag(word, accountViewModel, nav)
         is HashIndexUserSegment -> TagLink(word, accountViewModel, nav)
         is HashIndexEventSegment -> TagLink(word, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is SchemelessUrlSegment -> NoProtocolUrlRenderer(word)
@@ -620,6 +622,7 @@ fun CoreSecretMessage(
 @Composable
 fun HashTag(
     segment: HashTagSegment,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val primary = MaterialTheme.colorScheme.primary

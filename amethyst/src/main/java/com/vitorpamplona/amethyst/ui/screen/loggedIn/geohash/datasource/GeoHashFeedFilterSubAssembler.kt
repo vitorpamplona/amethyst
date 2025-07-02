@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class GeoHashFeedFilterSubAssembler(
     client: NostrClient,
@@ -31,8 +31,8 @@ class GeoHashFeedFilterSubAssembler(
 ) : PerUniqueIdEoseManager<GeohashQueryState>(client, allKeys) {
     override fun updateFilter(
         key: GeohashQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? = filterPostsByGeohash(key.geohash, since)
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? = filterPostsByGeohash(key.geohash, key.relays, since)
 
     /**
      * Only one key per hashtag.

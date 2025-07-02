@@ -20,13 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
+
 class ZapSplitSetupSerializer {
     companion object {
         @JvmStatic
         fun toTagArray(zapSplit: BaseZapSplitSetup): Array<String> =
             when (zapSplit) {
                 is ZapSplitSetupLnAddress -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.lnAddress)
-                is ZapSplitSetup -> arrayOf(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay ?: "", zapSplit.weight.toString())
+                is ZapSplitSetup -> arrayOfNotNull(BaseZapSplitSetup.TAG_NAME, zapSplit.pubKeyHex, zapSplit.relay?.url, zapSplit.weight.toString())
             }
     }
 }

@@ -59,8 +59,4 @@ abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControl
     }
 
     fun allKeys() = composeSubscriptions.keys
-
-    fun forEachSubscriber(action: (T) -> Unit) {
-        composeSubscriptions.keys.forEach(action)
-    }
 }

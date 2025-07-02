@@ -20,38 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
-fun filterUserProfileMedia(
-    key: HexKey,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    if (key.isEmpty()) return emptyList()
-
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            PictureEvent.KIND,
-                            ProfileGalleryEntryEvent.KIND,
-                            VideoVerticalEvent.KIND,
-                            VideoHorizontalEvent.KIND,
-                        ),
-                    authors = listOf(key),
-                    limit = 200,
-                    since = since,
-                ),
-        ),
+val UserProfileMediaKinds =
+    listOf(
+        PictureEvent.KIND,
+        ProfileGalleryEntryEvent.KIND,
+        VideoVerticalEvent.KIND,
+        VideoHorizontalEvent.KIND,
     )
+
+fun filterUserProfileMedia(
+    user: User,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    return user.outboxRelays().map { relay ->
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = UserProfileMediaKinds,
+                    authors = listOf(user.pubkeyHex),
+                    limit = 200,
+                    since = since?.get(relay)?.time,
+                ),
+        )
+    }
 }

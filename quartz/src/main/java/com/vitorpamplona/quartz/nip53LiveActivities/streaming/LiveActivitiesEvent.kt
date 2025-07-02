@@ -24,7 +24,18 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -38,6 +49,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StreamingTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.TotalParticipantsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.flatten
 
 @Immutable
 class LiveActivitiesEvent(
@@ -47,7 +59,16 @@ class LiveActivitiesEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+
+    override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
@@ -70,7 +91,7 @@ class LiveActivitiesEvent(
 
     fun relays() = tags.mapNotNull(RelayListTag::parse)
 
-    fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).map { it.relayUrls }.flatten()
+    fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).flatten()
 
     fun hasHost() = tags.any(ParticipantTag::isHost)
 

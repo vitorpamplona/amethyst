@@ -273,7 +273,7 @@ open class ChannelNewMessageViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val channelRelays = channel?.relays() ?: emptyList()
+        val channelRelays = channel?.relays() ?: emptySet()
 
         accountViewModel?.account?.signAndSendPrivately(template, channelRelays)
 

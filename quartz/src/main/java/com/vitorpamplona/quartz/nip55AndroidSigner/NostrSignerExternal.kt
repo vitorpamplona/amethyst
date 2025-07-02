@@ -33,6 +33,8 @@ class NostrSignerExternal(
     pubKey: HexKey,
     val launcher: ExternalSignerLauncher,
 ) : NostrSigner(pubKey) {
+    override fun isWriteable(): Boolean = true
+
     override fun <T : Event> sign(
         createdAt: Long,
         kind: Int,

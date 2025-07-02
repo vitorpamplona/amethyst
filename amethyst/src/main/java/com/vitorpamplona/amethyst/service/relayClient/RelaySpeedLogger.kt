@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.service.relayClient
 
 import android.util.Log
 import com.vitorpamplona.amethyst.service.relayClient.RelaySpeedLogger.Companion.TAG
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -36,7 +39,7 @@ class KindGroup(
     var count: AtomicInteger = AtomicInteger(0),
     var memory: AtomicLong = AtomicLong(0L),
     val subs: LargeCache<String, AtomicInteger> = LargeCache<String, AtomicInteger>(),
-    val relays: LargeCache<String, AtomicInteger> = LargeCache<String, AtomicInteger>(),
+    val relays: LargeCache<NormalizedRelayUrl, AtomicInteger> = LargeCache<NormalizedRelayUrl, AtomicInteger>(),
 ) {
     companion object {
         const val MB: Long = 1024
@@ -45,7 +48,7 @@ class KindGroup(
     fun increment(
         mem: Long,
         subId: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
     ) {
         count.incrementAndGet()
         memory.addAndGet(mem)
@@ -74,7 +77,7 @@ class KindGroup(
 
     fun printSubs() = subs.joinToString(", ") { key, value -> if (value.get() > 0) "$key ($value)" else "" }
 
-    fun printRelays() = relays.joinToString(", ") { key, value -> if (value.get() > 0) "${key.removePrefix("wss://").removeSuffix("/")} ($value)" else "" }
+    fun printRelays() = relays.joinToString(", ") { key, value -> if (value.get() > 0) "${key.displayUrl()} ($value)" else "" }
 
     override fun toString() = "(${count.get()} - ${memory.get().div(MB)}kb); ${printSubs()}; ${printRelays()}"
 }
@@ -86,7 +89,7 @@ class FrameStat {
     fun increment(
         kind: Int,
         subId: String,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         memory: Long,
     ) {
         eventCount.incrementAndGet()
@@ -143,16 +146,16 @@ class RelaySpeedLogger(
     var current = FrameStat()
 
     private val clientListener =
-        object : NostrClient.Listener {
+        object : IRelayClientListener {
             /** A new message was received */
             override fun onEvent(
+                relay: IRelayClient,
+                subId: String,
                 event: Event,
-                subscriptionId: String,
-                relay: Relay,
                 arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
-                current.increment(event.kind, subscriptionId, relay.url, event.countMemory())
+                current.increment(event.kind, subId, relay.url, event.countMemory())
             }
         }
 

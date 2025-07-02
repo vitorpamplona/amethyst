@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ReactionRowHeightChatMaxWidth
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -60,7 +61,7 @@ fun BasicRelaySetupInfoClickableRow(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
-                    clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                    clipboardManager.setText(AnnotatedString(item.relay.url))
                 },
             ),
     ) {
@@ -68,11 +69,11 @@ fun BasicRelaySetupInfoClickableRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = HalfVertPadding,
         ) {
-            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.url, accountViewModel)
+            val iconUrlFromRelayInfoDoc by loadRelayInfo(item.relay, accountViewModel)
 
             RenderRelayIcon(
-                item.briefInfo.displayUrl,
-                iconUrlFromRelayInfoDoc?.icon ?: item.briefInfo.favIcon,
+                item.relay.displayUrl(),
+                iconUrlFromRelayInfoDoc?.icon,
                 loadProfilePicture,
                 loadRobohash,
                 item.relayStat.pingInMs,

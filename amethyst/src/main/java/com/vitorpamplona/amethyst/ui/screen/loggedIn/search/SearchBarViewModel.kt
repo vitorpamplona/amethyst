@@ -68,7 +68,7 @@ class SearchBarViewModel(
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
-    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue))
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
     val searchResultsUsers =
         combine(searchValueFlow.debounce(100), invalidations.debounce(100)) { term, version ->
@@ -82,7 +82,7 @@ class SearchBarViewModel(
         combine(searchValueFlow.debounce(100), invalidations) { term, version ->
             logTime("SearchBarViewModel findNotesStartingWith") {
                 LocalCache
-                    .findNotesStartingWith(term, account)
+                    .findNotesStartingWith(term, account.hiddenUsers)
                     .sortedWith(DefaultFeedOrder)
             }
         }.flowOn(Dispatchers.Default)

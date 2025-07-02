@@ -50,7 +50,7 @@ fun DisplayFollowingHashtagsInPost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userFollowState by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
+    val userFollowState by accountViewModel.account.allFollows.flow.collectAsStateWithLifecycle()
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {
@@ -70,7 +70,7 @@ fun DisplayFollowingHashtagsInPost(
 
     firstTag?.let {
         Column(verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, nav) }
+            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, accountViewModel, nav) }
         }
     }
 }
@@ -78,6 +78,7 @@ fun DisplayFollowingHashtagsInPost(
 @Composable
 private fun DisplayTagList(
     firstTag: String,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Text(

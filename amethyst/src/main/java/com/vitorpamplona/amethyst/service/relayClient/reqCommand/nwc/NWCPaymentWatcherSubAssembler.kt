@@ -20,26 +20,29 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class NWCPaymentWatcherSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<NWCPaymentQueryState>,
-) : SingleSubEoseManager<NWCPaymentQueryState>(client, allKeys) {
-    override fun updateFilter(
-        keys: List<NWCPaymentQueryState>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? {
-        val fromAuthors = keys.mapTo(mutableSetOf()) { it.fromServiceHex }
-        val replyingToPayments = keys.mapTo(mutableSetOf()) { it.replyingToHex }
-        val aboutUsers = keys.mapTo(mutableSetOf()) { it.toUserHex }
+) : SingleSubNoEoseCacheEoseManager<NWCPaymentQueryState>(client, allKeys) {
+    override fun updateFilter(keys: List<NWCPaymentQueryState>): List<RelayBasedFilter>? {
+        if (keys.isEmpty()) return null
 
-        if (fromAuthors.isEmpty()) return null
+        return keys.groupBy { it.relay }.map { relayGroup ->
+            val fromAuthors = relayGroup.value.mapTo(mutableSetOf()) { it.fromServiceHex }
+            val replyingToPayments = relayGroup.value.mapTo(mutableSetOf()) { it.replyingToHex }
+            val aboutUsers = relayGroup.value.mapTo(mutableSetOf()) { it.toUserHex }
 
-        return filterNWCPaymentsFromRequests(fromAuthors, replyingToPayments, aboutUsers, since)
+            if (fromAuthors.isEmpty() || replyingToPayments.isEmpty()) return null
+
+            RelayBasedFilter(
+                relay = relayGroup.key,
+                filter = filterNWCPaymentsFromRequests(fromAuthors, replyingToPayments, aboutUsers),
+            )
+        }
     }
 
     override fun distinct(key: NWCPaymentQueryState) = key.replyingToHex

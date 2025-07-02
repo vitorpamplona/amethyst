@@ -27,8 +27,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.ammolite.relays.Constants
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -43,11 +41,15 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.ExternalSignerLauncher
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,38 +69,29 @@ val DefaultChannelSet =
 val DefaultChannels =
     listOf(
         // Anigma's Nostr
-        EventIdHint("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", "wss://nos.lol"),
+        EventIdHint("25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb", Constants.nos),
         // Amethyst's Group
-        EventIdHint("42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5", "wss://nos.lol"),
+        EventIdHint("42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5", Constants.nos),
     )
+
+val DefaultNIP65RelaySet = setOf(Constants.mom, Constants.nos, Constants.bitcoiner)
 
 val DefaultNIP65List =
     listOf(
-        AdvertisedRelayListEvent.AdvertisedRelayInfo(RelayUrlFormatter.normalize("wss://nostr.mom/"), AdvertisedRelayListEvent.AdvertisedRelayType.BOTH),
-        AdvertisedRelayListEvent.AdvertisedRelayInfo(RelayUrlFormatter.normalize("wss://nos.lol/"), AdvertisedRelayListEvent.AdvertisedRelayType.BOTH),
-        AdvertisedRelayListEvent.AdvertisedRelayInfo(RelayUrlFormatter.normalize("wss://nostr.bitcoiner.social/"), AdvertisedRelayListEvent.AdvertisedRelayType.BOTH),
+        AdvertisedRelayInfo(Constants.mom, AdvertisedRelayType.BOTH),
+        AdvertisedRelayInfo(Constants.nos, AdvertisedRelayType.BOTH),
+        AdvertisedRelayInfo(Constants.bitcoiner, AdvertisedRelayType.BOTH),
     )
 
-val DefaultDMRelayList =
-    listOf(
-        RelayUrlFormatter.normalize("wss://auth.nostr1.com"),
-        RelayUrlFormatter.normalize("wss://relay.0xchat.com"),
-        RelayUrlFormatter.normalize("wss://nos.lol"),
-    )
+val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
-val DefaultSearchRelayList =
-    listOf(
-        RelayUrlFormatter.normalize("wss://relay.nostr.band"),
-        RelayUrlFormatter.normalize("wss://nostr.wine"),
-        RelayUrlFormatter.normalize("wss://relay.noswhere.com"),
-        RelayUrlFormatter.normalize("wss://search.nos.today"),
-    )
+val DefaultSearchRelayList = setOf(Constants.band, Constants.wine, Constants.where, Constants.nostoday)
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val GLOBAL_FOLLOWS = " Global "
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
-val KIND3_FOLLOWS = " All Follows "
+val ALL_FOLLOWS = " All Follows "
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val AROUND_ME = " Around Me "
@@ -108,14 +101,13 @@ class AccountSettings(
     val keyPair: KeyPair,
     val transientAccount: Boolean = false,
     var externalSignerPackageName: String? = null,
-    var localRelays: Set<RelaySetupInfo> = Constants.defaultRelays.toSet(),
-    var localRelayServers: Set<String> = setOf(),
+    var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
-    val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(KIND3_FOLLOWS),
+    val defaultHomeFollowList: MutableStateFlow<String> = MutableStateFlow(ALL_FOLLOWS),
     val defaultStoriesFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     val defaultNotificationFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
     val defaultDiscoveryFollowList: MutableStateFlow<String> = MutableStateFlow(GLOBAL_FOLLOWS),
-    var zapPaymentRequest: Nip47WalletConnect.Nip47URI? = null,
+    var zapPaymentRequest: Nip47WalletConnect.Nip47URINorm? = null,
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
@@ -128,6 +120,9 @@ class AccountSettings(
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
     var backupAppSpecificData: AppSpecificDataEvent? = null,
     var backupChannelList: ChannelListEvent? = null,
+    var backupCommunityList: CommunityListEvent? = null,
+    var backupHashtagList: HashtagListEvent? = null,
+    var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     val torSettings: TorSettingsFlow = TorSettingsFlow(),
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
@@ -200,7 +195,7 @@ class AccountSettings(
         return false
     }
 
-    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URI?): Boolean {
+    fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URINorm?): Boolean {
         if (zapPaymentRequest != newServer) {
             zapPaymentRequest = newServer
             saveAccountSettings()
@@ -256,11 +251,11 @@ class AccountSettings(
     // proxy settings
     // ---
     fun setTorSettings(newTorSettings: TorSettings): Boolean {
-        if (torSettings.update(newTorSettings)) {
+        return if (torSettings.update(newTorSettings)) {
             saveAccountSettings()
-            return true
+            true
         } else {
-            return false
+            false
         }
     }
 
@@ -301,8 +296,8 @@ class AccountSettings(
     // ----
 
     fun updateLocalRelayServers(servers: Set<String>) {
-        if (localRelayServers != servers) {
-            localRelayServers = servers
+        if (localRelayServers.value != servers) {
+            localRelayServers.update { servers }
             saveAccountSettings()
         }
     }
@@ -373,6 +368,36 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupChannelList?.id != newChannelList.id) {
             backupChannelList = newChannelList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateGeohashListTo(newGeohashList: GeohashListEvent?) {
+        if (newGeohashList == null || newGeohashList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupGeohashList?.id != newGeohashList.id) {
+            backupGeohashList = newGeohashList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateHashtagListTo(newHashtagList: HashtagListEvent?) {
+        if (newHashtagList == null || newHashtagList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupHashtagList?.id != newHashtagList.id) {
+            backupHashtagList = newHashtagList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateCommunityListTo(newCommunityList: CommunityListEvent?) {
+        if (newCommunityList == null || newCommunityList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupCommunityList?.id != newCommunityList.id) {
+            backupCommunityList = newCommunityList
             saveAccountSettings()
         }
     }
@@ -489,17 +514,6 @@ class AccountSettings(
             true
         } else {
             false
-        }
-    }
-
-    // ----
-    // local relays
-    // ----
-
-    fun updateLocalRelays(newLocalRelays: Set<RelaySetupInfo>) {
-        if (!localRelays.equals(newLocalRelays)) {
-            localRelays = newLocalRelays
-            saveAccountSettings()
         }
     }
 

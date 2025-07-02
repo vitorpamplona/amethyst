@@ -34,8 +34,8 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -455,7 +455,7 @@ fun observeUserIsFollowingChannel(
         remember(account) {
             account
                 .publicChatList
-                .livePublicChatEventIdSet
+                .flowSet
                 .mapLatest { followingChannels ->
                     channel.idHex in followingChannels
                 }.distinctUntilChanged()
@@ -463,7 +463,7 @@ fun observeUserIsFollowingChannel(
         }
 
     @SuppressLint("StateFlowValueCalledInComposition")
-    return flow.collectAsStateWithLifecycle(channel.idHex in account.publicChatList.livePublicChatEventIdSet.value)
+    return flow.collectAsStateWithLifecycle(channel.idHex in account.publicChatList.flowSet.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -603,7 +603,7 @@ fun observeUserStatuses(
 @Composable
 fun observeUserRelayIntoList(
     user: User,
-    relayUrl: String,
+    relayUrl: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -656,8 +656,8 @@ fun observeUserRoomSubject(
 }
 
 data class RelayUsage(
-    val relays: List<String> = emptyList(),
-    val userRelayList: List<String> = emptyList(),
+    val relays: List<NormalizedRelayUrl> = emptyList(),
+    val userRelayList: List<NormalizedRelayUrl> = emptyList(),
 )
 
 @OptIn(FlowPreview::class)
@@ -677,7 +677,7 @@ fun observeUserRelaysUsing(
                 val currentUserRelays =
                     relayInfo.user.latestContactList
                         ?.relays()
-                        ?.map { RelayUrlFormatter.normalize(it.key) } ?: emptyList()
+                        ?.map { it.key } ?: emptyList()
 
                 RelayUsage(userRelaysBeingUsed, currentUserRelays)
             }.sample(1000)

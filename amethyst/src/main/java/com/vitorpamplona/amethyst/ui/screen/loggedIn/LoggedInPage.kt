@@ -54,12 +54,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.Chat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,6 +85,9 @@ fun LoggedInPage(
     // Sets up Coil's Image Loader
     ObserveImageLoadingTor(accountViewModel)
 
+    // Sets up the use of Proxy based on this Account's settings
+    SetProxyDeterminator(accountViewModel)
+
     // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)
 
@@ -103,10 +103,8 @@ fun LoggedInPage(
     // Updates local cache of the anti-spam filter choice of this user.
     ObserveAntiSpamFilterSettings(accountViewModel)
 
-    ManageRelayServices(accountViewModel, sharedPreferencesViewModel)
-
-    // Turns Embed Tor on if needed.
-    ManageTorInstance(accountViewModel)
+    // Pauses relay services when the app pauses
+    ManageRelayServices(accountViewModel)
 
     // Listens to Amber
     ListenToExternalSignerIfNeeded(accountViewModel)
@@ -130,65 +128,23 @@ fun ObserveAntiSpamFilterSettings(accountViewModel: AccountViewModel) {
 }
 
 @Composable
+fun SetProxyDeterminator(accountViewModel: AccountViewModel) {
+    LaunchedEffect(accountViewModel) {
+        Amethyst.instance.torProxySettingsAnchor.flow.tryEmit(accountViewModel.account.torRelayState.flow)
+    }
+}
+
+@Composable
 fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
-    LaunchedEffect(Unit) {
+    LaunchedEffect(accountViewModel) {
         Amethyst.instance.setImageLoader(accountViewModel.account::shouldUseTorForImageDownload)
     }
 }
 
 @Composable
-fun ManageRelayServices(
-    accountViewModel: AccountViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel,
-) {
-    LaunchedEffect(
-        sharedPreferencesViewModel.sharedPrefs.currentNetworkId,
-        sharedPreferencesViewModel.sharedPrefs.isOnMobileOrMeteredConnection,
-    ) {
-        Log.d("ManageRelayServices", "Loading/Change Network Id/State ${sharedPreferencesViewModel.sharedPrefs.currentNetworkId}, forcing start/restart of the relay services")
-        accountViewModel.forceRestartServices()
-    }
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
-
-    val scope = rememberCoroutineScope()
-    var job = remember<Job?> { null }
-
-    Log.d("ManageRelayServices", "Job $job for $accountViewModel")
-
-    DisposableEffect(key1 = accountViewModel) {
-        job?.cancel()
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> {
-                        job?.cancel()
-                        Log.d("ManageRelayServices", "Resuming Relay Services $accountViewModel")
-                        job = accountViewModel.justStart()
-                    }
-                    Lifecycle.Event.ON_PAUSE -> {
-                        Log.d("ManageRelayServices", "Prepare to pause Relay Services $accountViewModel")
-                        job?.cancel()
-                        job =
-                            scope.launch {
-                                delay(30000) // 30 seconds
-                                Log.d("ManageRelayServices", "Pausing Relay Services $accountViewModel")
-                                accountViewModel.justPause()
-                            }
-                    }
-                    else -> {}
-                }
-            }
-
-        lifeCycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            job?.cancel()
-            lifeCycleOwner.lifecycle.removeObserver(observer)
-            Log.d("ManageRelayServices", "Disposing Relay Services $accountViewModel")
-            // immediately stops upon disposal
-            accountViewModel.pauseAndLogOff()
-        }
-    }
+fun ManageRelayServices(accountViewModel: AccountViewModel) {
+    val relayServices by Amethyst.instance.relayProxyClientConnector.relayServices.collectAsStateWithLifecycle()
+    Log.d("ManageRelayServices", "Relay Services changed $relayServices")
 }
 
 @Composable
@@ -206,28 +162,6 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
 
         onPauseOrDispose {
             job.cancel()
-        }
-    }
-}
-
-@Composable
-fun ManageTorInstance(accountViewModel: AccountViewModel) {
-    val torSettings by accountViewModel.account.settings.torSettings.torType
-        .collectAsStateWithLifecycle()
-    if (torSettings == TorType.INTERNAL) {
-        WatchTorConnection(accountViewModel)
-    }
-}
-
-@Composable
-fun WatchTorConnection(accountViewModel: AccountViewModel) {
-    val status by Amethyst.instance.torManager.status
-        .collectAsStateWithLifecycle()
-
-    if (status is TorServiceStatus.Active) {
-        LaunchedEffect(key1 = status, key2 = accountViewModel) {
-            Log.d("TorService", "Tor has just finished connecting, force restart relays $accountViewModel")
-            accountViewModel.changeProxyPort((status as TorServiceStatus.Active).port)
         }
     }
 }

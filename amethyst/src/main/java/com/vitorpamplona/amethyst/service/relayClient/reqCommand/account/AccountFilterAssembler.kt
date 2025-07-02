@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to logged-in accounts.
 class AccountQueryState(

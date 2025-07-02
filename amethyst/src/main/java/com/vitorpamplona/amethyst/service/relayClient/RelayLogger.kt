@@ -21,9 +21,10 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import android.util.Log
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.Relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 
 /**
  * Listens to NostrClient's onNotify messages from the relay
@@ -36,20 +37,20 @@ class RelayLogger(
     }
 
     private val clientListener =
-        object : NostrClient.Listener {
+        object : IRelayClientListener {
             /** A new message was received */
             override fun onEvent(
+                relay: IRelayClient,
+                subId: String,
                 event: Event,
-                subscriptionId: String,
-                relay: Relay,
                 arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
-                Log.d(TAG, "Relay onEVENT ${relay.url} ($subscriptionId - $afterEOSE) ${event.toJson()}")
+                Log.d(TAG, "Relay onEVENT ${relay.url} ($subId - $afterEOSE) ${event.toJson()}")
             }
 
             override fun onSend(
-                relay: Relay,
+                relay: IRelayClient,
                 msg: String,
                 success: Boolean,
             ) {

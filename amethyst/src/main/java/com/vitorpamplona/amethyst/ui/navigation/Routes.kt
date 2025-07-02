@@ -20,24 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size23dp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.serialization.Serializable
-
-class BottomBarRoute(
-    val route: Route,
-    val icon: Int,
-    val contentDescriptor: Int = R.string.route,
-    val notifSize: Modifier = Modifier.size(Size23dp),
-    val iconSize: Modifier = Modifier.size(Size20dp),
-)
 
 sealed class Route {
     @Serializable object Home : Route()
@@ -85,11 +72,11 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class Hashtag(
-        val id: String,
+        val hashtag: String,
     ) : Route()
 
     @Serializable data class Geohash(
-        val id: String,
+        val geohash: String,
     ) : Route()
 
     @Serializable data class Community(

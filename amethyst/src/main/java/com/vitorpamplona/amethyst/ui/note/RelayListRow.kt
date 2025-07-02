@@ -66,7 +66,8 @@ import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @Composable
 public fun RelayBadgesHorizontal(
@@ -117,11 +118,11 @@ fun ChatRelayExpandButton(onClick: () -> Unit) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RenderRelay(
-    relay: RelayBriefInfoCache.RelayBriefInfo,
+    relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relayInfo by loadRelayInfo(relay.url, accountViewModel)
+    val relayInfo by loadRelayInfo(relay, accountViewModel)
 
     var openRelayDialog by remember { mutableStateOf(false) }
 
@@ -130,7 +131,7 @@ fun RenderRelay(
             RelayInformationDialog(
                 onClose = { openRelayDialog = false },
                 relayInfo = it,
-                relayBriefInfo = relay,
+                relay = relay,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -150,7 +151,7 @@ fun RenderRelay(
                     },
                     onClick = {
                         accountViewModel.retrieveRelayDocument(
-                            relay.url,
+                            relay,
                             onInfo = {
                                 openRelayDialog = true
                             },
@@ -170,7 +171,7 @@ fun RenderRelay(
                                         Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
                                             R.string.relay_information_document_error_failed_with_http
                                     },
-                                    url,
+                                    url.url,
                                     exceptionMessage ?: errorCode.toString(),
                                 )
                             },
@@ -184,8 +185,8 @@ fun RenderRelay(
         contentAlignment = Alignment.Center,
     ) {
         RenderRelayIcon(
-            displayUrl = relay.displayUrl,
-            iconUrl = relayInfo?.icon ?: relay.favIcon,
+            displayUrl = relay.displayUrl(),
+            iconUrl = relayInfo?.icon,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
             pingInMs = 0,
             loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,

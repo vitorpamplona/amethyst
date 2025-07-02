@@ -120,8 +120,8 @@ import com.vitorpamplona.amethyst.ui.theme.bannerModifier
 import com.vitorpamplona.amethyst.ui.theme.drawerSpacing
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.profileContentHeaderModifier
-import com.vitorpamplona.ammolite.relays.RelayPoolStatus
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
 
@@ -393,7 +393,7 @@ private fun FollowingAndFollowerCounts(
     Row(
         modifier = drawerSpacing.clickable(onClick = onClick),
     ) {
-        val followingCount = baseAccountUser.liveKind3Follows.collectAsStateWithLifecycle()
+        val followingCount = baseAccountUser.kind3FollowList.flow.collectAsStateWithLifecycle()
         val followerCount by observeUserFollowerCount(baseAccountUser.userProfile(), accountViewModel)
 
         Text(
@@ -528,15 +528,15 @@ fun ListContent(
 
 @Composable
 private fun RelayStatus(accountViewModel: AccountViewModel) {
-    val connectedRelaysText by accountViewModel.relayStatusFlow().collectAsStateWithLifecycle(RelayPoolStatus(0, 0))
+    val connectedRelaysText by accountViewModel.relayStatusFlow().collectAsStateWithLifecycle()
 
     RenderRelayStatus(connectedRelaysText)
 }
 
 @Composable
-private fun RenderRelayStatus(relayPool: RelayPoolStatus) {
+private fun RenderRelayStatus(relayPool: RelayPool.RelayPoolStatus) {
     val text by
-        remember(relayPool) { derivedStateOf { "${relayPool.connected}/${relayPool.available}" } }
+        remember(relayPool) { derivedStateOf { "${relayPool.connected.size}/${relayPool.available.size}" } }
 
     val placeHolder = MaterialTheme.colorScheme.placeholderText
 

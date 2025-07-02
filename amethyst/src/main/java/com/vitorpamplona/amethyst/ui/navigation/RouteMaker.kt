@@ -171,12 +171,12 @@ fun routeToMessage(
 
 fun routeFor(note: Channel): Route =
     if (note is EphemeralChatChannel) {
-        Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl)
+        Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl.url)
     } else {
         Route.Channel(note.idHex)
     }
 
-fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.relayUrl)
+fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.relayUrl.url)
 
 fun routeFor(user: User): Route.Profile = Route.Profile(user.pubkeyHex)
 

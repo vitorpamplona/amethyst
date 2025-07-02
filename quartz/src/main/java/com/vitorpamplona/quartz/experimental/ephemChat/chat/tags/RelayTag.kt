@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.quartz.experimental.ephemChat.chat.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
 class RelayTag {
@@ -28,14 +31,18 @@ class RelayTag {
         const val TAG_NAME = "relay"
 
         @JvmStatic
-        fun parse(tag: Array<String>): String? {
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        @JvmStatic
+        fun parse(tag: Array<String>): NormalizedRelayUrl? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
+
+            return RelayUrlNormalizer.normalizeOrNull(tag[1]) ?: return null
         }
 
         @JvmStatic
-        fun assemble(url: String) = arrayOf(TAG_NAME, url)
+        fun assemble(relay: NormalizedRelayUrl) = arrayOf(TAG_NAME, relay.url)
     }
 }

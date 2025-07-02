@@ -54,7 +54,7 @@ fun prepareETagsAsReplyTo(
 
     val branchTags =
         replyingTo.event.threadTags().filter { it.eventId != rootTag.eventId }.map {
-            MarkedETag(it.eventId, it.relay, "", it.author)
+            MarkedETag(it.eventId, it.relay, null, it.author)
         }
 
     val branch = mutableListOf<MarkedETag>()
@@ -83,7 +83,7 @@ fun <T : BaseThreadedEvent> prepareMarkedETagsAsReplyTo(replyingTo: EventHintBun
 
     val branchTags =
         replyingTo.event.threadTags().filter { it.eventId != rootTag.eventId }.map {
-            MarkedETag(it.eventId, it.relay, "", it.author)
+            MarkedETag(it.eventId, it.relay, null, it.author)
         }
 
     val branch = mutableListOf<MarkedETag>()

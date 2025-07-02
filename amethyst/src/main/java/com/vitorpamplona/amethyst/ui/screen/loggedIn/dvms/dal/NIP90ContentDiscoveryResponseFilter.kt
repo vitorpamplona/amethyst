@@ -73,10 +73,8 @@ open class NIP90ContentDiscoveryResponseFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            account.userProfile().pubkeyHex,
-            account.settings.defaultDiscoveryFollowList.value,
             account.liveDiscoveryFollowLists.value,
-            account.flowHiddenUsers.value,
+            account.hiddenUsers.flow.value,
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {

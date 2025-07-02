@@ -100,11 +100,11 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -139,7 +139,7 @@ class UpdateZapAmountViewModel : ViewModel() {
                 ?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectRelay =
             myAccount.settings.zapPaymentRequest
-                ?.relayUri
+                ?.relayUri?.url
                 ?.let { TextFieldValue(it) } ?: TextFieldValue("")
         this.walletConnectSecret =
             myAccount.settings.zapPaymentRequest
@@ -173,11 +173,11 @@ class UpdateZapAmountViewModel : ViewModel() {
                         null
                     }
 
-                val relayUrl = walletConnectRelay.text.ifBlank { null }?.let { RelayUrlFormatter.normalize(it) }
+                val relayUrl = walletConnectRelay.text.ifBlank { null }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
                 val privKeyHex = walletConnectSecret.text.ifBlank { null }?.let { decodePrivateKeyAsHexOrNull(it) }
 
                 if (pubkeyHex != null && relayUrl != null) {
-                    Nip47WalletConnect.Nip47URI(
+                    Nip47WalletConnect.Nip47URINorm(
                         pubkeyHex,
                         relayUrl,
                         privKeyHex,
@@ -224,7 +224,7 @@ class UpdateZapAmountViewModel : ViewModel() {
     fun updateNIP47(uri: String) {
         val contact = Nip47WalletConnect.parse(uri)
         walletConnectPubkey = TextFieldValue(contact.pubKeyHex)
-        walletConnectRelay = TextFieldValue(contact.relayUri)
+        walletConnectRelay = TextFieldValue(contact.relayUri.url)
         walletConnectSecret = TextFieldValue(contact.secret ?: "")
     }
 }
@@ -429,8 +429,7 @@ fun UpdateZapAmountContent(
         ) {
             TextSpinner(
                 label = stringRes(id = R.string.zap_type_explainer),
-                placeholder =
-                    zapTypes.filter { it.first == accountViewModel.defaultZapType() }.first().second,
+                placeholder = zapTypes.firstOrNull { it.first == accountViewModel.defaultZapType() }?.second ?: zapTypes.firstOrNull()?.second ?: "",
                 options = zapOptions,
                 onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
                 modifier = Modifier.weight(1f).padding(end = 5.dp),

@@ -74,9 +74,10 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStats
-import com.vitorpamplona.quartz.nip01Core.relay.RelayDebugMessage
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayDebugMessage
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.collections.immutable.toImmutableList
@@ -85,7 +86,7 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable
 fun RelayInformationDialog(
     onClose: () -> Unit,
-    relayBriefInfo: RelayBriefInfoCache.RelayBriefInfo,
+    relay: NormalizedRelayUrl,
     relayInfo: Nip11RelayInformation,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -93,9 +94,9 @@ fun RelayInformationDialog(
     val newNav = rememberExtendedNav(nav, onClose)
 
     val messages =
-        remember(relayBriefInfo) {
+        remember(relay) {
             RelayStats
-                .get(url = relayBriefInfo.url)
+                .get(url = relay)
                 .messages
                 .snapshot()
                 .values
@@ -119,7 +120,7 @@ fun RelayInformationDialog(
                 TopAppBar(
                     actions = {},
                     title = {
-                        Text(relayBriefInfo.displayUrl)
+                        Text(relay.displayUrl())
                     },
                     navigationIcon = {
                         Row {
@@ -148,11 +149,11 @@ fun RelayInformationDialog(
                     ) {
                         Column {
                             RenderRelayIcon(
-                                displayUrl = relayBriefInfo.displayUrl,
-                                iconUrl = relayInfo.icon ?: relayBriefInfo.favIcon,
+                                displayUrl = relay.displayUrl(),
+                                iconUrl = relayInfo.icon,
                                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                                RelayStats.get(url = relayBriefInfo.url).pingInMs,
+                                RelayStats.get(relay).pingInMs,
                                 iconModifier = LargeRelayIconModifier,
                             )
                         }
@@ -162,7 +163,7 @@ fun RelayInformationDialog(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Title(relayInfo.name?.trim() ?: "")
                             Spacer(modifier = HalfVertSpacer)
-                            SubtitleContent(relayBriefInfo.url)
+                            SubtitleContent(relay.url)
                         }
                     }
                 }

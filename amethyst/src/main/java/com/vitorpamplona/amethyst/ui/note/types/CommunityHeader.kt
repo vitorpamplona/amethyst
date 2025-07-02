@@ -170,6 +170,7 @@ fun LongCommunityHeader(
                     DisplayUncitedHashtags(
                         event = it,
                         content = summary ?: "",
+                        accountViewModel = accountViewModel,
                         nav = nav,
                     )
                 }
@@ -360,9 +361,9 @@ fun WatchAddressableNoteFollows(
     accountViewModel: AccountViewModel,
     onFollowChanges: @Composable (Boolean) -> Unit,
 ) {
-    val state by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
+    val state by accountViewModel.account.kind3FollowList.flow.collectAsStateWithLifecycle()
 
-    onFollowChanges(state.addresses.contains(note.idHex))
+    onFollowChanges(state.communities.contains(note.idHex))
 }
 
 @Composable

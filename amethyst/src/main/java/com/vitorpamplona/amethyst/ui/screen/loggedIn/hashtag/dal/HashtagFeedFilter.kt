@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -41,6 +42,7 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
 class HashtagFeedFilter(
     val tag: String,
+    val relays: Set<NormalizedRelayUrl>,
     val account: Account,
     val cache: LocalCache,
 ) : AdditiveFeedFilter<Note>() {
@@ -64,7 +66,7 @@ class HashtagFeedFilter(
         hashTag: String,
     ): Boolean =
         (acceptableViaHashtag(it.event, hashTag) || acceptableViaScope(it.event, hashTag)) &&
-            !it.isHiddenFor(account.flowHiddenUsers.value) &&
+            !it.isHiddenFor(account.hiddenUsers.flow.value) &&
             account.isAcceptable(it)
 
     fun acceptableViaHashtag(

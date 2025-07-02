@@ -24,6 +24,8 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -34,10 +36,10 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class ETag(
     override val eventId: HexKey,
 ) : GenericETag {
-    override var relay: String? = null
+    override var relay: NormalizedRelayUrl? = null
     override var author: HexKey? = null
 
-    constructor(eventId: HexKey, relayHint: String? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
+    constructor(eventId: HexKey, relayHint: NormalizedRelayUrl? = null, authorPubKeyHex: HexKey? = null) : this(eventId) {
         this.relay = relayHint
         this.author = authorPubKeyHex
     }
@@ -45,16 +47,12 @@ data class ETag(
     fun countMemory(): Long =
         3 * pointerSizeInBytes + // 3 fields, 4 bytes each reference (32bit)
             eventId.bytesUsedInMemory() +
-            (relay?.bytesUsedInMemory() ?: 0) +
+            (relay?.url?.bytesUsedInMemory() ?: 0) +
             (author?.bytesUsedInMemory() ?: 0)
 
     fun toNEvent(): String = NEvent.create(eventId, author, null, relay)
 
-    override fun toTagArray() = toNamedTagArray(TAG_NAME)
-
-    fun toQTagArray() = toNamedTagArray("q")
-
-    fun toNamedTagArray(key: String) = arrayOfNotNull(key, eventId, relay, author)
+    override fun toTagArray() = assemble(eventId, relay, author)
 
     companion object {
         const val TAG_NAME = "e"
@@ -73,7 +71,9 @@ data class ETag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ETag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return ETag(tag[1], hint, tag.getOrNull(3))
         }
 
         @JvmStatic
@@ -90,14 +90,18 @@ data class ETag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return EventIdHint(tag[1], tag[2])
+
+            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(hint != null) { return null }
+
+            return EventIdHint(tag[1], hint)
         }
 
         @JvmStatic
         fun assemble(
             eventId: HexKey,
-            relay: String?,
+            relay: NormalizedRelayUrl?,
             author: HexKey?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relay, author)
+        ) = arrayOfNotNull(TAG_NAME, eventId, relay?.url, author)
     }
 }

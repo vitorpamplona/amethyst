@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
@@ -82,7 +82,7 @@ open class NewMediaModel : ViewModel() {
 
     fun upload(
         context: Context,
-        relayList: List<RelaySetupInfo>,
+        relayList: List<NormalizedRelayUrl>,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
@@ -162,7 +162,7 @@ open class NewMediaModel : ViewModel() {
                                         caption,
                                         if (sensitiveContent) "" else null,
                                         it.uploadedHash,
-                                        relayList,
+                                        relayList.toSet(),
                                     ) {
                                         continuation.resume(true)
                                     }
@@ -181,7 +181,7 @@ open class NewMediaModel : ViewModel() {
                                             imageUrls,
                                             caption,
                                             if (sensitiveContent) "" else null,
-                                            relayList,
+                                            relayList.toSet(),
                                         ) {
                                             continuation.resume(true)
                                         }

@@ -42,6 +42,11 @@ fun TlvBuilder.addStringIfNotNull(
     data: String?,
 ) = addStringIfNotNull(type.id, data)
 
+fun TlvBuilder.addStringIfNotBlank(
+    type: TlvTypes,
+    data: String,
+) = addStringIfNotBlank(type.id, data)
+
 fun TlvBuilder.addHexIfNotNull(
     type: TlvTypes,
     data: HexKey?,

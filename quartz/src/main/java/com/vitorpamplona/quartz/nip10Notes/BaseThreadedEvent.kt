@@ -58,6 +58,12 @@ open class BaseThreadedEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
+    @Transient
+    private var citedUsersCache: Set<String>? = null
+
+    @Transient
+    private var citedNotesCache: Set<String>? = null
+
     override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
@@ -106,10 +112,6 @@ open class BaseThreadedEvent(
 
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
     }
-
-    @Transient private var citedUsersCache: Set<String>? = null
-
-    @Transient private var citedNotesCache: Set<String>? = null
 
     fun citedUsers(): Set<HexKey> {
         citedUsersCache?.let {

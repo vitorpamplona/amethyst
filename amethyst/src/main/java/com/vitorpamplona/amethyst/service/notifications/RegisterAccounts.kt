@@ -25,11 +25,12 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.launchAndWaitAll
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.tryAndWait
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
+import com.vitorpamplona.quartz.utils.launchAndWaitAll
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -51,7 +52,7 @@ class RegisterAccounts(
 
     private suspend fun signAllAuths(
         notificationToken: String,
-        remainingTos: List<Pair<AccountSettings, List<String>>>,
+        remainingTos: List<Pair<AccountSettings, List<NormalizedRelayUrl>>>,
         output: MutableList<RelayAuthEvent>,
         onReady: (List<RelayAuthEvent>) -> Unit,
     ) {
@@ -99,15 +100,15 @@ class RegisterAccounts(
 
                     val acc = LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)
                     if (acc != null && acc.isWriteable()) {
-                        val nip65Read = acc.backupNIP65RelayList?.readRelays() ?: emptyList()
+                        val nip65Read = acc.backupNIP65RelayList?.readRelaysNorm() ?: emptyList()
 
                         Log.d(tag, "Register Account ${it.npub} NIP65 Reads ${nip65Read.joinToString(", ")}")
 
-                        val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList<String>()
+                        val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList()
 
                         Log.d(tag, "Register Account ${it.npub} NIP17 Reads ${nip17Read.joinToString(", ")}")
 
-                        val readKind3Relays = acc.backupContactList?.relays()?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList<String>()
+                        val readKind3Relays = acc.backupContactList?.relays()?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList()
 
                         Log.d(tag, "Register Account ${it.npub} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
 

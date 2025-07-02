@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local
 
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class LocalRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String> = account.settings.localRelayServers.toList()
+    override fun getRelayList(): List<NormalizedRelayUrl> = account.localRelayList.flow.value.toList()
 
-    override fun saveRelayList(urlList: List<String>) {
-        account.settings.updateLocalRelayServers(urlList.toSet())
+    override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+        account.localRelayList.saveRelayList(urlList) {}
     }
 }

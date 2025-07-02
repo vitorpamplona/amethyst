@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -83,7 +84,7 @@ class InteractiveStoryReadingStateEvent(
         fun update(
             base: InteractiveStoryReadingStateEvent,
             currentScene: InteractiveStoryBaseEvent,
-            currentSceneRelay: String?,
+            currentSceneRelay: NormalizedRelayUrl?,
             createdAt: Long = TimeUtils.now(),
         ): EventTemplate<InteractiveStoryReadingStateEvent> {
             val rootTag = base.dTag()
@@ -109,9 +110,9 @@ class InteractiveStoryReadingStateEvent(
 
         fun build(
             root: InteractiveStoryBaseEvent,
-            rootRelay: String?,
+            rootRelay: NormalizedRelayUrl?,
             currentScene: InteractiveStoryBaseEvent,
-            currentSceneRelay: String?,
+            currentSceneRelay: NormalizedRelayUrl?,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<InteractiveStoryReadingStateEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {

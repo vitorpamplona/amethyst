@@ -124,8 +124,10 @@ private fun ChannelMetadataScaffold(
 
                         JoinButton(
                             onPost = {
-                                nav.popBack()
-                                nav.nav(routeFor(postViewModel.buildRoom()))
+                                postViewModel.buildRoom()?.let {
+                                    nav.popBack()
+                                    nav.nav(routeFor(it))
+                                }
                             },
                             postViewModel.canPost,
                         )

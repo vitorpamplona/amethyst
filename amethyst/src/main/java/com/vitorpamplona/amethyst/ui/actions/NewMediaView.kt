@@ -101,7 +101,7 @@ fun NewMediaView(
     }
 
     var showRelaysDialog by remember { mutableStateOf(false) }
-    var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+    var relayList = remember { accountViewModel.account.outboxRelays.flow.value.toImmutableList() }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -202,7 +202,7 @@ fun ImageVideoPost(
     accountViewModel: AccountViewModel,
 ) {
     val nip95description = stringRes(id = R.string.upload_server_relays_nip95)
-    val fileServers by accountViewModel.account.liveServerList.collectAsState()
+    val fileServers by accountViewModel.account.serverLists.liveServerList.collectAsState()
 
     val fileServerOptions =
         remember(fileServers) {

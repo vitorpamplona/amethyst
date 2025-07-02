@@ -23,13 +23,14 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.utils.collectSuccessfulOperations
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -173,6 +175,16 @@ class ZapPaymentHandler(
         val user: User? = null,
     )
 
+    fun receivingRelaySet(userHex: HexKey): Set<NormalizedRelayUrl>? {
+        return (
+            LocalCache
+                .getAddressableNoteIfExists(
+                    AdvertisedRelayListEvent.createAddressTag(userHex),
+                )?.event as? AdvertisedRelayListEvent
+        )
+            ?.readRelaysNorm()?.toSet()
+    }
+
     suspend fun signAllZapRequests(
         note: Note,
         pollOption: Int?,
@@ -181,18 +193,6 @@ class ZapPaymentHandler(
         zapsToSend: List<BaseZapSplitSetup>,
         onAllDone: suspend (List<ZapRequestReady>) -> Unit,
     ) {
-        val authorRelayList =
-            note.author
-                ?.pubkeyHex
-                ?.let {
-                    (
-                        LocalCache
-                            .getAddressableNoteIfExists(
-                                AdvertisedRelayListEvent.createAddressTag(it),
-                            )?.event as? AdvertisedRelayListEvent?
-                    )?.readRelays()
-                }?.toSet()
-
         collectSuccessfulOperations<BaseZapSplitSetup, ZapRequestReady>(
             items = zapsToSend,
             runRequestFor = { next: BaseZapSplitSetup, onReady ->
@@ -203,18 +203,12 @@ class ZapPaymentHandler(
                         }
                     }
                 } else if (next is ZapSplitSetup) {
-                    val user = LocalCache.getUserIfExists(next.pubKeyHex)
-                    val userRelayList =
-                        (
-                            (
-                                LocalCache
-                                    .getAddressableNoteIfExists(
-                                        AdvertisedRelayListEvent.createAddressTag(next.pubKeyHex),
-                                    )?.event as? AdvertisedRelayListEvent?
-                            )?.readRelays()?.toSet() ?: emptySet()
-                        ) + (authorRelayList ?: emptySet())
+                    val authorRelayList = note.author?.let { receivingRelaySet(it.pubkeyHex) } ?: emptySet()
+                    val userRelayList = receivingRelaySet(next.pubKeyHex) ?: emptySet()
 
-                    prepareZapRequestIfNeeded(note, pollOption, message, zapType, user, userRelayList) { zapRequestJson ->
+                    val user = LocalCache.getOrCreateUser(next.pubKeyHex)
+
+                    prepareZapRequestIfNeeded(note, pollOption, message, zapType, user, userRelayList + authorRelayList) { zapRequestJson ->
                         onReady(ZapRequestReady(next, zapRequestJson, user))
                     }
                 }
@@ -387,7 +381,7 @@ class ZapPaymentHandler(
         message: String,
         zapType: LnZapEvent.ZapType,
         overrideUser: User? = null,
-        additionalRelays: Set<String>? = null,
+        additionalRelays: Set<NormalizedRelayUrl>? = null,
         onReady: (String?) -> Unit,
     ) {
         if (zapType != LnZapEvent.ZapType.NONZAP) {

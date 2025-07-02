@@ -64,7 +64,7 @@ fun LazyListScope.renderPrivateOutboxItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Outbox" + item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Outbox" + item.relay }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },

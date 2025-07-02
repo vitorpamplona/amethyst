@@ -84,7 +84,7 @@ class ChannelMetadataViewModel : ViewModel() {
             val relays =
                 channel.info.relays
                     ?.map { relaySetupInfoBuilder(it) }
-                    ?.distinctBy { it.url }
+                    ?.distinctBy { it.relay }
 
             _channelRelays.update { relays ?: emptyList() }
         }
@@ -102,19 +102,17 @@ class ChannelMetadataViewModel : ViewModel() {
                             channelName.value.text,
                             channelDescription.value.text,
                             channelPicture.value.text,
-                            channelRelays.value.map { it.url },
+                            channelRelays.value.map { it.relay },
                         )
 
                     account.signAndSendPrivatelyOrBroadcast(
                         template,
                         relayList = { it.channelInfo().relays },
                         onDone = {
-                            val channel = LocalCache.getOrCreateChannel(it.id) { PublicChatChannel(it) }
-                            if (channel is PublicChatChannel) {
-                                // follows the channel
-                                account.follow(channel)
-                                onDone(channel)
-                            }
+                            val channel = LocalCache.getOrCreatePublicChatChannel(it.id)
+                            // follows the channel
+                            account.follow(channel)
+                            onDone(channel)
                         },
                     )
                 } else {
@@ -128,7 +126,7 @@ class ChannelMetadataViewModel : ViewModel() {
                                 channelName.value.text,
                                 channelDescription.value.text,
                                 channelPicture.value.text,
-                                channelRelays.value.map { it.url },
+                                channelRelays.value.map { it.relay },
                                 hint,
                             )
                         } else {
@@ -138,7 +136,7 @@ class ChannelMetadataViewModel : ViewModel() {
                                 channelName.value.text,
                                 channelDescription.value.text,
                                 channelPicture.value.text,
-                                channelRelays.value.map { it.url },
+                                channelRelays.value.map { it.relay },
                                 eTag,
                             )
                         }
@@ -147,10 +145,8 @@ class ChannelMetadataViewModel : ViewModel() {
                         template,
                         relayList = { it.channelInfo().relays },
                         onDone = {
-                            val channel = LocalCache.getOrCreateChannel(it.id) { PublicChatChannel(it) }
-                            if (channel is PublicChatChannel) {
-                                onDone(channel)
-                            }
+                            val channel = LocalCache.getOrCreatePublicChatChannel(it.id)
+                            onDone(channel)
                         },
                     )
                 }
@@ -161,7 +157,7 @@ class ChannelMetadataViewModel : ViewModel() {
     }
 
     fun addHomeRelay(relay: BasicRelaySetupInfo) {
-        if (_channelRelays.value.any { it.url == relay.url }) return
+        if (_channelRelays.value.any { it.relay == relay.relay }) return
 
         _channelRelays.update { it.plus(relay) }
     }

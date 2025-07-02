@@ -20,37 +20,38 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeProfilesEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
-fun filterUserProfileMetadata(
-    keys: Set<HexKey>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    if (keys.isEmpty()) return emptyList()
-
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            MetadataEvent.KIND,
-                            AdvertisedRelayListEvent.KIND,
-                            ContactListEvent.KIND,
-                            BadgeProfilesEvent.KIND,
-                        ),
-                    authors = keys.toList(),
-                    since = since,
-                ),
-        ),
+val UserProfileMetadataKinds =
+    listOf(
+        MetadataEvent.KIND,
+        AdvertisedRelayListEvent.KIND,
+        ContactListEvent.KIND,
+        BadgeProfilesEvent.KIND,
     )
+
+fun filterUserProfileMetadata(
+    users: Map<NormalizedRelayUrl, Set<String>>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (users.isEmpty()) return emptyList()
+
+    return users.map {
+        RelayBasedFilter(
+            relay = it.key,
+            filter =
+                Filter(
+                    kinds = UserProfileMetadataKinds,
+                    authors = it.value.sorted(),
+                    since = since?.get(it.key)?.time,
+                ),
+        )
+    }
 }

@@ -20,29 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.flatten
 
 fun filterClassifiedsByFollows(
-    follows: Map<String, List<HexKey>>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (follows != null && follows.isEmpty()) return null
+    followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = setOf(if (follows == null) FeedType.GLOBAL else FeedType.FOLLOWS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    authors = follows,
-                    kinds = listOf(ClassifiedsEvent.KIND),
-                    limit = 300,
-                    since = since,
-                ),
-        ),
-    )
+    val defaultSince = TimeUtils.oneWeekAgo()
+
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
+
+        listOfNotNull(
+            it.value.authors?.let {
+                filterClassifiedsAuthors(relay, it, since)
+            },
+            it.value.geotags?.let {
+                filterClassifiedsByGeohash(relay, it, since)
+            },
+            it.value.hashtags?.let {
+                filterClassifiedsByHashtag(relay, it, since)
+            },
+            it.value.communities?.let {
+                filterClassifiedsAllCommunities(relay, it, since)
+            },
+        ).flatten()
+    }
 }

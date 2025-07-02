@@ -82,14 +82,12 @@ import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -229,10 +227,6 @@ private fun ChannelRoomCompose(
     val channelState by observeChannel(channel, accountViewModel)
 
     val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
-    val info =
-        remember(channel.roomId.relayUrl) {
-            RelayBriefInfoCache.get(RelayUrlFormatter.normalize(channel.roomId.relayUrl))
-        }
 
     val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()
 
@@ -253,7 +247,7 @@ private fun ChannelRoomCompose(
 
     ChannelName(
         channelIdHex = channel.idHex,
-        channelPicture = relayInfo?.icon ?: info.favIcon,
+        channelPicture = relayInfo?.icon,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.ephemeral_relay_chat, modifier) },
         channelLastTime = note.createdAt(),
         channelLastContent = "$authorName: $description",

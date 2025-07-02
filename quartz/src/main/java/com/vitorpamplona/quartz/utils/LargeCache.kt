@@ -26,6 +26,8 @@ import java.util.function.BiConsumer
 class LargeCache<K, V> {
     private val cache = ConcurrentSkipListMap<K, V>()
 
+    fun keys() = cache.keys
+
     fun values() = cache.values
 
     fun get(key: K) = cache.get(key)
@@ -35,6 +37,8 @@ class LargeCache<K, V> {
     fun size() = cache.size
 
     fun isEmpty() = cache.isEmpty()
+
+    fun clear() = cache.clear()
 
     fun containsKey(key: K) = cache.containsKey(key)
 
@@ -56,6 +60,19 @@ class LargeCache<K, V> {
         } else {
             val newObject = builder(key)
             cache.putIfAbsent(key, newObject) ?: newObject
+        }
+    }
+
+    fun createIfAbsent(
+        key: K,
+        builder: (key: K) -> V,
+    ): Boolean {
+        val value = cache.get(key)
+        return if (value != null) {
+            false
+        } else {
+            val newObject = builder(key)
+            cache.putIfAbsent(key, newObject) == null
         }
     }
 

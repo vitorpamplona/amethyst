@@ -45,6 +45,10 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -106,9 +110,17 @@ fun RenderChannelThumb(
 
     LaunchedEffect(key1 = channelUpdates) {
         launch(Dispatchers.IO) {
-            val followingKeySet =
-                accountViewModel.account.liveDiscoveryFollowLists.value
-                    ?.authors
+            val topFilter = accountViewModel.account.liveDiscoveryFollowLists.value
+            val topFilterAuthors =
+                when (topFilter) {
+                    is AuthorsByOutboxTopNavFilter -> topFilter.authors
+                    is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
+                    is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+                    is SingleCommunityTopNavFilter -> topFilter.authors
+                    else -> null
+                }
+
+            val followingKeySet = topFilterAuthors
             val allParticipants =
                 ParticipantListBuilder()
                     .followsThatParticipateOn(baseNote, followingKeySet)
@@ -116,7 +128,7 @@ fun RenderChannelThumb(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.liveKind3Follows.value.authors
+                    val allFollows = accountViewModel.account.kind3FollowList.flow.value.authors
                     val followingParticipants =
                         ParticipantListBuilder().followsThatParticipateOn(baseNote, allFollows).toList()
 

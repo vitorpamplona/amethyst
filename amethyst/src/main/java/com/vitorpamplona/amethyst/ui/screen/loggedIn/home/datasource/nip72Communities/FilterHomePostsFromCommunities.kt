@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -32,36 +33,87 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.flatten
+import kotlin.collections.mapNotNull
 
-fun filterHomePostsFromCommunities(
-    communitiesToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (communitiesToLoad == null || communitiesToLoad.isEmpty()) return null
+val HomePostsFromCommunityKinds =
+    listOf(
+        TextNoteEvent.KIND,
+        LongTextNoteEvent.KIND,
+        ClassifiedsEvent.KIND,
+        HighlightEvent.KIND,
+        WikiNoteEvent.KIND,
+        CommunityPostApprovalEvent.KIND,
+        CommentEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
+    )
 
+val HomePostsFromCommunityKindsStr =
+    listOf(
+        TextNoteEvent.KIND.toString(),
+        LongTextNoteEvent.KIND.toString(),
+        ClassifiedsEvent.KIND.toString(),
+        HighlightEvent.KIND.toString(),
+        WikiNoteEvent.KIND.toString(),
+        CommunityPostApprovalEvent.KIND.toString(),
+        CommentEvent.KIND.toString(),
+        InteractiveStoryPrologueEvent.KIND.toString(),
+    )
+
+fun filterHomePostsFromCommunity(
+    relay: NormalizedRelayUrl,
+    community: String,
+    authors: Set<String>?,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    val authors = authors?.sorted()
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.FOLLOWS),
+        // approved
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            LongTextNoteEvent.KIND,
-                            ClassifiedsEvent.KIND,
-                            HighlightEvent.KIND,
-                            WikiNoteEvent.KIND,
-                            CommunityPostApprovalEvent.KIND,
-                            CommentEvent.KIND,
-                            InteractiveStoryPrologueEvent.KIND,
-                        ),
+                Filter(
+                    authors = authors,
+                    kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
-                            "a" to communitiesToLoad.toList(),
+                            "a" to listOf(community),
+                            "k" to HomePostsFromCommunityKindsStr,
                         ),
-                    limit = 100,
+                    limit = 200,
+                    since = since,
+                ),
+        ),
+        // not approved
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    authors = authors,
+                    tags = mapOf("a" to listOf(community)),
+                    kinds = HomePostsFromCommunityKinds,
+                    limit = 200,
                     since = since,
                 ),
         ),
     )
+}
+
+fun filterHomePostsByCommunity(
+    communitySet: SingleCommunityTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (communitySet.set.isEmpty()) return emptyList()
+
+    val defaultSince = TimeUtils.oneWeekAgo()
+
+    return communitySet.set.mapNotNull {
+        filterHomePostsFromCommunity(
+            relay = it.key,
+            community = it.value.community,
+            authors = it.value.authors,
+            since = since?.get(it.key)?.time ?: defaultSince,
+        )
+    }.flatten()
 }

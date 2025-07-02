@@ -23,11 +23,13 @@ package com.vitorpamplona.quartz.nip50Search
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip50Search.tags.RelayTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,14 +41,7 @@ class SearchRelayListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun relays(): List<String> =
-        tags.mapNotNull {
-            if (it.size > 1 && it[0] == "relay") {
-                it[1]
-            } else {
-                null
-            }
-        }
+    fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parse)
 
     companion object {
         const val KIND = 10007
@@ -57,26 +52,26 @@ class SearchRelayListEvent(
 
         fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
-        fun createTagArray(relays: List<String>): Array<Array<String>> =
+        fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
             relays
                 .map {
-                    arrayOf("relay", it)
+                    RelayTag.assemble(it)
                 }.plusElement(AltTag.assemble("Relay list to use for Search"))
                 .toTypedArray()
 
         fun updateRelayList(
             earlierVersion: SearchRelayListEvent,
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (SearchRelayListEvent) -> Unit,
         ) {
             val tags =
                 earlierVersion.tags
-                    .filter { it[0] != "relay" }
+                    .filter(RelayTag::notMatch)
                     .plus(
                         relays.map {
-                            arrayOf("relay", it)
+                            RelayTag.assemble(it)
                         },
                     ).toTypedArray()
 
@@ -84,7 +79,7 @@ class SearchRelayListEvent(
         }
 
         fun createFromScratch(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (SearchRelayListEvent) -> Unit,
@@ -93,7 +88,7 @@ class SearchRelayListEvent(
         }
 
         fun create(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             onReady: (SearchRelayListEvent) -> Unit,
@@ -102,7 +97,7 @@ class SearchRelayListEvent(
         }
 
         fun create(
-            relays: List<String>,
+            relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
         ): SearchRelayListEvent? = signer.sign(createdAt, KIND, createTagArray(relays), "")

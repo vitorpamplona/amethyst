@@ -35,10 +35,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
+import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.isDebug
@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.WarningType
+import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.service.CashuProcessor
 import com.vitorpamplona.amethyst.service.CashuToken
@@ -90,7 +91,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -98,7 +99,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -112,7 +112,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -121,11 +120,11 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.collectSuccessfulOperations
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -143,9 +142,9 @@ import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
@@ -156,34 +155,25 @@ class AccountViewModel(
     val app: Amethyst,
 ) : ViewModel(),
     Dao {
-    val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
+    val account = Account(accountSettings, accountSettings.createSigner(), app.locationManager.geohashStateFlow, LocalCache, app.client, viewModelScope)
 
     val newNotesPreProcessor = PrecacheNewNotesProcessor(account, LocalCache)
 
     var firstRoute: Route? = null
 
-    // TODO: contact lists are not notes yet
-    // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
-
-    val normalizedKind3RelaySetFlow =
+    val normalizedKind3RelaySetFlow: StateFlow<Set<NormalizedRelayUrl>> =
         account
             .userProfile()
             .flow()
             .relays.stateFlow
             .map { contactListState ->
-                checkNotInMainThread()
-                contactListState.user.latestContactList?.relays()?.map {
-                    RelayUrlFormatter.normalize(it.key)
-                } ?: emptySet()
+                contactListState.user.latestContactList?.relays()?.keys ?: emptySet()
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(10000, 10000),
                 emptySet(),
             )
-
-    val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
-    val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
     val toastManager = ToastManager()
 
@@ -322,7 +312,7 @@ class AccountViewModel(
 
     fun isNoteAcceptable(
         note: Note,
-        accountChoices: Account.LiveHiddenUsers,
+        accountChoices: HiddenUsersState.LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
         checkNotInMainThread()
@@ -363,8 +353,8 @@ class AccountViewModel(
     fun createIsHiddenFlow(note: Note): StateFlow<NoteComposeReportState> =
         noteIsHiddenFlows.get(note)
             ?: combineTransform(
-                account.flowHiddenUsers,
-                account.liveKind3Follows,
+                account.hiddenUsers.flow,
+                account.kind3FollowList.flow,
                 note.flow().author(),
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
@@ -723,24 +713,18 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.boost(note) }
     }
 
-    fun removeEmojiPack(
-        usersEmojiList: Note,
-        emojiList: Note,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.removeEmojiPack(usersEmojiList, emojiList) }
+    fun removeEmojiPack(emojiPack: Note) {
+        viewModelScope.launch(Dispatchers.IO) { account.removeEmojiPack(emojiPack) }
     }
 
-    fun addEmojiPack(
-        usersEmojiList: Note,
-        emojiPack: Note,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiPack) }
+    fun addEmojiPack(emojiPack: Note) {
+        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(emojiPack) }
     }
 
     fun addMediaToGallery(
         hex: String,
         url: String,
-        relay: String?,
+        relay: NormalizedRelayUrl?,
         blurhash: String?,
         dim: DimensionTag?,
         hash: String?,
@@ -1032,17 +1016,15 @@ class AccountViewModel(
         }
     }
 
-    fun <T : Event> createRumor(template: EventTemplate<T>) = account.signer.assembleRumor<T>(template)
-
     fun retrieveRelayDocument(
-        dirtyUrl: String,
+        relay: NormalizedRelayUrl,
         onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
+        onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             Nip11CachedRetriever.loadRelayInfo(
-                dirtyUrl,
-                okHttpClient = ::okHttpClientForDirty,
+                relay,
+                okHttpClient = { okHttpClientForClean(relay) },
                 onInfo,
                 onError,
             )
@@ -1152,7 +1134,7 @@ class AccountViewModel(
 
     private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? = LocalCache.checkGetOrCreateChannel(key)
 
-    suspend fun checkGetOrCreateChannel(key: RoomId): Channel? = LocalCache.checkGetOrCreateChannel(key)
+    suspend fun checkGetOrCreateChannel(key: RoomId): Channel? = LocalCache.getOrCreateEphemeralChannel(key)
 
     fun checkGetOrCreateChannel(
         key: HexKey,
@@ -1284,37 +1266,7 @@ class AccountViewModel(
 
     fun setTorSettings(newTorSettings: TorSettings) =
         viewModelScope.launch(Dispatchers.IO) {
-            // Only restart relay connections if port or type changes
-            if (account.settings.setTorSettings(newTorSettings)) {
-                app.serviceManager.forceRestart()
-            }
-        }
-
-    fun forceRestartServices() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.setAccountAndRestart(account)
-        }
-
-    fun justStart() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.justStartIfItHasAccount()
-        }
-
-    fun justPause() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.cleanObservers()
-            app.serviceManager.pauseForGood()
-        }
-
-    fun pauseAndLogOff() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.cleanObservers()
-            app.serviceManager.pauseAndLogOff()
-        }
-
-    fun changeProxyPort(port: Int) =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.forceRestart()
+            account.settings.setTorSettings(newTorSettings)
         }
 
     class Factory(
@@ -1556,7 +1508,7 @@ class AccountViewModel(
 
     fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForPreviewUrl(url))
 
-    fun okHttpClientForDirty(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForDirty(url))
+    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForClean(url))
 
     fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
 
@@ -1588,7 +1540,7 @@ class AccountViewModel(
     }
 
     fun requestDVMContentDiscovery(
-        dvmPublicKey: String,
+        dvmPublicKey: User,
         onReady: (event: Note) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1708,17 +1660,27 @@ class AccountViewModel(
 
     fun relayStatusFlow() = app.client.relayStatusFlow()
 
-    fun allAccountsSync(): List<HexKey> =
-        runBlocking {
-            LocalPreferences.allSavedAccounts().mapNotNull {
-                try {
-                    it.npub.bechToBytes().toHexKey()
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    null
-                }
+    fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> {
+        return loggedInAccounts?.mapNotNull {
+            try {
+                it.npub.bechToBytes().toHexKey()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
             }
-        }
+        }?.toSet() ?: emptySet()
+    }
+
+    val trustedAccounts: StateFlow<Set<HexKey>> =
+        LocalPreferences.accountsFlow().map { loggedInAccounts ->
+            convertAccounts(loggedInAccounts)
+        }.onStart {
+            emit(convertAccounts(LocalPreferences.allSavedAccounts()))
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptySet<HexKey>(),
+        )
 
     val draftNoteCache = CachedDraftNotes(this)
 
@@ -1793,9 +1755,13 @@ class AccountViewModel(
     val nip19: Nip19Parser.ParseReturn,
 )
 
+var mockedCache: AccountViewModel? = null
+
 @SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun mockAccountViewModel(): AccountViewModel {
+    mockedCache?.let { return it }
+
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
     sharedPreferencesViewModel.init()
 
@@ -1811,12 +1777,18 @@ fun mockAccountViewModel(): AccountViewModel {
         ),
         sharedPreferencesViewModel.sharedPrefs,
         Amethyst(),
-    )
+    ).also {
+        mockedCache = it
+    }
 }
+
+var vitorCache: AccountViewModel? = null
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun mockVitorAccountViewModel(): AccountViewModel {
+    mockedCache?.let { return it }
+
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
     sharedPreferencesViewModel.init()
 
@@ -1830,5 +1802,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         ),
         sharedPreferencesViewModel.sharedPrefs,
         Amethyst(),
-    )
+    ).also {
+        vitorCache = it
+    }
 }

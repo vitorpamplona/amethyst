@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.datasources.RelayAuthenticator
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.acessories.RelayAuthenticator
 
 class ScreenAuthAccount(
     val account: Account,

@@ -21,13 +21,14 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
-fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<TypedFilter>? {
+fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
     val missingAddressables = mutableSetOf<Address>()
 
     keys.forEach {
@@ -46,31 +47,43 @@ fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<TypedFilt
     return filterMissingAddressables(missingAddressables)
 }
 
-fun filterMissingAddressables(missingAddressables: Set<Address>): List<TypedFilter>? {
-    if (missingAddressables.isEmpty()) return null
+fun filterMissingAddressables(missingAddressables: Set<Address>): List<RelayBasedFilter> {
+    if (missingAddressables.isEmpty()) return emptyList()
 
-    return missingAddressables.map { aTag ->
-        if (aTag.kind < 25000 && aTag.dTag.isBlank()) {
-            TypedFilter(
-                types = EVENT_FINDER_TYPES,
-                filter =
-                    SincePerRelayFilter(
-                        kinds = listOf(aTag.kind),
-                        authors = listOf(aTag.pubKeyHex),
-                        limit = 1,
-                    ),
-            )
-        } else {
-            TypedFilter(
-                types = EVENT_FINDER_TYPES,
-                filter =
-                    SincePerRelayFilter(
-                        kinds = listOf(aTag.kind),
-                        tags = mapOf("d" to listOf(aTag.dTag)),
-                        authors = listOf(aTag.pubKeyHex),
-                        limit = 1,
-                    ),
-            )
+    return missingAddressables.flatMap { aTag ->
+        val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(aTag.pubKeyHex)
+        val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
+
+        val authorHomeRelays =
+            authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
+                ?: LocalCache.relayHints.hintsForKey(aTag.pubKeyHex).ifEmpty { null }
+                ?: listOfNotNull(LocalCache.getUserIfExists(aTag.pubKeyHex)?.latestMetadataRelay)
+
+        val relayHints = LocalCache.relayHints.hintsForAddress(aTag.toValue())
+
+        (authorHomeRelays + relayHints).toSet().map {
+            if (aTag.kind < 25000 && aTag.dTag.isBlank()) {
+                RelayBasedFilter(
+                    relay = it,
+                    filter =
+                        Filter(
+                            kinds = listOf(aTag.kind),
+                            authors = listOf(aTag.pubKeyHex),
+                            limit = 1,
+                        ),
+                )
+            } else {
+                RelayBasedFilter(
+                    relay = it,
+                    filter =
+                        Filter(
+                            kinds = listOf(aTag.kind),
+                            tags = mapOf("d" to listOf(aTag.dTag)),
+                            authors = listOf(aTag.pubKeyHex),
+                            limit = 1,
+                        ),
+                )
+            }
         }
     }
 }

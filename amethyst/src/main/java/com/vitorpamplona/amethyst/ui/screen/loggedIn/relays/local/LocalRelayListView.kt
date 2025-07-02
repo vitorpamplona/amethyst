@@ -64,7 +64,7 @@ fun LazyListScope.renderLocalItems(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    itemsIndexed(feedState, key = { _, item -> "Local" + item.url }) { index, item ->
+    itemsIndexed(feedState, key = { _, item -> "Local" + item.relay }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
             onDelete = { postViewModel.deleteRelay(item) },

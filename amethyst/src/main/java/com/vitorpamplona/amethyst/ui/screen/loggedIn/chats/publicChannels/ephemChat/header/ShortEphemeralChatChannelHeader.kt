@@ -50,28 +50,24 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemC
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 
 @Composable
 fun loadRelayInfo(
-    relayUrl: String,
+    relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ): State<Nip11RelayInformation?> {
     @Suppress("ProduceStateDoesNotAssignValue")
     val relayInfo =
         produceStateIfNotNull(
-            Nip11CachedRetriever.getFromCache(relayUrl),
-            relayUrl,
+            Nip11CachedRetriever.getFromCache(relay),
+            relay,
         ) {
             accountViewModel.retrieveRelayDocument(
-                relayUrl,
-                onInfo = {
-                    value = it
-                },
-                onError = { url, errorCode, exceptionMessage ->
-                },
+                relay = relay,
+                onInfo = { value = it },
+                onError = { url, errorCode, exceptionMessage -> },
             )
         }
 
@@ -124,14 +120,10 @@ private fun DrawRelayIcon(
     accountViewModel: AccountViewModel,
 ) {
     val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
-    val info =
-        remember(channel.roomId.relayUrl) {
-            RelayBriefInfoCache.get(RelayUrlFormatter.normalize(channel.roomId.relayUrl))
-        }
 
     RobohashFallbackAsyncImage(
         robot = channel.idHex,
-        model = relayInfo?.icon ?: info.favIcon,
+        model = relayInfo?.icon,
         contentDescription = stringRes(R.string.profile_image),
         contentScale = ContentScale.Crop,
         modifier = HeaderPictureModifier,

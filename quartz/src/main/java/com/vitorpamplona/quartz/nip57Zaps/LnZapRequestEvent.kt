@@ -27,8 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -43,7 +48,16 @@ class LnZapRequestEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
     @Transient private var privateZapEvent: LnZapPrivateEvent? = null
 
     override fun countMemory(): Long = super.countMemory() + pointerSizeInBytes + (privateZapEvent?.countMemory() ?: 0)
@@ -138,7 +152,7 @@ class LnZapRequestEvent(
 
         fun create(
             userHex: String,
-            relays: Set<String>,
+            relays: Set<NormalizedRelayUrl>,
             signer: NostrSigner,
             message: String,
             zapType: LnZapEvent.ZapType,
@@ -150,7 +164,7 @@ class LnZapRequestEvent(
             var tags =
                 arrayOf(
                     arrayOf("p", userHex),
-                    arrayOf("relays") + relays,
+                    arrayOf("relays") + relays.map { it.url },
                 )
 
             if (zapType == LnZapEvent.ZapType.ANONYMOUS) {

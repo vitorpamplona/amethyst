@@ -24,11 +24,12 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
-fun filterMissingEventsForThread(threadInfo: ThreadAssembler.ThreadInfo): List<TypedFilter> {
-    val missingEvents = mutableSetOf<String>()
+fun filterMissingEventsForThread(threadInfo: ThreadAssembler.ThreadInfo): List<RelayBasedFilter> {
+    val missingEvents = mutableSetOf<HexKey>()
     val missingAddresses = mutableSetOf<Address>()
 
     if (threadInfo.root.event == null) {

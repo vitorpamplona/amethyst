@@ -124,7 +124,7 @@ fun RenderPrivateMessage(
                 }
 
                 if (noteEvent.hasHashtags()) {
-                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
+                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
                 }
             }
         }

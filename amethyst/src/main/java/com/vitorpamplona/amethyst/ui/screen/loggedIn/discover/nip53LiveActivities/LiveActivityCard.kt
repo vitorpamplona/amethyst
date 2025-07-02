@@ -45,6 +45,10 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.INav
@@ -222,9 +226,16 @@ fun LoadParticipants(
 
             val hostsAuthor = hosts + (baseNote.author?.let { listOf(it) } ?: emptyList<User>())
 
+            val topFilter = accountViewModel.account.liveDiscoveryFollowLists.value
+
             val followingKeySet =
-                accountViewModel.account.liveDiscoveryFollowLists.value
-                    ?.authors
+                when (topFilter) {
+                    is AuthorsByOutboxTopNavFilter -> topFilter.authors
+                    is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
+                    is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+                    is SingleCommunityTopNavFilter -> topFilter.authors
+                    else -> emptySet()
+                }
 
             val allParticipants =
                 ParticipantListBuilder()
@@ -233,7 +244,7 @@ fun LoadParticipants(
 
             val newParticipantUsers =
                 if (followingKeySet == null) {
-                    val allFollows = accountViewModel.account.liveKind3Follows.value.authors
+                    val allFollows = accountViewModel.account.kind3FollowList.flow.value.authors
                     val followingParticipants =
                         ParticipantListBuilder()
                             .followsThatParticipateOn(baseNote, allFollows)

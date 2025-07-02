@@ -23,8 +23,10 @@ package com.vitorpamplona.quartz.nip51Lists
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip51Lists.tags.RelayTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -36,7 +38,7 @@ class RelaySetEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun relays() = tags.filter { it.size > 1 && it[0] == "r" }.map { it[1] }
+    fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parse)
 
     fun description() = tags.firstOrNull { it.size > 1 && it[0] == "description" }?.get(1)
 

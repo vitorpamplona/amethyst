@@ -22,13 +22,11 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.launchAndWaitAll
+import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.replace
-import com.vitorpamplona.amethyst.tryAndWait
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -37,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -74,6 +73,8 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.launchAndWaitAll
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -157,7 +158,7 @@ open class Note(
     var zapPayments = mapOf<Note, Note?>()
         private set
 
-    var relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
+    var relays = listOf<NormalizedRelayUrl>()
         private set
 
     fun id() = Hex.decode(idHex)
@@ -183,14 +184,26 @@ open class Note(
         }
     }
 
-    fun relayHintUrl(): String? {
+    fun relayUrls(): List<NormalizedRelayUrl> {
+        val authorRelay = author?.relayHints()?.ifEmpty { null }
+
+        return authorRelay ?: relays
+    }
+
+    fun relayUrlsForReactions(): List<NormalizedRelayUrl> {
+        val authorRelay = author?.inboxRelays()?.ifEmpty { null }
+
+        return authorRelay ?: relays
+    }
+
+    fun relayHintUrl(): NormalizedRelayUrl? {
         val authorRelay = author?.latestMetadataRelay
 
         return if (relays.isNotEmpty()) {
-            if (authorRelay != null && relays.any { it.url == authorRelay }) {
+            if (authorRelay != null && relays.any { it == authorRelay }) {
                 authorRelay
             } else {
-                relays.firstOrNull()?.url
+                relays.firstOrNull()
             }
         } else {
             null
@@ -293,7 +306,7 @@ open class Note(
         zaps = mapOf<Note, Note?>()
         zapPayments = mapOf<Note, Note?>()
         zapsAmount = BigDecimal.ZERO
-        relays = listOf<RelayBriefInfoCache.RelayBriefInfo>()
+        relays = listOf<NormalizedRelayUrl>()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
@@ -445,17 +458,17 @@ open class Note(
     }
 
     @Synchronized
-    fun addRelaySync(briefInfo: RelayBriefInfoCache.RelayBriefInfo) {
-        if (briefInfo !in relays) {
-            relays = relays + briefInfo
+    fun addRelaySync(relay: NormalizedRelayUrl) {
+        if (relay !in relays) {
+            relays = relays + relay
         }
     }
 
-    fun hasRelay(relay: RelayBriefInfoCache.RelayBriefInfo) = relay !in relays
+    fun hasRelay(relay: NormalizedRelayUrl) = relay !in relays
 
-    fun addRelay(brief: RelayBriefInfoCache.RelayBriefInfo) {
-        if (brief !in relays) {
-            addRelaySync(brief)
+    fun addRelay(relay: NormalizedRelayUrl) {
+        if (relay !in relays) {
+            addRelaySync(relay)
             flowSet?.relays?.invalidateData()
         }
     }
@@ -779,9 +792,17 @@ open class Note(
     fun reactedBy(loggedIn: User): List<String> = reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
-        return boosts.firstOrNull {
-            it.author == loggedIn && (it.createdAt() ?: 0) > TimeUtils.fiveMinutesAgo()
-        } != null // 5 minute protection
+        val fiveMinsAgo = TimeUtils.fiveMinutesAgo()
+        return boosts.any {
+            it.author == loggedIn && (it.createdAt() ?: 0) > fiveMinsAgo
+        }
+    }
+
+    fun hasBoostedInTheLast5Minutes(loggedIn: HexKey): Boolean {
+        val fiveMinsAgo = TimeUtils.fiveMinutesAgo()
+        return boosts.any {
+            (it.createdAt() ?: 0) > fiveMinsAgo && it.author?.pubkeyHex == loggedIn
+        }
     }
 
     fun boostedBy(loggedIn: User): List<Note> = boosts.filter { it.author == loggedIn }
@@ -823,7 +844,7 @@ open class Note(
         zapsAmount = BigDecimal.ZERO
     }
 
-    fun isHiddenFor(accountChoices: Account.LiveHiddenUsers): Boolean {
+    fun isHiddenFor(accountChoices: HiddenUsersState.LiveHiddenUsers): Boolean {
         val thisEvent = event ?: return false
         val hash = thisEvent.pubKey.hashCode()
 

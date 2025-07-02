@@ -27,16 +27,15 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -53,7 +52,10 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +84,6 @@ private object PrefKeys {
     const val SAVED_ACCOUNTS = "all_saved_accounts"
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
-    const val RELAYS = "relays"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
@@ -99,6 +100,9 @@ private object PrefKeys {
     const val LATEST_PRIVATE_HOME_RELAY_LIST = "latestPrivateHomeRelayList"
     const val LATEST_APP_SPECIFIC_DATA = "latestAppSpecificData"
     const val LATEST_CHANNEL_LIST = "latestChannelList"
+    const val LATEST_COMMUNITY_LIST = "latestCommunityList"
+    const val LATEST_HASHTAG_LIST = "latestHashtagList"
+    const val LATEST_GEOHASH_LIST = "latestGeohashList"
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
@@ -120,8 +124,8 @@ object LocalPreferences {
     private const val COMMA = ","
 
     private var currentAccount: String? = null
-    private var savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
-    private var cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
+    private val savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
+    private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
         if (currentAccount == null) {
@@ -249,7 +253,7 @@ object LocalPreferences {
                 if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
-            return Amethyst.instance.encryptedStorage(npub)
+            Amethyst.instance.encryptedStorage(npub)
         }
     }
 
@@ -299,7 +303,6 @@ object LocalPreferences {
                         settings.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
                     }
                     settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
-                    putString(PrefKeys.RELAYS, EventMapper.mapper.writeValueAsString(settings.localRelays))
 
                     putString(
                         PrefKeys.DEFAULT_FILE_SERVER,
@@ -364,8 +367,8 @@ object LocalPreferences {
                         remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                     }
 
-                    if (settings.localRelayServers.isNotEmpty()) {
-                        putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
+                    if (settings.localRelayServers.value.isNotEmpty()) {
+                        putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers.value)
                     } else {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
@@ -404,6 +407,33 @@ object LocalPreferences {
                         )
                     } else {
                         remove(PrefKeys.LATEST_CHANNEL_LIST)
+                    }
+
+                    if (settings.backupCommunityList != null) {
+                        putString(
+                            PrefKeys.LATEST_COMMUNITY_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupCommunityList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_COMMUNITY_LIST)
+                    }
+
+                    if (settings.backupHashtagList != null) {
+                        putString(
+                            PrefKeys.LATEST_HASHTAG_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupHashtagList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_HASHTAG_LIST)
+                    }
+
+                    if (settings.backupGeohashList != null) {
+                        putString(
+                            PrefKeys.LATEST_HASHTAG_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupGeohashList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_HASHTAG_LIST)
                     }
 
                     if (settings.backupEphemeralChatList != null) {
@@ -453,9 +483,8 @@ object LocalPreferences {
         prefs: SharedPreferences = encryptedPreferences(),
     ) {
         Log.d("LocalPreferences", "Saving to shared settings")
-        with(prefs.edit()) {
+        prefs.edit {
             putString(PrefKeys.SHARED_SETTINGS, EventMapper.mapper.writeValueAsString(sharedSettings))
-            apply()
         }
     }
 
@@ -514,15 +543,13 @@ object LocalPreferences {
                             ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
                     val defaultHomeFollowList =
-                        getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: KIND3_FOLLOWS
+                        getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: ALL_FOLLOWS
                     val defaultStoriesFollowList =
                         getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
                     val defaultNotificationFollowList =
                         getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
                     val defaultDiscoveryFollowList =
                         getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
-
-                    val localRelays = parseOrNull<Set<RelaySetupInfo>>(PrefKeys.RELAYS) ?: emptySet()
 
                     val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
                     val defaultFileServer = parseOrNull<ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: DEFAULT_MEDIA_SERVERS[0]
@@ -538,8 +565,11 @@ object LocalPreferences {
                     val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
                     val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
                     val latestAppSpecificData = parseEventOrNull<AppSpecificDataEvent>(PrefKeys.LATEST_APP_SPECIFIC_DATA)
-                    val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
                     val latestChannelList = parseEventOrNull<ChannelListEvent>(PrefKeys.LATEST_CHANNEL_LIST)
+                    val latestCommunityList = parseEventOrNull<CommunityListEvent>(PrefKeys.LATEST_COMMUNITY_LIST)
+                    val latestHashtagList = parseEventOrNull<HashtagListEvent>(PrefKeys.LATEST_HASHTAG_LIST)
+                    val latestGeohashList = parseEventOrNull<GeohashListEvent>(PrefKeys.LATEST_GEOHASH_LIST)
+                    val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
 
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
@@ -559,14 +589,13 @@ object LocalPreferences {
                         keyPair = keyPair,
                         transientAccount = false,
                         externalSignerPackageName = externalSignerPackageName,
-                        localRelays = localRelays,
-                        localRelayServers = localRelayServers,
+                        localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServer,
                         defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
                         defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
                         defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
                         defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
-                        zapPaymentRequest = zapPaymentRequestServer,
+                        zapPaymentRequest = zapPaymentRequestServer?.normalize(),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
@@ -579,6 +608,9 @@ object LocalPreferences {
                         backupMuteList = latestMuteList,
                         backupAppSpecificData = latestAppSpecificData,
                         backupChannelList = latestChannelList,
+                        backupCommunityList = latestCommunityList,
+                        backupHashtagList = latestHashtagList,
+                        backupGeohashList = latestGeohashList,
                         backupEphemeralChatList = latestEphemeralList,
                         torSettings = TorSettingsFlow.build(torSettings),
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute),

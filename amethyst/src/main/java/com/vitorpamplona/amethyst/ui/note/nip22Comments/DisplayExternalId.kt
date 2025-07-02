@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
@@ -29,11 +30,12 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 @Composable
 fun DisplayExternalId(
     externalId: ExternalId,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     when (externalId) {
-        is GeohashId -> DisplayGeohashExternalId(externalId, nav)
-        is HashtagId -> DisplayHashtagExternalId(externalId, nav)
+        is GeohashId -> DisplayGeohashExternalId(externalId, accountViewModel, nav)
+        is HashtagId -> DisplayHashtagExternalId(externalId, accountViewModel, nav)
         else -> {}
     }
 }

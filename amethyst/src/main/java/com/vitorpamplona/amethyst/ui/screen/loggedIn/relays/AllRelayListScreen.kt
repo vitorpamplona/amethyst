@@ -57,9 +57,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kind3.Kind3RelayListViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kind3.renderKind3Items
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kind3.renderKind3ProposalItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.renderLocalItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.PrivateOutboxRelayListViewModel
@@ -77,7 +74,6 @@ import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.ammolite.relays.Constants
 
 @Composable
 fun AllRelayListScreen(
@@ -95,10 +91,6 @@ fun MappedAllRelayListView(
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
-    val kind3ViewModel: Kind3RelayListViewModel = viewModel()
-    val kind3FeedState by kind3ViewModel.relays.collectAsStateWithLifecycle()
-    val kind3Proposals by kind3ViewModel.proposedRelays.collectAsStateWithLifecycle()
-
     val dmViewModel: DMRelayListViewModel = viewModel()
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
 
@@ -116,7 +108,6 @@ fun MappedAllRelayListView(
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        kind3ViewModel.load(accountViewModel.account)
         dmViewModel.load(accountViewModel.account)
         nip65ViewModel.load(accountViewModel.account)
         searchViewModel.load(accountViewModel.account)
@@ -146,7 +137,6 @@ fun MappedAllRelayListView(
 
                         SaveButton(
                             onPost = {
-                                kind3ViewModel.create()
                                 dmViewModel.create()
                                 nip65ViewModel.create()
                                 searchViewModel.create()
@@ -163,7 +153,6 @@ fun MappedAllRelayListView(
                         Spacer(modifier = StdHorzSpacer)
                         CloseButton(
                             onPress = {
-                                kind3ViewModel.clear()
                                 dmViewModel.clear()
                                 nip65ViewModel.clear()
                                 searchViewModel.clear()
@@ -252,42 +241,7 @@ fun MappedAllRelayListView(
                 )
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
-
-            item {
-                SettingsCategoryWithButton(
-                    stringRes(R.string.kind_3_section),
-                    stringRes(R.string.kind_3_section_description),
-                    SettingsCategorySpacingModifier,
-                ) {
-                    ResetKind3Relays(kind3ViewModel)
-                }
-            }
-            renderKind3Items(kind3FeedState, kind3ViewModel, accountViewModel, newNav, relayToAdd)
-
-            if (kind3Proposals.isNotEmpty()) {
-                item {
-                    SettingsCategory(
-                        stringRes(R.string.kind_3_recommended_section),
-                        stringRes(R.string.kind_3_recommended_section_description),
-                        SettingsCategorySpacingModifier,
-                    )
-                }
-                renderKind3ProposalItems(kind3Proposals, kind3ViewModel, accountViewModel, newNav)
-            }
         }
-    }
-}
-
-@Composable
-fun ResetKind3Relays(postViewModel: Kind3RelayListViewModel) {
-    OutlinedButton(
-        onClick = {
-            postViewModel.deleteAll()
-            postViewModel.addAll(Constants.defaultRelays)
-            postViewModel.loadRelayDocuments()
-        },
-    ) {
-        Text(stringRes(R.string.default_relays))
     }
 }
 

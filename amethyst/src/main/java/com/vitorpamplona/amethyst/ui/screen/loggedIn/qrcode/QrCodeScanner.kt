@@ -29,15 +29,19 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import kotlinx.coroutines.CancellationException
 
 @Composable
-fun NIP19QrCodeScanner(onScan: (Route?) -> Unit) {
+fun NIP19QrCodeScanner(
+    accountViewModel: AccountViewModel,
+    onScan: (Route?) -> Unit,
+) {
     SimpleQrCodeScanner {
         try {
-            onScan(uriToRoute(it))
+            onScan(uriToRoute(it, accountViewModel.account))
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.e("NIP19 Scanner", "Error parsing $it", e)

@@ -20,16 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip28PublicChat.admin
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.core.JsonParseException
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip28PublicChat.base.BasePublicChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
+import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -44,9 +48,16 @@ class ChannelMetadataEvent(
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider {
-    override fun eventHints() = channelInfo().relays?.map { EventIdHint(id, it) } ?: emptyList()
+    override fun eventHints() = channelInfo().relays?.mapNotNull { EventIdHint(id, it) } ?: emptyList()
 
-    fun channelInfo() = ChannelData.parse(content) ?: ChannelData()
+    fun channelInfo(): ChannelDataNorm {
+        return try {
+            ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
+        } catch (e: JsonParseException) {
+            Log.e("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
+            ChannelDataNorm()
+        }
+    }
 
     companion object {
         const val KIND = 41
@@ -56,24 +67,24 @@ class ChannelMetadataEvent(
             name: String?,
             about: String?,
             picture: String?,
-            relays: List<String>?,
+            relays: List<NormalizedRelayUrl>?,
             channel: EventHintBundle<ChannelCreateEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMetadataEvent>.() -> Unit = {},
-        ) = build(ChannelData(name, about, picture, relays), channel, createdAt, initializer)
+        ) = build(ChannelDataNorm(name, about, picture, relays), channel, createdAt, initializer)
 
         fun build(
             name: String?,
             about: String?,
             picture: String?,
-            relays: List<String>?,
+            relays: List<NormalizedRelayUrl>?,
             channel: ETag,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMetadataEvent>.() -> Unit = {},
-        ) = build(ChannelData(name, about, picture, relays), channel, createdAt, initializer)
+        ) = build(ChannelDataNorm(name, about, picture, relays), channel, createdAt, initializer)
 
         fun build(
-            data: ChannelData,
+            data: ChannelDataNorm,
             channel: EventHintBundle<ChannelCreateEvent>,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMetadataEvent>.() -> Unit = {},
@@ -84,7 +95,7 @@ class ChannelMetadataEvent(
         }
 
         fun build(
-            data: ChannelData,
+            data: ChannelDataNorm,
             channel: ETag,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelMetadataEvent>.() -> Unit = {},

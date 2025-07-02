@@ -622,7 +622,7 @@ class ChatNewMessageViewModel :
                 toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
                 updateRoomFromUsersInput()
 
-                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelays()
+                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()
                 nip17 = relayList != null
             }
 

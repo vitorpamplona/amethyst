@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -32,7 +34,7 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 data class ReplyAuthorTag(
     override val pubKey: HexKey,
-    override val relayHint: String? = null,
+    override val relayHint: NormalizedRelayUrl? = null,
 ) : PubKeyReferenceTag {
     fun toTagArray() = assemble(pubKey, relayHint)
 
@@ -47,7 +49,10 @@ data class ReplyAuthorTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ReplyAuthorTag(tag[1], tag.getOrNull(2))
+
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+            return ReplyAuthorTag(tag[1], hint)
         }
 
         @JvmStatic
@@ -64,13 +69,17 @@ data class ReplyAuthorTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return PubKeyHint(tag[1], tag[2])
+
+            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(hint != null) { return null }
+
+            return PubKeyHint(tag[1], hint)
         }
 
         @JvmStatic
         fun assemble(
             pubkey: HexKey,
-            relayHint: String?,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint)
+            relayHint: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url)
     }
 }

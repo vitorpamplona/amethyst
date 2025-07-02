@@ -21,12 +21,16 @@
 package com.vitorpamplona.quartz.nip19Bech32.entities
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 
 @Immutable
 data class NSec(
     val hex: String,
 ) : Entity {
+    fun toPubKeyHex() = Nip01.pubKeyCreate(hex.hexToByteArray()).toHexKey()
+
     companion object {
         fun parse(bytes: ByteArray): NSec? {
             if (bytes.isEmpty()) return null

@@ -20,14 +20,19 @@
  */
 package com.vitorpamplona.quartz.nip28PublicChat.admin
 
+import android.R.attr.data
+import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.core.JsonParseException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
+import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -41,9 +46,16 @@ class ChannelCreateEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider {
-    override fun eventHints() = channelInfo().relays?.map { EventIdHint(id, it) } ?: emptyList()
+    override fun eventHints() = channelInfo().relays?.mapNotNull { EventIdHint(id, it) } ?: emptyList()
 
-    fun channelInfo() = ChannelData.parse(content) ?: ChannelData()
+    fun channelInfo(): ChannelDataNorm {
+        return try {
+            ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
+        } catch (e: JsonParseException) {
+            Log.e("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
+            ChannelDataNorm()
+        }
+    }
 
     companion object {
         const val KIND = 40
@@ -52,13 +64,13 @@ class ChannelCreateEvent(
             name: String?,
             about: String?,
             picture: String?,
-            relays: List<String>?,
+            relays: List<NormalizedRelayUrl>?,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelCreateEvent>.() -> Unit = {},
-        ) = build(ChannelData(name, about, picture, relays), createdAt, initializer)
+        ) = build(ChannelDataNorm(name, about, picture, relays), createdAt, initializer)
 
         fun build(
-            data: ChannelData,
+            data: ChannelDataNorm,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<ChannelCreateEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, data.toContent(), createdAt) {

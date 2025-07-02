@@ -21,12 +21,25 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGeohashes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGlobal
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByHashtags
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByAllCommunities
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsByCommunity
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -40,8 +53,21 @@ class HomeOutboxEventsEoseManager(
 ) : PerUserAndFollowListEoseManager<HomeQueryState>(client, allKeys) {
     override fun updateFilter(
         key: HomeQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? = filterHomePostsByFollows(key.followRelay(), since)
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
+        val feedSettings = key.followsPerRelay()
+        return when (feedSettings) {
+            is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since)
+            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since)
+            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since)
+            is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since)
+            is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since)
+            is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since)
+            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since)
+            is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since)
+            else -> emptyList()
+        }
+    }
 
     override fun user(key: HomeQueryState) = key.account.userProfile()
 
@@ -51,9 +77,9 @@ class HomeOutboxEventsEoseManager(
 
     fun HomeQueryState.listName() = listNameFlow().value
 
-    fun HomeQueryState.followRelayFlow() = account.liveHomeListAuthorsPerRelay
+    fun HomeQueryState.followRelayFlow() = account.liveHomeFollowListsPerRelay
 
-    fun HomeQueryState.followRelay() = followRelayFlow().value
+    fun HomeQueryState.followsPerRelay() = followRelayFlow().value
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -69,7 +95,7 @@ class HomeOutboxEventsEoseManager(
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followRelayFlow().sample(5000).collectLatest {
+                    key.followRelayFlow().sample(2000).collectLatest {
                         invalidateFilters()
                     }
                 },
@@ -82,7 +108,7 @@ class HomeOutboxEventsEoseManager(
         key: User,
         subId: String,
     ) {
-        return super.endSub(key, subId)
+        super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
     }
 }

@@ -31,11 +31,13 @@ import androidx.compose.ui.text.withLink
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 
 @Composable
 fun DisplayLocation(
     geohashStr: String,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     LoadCityName(geohashStr) { cityName ->

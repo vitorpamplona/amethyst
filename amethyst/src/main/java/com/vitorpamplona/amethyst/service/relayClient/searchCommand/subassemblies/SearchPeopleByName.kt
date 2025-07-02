@@ -20,21 +20,23 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-fun searchPeopleByName(searchString: HexKey) =
-    listOf(
-        TypedFilter(
-            types = setOf(FeedType.SEARCH),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(MetadataEvent.KIND),
-                    search = searchString,
-                    limit = 1000,
-                ),
-        ),
-    )
+fun searchPeopleByName(
+    searchString: HexKey,
+    relay: NormalizedRelayUrl,
+) = listOf(
+    RelayBasedFilter(
+        relay = relay,
+        filter =
+            Filter(
+                kinds = listOf(MetadataEvent.KIND),
+                search = searchString,
+                limit = 1000,
+            ),
+    ),
+)

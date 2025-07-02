@@ -21,9 +21,10 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.service.relays.EOSERelayList
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.collections.distinctBy
 
 /**
@@ -49,9 +50,9 @@ abstract class SingleSubEoseManager<T>(
     fun since() = latestEOSEs.since()
 
     open fun newEose(
-        relayUrl: String,
+        relay: NormalizedRelayUrl,
         time: Long,
-    ) = latestEOSEs.newEose(relayUrl, time)
+    ) = latestEOSEs.newEose(relay, time)
 
     val sub =
         orchestrator.requestNewSubscription { time, relayUrl ->
@@ -64,13 +65,13 @@ abstract class SingleSubEoseManager<T>(
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
 
-        sub.typedFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
+        sub.relayBasedFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
     }
 
     abstract fun updateFilter(
-        key: List<T>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>?
+        keys: List<T>,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
 
     abstract fun distinct(key: T): Any
 }

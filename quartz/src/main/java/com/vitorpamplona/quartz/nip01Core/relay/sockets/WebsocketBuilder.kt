@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
 interface WebsocketBuilder {
     fun build(
-        url: String,
+        url: NormalizedRelayUrl,
         out: WebSocketListener,
     ): WebSocket
 }

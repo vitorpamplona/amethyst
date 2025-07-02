@@ -25,11 +25,11 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -75,7 +75,7 @@ class FollowListState(
 ) {
     val kind3Follow =
         PeopleListOutBoxFeedDefinition(
-            code = KIND3_FOLLOWS,
+            code = ALL_FOLLOWS,
             name = ResourceName(R.string.follow_list_kind3follows),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
@@ -88,7 +88,6 @@ class FollowListState(
             name = ResourceName(R.string.follow_list_global),
             type = CodeNameType.HARDCODED,
             kinds = DEFAULT_FEED_KINDS,
-            relays = account.activeGlobalRelays().toList(),
         )
 
     val aroundMe =
@@ -161,11 +160,11 @@ class FollowListState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val liveKind3FollowsFlow: Flow<List<FeedDefinition>> =
-        account.liveKind3Follows.transformLatest {
+        account.kind3FollowList.flow.transformLatest {
             checkNotInMainThread()
 
             val communities =
-                it.addresses.mapNotNull {
+                it.communities.mapNotNull {
                     LocalCache.checkGetOrCreateAddressableNote(it)?.let { communityNote ->
                         TagFeedDefinition(
                             "Community/${communityNote.idHex}",
@@ -174,7 +173,6 @@ class FollowListState(
                             route = Route.Community(communityNote.idHex),
                             kinds = DEFAULT_COMMUNITY_FEEDS,
                             aTags = listOf(communityNote.idHex),
-                            relays = account.activeGlobalRelays().toList(),
                         )
                     }
                 }
@@ -188,7 +186,6 @@ class FollowListState(
                         route = Route.Hashtag(it),
                         kinds = DEFAULT_FEED_KINDS,
                         tTags = listOf(it),
-                        relays = account.activeGlobalRelays().toList(),
                     )
                 }
 
@@ -201,7 +198,6 @@ class FollowListState(
                         route = Route.Geohash(it),
                         kinds = DEFAULT_FEED_KINDS,
                         gTags = listOf(it),
-                        relays = account.activeGlobalRelays().toList(),
                     )
                 }
 
@@ -322,7 +318,6 @@ class GlobalFeedDefinition(
     name: Name,
     type: CodeNameType,
     val kinds: List<Int>,
-    val relays: List<String>,
 ) : FeedDefinition(code, name, type, null)
 
 @Immutable
@@ -332,7 +327,6 @@ class TagFeedDefinition(
     type: CodeNameType,
     route: Route?,
     val kinds: List<Int>,
-    val relays: List<String>,
     val pTags: List<String>? = null,
     val eTags: List<String>? = null,
     val aTags: List<String>? = null,

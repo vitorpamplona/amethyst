@@ -56,10 +56,10 @@ fun RelayFeedView(
                     item,
                     accountViewModel = accountViewModel,
                     onAddRelay = {
-                        nav.nav(Route.EditRelays(item.url))
+                        nav.nav(Route.EditRelays(item.url.url))
                     },
                     onRemoveRelay = {
-                        nav.nav(Route.EditRelays(item.url))
+                        nav.nav(Route.EditRelays(item.url.url))
                     },
                 )
                 HorizontalDivider(

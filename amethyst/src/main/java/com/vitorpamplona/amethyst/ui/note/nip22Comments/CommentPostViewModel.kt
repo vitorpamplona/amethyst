@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
@@ -177,7 +178,7 @@ open class CommentPostViewModel :
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     var showRelaysDialog by mutableStateOf(false)
-    var relayList by mutableStateOf<ImmutableList<String>?>(null)
+    var relayList by mutableStateOf<ImmutableList<NormalizedRelayUrl>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -312,11 +313,11 @@ open class CommentPostViewModel :
         val template = createTemplate() ?: return
         val relayList = relayList
 
-        if (nip95attachments.isNotEmpty() && relayList != null) {
+        if (nip95attachments.isNotEmpty() && relayList != null && relayList.isNotEmpty()) {
             val usedImages = template.tags.taggedQuoteIds().toSet()
             nip95attachments.forEach {
-                if (usedImages.contains(it.second.id) == true) {
-                    account?.sendNip95Privately(it.first, it.second, relayList)
+                if (usedImages.contains(it.second.id)) {
+                    account?.sendNip95(it.first, it.second, relayList.toSet())
                 }
             }
         }
@@ -554,17 +555,7 @@ open class CommentPostViewModel :
     fun reloadRelaySet() {
         val account = accountViewModel?.account ?: return
 
-        val nip65 = account.normalizedNIP65WriteRelayList.value
-        val private = account.normalizedPrivateOutBoxRelaySet.value
-        val local = account.settings.localRelayServers
-
-        relayList =
-            if (nip65.isEmpty()) {
-                account.activeWriteRelays().map { it.url }.toImmutableList()
-            } else {
-                val combined: Set<String> = (nip65 + private + local)
-                combined.toImmutableList()
-            }
+        relayList = account.outboxRelays.flow.value.toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {

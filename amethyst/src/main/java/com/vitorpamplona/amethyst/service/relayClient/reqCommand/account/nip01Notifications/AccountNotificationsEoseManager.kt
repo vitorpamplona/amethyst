@@ -20,11 +20,19 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.ammolite.relays.datasources.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlin.collections.forEach
 
 class AccountNotificationsEoseManager(
     client: NostrClient,
@@ -34,6 +42,35 @@ class AccountNotificationsEoseManager(
 
     override fun updateFilter(
         key: AccountQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? = filterNotificationsToPubkey(user(key).pubkeyHex, since)
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? =
+        key.account.notificationRelays.flow.value.flatMap {
+            filterNotificationsToPubkey(it, user(key).pubkeyHex, since?.get(it)?.time)
+        }
+
+    val userJobMap = mutableMapOf<User, List<Job>>()
+
+    @OptIn(FlowPreview::class)
+    override fun newSub(key: AccountQueryState): Subscription {
+        val user = user(key)
+        userJobMap[user]?.forEach { it.cancel() }
+        userJobMap[user] =
+            listOf(
+                key.account.scope.launch(Dispatchers.Default) {
+                    key.account.notificationRelays.flow.collectLatest {
+                        invalidateFilters()
+                    }
+                },
+            )
+
+        return super.newSub(key)
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        userJobMap[key]?.forEach { it.cancel() }
+    }
 }

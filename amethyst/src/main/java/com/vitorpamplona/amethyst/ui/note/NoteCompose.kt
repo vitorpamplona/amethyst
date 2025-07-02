@@ -977,7 +977,7 @@ fun SecondUserInfoRow(
         val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }
         if (geo != null) {
             Spacer(StdHorzSpacer)
-            DisplayLocation(geo, nav)
+            DisplayLocation(geo, accountViewModel, nav)
         }
 
         val baseReward = remember(noteEvent) { noteEvent.bountyBaseReward()?.let { Reward(it) } }

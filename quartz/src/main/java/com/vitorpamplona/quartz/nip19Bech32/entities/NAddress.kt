@@ -23,9 +23,11 @@ package com.vitorpamplona.quartz.nip19Bech32.entities
 import addHex
 import addInt
 import addString
-import addStringIfNotNull
+import addStringIfNotBlank
 import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
@@ -38,9 +40,11 @@ data class NAddress(
     val kind: Int,
     val author: String,
     val dTag: String,
-    val relay: List<String>,
+    val relay: List<NormalizedRelayUrl>,
 ) : Entity {
     fun aTag(): String = Address.assemble(kind, author, dTag)
+
+    fun address() = Address(kind, author, dTag)
 
     companion object {
         fun parse(naddr: String): NAddress? {
@@ -68,20 +72,37 @@ data class NAddress(
             val author = tlv.firstAsHex(TlvTypes.AUTHOR.id) ?: return null
             val kind = tlv.firstAsInt(TlvTypes.KIND.id) ?: return null
 
-            return NAddress(kind, author, d, relay)
+            return NAddress(kind, author, d, relay.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
         }
 
         fun create(
             kind: Int,
             pubKeyHex: String,
             dTag: String,
-            vararg relays: String?,
+            relay: NormalizedRelayUrl?,
+        ): String =
+            TlvBuilder()
+                .apply {
+                    addString(TlvTypes.SPECIAL, dTag)
+                    if (relay != null) {
+                        addStringIfNotBlank(TlvTypes.RELAY, relay.url)
+                    }
+                    addHex(TlvTypes.AUTHOR, pubKeyHex)
+                    addInt(TlvTypes.KIND, kind)
+                }.build()
+                .toNAddress()
+
+        fun create(
+            kind: Int,
+            pubKeyHex: String,
+            dTag: String,
+            relays: List<NormalizedRelayUrl>,
         ): String =
             TlvBuilder()
                 .apply {
                     addString(TlvTypes.SPECIAL, dTag)
                     relays.forEach {
-                        addStringIfNotNull(TlvTypes.RELAY, it)
+                        addStringIfNotBlank(TlvTypes.RELAY, it.url)
                     }
                     addHex(TlvTypes.AUTHOR, pubKeyHex)
                     addInt(TlvTypes.KIND, kind)

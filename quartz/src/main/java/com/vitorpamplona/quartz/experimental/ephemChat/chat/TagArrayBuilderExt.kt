@@ -23,7 +23,8 @@ package com.vitorpamplona.quartz.experimental.ephemChat.chat
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.tags.RelayTag
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.tags.RoomTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun TagArrayBuilder<EphemeralChatEvent>.room(room: String) = addUnique(RoomTag.assemble(room))
 
-fun TagArrayBuilder<EphemeralChatEvent>.relay(room: String) = addUnique(RelayTag.assemble(room))
+fun TagArrayBuilder<EphemeralChatEvent>.relay(relay: NormalizedRelayUrl) = addUnique(RelayTag.assemble(relay))

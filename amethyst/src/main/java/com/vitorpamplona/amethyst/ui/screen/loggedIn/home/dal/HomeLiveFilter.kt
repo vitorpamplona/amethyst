@@ -25,6 +25,10 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -41,42 +45,32 @@ class HomeLiveFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     fun limitTime() = TimeUtils.fifteenMinutesAgo()
 
     override fun feed(): List<Channel> {
-        val gRelays = account.activeGlobalRelays().toSet()
         val filterParams = buildFilterParams(account)
         val fiveMinsAgo = limitTime()
 
         val list =
-            LocalCache.channels.filter { id, channel ->
-                shouldIncludeChannel(channel, gRelays, filterParams, fiveMinsAgo)
+            LocalCache.ephemeralChannels.filter { id, channel ->
+                shouldIncludeChannel(channel, filterParams, fiveMinsAgo)
             }
 
         return sort(list.toSet())
     }
 
     fun shouldIncludeChannel(
-        channel: Channel,
-        gRelays: Set<String>,
+        channel: EphemeralChatChannel,
         filterParams: FilterByListParams,
         timeLimit: Long,
     ): Boolean =
-        if (channel is EphemeralChatChannel) {
-            val list =
-                channel.notes.filter { key, value ->
-                    acceptableEvent(value, gRelays, filterParams, timeLimit)
-                }
-            list.isNotEmpty()
-        } else {
-            false
-        }
+        channel.notes.filter { key, value ->
+            acceptableEvent(value, filterParams, timeLimit)
+        }.isNotEmpty()
 
     override fun updateListWith(
         oldList: List<Channel>,
@@ -110,31 +104,37 @@ class HomeLiveFilter(
     }
 
     private fun applyFilter(collection: Collection<Note>): Set<Note> {
-        val gRelays = account.activeGlobalRelays().toSet()
         val filterParams = buildFilterParams(account)
 
         return collection.filterTo(HashSet()) {
-            acceptableEvent(it, gRelays, filterParams, limitTime())
+            acceptableEvent(it, filterParams, limitTime())
         }
     }
 
     private fun acceptableEvent(
-        it: Note,
-        globalRelays: Set<String>,
+        note: Note,
         filterParams: FilterByListParams,
         timeLimit: Long,
     ): Boolean {
-        val createdAt = it.createdAt() ?: return false
-        val noteEvent = it.event
-        val isGlobalRelay = it.relays.any { globalRelays.contains(it.url) }
+        val createdAt = note.createdAt() ?: return false
+        val noteEvent = note.event
         return (noteEvent is EphemeralChatEvent) &&
             createdAt > timeLimit &&
-            filterParams.match(noteEvent, isGlobalRelay)
+            filterParams.match(noteEvent, note.relays)
     }
 
     fun sort(collection: Set<Channel>): List<Channel> {
-        val followingKeySet =
-            account.liveDiscoveryFollowLists.value?.authors ?: account.liveKind3Follows.value.authors
+        val topFilter = account.liveDiscoveryFollowLists.value
+        val topFilterAuthors =
+            when (topFilter) {
+                is AuthorsByOutboxTopNavFilter -> topFilter.authors
+                is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
+                is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+                is SingleCommunityTopNavFilter -> topFilter.authors
+                else -> null
+            }
+
+        val followingKeySet = topFilterAuthors ?: account.kind3FollowList.flow.value.authors
 
         val followCounts =
             collection.associate { it to followsThatParticipateOn(it, followingKeySet) }

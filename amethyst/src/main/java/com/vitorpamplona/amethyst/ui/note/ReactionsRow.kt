@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReposts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
@@ -1156,6 +1157,12 @@ fun ObserveZapIcon(
     if (!wasZappedByLoggedInUser.value) {
         val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
+
         LaunchedEffect(key1 = zapsState) {
             if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
                 accountViewModel.calculateIfNoteWasZappedByAccount(baseNote) { newWasZapped ->
@@ -1179,6 +1186,12 @@ fun ObserveZapAmountText(
     val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
+
         @Suppress("ProduceStateDoesNotAssignValue")
         val zapAmountTxt by
             produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {

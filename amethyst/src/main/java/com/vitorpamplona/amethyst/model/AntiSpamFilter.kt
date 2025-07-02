@@ -24,10 +24,10 @@ import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.njumpLink
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStats
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +45,7 @@ class AntiSpamFilter {
 
     fun isSpam(
         event: Event,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
     ): Boolean {
         checkNotInMainThread()
 
@@ -74,14 +74,14 @@ class AntiSpamFilter {
         ) {
             Log.w(
                 "Potential SPAM Message",
-                "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${relay?.url} ${event.content.replace("\n", " | ")}",
+                "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} $relay ${event.content.replace("\n", " | ")}",
             )
 
             // Log down offenders
             logOffender(hash, event)
 
             if (relay != null) {
-                RelayStats.newSpam(relay.url, njumpLink(NEvent.create(event.id, event.pubKey, event.kind, relay.url)))
+                RelayStats.newSpam(relay, njumpLink(NEvent.create(event.id, event.pubKey, event.kind, relay)))
             }
 
             flowSpam.tryEmit(AntiSpamState(this))

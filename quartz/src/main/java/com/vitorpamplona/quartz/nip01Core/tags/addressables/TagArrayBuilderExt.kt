@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.tags.addressables
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip18Reposts.quotes.toQTagArray
 
 fun <T : Event> TagArrayBuilder<T>.aTag(tag: ATag) = add(tag.toATagArray())
 

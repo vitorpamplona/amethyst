@@ -73,6 +73,6 @@ fun RenderNIP90ContentDiscoveryResponse(
     }
 
     if (noteEvent.hasHashtags()) {
-        DisplayUncitedHashtags(noteEvent, noteEvent.content, callbackUri, nav)
+        DisplayUncitedHashtags(noteEvent, noteEvent.content, callbackUri, accountViewModel, nav)
     }
 }

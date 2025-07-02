@@ -22,65 +22,68 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.sub
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 fun filterEventsInThreadForRoot(
     root: Note,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
     val addressRoot = if (root is AddressableNote) root.idHex else null
     val eventRoot = if (root !is AddressableNote) root.idHex else root.event?.id
 
-    val address =
-        if (addressRoot != null) {
-            listOf(
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter =
-                        SincePerRelayFilter(
-                            tags = mapOf("a" to listOf(addressRoot)),
-                            since = since,
-                        ),
-                ),
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter =
-                        SincePerRelayFilter(
-                            tags = mapOf("A" to listOf(addressRoot)),
-                            since = since,
-                        ),
-                ),
-            )
-        } else {
-            emptyList()
-        }
+    return root.relayUrlsForReactions().toSet().flatMap {
+        val since = since?.get(it)?.time
 
-    val event =
-        if (eventRoot != null) {
-            listOf(
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter =
-                        SincePerRelayFilter(
-                            tags = mapOf("e" to listOf(eventRoot)),
-                            since = since,
-                        ),
-                ),
-                TypedFilter(
-                    types = COMMON_FEED_TYPES,
-                    filter =
-                        SincePerRelayFilter(
-                            tags = mapOf("E" to listOf(eventRoot)),
-                            since = since,
-                        ),
-                ),
-            )
-        } else {
-            emptyList()
-        }
+        val addressList =
+            if (addressRoot != null) {
+                listOf(
+                    RelayBasedFilter(
+                        relay = it,
+                        filter =
+                            Filter(
+                                tags = mapOf("a" to listOf(addressRoot)),
+                                since = since,
+                            ),
+                    ),
+                    RelayBasedFilter(
+                        relay = it,
+                        filter =
+                            Filter(
+                                tags = mapOf("A" to listOf(addressRoot)),
+                                since = since,
+                            ),
+                    ),
+                )
+            } else {
+                emptyList()
+            }
 
-    return address + event
+        val eventList =
+            if (eventRoot != null) {
+                listOf(
+                    RelayBasedFilter(
+                        relay = it,
+                        filter =
+                            Filter(
+                                tags = mapOf("e" to listOf(eventRoot)),
+                                since = since,
+                            ),
+                    ),
+                    RelayBasedFilter(
+                        relay = it,
+                        filter =
+                            Filter(
+                                tags = mapOf("E" to listOf(eventRoot)),
+                                since = since,
+                            ),
+                    ),
+                )
+            } else {
+                emptyList()
+            }
+
+        addressList + eventList
+    }
 }

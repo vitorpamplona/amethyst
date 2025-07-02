@@ -21,11 +21,10 @@
 package com.vitorpamplona.quartz.nip36SensitiveContent
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 
-fun TagArray.isSensitive() = this.any { (it.size > 0 && it[0] == ContentWarningTag.TAG_NAME) }
+val nsfwTags = setOf("nsfw", "nude", "NSFW", "NUDE", "Nsfw", "Nude")
 
-fun TagArray.isSensitiveOrNSFW() =
-    this.any {
-        (it.size > 0 && it[0] == ContentWarningTag.TAG_NAME) ||
-            (it.size > 1 && it[0] == "t" && (it[1].equals("nsfw", true) || it[1].equals("nude", true)))
-    }
+fun TagArray.isSensitive() = this.any(ContentWarningTag::isTag)
+
+fun TagArray.isSensitiveOrNSFW() = this.any { ContentWarningTag.isTag(it) || HashtagTag.isAnyTagged(it, nsfwTags) }

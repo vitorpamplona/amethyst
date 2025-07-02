@@ -21,9 +21,11 @@
 package com.vitorpamplona.quartz.nip01Core.relay.sockets
 
 interface WebSocket {
+    fun needsReconnect(): Boolean
+
     fun connect()
 
-    fun cancel()
+    fun disconnect()
 
     fun send(msg: String): Boolean
 }

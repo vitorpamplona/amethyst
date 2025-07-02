@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.ammolite.relays.datasources
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
 class SubscriptionSet {
     private var subscriptions = mapOf<String, Subscription>()
 
@@ -35,11 +37,11 @@ class SubscriptionSet {
 
     fun remove(sub: Subscription) = remove(sub.id)
 
-    fun newSub(onEOSE: ((Long, String) -> Unit)? = null): Subscription = Subscription(onEose = onEOSE).also { add(it) }
+    fun newSub(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null): Subscription = Subscription(onEose = onEOSE).also { add(it) }
 
     fun forEach(action: (Subscription) -> Unit) = subscriptions.values.forEach(action)
 
     operator fun get(subId: String) = subscriptions[subId]
 
-    fun actives() = subscriptions.values.filter { it.typedFilters != null }
+    fun actives() = subscriptions.values.filter { it.relayBasedFilters != null }
 }

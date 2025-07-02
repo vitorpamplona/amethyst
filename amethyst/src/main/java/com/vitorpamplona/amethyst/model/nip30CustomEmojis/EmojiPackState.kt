@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip30CustomEmojis
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
@@ -67,7 +68,7 @@ class EmojiPackState(
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveEmojiSelectionPack: StateFlow<List<StateFlow<NoteState>>?> by lazy {
+    val flow: StateFlow<List<StateFlow<NoteState>>?> by lazy {
         getEmojiPackSelectionFlow()
             .transformLatest {
                 emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
@@ -98,7 +99,7 @@ class EmojiPackState(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val myEmojis by lazy {
-        liveEmojiSelectionPack
+        flow
             .transformLatest { emojiList ->
                 if (emojiList != null) {
                     emitAll(
@@ -115,5 +116,41 @@ class EmojiPackState(
                 SharingStarted.Eagerly,
                 mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
             )
+    }
+
+    fun addEmojiPack(
+        emojiPack: Note,
+        onDone: (EmojiPackSelectionEvent) -> Unit,
+    ) {
+        if (!signer.isWriteable()) return
+
+        val emojiPackEvent = emojiPack.event
+        if (emojiPackEvent !is EmojiPackEvent) return
+
+        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: return
+
+        val usersEmojiList = getEmojiPackSelection()
+        if (usersEmojiList == null) {
+            val template = EmojiPackSelectionEvent.build(listOf(eventHint))
+            signer.sign(template, onDone)
+        } else {
+            val template = EmojiPackSelectionEvent.add(usersEmojiList, eventHint)
+            signer.sign(template, onDone)
+        }
+    }
+
+    fun removeEmojiPack(
+        emojiPack: Note,
+        onDone: (EmojiPackSelectionEvent) -> Unit,
+    ) {
+        if (!signer.isWriteable()) return
+
+        val usersEmojiList = getEmojiPackSelection() ?: return
+
+        val emojiPackEvent = emojiPack.event
+        if (emojiPackEvent !is EmojiPackEvent) return
+
+        val template = EmojiPackSelectionEvent.remove(usersEmojiList, emojiPackEvent)
+        signer.sign(template, onDone)
     }
 }

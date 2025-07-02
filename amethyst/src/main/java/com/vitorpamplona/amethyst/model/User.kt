@@ -24,11 +24,11 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortenHex
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache.RelayBriefInfo
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
@@ -57,7 +58,7 @@ class User(
     var info: UserMetadata? = null
 
     var latestMetadata: MetadataEvent? = null
-    var latestMetadataRelay: String? = null
+    var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
     var latestBookmarkList: BookmarkListEvent? = null
 
@@ -67,7 +68,7 @@ class User(
     var zaps = mapOf<Note, Note?>()
         private set
 
-    var relaysBeingUsed = mapOf<String, RelayInfo>()
+    var relaysBeingUsed = mapOf<NormalizedRelayUrl, RelayInfo>()
         private set
 
     var privateChatrooms = mapOf<ChatroomKey, Chatroom>()
@@ -79,13 +80,21 @@ class User(
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
 
+    fun dmInboxRelayList() = (LocalCache.getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(pubkeyHex))?.event as? ChatMessageRelayListEvent)
+
     fun authorRelayList() = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(pubkeyHex))?.event as? AdvertisedRelayListEvent)
 
     fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
 
-    fun relayHints() = authorRelayList()?.writeRelays()?.take(3) ?: listOfNotNull(latestMetadataRelay)
+    fun outboxRelays() = authorRelayList()?.writeRelaysNorm() ?: listOfNotNull(latestMetadataRelay)
 
-    fun bestRelayHint() = authorRelayList()?.writeRelays()?.firstOrNull() ?: latestMetadataRelay
+    fun relayHints() = authorRelayList()?.writeRelaysNorm()?.take(3) ?: listOfNotNull(latestMetadataRelay)
+
+    fun inboxRelays() = authorRelayList()?.readRelaysNorm() ?: listOfNotNull(latestMetadataRelay)
+
+    fun dmInboxRelays() = dmInboxRelayList()?.relays()?.ifEmpty { null } ?: inboxRelays()
+
+    fun bestRelayHint() = authorRelayList()?.writeRelaysNorm()?.firstOrNull() ?: latestMetadataRelay
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
@@ -289,12 +298,12 @@ class User(
     }
 
     fun addRelayBeingUsed(
-        relay: RelayBriefInfo,
+        relay: NormalizedRelayUrl,
         eventTime: Long,
     ) {
-        val here = relaysBeingUsed[relay.url]
+        val here = relaysBeingUsed[relay]
         if (here == null) {
-            relaysBeingUsed = relaysBeingUsed + Pair(relay.url, RelayInfo(relay.url, eventTime, 1))
+            relaysBeingUsed = relaysBeingUsed + Pair(relay, RelayInfo(relay, eventTime, 1))
         } else {
             if (eventTime > here.lastEvent) {
                 here.lastEvent = eventTime
@@ -345,8 +354,7 @@ class User(
         type: ReportType,
     ): Boolean =
         reports[loggedIn]?.firstOrNull {
-            it.event is ReportEvent &&
-                (it.event as ReportEvent).reportedAuthor().any { it.type == type }
+            (it.event as? ReportEvent)?.reportedAuthor()?.any { it.type == type } ?: false
         } != null
 
     fun containsAny(hiddenWordsCase: List<DualCase>): Boolean {
@@ -445,7 +453,7 @@ class UserFlowSet(
 
 @Immutable
 data class RelayInfo(
-    val url: String,
+    val url: NormalizedRelayUrl,
     var lastEvent: Long,
     var counter: Long,
 )

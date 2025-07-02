@@ -39,7 +39,7 @@ class DualHttpClientManager(
 ) {
     val factory = OkHttpClientFactory(keyCache)
 
-    private val defaultHttpClient: StateFlow<OkHttpClient> =
+    val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->
             factory.buildHttpClient(proxy, mobile, userAgent)
         }.stateIn(
@@ -48,7 +48,7 @@ class DualHttpClientManager(
             factory.buildHttpClient(proxyPortProvider.value, isMobileDataProvider.value, userAgent),
         )
 
-    private val defaultHttpClientWithoutProxy: StateFlow<OkHttpClient> =
+    val defaultHttpClientWithoutProxy: StateFlow<OkHttpClient> =
         isMobileDataProvider
             .map { mobile ->
                 factory.buildHttpClient(mobile, userAgent)

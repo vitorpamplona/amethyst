@@ -20,15 +20,17 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserLoaderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class UserFinderQueryState(
     val user: User,
+    val account: Account,
 )
 
 class UserFinderFilterAssembler(

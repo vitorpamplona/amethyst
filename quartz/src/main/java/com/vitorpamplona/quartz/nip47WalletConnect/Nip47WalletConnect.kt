@@ -23,13 +23,15 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 import androidx.core.net.toUri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import kotlinx.coroutines.CancellationException
 
 // Rename to the corect nip number when ready.
 class Nip47WalletConnect {
     companion object {
-        fun parse(uri: String): Nip47URI {
+        fun parse(uri: String): Nip47URINorm {
             // nostrwalletconnect://b889ff5b1513b641e2a139f661a661364979c5beee91842f8f0ef42ab558e9d4?relay=wss%3A%2F%2Frelay.damus.io&metadata=%7B%22name%22%3A%22Example%22%7D
 
             val url = uri.toUri()
@@ -49,15 +51,31 @@ class Nip47WalletConnect {
                 }
 
             val relay = url.getQueryParameter("relay") ?: throw IllegalArgumentException("Relay cannot be null")
+            val relayNorm = RelayUrlNormalizer.normalizeOrNull(relay) ?: throw IllegalArgumentException("Invalid relay Url")
             val secret = url.getQueryParameter("secret")
 
-            return Nip47URI(pubkeyHex, relay, secret)
+            return Nip47URINorm(pubkeyHex, relayNorm, secret)
         }
     }
 
     data class Nip47URI(
         val pubKeyHex: HexKey,
         val relayUri: String,
+        val secret: HexKey?,
+    ) {
+        fun normalize(): Nip47WalletConnect.Nip47URINorm? =
+            RelayUrlNormalizer.normalizeOrNull(relayUri)?.let {
+                Nip47URINorm(
+                    pubKeyHex,
+                    it,
+                    secret,
+                )
+            }
+    }
+
+    data class Nip47URINorm(
+        val pubKeyHex: HexKey,
+        val relayUri: NormalizedRelayUrl,
         val secret: HexKey?,
     )
 }

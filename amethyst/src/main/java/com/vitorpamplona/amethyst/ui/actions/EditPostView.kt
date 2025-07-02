@@ -91,7 +91,9 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
+import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
+import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.painterRes
@@ -127,7 +129,7 @@ fun EditPostView(
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     var showRelaysDialog by remember { mutableStateOf(false) }
-    var relayList = remember { accountViewModel.account.activeWriteRelays().toImmutableList() }
+    var relayList = remember { accountViewModel.account.outboxRelays.flow.value.toImmutableList() }
 
     LaunchedEffect(Unit) {
         postViewModel.load(edit, versionLookingAt, accountViewModel)

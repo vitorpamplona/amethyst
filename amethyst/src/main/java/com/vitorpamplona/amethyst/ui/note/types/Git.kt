@@ -199,6 +199,7 @@ private fun RenderGitPatchEvent(
                     event = noteEvent,
                     content = eventContent,
                     callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
                     nav = nav,
                 )
             }
@@ -301,7 +302,7 @@ private fun RenderGitIssueEvent(
             }
 
             if (note.event?.hasHashtags() == true) {
-                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
+                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
             }
         }
     }

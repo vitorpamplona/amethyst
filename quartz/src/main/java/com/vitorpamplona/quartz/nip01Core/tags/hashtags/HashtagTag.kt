@@ -30,6 +30,16 @@ class HashtagTag {
         @JvmStatic
         fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
+        fun isTagged(
+            tag: Array<String>,
+            hashtag: String,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] == hashtag
+
+        fun isAnyTagged(
+            tag: Array<String>,
+            hashtags: Set<String>,
+        ) = tag.has(1) && tag[0] == TAG_NAME && tag[1] in hashtags
+
         @JvmStatic
         fun parse(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }

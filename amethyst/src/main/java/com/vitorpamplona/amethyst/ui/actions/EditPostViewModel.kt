@@ -45,9 +45,9 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestio
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -120,18 +120,18 @@ open class EditPostViewModel : ViewModel() {
         editedFromNote = edit
     }
 
-    fun sendPost(relayList: List<RelaySetupInfo>) {
+    fun sendPost(relayList: List<NormalizedRelayUrl>) {
         viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList) }
     }
 
-    suspend fun innerSendPost(relayList: List<RelaySetupInfo>) {
+    suspend fun innerSendPost(relayList: List<NormalizedRelayUrl>) {
         if (accountViewModel == null) {
             cancel()
             return
         }
 
         nip95attachments.forEach {
-            account?.sendNip95(it.first, it.second, relayList)
+            account?.sendNip95(it.first, it.second, relayList.toSet())
         }
 
         val notify =

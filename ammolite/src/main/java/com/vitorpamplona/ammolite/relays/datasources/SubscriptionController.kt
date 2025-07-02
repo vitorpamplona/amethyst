@@ -21,10 +21,12 @@
 package com.vitorpamplona.ammolite.relays.datasources
 
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.Relay
-import com.vitorpamplona.ammolite.relays.TypedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import java.util.concurrent.atomic.AtomicBoolean
@@ -44,36 +46,36 @@ class SubscriptionController(
     val stats = SubscriptionStats()
 
     private val clientListener =
-        object : NostrClient.Listener {
+        object : IRelayClientListener {
             override fun onEvent(
+                relay: IRelayClient,
+                subId: String,
                 event: Event,
-                subscriptionId: String,
-                relay: Relay,
                 arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
-                if (subscriptions.contains(subscriptionId)) {
-                    stats.add(subscriptionId, event.kind)
+                if (subscriptions.contains(subId)) {
+                    stats.add(subId, event.kind)
                     if (afterEOSE) {
-                        runAfterEOSE(subscriptionId, relay, arrivalTime)
+                        runAfterEOSE(subId, relay, arrivalTime)
                     }
                 }
             }
 
             override fun onEOSE(
-                relay: Relay,
-                subscriptionId: String,
+                relay: IRelayClient,
+                subId: String,
                 arrivalTime: Long,
             ) {
-                if (subscriptions.contains(subscriptionId)) {
-                    runAfterEOSE(subscriptionId, relay, arrivalTime)
+                if (subscriptions.contains(subId)) {
+                    runAfterEOSE(subId, relay, arrivalTime)
                 }
             }
         }
 
     private fun runAfterEOSE(
         subscriptionId: String,
-        relay: Relay,
+        relay: IRelayClient,
         arrivalTime: Long,
     ) {
         subscriptions[subscriptionId]?.callEose(arrivalTime, relay.url)
@@ -109,7 +111,7 @@ class SubscriptionController(
 
     fun getSub(subId: String) = subscriptions.get(subId)
 
-    fun requestNewSubscription(onEOSE: ((Long, String) -> Unit)? = null): Subscription = subscriptions.newSub(onEOSE)
+    fun requestNewSubscription(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null): Subscription = subscriptions.newSub(onEOSE)
 
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 
@@ -163,9 +165,9 @@ class SubscriptionController(
 
     fun updateRelaysIfNeeded(
         updatedSubscription: Subscription,
-        currentFilters: List<TypedFilter>?,
+        currentFilters: List<RelayBasedFilter>?,
     ) {
-        val updatedSubscriptionNewFilters = updatedSubscription.typedFilters
+        val updatedSubscriptionNewFilters = updatedSubscription.relayBasedFilters
 
         val isActive = client.isActive(updatedSubscription.id)
 

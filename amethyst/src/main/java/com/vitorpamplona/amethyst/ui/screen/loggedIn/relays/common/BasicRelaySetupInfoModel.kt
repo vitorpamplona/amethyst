@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,14 +47,14 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         loadRelayDocuments()
     }
 
-    abstract fun getRelayList(): List<String>?
+    abstract fun getRelayList(): List<NormalizedRelayUrl>?
 
-    abstract fun saveRelayList(urlList: List<String>)
+    abstract fun saveRelayList(urlList: List<NormalizedRelayUrl>)
 
     fun create() {
         if (hasModified) {
             viewModelScope.launch(Dispatchers.IO) {
-                saveRelayList(_relays.value.map { it.url })
+                saveRelayList(_relays.value.map { it.relay })
                 clear()
             }
         }
@@ -63,8 +64,10 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _relays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
-                    dirtyUrl = item.url,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
+                    relay = item.relay,
+                    okHttpClient = {
+                        Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForClean(item.relay))
+                    },
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -81,14 +84,14 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
             relayList
                 .map { relaySetupInfoBuilder(it) }
-                .distinctBy { it.url }
+                .distinctBy { it.relay }
                 .sortedBy { it.relayStat.receivedBytes }
                 .reversed()
         }
     }
 
     fun addRelay(relay: BasicRelaySetupInfo) {
-        if (relays.value.any { it.url == relay.url }) return
+        if (relays.value.any { it.relay == relay.relay }) return
 
         _relays.update { it.plus(relay) }
         hasModified = true

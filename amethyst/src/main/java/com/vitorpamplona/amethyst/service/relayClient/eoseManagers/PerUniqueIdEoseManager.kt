@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.service.relays.EOSEFollowList
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.collections.distinctBy
 
 /**
@@ -50,7 +51,7 @@ abstract class PerUniqueIdEoseManager<T>(
 
     fun newEose(
         key: T,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         latestEOSEs.newEose(id(key), relayUrl, time)
@@ -73,7 +74,7 @@ abstract class PerUniqueIdEoseManager<T>(
 
     fun findOrCreateSubFor(key: T): Subscription {
         val id = id(key)
-        var subId = userSubscriptionMap[id]
+        val subId = userSubscriptionMap[id]
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[id] = it.id }
         } else {
@@ -88,7 +89,7 @@ abstract class PerUniqueIdEoseManager<T>(
 
         uniqueSubscribedAccounts.forEach {
             val mainKey = id(it)
-            findOrCreateSubFor(it).typedFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            findOrCreateSubFor(it).relayBasedFilters = updateFilter(it, since(it))?.ifEmpty { null }
 
             updated.add(mainKey)
         }
@@ -102,8 +103,8 @@ abstract class PerUniqueIdEoseManager<T>(
 
     abstract fun updateFilter(
         key: T,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>?
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
 
     abstract fun id(key: T): String
 }

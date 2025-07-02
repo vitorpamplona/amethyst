@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.forks
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.MARKER
 
@@ -29,8 +30,8 @@ fun MarkedETag.Companion.parseFork(tag: Array<String>): MarkedETag? {
     // ["e", id hex, relay hint, marker, pubkey]
     return MarkedETag(
         tag[ORDER_EVT_ID],
-        tag[ORDER_RELAY],
-        tag[ORDER_MARKER],
+        tag[ORDER_RELAY].ifBlank { null }?.let { RelayUrlNormalizer.normalizeOrNull(it) },
+        MARKER.FORK,
         tag.getOrNull(
             ORDER_PUBKEY,
         ),

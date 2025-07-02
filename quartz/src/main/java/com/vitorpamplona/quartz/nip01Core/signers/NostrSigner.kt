@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 abstract class NostrSigner(
     val pubKey: HexKey,
 ) {
+    abstract fun isWriteable(): Boolean
+
     fun <T : Event> sign(
         ev: EventTemplate<T>,
         onReady: (T) -> Unit,

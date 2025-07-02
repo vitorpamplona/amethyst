@@ -20,21 +20,42 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class UserLoaderSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubNoEoseCacheEoseManager<UserFinderQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun updateFilter(keys: List<UserFinderQueryState>): List<TypedFilter>? {
-        val firstTimers = keys.filter { it.user.latestMetadata == null }.mapTo(mutableSetOf()) { it.user.pubkeyHex }
+    override fun updateFilter(keys: List<UserFinderQueryState>): List<RelayBasedFilter>? {
+        val firstTimers = mutableSetOf<User>()
+
+        keys.forEach {
+            if (it.user.latestMetadata == null) {
+                firstTimers.add(it.user)
+            } else {
+                null
+            }
+        }
+
+        keys.mapTo(mutableSetOf()) { it.account }.forEach {
+            it.kind3FollowList.flow.value.authors.forEach {
+                val user = LocalCache.getOrCreateUser(it)
+                if (user.latestMetadata == null) {
+                    firstTimers.add(user)
+                } else {
+                    null
+                }
+            }
+        }
 
         if (firstTimers.isEmpty()) return null
 
-        return filterNewUserMetadataForKey(firstTimers)
+        return filterFindUserMetadataForKey(firstTimers)
     }
 
     override fun distinct(key: UserFinderQueryState) = key.user

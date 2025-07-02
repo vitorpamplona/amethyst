@@ -73,7 +73,7 @@ fun RenderContentAsMarkdown(
     val onClick =
         remember {
             { link: String ->
-                val route = uriToRoute(link)
+                val route = uriToRoute(link, accountViewModel.account)
                 if (route != null) {
                     nav.nav(route)
                 } else {

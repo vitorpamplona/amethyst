@@ -52,8 +52,9 @@ import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
@@ -74,7 +75,7 @@ fun DisplayRelaySet(
     val relays by
         remember(noteEvent) {
             mutableStateOf(
-                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                noteEvent.relays().toImmutableList(),
             )
         }
 
@@ -105,14 +106,14 @@ fun DisplayNIP65RelayList(
     val writeRelays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.writeRelays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                noteEvent.writeRelaysNorm()?.toImmutableList() ?: persistentListOf(),
             )
         }
 
     val readRelays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.readRelays()?.map { RelayBriefInfoCache.RelayBriefInfo(it) }?.toImmutableList() ?: persistentListOf(),
+                noteEvent.readRelaysNorm()?.toImmutableList() ?: persistentListOf(),
             )
         }
 
@@ -147,7 +148,7 @@ fun DisplayDMRelayList(
     val relays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                noteEvent.relays().toImmutableList(),
             )
         }
 
@@ -173,7 +174,7 @@ fun DisplaySearchRelayList(
     val relays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                noteEvent.relays().toImmutableList(),
             )
         }
 
@@ -189,7 +190,7 @@ fun DisplaySearchRelayList(
 
 @Composable
 fun DisplayRelaySet(
-    relays: ImmutableList<RelayBriefInfoCache.RelayBriefInfo>,
+    relays: ImmutableList<NormalizedRelayUrl>,
     relayListName: String,
     relayDescription: String?,
     backgroundColor: MutableState<Color>,
@@ -239,7 +240,7 @@ fun DisplayRelaySet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = relay.displayUrl,
+                        text = relay.displayUrl(),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -250,7 +251,7 @@ fun DisplayRelaySet(
                     )
 
                     Column(modifier = Modifier.padding(start = 10.dp)) {
-                        RelayOptionsAction(relay.url, accountViewModel, nav)
+                        RelayOptionsAction(relay, accountViewModel, nav)
                     }
                 }
             }
@@ -274,7 +275,7 @@ fun DisplayRelaySet(
 
 @Composable
 private fun RelayOptionsAction(
-    relay: String,
+    relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -282,11 +283,11 @@ private fun RelayOptionsAction(
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {
-            nav.nav(Route.EditRelays(relay))
+            nav.nav(Route.EditRelays(relay.url))
         }
     } else {
         RemoveRelayButton {
-            nav.nav(Route.EditRelays(relay))
+            nav.nav(Route.EditRelays(relay.url))
         }
     }
 }

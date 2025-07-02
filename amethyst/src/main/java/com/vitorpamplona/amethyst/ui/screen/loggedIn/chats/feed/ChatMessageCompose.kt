@@ -233,7 +233,7 @@ fun NormalChatNote(
                             val geo = remember(note) { note.event?.geoHashOrScope() }
                             if (geo != null) {
                                 Spacer(StdHorzSpacer)
-                                DisplayLocation(geo, nav)
+                                DisplayLocation(geo, accountViewModel, nav)
                             }
 
                             val pow = remember(note) { note.event?.strongPoWOrNull() }

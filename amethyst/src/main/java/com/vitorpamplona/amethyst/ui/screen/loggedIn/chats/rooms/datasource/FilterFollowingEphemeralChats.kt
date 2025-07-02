@@ -20,39 +20,44 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun filterFollowingEphemeralChats(
-    followingChannels: Set<RoomId>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (followingChannels == null || followingChannels.isEmpty()) return null
+    followingChannels: Set<RoomId>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? {
+    if (followingChannels.isEmpty()) return null
 
-    val dTags =
-        followingChannels.map {
-            if (it.id.isBlank()) {
-                "_"
-            } else {
-                it.id
+    val relayRoomDTags =
+        mapOfSet {
+            followingChannels.forEach { room ->
+                if (!room.relayUrl.url.isBlank()) {
+                    add(room.relayUrl, room.id.ifBlank { "_" })
+                } else {
+                    Constants.eventFinderRelays.forEach {
+                        add(it, room.id.ifBlank { "_" })
+                    }
+                }
             }
         }
 
-    return listOf(
-        TypedFilter(
+    return relayRoomDTags.map {
+        RelayBasedFilter(
             // Metadata comes from any relay
-            types = setOf(FeedType.PUBLIC_CHATS),
+            relay = it.key,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(EphemeralChatEvent.KIND),
-                    tags = mapOf("d" to dTags),
+                    tags = mapOf("d" to it.value.sorted()),
                     limit = 100,
-                    since = since,
+                    since = since?.get(it.key)?.time,
                 ),
-        ),
-    )
+        )
+    }
 }
