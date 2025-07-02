@@ -72,32 +72,6 @@ class NostrClient(
             activeSubscriptions.relays.value + eventOutbox.relays.value
         }.onEach {
             relayPool.updatePool(it)
-
-            val subs = activeSubscriptions.allSubscriptions()
-
-            it.forEach { relay ->
-                var hasSub = false
-                subs.forEach { sub ->
-                    sub.value.filters.forEach {
-                        if (it.isValidFor(relay)) {
-                            hasSub = true
-                        }
-                    }
-                }
-                if (!hasSub) {
-                    Log.d("NostrClient", "AABBCC $relay doesn't have any sub")
-                }
-
-                if (relayPool.getRelay(relay)?.isConnected() == false) {
-                    Log.d("NostrClient", "AABBCC $relay is not connected")
-                }
-            }
-
-            val filters = subs.values.sumOf { it.filters.size }
-            Log.d("NostrClient", "Updating list for relays to ${it.size} relays and ${subs.size} subscriptions and $filters filters")
-            it.forEach {
-                Log.d("NostrClient", "${it.url} isConnected ${relayPool.getRelay(it)?.isConnected()}")
-            }
         }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

@@ -98,8 +98,6 @@ open class BasicRelayClient(
     }
 
     fun connectAndRunOverride(onConnected: () -> Unit) {
-        Log.d("Relay", "Relay.connect $url isAlreadyConnecting: ${connectingMutex.get()}")
-
         // If there is a connection, don't wait.
         if (connectingMutex.getAndSet(true)) {
             return
@@ -111,6 +109,8 @@ open class BasicRelayClient(
                 return
             }
 
+            Log.d("Relay", "${url.url} connecting...")
+
             lastConnectTentative = TimeUtils.now()
 
             socket = socketBuilder.build(url, MyWebsocketListener(onConnected))
@@ -118,7 +118,7 @@ open class BasicRelayClient(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
-            Log.w("Relay", "Relay Crash before connedting $url", e)
+            Log.w("Relay", "${url.url} Crash before connecting $url", e)
             stats.newError(e.message ?: "Error trying to connect: ${e.javaClass.simpleName}")
 
             markConnectionAsClosed()
@@ -135,7 +135,7 @@ open class BasicRelayClient(
             pingMillis: Long,
             compression: Boolean,
         ) {
-            Log.d("Relay", "Connect onOpen $url $socket")
+            Log.d("Relay", "${url.url} onConnect $socket")
 
             markConnectionAsReady(pingMillis, compression)
 
@@ -161,7 +161,7 @@ open class BasicRelayClient(
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 stats.newError("Error processing: $text")
-                Log.e("Relay", "Error processing: $text from ${url.url}")
+                Log.e("Relay", "${url.url} Error processing: $text")
                 listener.onError(this@BasicRelayClient, "", Error("Error processing $text"))
             }
         }
@@ -170,7 +170,7 @@ open class BasicRelayClient(
             code: Int,
             reason: String,
         ) {
-            Log.w("Relay", "Relay onClosing $url: $reason")
+            Log.w("Relay", "${url.url} onClosing: $code $reason")
 
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTING)
         }
@@ -181,7 +181,7 @@ open class BasicRelayClient(
         ) {
             markConnectionAsClosed()
 
-            Log.w("Relay", "Relay onClosed $url: $reason")
+            Log.w("Relay", "${url.url} onClosed $reason")
 
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTED)
         }
@@ -201,7 +201,7 @@ open class BasicRelayClient(
             // Failures disconnect the relay.
             markConnectionAsClosed()
 
-            Log.w("Relay", "Relay onFailure $url, $code $response ${t.message} $socket")
+            Log.w("Relay", "${url.url} onFailure $code $response ${t.message} $socket")
             t.printStackTrace()
             listener.onError(
                 this@BasicRelayClient,
@@ -258,7 +258,7 @@ open class BasicRelayClient(
         msg: OkMessage,
         onConnected: () -> Unit,
     ) {
-        Log.w("Relay", "Relay on OK $url, ${msg.eventId} ${msg.success} ${msg.message}")
+        Log.w("Relay", "${url.url} Relay on OK: ${msg.eventId} ${msg.success} ${msg.message}")
 
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
         if (authResponseWatcher.containsKey(msg.eventId)) {
@@ -300,7 +300,7 @@ open class BasicRelayClient(
     }
 
     override fun disconnect() {
-        Log.d("Relay", "Relay.disconnect $url")
+        Log.d("Relay", "${url.url} disconnecting...")
         lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
         delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
         socket?.disconnect()

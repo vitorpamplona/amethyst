@@ -74,7 +74,7 @@ class AntiSpamFilter {
         ) {
             Log.w(
                 "Potential SPAM Message",
-                "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} $relay ${event.content.replace("\n", " | ")}",
+                "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${relay?.url} ${event.content.replace("\n", " | ")}",
             )
 
             // Log down offenders

@@ -102,15 +102,15 @@ class RegisterAccounts(
                     if (acc != null && acc.isWriteable()) {
                         val nip65Read = acc.backupNIP65RelayList?.readRelaysNorm() ?: emptyList()
 
-                        Log.d(tag, "Register Account ${it.npub} NIP65 Reads ${nip65Read.joinToString(", ")}")
+                        Log.d(tag, "Register Account ${it.npub} NIP65 Reads ${nip65Read.joinToString(", ") { it.url } }")
 
                         val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList()
 
-                        Log.d(tag, "Register Account ${it.npub} NIP17 Reads ${nip17Read.joinToString(", ")}")
+                        Log.d(tag, "Register Account ${it.npub} NIP17 Reads ${nip17Read.joinToString(", ") { it.url } }")
 
                         val readKind3Relays = acc.backupContactList?.relays()?.mapNotNull { if (it.value.read) it.key else null } ?: emptyList()
 
-                        Log.d(tag, "Register Account ${it.npub} Kind3 Reads ${readKind3Relays.joinToString(", ")}")
+                        Log.d(tag, "Register Account ${it.npub} Kind3 Reads ${readKind3Relays.joinToString(", ") { it.url } }")
 
                         val relays = (nip65Read + nip17Read + readKind3Relays)
 

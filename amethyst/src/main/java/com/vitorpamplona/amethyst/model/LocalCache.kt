@@ -2947,7 +2947,7 @@ object LocalCache : ILocalCache {
             // update relay with deletion event from another.
             if (relay != null) {
                 deletionIndex.hasBeenDeletedBy(event)?.let {
-                    Log.d("LocalCache", "Updating ${relay.url} with a Deletion Event ${it.toJson()} because of ${event.toJson()}")
+                    Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${it.toJson()} because of ${event.toJson()}")
                     relay.send(it)
                 }
             }
@@ -2959,7 +2959,7 @@ object LocalCache : ILocalCache {
             getAddressableNoteIfExists(event.addressTag())?.let { note ->
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url)) {
-                        Log.d("LocalCache", "Updating ${relay.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
+                        Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
                         relay.send(existingEvent)
                     }
                 }
