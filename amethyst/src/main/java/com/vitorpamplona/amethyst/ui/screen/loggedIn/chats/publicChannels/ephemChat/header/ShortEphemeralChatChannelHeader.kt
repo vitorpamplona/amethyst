@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,12 +30,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.fasterxml.jackson.databind.util.ClassUtil.exceptionMessage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -43,7 +46,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingChannel
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions.JoinChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.actions.LeaveChatButton
@@ -57,22 +59,21 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 fun loadRelayInfo(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
-): State<Nip11RelayInformation?> {
-    @Suppress("ProduceStateDoesNotAssignValue")
-    val relayInfo =
-        produceStateIfNotNull(
-            Nip11CachedRetriever.getFromCache(relay),
-            relay,
-        ) {
-            accountViewModel.retrieveRelayDocument(
-                relay = relay,
-                onInfo = { value = it },
-                onError = { url, errorCode, exceptionMessage -> },
-            )
-        }
-
-    return relayInfo
-}
+): State<Nip11RelayInformation> =
+    produceState(
+        Nip11CachedRetriever.getFromCache(relay),
+        relay,
+    ) {
+        accountViewModel.retrieveRelayDocument(
+            relay = relay,
+            onInfo = {
+                value = it
+            },
+            onError = { url, errorCode, exceptionMessage ->
+                Log.e("RelayInfo", "Error loading relay info for ${url.url}: $errorCode - $exceptionMessage")
+            },
+        )
+    }
 
 @Composable
 fun ShortEphemeralChatChannelHeader(

@@ -127,15 +127,13 @@ fun RenderRelay(
     var openRelayDialog by remember { mutableStateOf(false) }
 
     if (openRelayDialog) {
-        relayInfo?.let {
-            RelayInformationDialog(
-                onClose = { openRelayDialog = false },
-                relayInfo = it,
-                relay = relay,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
+        RelayInformationDialog(
+            onClose = { openRelayDialog = false },
+            relayInfo = relayInfo,
+            relay = relay,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 
     val clipboardManager = LocalClipboardManager.current
@@ -150,11 +148,10 @@ fun RenderRelay(
                         clipboardManager.setText(AnnotatedString(relay.url))
                     },
                     onClick = {
+                        openRelayDialog = true
                         accountViewModel.retrieveRelayDocument(
                             relay,
-                            onInfo = {
-                                openRelayDialog = true
-                            },
+                            onInfo = { },
                             onError = { url, errorCode, exceptionMessage ->
                                 accountViewModel.toastManager.toast(
                                     R.string.unable_to_download_relay_document,
@@ -185,8 +182,8 @@ fun RenderRelay(
         contentAlignment = Alignment.Center,
     ) {
         RenderRelayIcon(
-            displayUrl = relay.displayUrl(),
-            iconUrl = relayInfo?.icon,
+            displayUrl = relayInfo.id ?: relay.url,
+            iconUrl = relayInfo.icon,
             loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
             pingInMs = 0,
             loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
