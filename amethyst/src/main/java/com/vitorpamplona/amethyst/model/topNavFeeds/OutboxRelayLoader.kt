@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -38,14 +39,23 @@ class OutboxRelayLoader {
         ): Map<NormalizedRelayUrl, Set<HexKey>> =
             mapOfSet {
                 outboxRelayNotes.forEach { outboxNote ->
-                    val relays =
-                        (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.ifEmpty { null }
-                            ?: outboxNote.note.author
-                                ?.pubkeyHex
-                                ?.let { cache.relayHints.hintsForKey(it) }
+                    val note = outboxNote.note
 
-                    relays?.forEach {
-                        add(it, outboxNote.note.idHex)
+                    val authorHex =
+                        if (note is AddressableNote) {
+                            note.address.pubKeyHex
+                        } else {
+                            note.author?.pubkeyHex
+                        }
+
+                    if (authorHex != null) {
+                        val relays =
+                            (outboxNote.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.ifEmpty { null }
+                                ?: cache.relayHints.hintsForKey(authorHex)
+
+                        relays.forEach {
+                            add(it, authorHex)
+                        }
                     }
                 }
             }
