@@ -20,6 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import android.util.Log
+import com.vitorpamplona.amethyst.isDebug
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -36,9 +43,29 @@ class OkHttpClientFactory(
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
     }
 
+    val logging = LoggingInterceptor()
+    val keyDecryptor = EncryptedBlobInterceptor(keyCache)
+
+    val myDispatcher =
+        Dispatcher().apply {
+            maxRequests = 512
+        }
+
+    init {
+        if (isDebug) {
+            GlobalScope.launch(Dispatchers.IO) {
+                while (true) {
+                    Log.d("OkHttpClientFactory", "Active threads ${myDispatcher.runningCallsCount()}")
+                    delay(5000)
+                }
+            }
+        }
+    }
+
     private val rootClient =
         OkHttpClient
             .Builder()
+            .dispatcher(myDispatcher)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
@@ -57,8 +84,8 @@ class OkHttpClientFactory(
             .connectTimeout(duration)
             .writeTimeout(duration)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
-            .addNetworkInterceptor(LoggingInterceptor())
-            .addNetworkInterceptor(EncryptedBlobInterceptor(keyCache))
+            .addNetworkInterceptor(logging)
+            .addNetworkInterceptor(keyDecryptor)
             .build()
     }
 
