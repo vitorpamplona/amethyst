@@ -258,7 +258,7 @@ open class BasicRelayClient(
         msg: OkMessage,
         onConnected: () -> Unit,
     ) {
-        Log.w("Relay", "${url.url} Relay on OK: ${msg.eventId} ${msg.success} ${msg.message}")
+        Log.w("Relay", "${url.url} onOK: ${msg.eventId} ${msg.success} ${msg.message}")
 
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
         if (authResponseWatcher.containsKey(msg.eventId)) {
