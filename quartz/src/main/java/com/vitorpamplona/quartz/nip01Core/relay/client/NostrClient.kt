@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client
 
-import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
@@ -115,10 +114,6 @@ class NostrClient(
         subscriptionId: String = newSubId(),
         filters: List<RelayBasedFilter> = listOf(),
     ) {
-        filters.forEach {
-            Log.d("NostrClient", "${it.relay.url} ${it.filter.toJson()}")
-        }
-
         activeSubscriptions.addOrUpdate(subscriptionId, filters)
         relayPool.sendRequest(subscriptionId, filters)
     }

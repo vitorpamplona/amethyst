@@ -2265,7 +2265,7 @@ class Account(
         scope.launch(Dispatchers.Default) {
             cache.antiSpam.flowSpam.collect {
                 it.cache.spamMessages.snapshot().values.forEach { spammer ->
-                    if (!hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.duplicatedMessages.size >= 5) {
+                    if (!hiddenUsers.isHidden(spammer.pubkeyHex) && spammer.shouldHide()) {
                         if (spammer.pubkeyHex != userProfile().pubkeyHex && spammer.pubkeyHex !in followingKeySet()) {
                             hiddenUsers.hideUser(spammer.pubkeyHex)
                         }

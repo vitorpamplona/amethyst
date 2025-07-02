@@ -112,7 +112,7 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Spam: " +
-            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentMessages.size(),
+            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentEventIds.size() + " / " + LocalCache.antiSpam.recentAddressables.size(),
     )
 
     Log.d(
