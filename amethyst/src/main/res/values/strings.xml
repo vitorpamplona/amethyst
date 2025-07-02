@@ -1061,6 +1061,11 @@
     <string name="private_outbox_section_explainer">Insert between 1–3 relays to store events no one else can see, like your Drafts and/or app settings. Ideally, these relays are either local or require authentication before downloading each user\'s content.</string>
     <string name="kind_3_section">General Relays</string>
     <string name="kind_3_section_description">Amethyst uses these relays to download posts for you.</string>
+
+
+    <string name="connected_section">Connected Relays</string>
+    <string name="connected_section_description">Current list of relays being used</string>
+
     <string name="kind_3_recommended_section">Recommended Relays</string>
     <string name="kind_3_recommended_section_description">Add the following relays to your General Relays list in order to receive posts from the listed users.</string>
     <string name="search_section">Search Relays</string>

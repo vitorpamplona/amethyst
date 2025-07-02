@@ -55,6 +55,8 @@ import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
@@ -107,12 +109,16 @@ fun MappedAllRelayListView(
     val localViewModel: LocalRelayListViewModel = viewModel()
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
 
+    val connectedViewModel: ConnectedRelayListViewModel = viewModel()
+    val connectedRelays by connectedViewModel.relays.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         dmViewModel.load(accountViewModel.account)
         nip65ViewModel.load(accountViewModel.account)
         searchViewModel.load(accountViewModel.account)
         localViewModel.load(accountViewModel.account)
         privateOutboxViewModel.load(accountViewModel.account)
+        connectedViewModel.load(accountViewModel.account)
     }
 
     Scaffold(
@@ -241,6 +247,15 @@ fun MappedAllRelayListView(
                 )
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.connected_section),
+                    stringRes(R.string.connected_section_description),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderConnectedItems(connectedRelays, connectedViewModel, accountViewModel, newNav)
         }
     }
 }
