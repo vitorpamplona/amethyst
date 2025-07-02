@@ -43,4 +43,4 @@ fun NormalizedRelayUrl.toHttp() =
 
 fun NormalizedRelayUrl.isOnion() = url.endsWith(".onion/")
 
-fun NormalizedRelayUrl.isLocalHost() = url.contains("127.0.0.1") || url.contains("localhost")
+fun NormalizedRelayUrl.isLocalHost() = url.contains("127.0.0.1") || url.contains("localhost") || url.contains(".local:")

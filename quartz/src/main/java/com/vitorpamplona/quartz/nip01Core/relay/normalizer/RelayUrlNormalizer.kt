@@ -27,7 +27,7 @@ val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
 
 class RelayUrlNormalizer {
     companion object {
-        fun isLocalHost(url: String) = url.contains("127.0.0.1") || url.contains("localhost")
+        fun isLocalHost(url: String) = url.contains("127.0.0.1") || url.contains("localhost") || url.contains(".local:")
 
         fun isOnion(url: String) = url.endsWith(".onion") || url.endsWith(".onion/")
 
