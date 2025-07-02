@@ -54,15 +54,21 @@ class TorRelayState(
             trustedRelaysViaTor: Boolean,
             newRelaysViaTor: Boolean,
             ->
-            TorRelaySettings(torType, onionRelaysViaTor, dmRelaysViaTor, trustedRelaysViaTor, newRelaysViaTor)
+            TorRelaySettings(
+                torType = torType,
+                onionRelaysViaTor = onionRelaysViaTor,
+                dmRelaysViaTor = dmRelaysViaTor,
+                trustedRelaysViaTor = trustedRelaysViaTor,
+                newRelaysViaTor = newRelaysViaTor,
+            )
         }.onStart {
             emit(
                 TorRelaySettings(
-                    settings.torSettings.torType.value,
-                    settings.torSettings.onionRelaysViaTor.value,
-                    settings.torSettings.dmRelaysViaTor.value,
-                    settings.torSettings.trustedRelaysViaTor.value,
-                    settings.torSettings.newRelaysViaTor.value,
+                    torType = settings.torSettings.torType.value,
+                    onionRelaysViaTor = settings.torSettings.onionRelaysViaTor.value,
+                    dmRelaysViaTor = settings.torSettings.dmRelaysViaTor.value,
+                    trustedRelaysViaTor = settings.torSettings.trustedRelaysViaTor.value,
+                    newRelaysViaTor = settings.torSettings.newRelaysViaTor.value,
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -70,11 +76,11 @@ class TorRelayState(
                 scope,
                 SharingStarted.Eagerly,
                 TorRelaySettings(
-                    settings.torSettings.torType.value,
-                    settings.torSettings.onionRelaysViaTor.value,
-                    settings.torSettings.dmRelaysViaTor.value,
-                    settings.torSettings.trustedRelaysViaTor.value,
-                    settings.torSettings.newRelaysViaTor.value,
+                    torType = settings.torSettings.torType.value,
+                    onionRelaysViaTor = settings.torSettings.onionRelaysViaTor.value,
+                    dmRelaysViaTor = settings.torSettings.dmRelaysViaTor.value,
+                    trustedRelaysViaTor = settings.torSettings.trustedRelaysViaTor.value,
+                    newRelaysViaTor = settings.torSettings.newRelaysViaTor.value,
                 ),
             )
 
@@ -84,13 +90,19 @@ class TorRelayState(
             trustedRelayState.flow,
             dmRelayState.flow,
         ) { torSettings: TorRelaySettings, trustedRelayList: Set<NormalizedRelayUrl>, dmRelayList: Set<NormalizedRelayUrl> ->
-            emit(TorRelayEvaluation(torSettings, trustedRelayList, dmRelayList))
+            emit(
+                TorRelayEvaluation(
+                    torSettings = torSettings,
+                    trustedRelayList = trustedRelayList,
+                    dmRelayList = dmRelayList,
+                ),
+            )
         }.onStart {
             emit(
                 TorRelayEvaluation(
-                    torSettings.value,
-                    trustedRelayState.flow.value,
-                    dmRelayState.flow.value,
+                    torSettings = torSettings.value,
+                    trustedRelayList = trustedRelayState.flow.value,
+                    dmRelayList = dmRelayState.flow.value,
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -98,9 +110,9 @@ class TorRelayState(
                 scope,
                 SharingStarted.Eagerly,
                 TorRelayEvaluation(
-                    torSettings.value,
-                    trustedRelayState.flow.value,
-                    dmRelayState.flow.value,
+                    torSettings = torSettings.value,
+                    trustedRelayList = trustedRelayState.flow.value,
+                    dmRelayList = dmRelayState.flow.value,
                 ),
             )
 }

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.model.torState
 
 import com.vitorpamplona.amethyst.ui.tor.TorType
 
-class TorRelaySettings(
+data class TorRelaySettings(
     val torType: TorType = TorType.OFF,
     val onionRelaysViaTor: Boolean = true,
     val dmRelaysViaTor: Boolean = false,
