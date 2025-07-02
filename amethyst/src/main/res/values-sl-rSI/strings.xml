@@ -308,7 +308,6 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="quick_action_unfollow">Prenehaj slediti</string>
     <string name="quick_action_follow">Sledi</string>
     <string name="quick_action_request_deletion_gallery_title">Izbris iz galerije</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Odstrani ta medij iz tvoje galerije, lahko ga dodaš nazaj kasneje.</string>
     <string name="quick_action_request_deletion_alert_title">Prošnja za izbris</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst bo poslal prošnjo za izbris zapiska vsem relejem na katere ste povezani. Nobenega jamstva ni, da bo vaš zapisek trajno izbrisan iz teh relejev ali iz drugih relejev, kjer je morda shranjen.</string>
     <string name="quick_action_block_dialog_btn">Blokiraj</string>
@@ -569,10 +568,7 @@ Prijavi se s privatnim ključem, za prikaz skritih besed in stavkov</string>
     <string name="relay_setup">Releji</string>
     <string name="discover_follows">Sledi tropu</string>
     <string name="discover_reads">Branje</string>
-    <string name="discover_content">Odkrivanje zapiskov</string>
     <string name="discover_marketplace">Tržnica</string>
-    <string name="discover_live">V živo</string>
-    <string name="discover_community">Skupnosti</string>
     <string name="discover_chat">Pogovori</string>
     <string name="community_approved_posts">Odobrene objave</string>
     <string name="groups_no_descriptor">Ta skupina nima opisa ali pravil. Obrnite se na lastnika, da jih doda</string>

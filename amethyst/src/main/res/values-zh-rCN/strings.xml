@@ -300,7 +300,7 @@
     <string name="quick_action_unfollow">取关</string>
     <string name="quick_action_follow">关注</string>
     <string name="quick_action_request_deletion_gallery_title">从相册中删除</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">从相册中删除此媒体，但仍然可供浏览</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">从媒体库中删除此媒体。</string>
     <string name="quick_action_request_deletion_alert_title">请求删贴</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst 将请求你的记录从当前连接的中继器中删除。不能保证你发布的笔记将被永久从那些中继器或其他存储笔记的中继器中删除。</string>
     <string name="quick_action_block_dialog_btn">阻止</string>
@@ -561,10 +561,10 @@
     <string name="relay_setup">中继器</string>
     <string name="discover_follows">关注包</string>
     <string name="discover_reads">次浏览</string>
-    <string name="discover_content">笔记发现</string>
+    <string name="discover_content_v2">Feed算法</string>
     <string name="discover_marketplace">市场</string>
-    <string name="discover_live">直播</string>
-    <string name="discover_community">社区</string>
+    <string name="discover_live_v2">直播</string>
+    <string name="discover_community_v2">社区</string>
     <string name="discover_chat">聊天</string>
     <string name="community_approved_posts">批准的帖子</string>
     <string name="groups_no_descriptor">此群组没有描述或规则。联系群主来添加</string>
@@ -616,6 +616,8 @@
     <string name="geohash_explainer">将你所在位置的地理位置添加到帖子。公众会知道你在当前位置的5公里之内（3英里）</string>
     <string name="geohash_exclusive">位置限定帖子</string>
     <string name="geohash_exclusive_explainer">只有处于同一地理位置的关注者才能看到贴文。其他追随者无法看到。</string>
+    <string name="hashtag_exclusive">话题标签专属帖子</string>
+    <string name="hashtag_exclusive_explainer">只有话题标签的关注者才会看到它。您的一般关注者不会看到它。</string>
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
@@ -818,6 +820,7 @@
     <string name="new_short">新短篇媒体：图像或视频</string>
     <string name="new_community_note">新社区笔记</string>
     <string name="new_product">新产品</string>
+    <string name="new_exclusive_geo_note">新建地理位置专属帖子</string>
     <string name="open_all_reactions_to_this_post">展开对此帖子的所有回应</string>
     <string name="close_all_reactions_to_this_post">收起对此帖子的所有回应</string>
     <string name="reply_description">回复</string>
@@ -970,4 +973,5 @@
     <string name="group_relay">聊天中继</string>
     <string name="group_relay_explanation">此聊天所有用户都连接到的中继</string>
     <string name="share_image">分享图片…</string>
+    <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
 </resources>

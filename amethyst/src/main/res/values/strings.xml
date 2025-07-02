@@ -326,7 +326,7 @@
     <string name="quick_action_unfollow">Unfollow</string>
     <string name="quick_action_follow">Follow</string>
     <string name="quick_action_request_deletion_gallery_title">Delete from Gallery</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Remove this media from your Gallery.</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Remove this media from your Gallery.</string>
     <string name="quick_action_request_deletion_alert_title">Request Deletion</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst will request that your note be deleted from the relays you are currently connected to. There is no guarantee that your note will be permanently deleted from those relays, or from other relays where it may be stored.</string>
     <string name="quick_action_block_dialog_btn">Block</string>
@@ -661,10 +661,10 @@
 
     <string name="discover_follows">Follow Packs</string>
     <string name="discover_reads">Reads</string>
-    <string name="discover_content">Feed Algorithms</string>
+    <string name="discover_content_v2">Feed Algorithms</string>
     <string name="discover_marketplace">Marketplace</string>
-    <string name="discover_live">Live Streams</string>
-    <string name="discover_community">Communities</string>
+    <string name="discover_live_v2">Live Streams</string>
+    <string name="discover_community_v2">Communities</string>
     <string name="discover_chat">Chats</string>
     <string name="community_approved_posts">Approved Posts</string>
 
@@ -675,6 +675,7 @@
     <string name="add_sensitive_content_description">Adds sensitive content warning before showing this content</string>
 
     <string name="preferences">App Preferences</string>
+    <string name="user_preferences">User Preferences</string>
 
     <string name="settings">Settings</string>
     <string name="connectivity_type_always">Always</string>
@@ -1178,4 +1179,7 @@
     <string name="share_image">Share image…</string>
 
     <string name="search_by_hashtag">Search hashtag: #%1$s</string>
+
+    <string name="dont_translate_from">Don\'t Translate From</string>
+    <string name="dont_translate_from_description">Languages shown here will not be translated. Select a language to remove it and have it translated again.</string>
 </resources>

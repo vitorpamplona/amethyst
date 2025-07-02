@@ -298,7 +298,7 @@
     <string name="quick_action_unfollow">Sluta följa</string>
     <string name="quick_action_follow">Följ</string>
     <string name="quick_action_request_deletion_gallery_title">Ta bort från galleriet</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Ta bort detta media från ditt galleri, kan du lägga till det senare</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Ta bort detta media från ditt galleri.</string>
     <string name="quick_action_request_deletion_alert_title">Begär radering</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst kommer att begära att din anteckning tas bort från de reläer du för närvarande är ansluten till. Det finns ingen garanti för att din anteckning kommer att raderas permanent från dessa reläer eller från andra reläer där den kan lagras.</string>
     <string name="quick_action_block_dialog_btn">Blockera</string>
@@ -558,10 +558,10 @@
     <string name="relay_setup">Reläer</string>
     <string name="discover_follows">Följpaket</string>
     <string name="discover_reads">Läsningar</string>
-    <string name="discover_content">Upptäckt av anteckningar</string>
+    <string name="discover_content_v2">Feed algoritmer</string>
     <string name="discover_marketplace">Marknadsplats</string>
-    <string name="discover_live">Live</string>
-    <string name="discover_community">Gemenskap</string>
+    <string name="discover_live_v2">Live-streams</string>
+    <string name="discover_community_v2">Grupper</string>
     <string name="discover_chat">Chattar</string>
     <string name="community_approved_posts">Godkända Inlägg</string>
     <string name="groups_no_descriptor">Denna grupp har ingen beskrivning eller regler. Prata med ägaren för att lägga till en.</string>
@@ -613,6 +613,8 @@
     <string name="geohash_explainer">Lägger till en Geohash av din plats i inlägget. Allmänheten kommer att veta att du befinner dig inom 5 km från nuvarande plats</string>
     <string name="geohash_exclusive">Plats-exklusivt inlägg</string>
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
+    <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
+    <string name="hashtag_exclusive_explainer">Endast anhängare av hashtaggen kommer att se den. Dina generella följare kommer inte att se den.</string>
     <string name="loading_location">Laddar position</string>
     <string name="lack_location_permissions">Inga platsbehörigheter</string>
     <string name="add_sensitive_content_explainer">Lägger till en varning för känsligt innehåll innan ditt innehåll visas. Detta är idealiskt för NSFW-innehåll (inte säkert för arbete) eller innehåll som vissa personer kan uppleva som stötande eller störande</string>
@@ -815,6 +817,7 @@
     <string name="new_short">Nya kort: bilder eller videor</string>
     <string name="new_community_note">Nytt Community-meddelande</string>
     <string name="new_product">Ny produkt</string>
+    <string name="new_exclusive_geo_note">Nytt Geo-Exklusivt inlägg</string>
     <string name="open_all_reactions_to_this_post">Öppna alla reaktioner på detta inlägg</string>
     <string name="close_all_reactions_to_this_post">Stäng alla reaktioner på detta inlägg</string>
     <string name="reply_description">Svara</string>
@@ -967,4 +970,5 @@
     <string name="group_relay">Chatt Relä</string>
     <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
     <string name="share_image">Dela bild…</string>
+    <string name="search_by_hashtag">Sök hashtag: #%1$s</string>
 </resources>

@@ -377,8 +377,6 @@
     <string name="are_you_sure_you_want_to_log_out">Keluar akan menghapus semua informasi yang disimpan secara lokal.
 Pastikan kunci pribadi Anda telah simpan untuk menghindari kehilangan akun Anda. Apakah Anda ingin melanjutkan?</string>
     <string name="followed_tags">Tags yang Diikuti</string>
-    <string name="discover_live">Langsung</string>
-    <string name="discover_community">Komunitas</string>
     <string name="discover_chat">Obrolan</string>
     <string name="community_approved_posts">Post yang disetujui</string>
     <string name="groups_no_descriptor">Grup ini tidak memiliki deskripsi atau peraturan.

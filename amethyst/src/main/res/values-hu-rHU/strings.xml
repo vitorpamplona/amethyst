@@ -300,7 +300,7 @@
     <string name="quick_action_unfollow">Követés megszüntetése</string>
     <string name="quick_action_follow">Követés</string>
     <string name="quick_action_request_deletion_gallery_title">Törlés a galériából</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Távolítsa el ezt a médiát a galériából, később újra hozzáadhatja</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Távolítsa el ezt a médiát a galériából.</string>
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy a bejegyzését töröljék azokról az átjátszókról, amelyekhez jelenleg csatlakozik. Nem garantálható, hogy a bejegyzése véglegesen törlődik ezekről az átjátszókról, vagy más átjátszókról, ahol esetleg tárolva van.</string>
     <string name="quick_action_block_dialog_btn">Letiltás</string>
@@ -496,9 +496,18 @@
     <string name="content_warning_hide_all_sensitive_content">Az érzékeny tartalmat mindig rejtse el</string>
     <string name="content_warning_show_all_sensitive_content">Az érzékeny tartalmat mindig jelenítse meg</string>
     <string name="content_warning_see_warnings">A tartalomra vonatkozó figyelmeztetéseket mindig jelenítse meg</string>
+    <string name="content_warning_hide_all_sensitive_content_option">Elrejtés</string>
+    <string name="content_warning_show_all_sensitive_content_option">Megjelenítés</string>
+    <string name="content_warning_see_warnings_option">Figyelmeztetés</string>
     <string name="recommended_apps">Ajánlott alkalmazások: </string>
     <string name="filter_spam_from_strangers">Az idegenektől érkező kéretlen tartalmak szűrése</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen amikor a bejegyzések jelentve vannak azok által akiket követek</string>
+    <string name="filter_spam_from_strangers_title">Kéretlen tartalomszűrő</string>
+    <string name="filter_spam_from_strangers_explainer">Elrejti az ismeretlen felhasználók hozzászólásait, amelyek pontosan ugyanazok voltak 5 vagy több alkalommal</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzéseket az Ön által követett felhasználók 5 vagy annál többször jelentették</string>
+    <string name="show_sensitive_content_title">Érzékeny tartalom megjelenítése</string>
+    <string name="show_sensitive_content_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzés szerzője érzékenynek jelölte a hozzászólást</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
     <string name="zapraiser">Zap-gyűjtés</string>
@@ -552,10 +561,10 @@
     <string name="relay_setup">Átjátszók</string>
     <string name="discover_follows">Követett csomagok</string>
     <string name="discover_reads">Olvasmányok</string>
-    <string name="discover_content">Bejegyzések felfedezése</string>
+    <string name="discover_content_v2">Hírforrás-algoritmus</string>
     <string name="discover_marketplace">Piac</string>
-    <string name="discover_live">Élő</string>
-    <string name="discover_community">Közösség</string>
+    <string name="discover_live_v2">Élő közvetítések</string>
+    <string name="discover_community_v2">Közösségek</string>
     <string name="discover_chat">Csevegések</string>
     <string name="community_approved_posts">Elfogadott bejegyzések</string>
     <string name="groups_no_descriptor">Ennek a csoportnak nincs leírása vagy szabályai. Kérje meg a tulajdonosát, hogy adjon hozzá egyet</string>
@@ -607,6 +616,8 @@
     <string name="geohash_explainer">Hozzáadja a helyének geohash-sét a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
+    <string name="hashtag_exclusive">Hashtag-exkluzív bejegyzés</string>
+    <string name="hashtag_exclusive_explainer">Csak a hashtag követői fogják látni, de az Ön általános követői viszont nem.</string>
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
@@ -809,6 +820,7 @@
     <string name="new_short">Új rövidek: képek vagy videók</string>
     <string name="new_community_note">Új közösségi bejegyzés</string>
     <string name="new_product">Új termék</string>
+    <string name="new_exclusive_geo_note">Új hely-exkluzív bejegyzés </string>
     <string name="open_all_reactions_to_this_post">A bejegyzésre adott összes reakció kibontása</string>
     <string name="close_all_reactions_to_this_post">A bejegyzésre adott összes reakció összecsukása</string>
     <string name="reply_description">Válasz</string>
@@ -960,4 +972,6 @@
     <string name="private_message">Privát üzenet</string>
     <string name="group_relay">Csevegési átjátszó</string>
     <string name="group_relay_explanation">Az átjátszó, amelyhez a csevegés összes felhasználója csatlakozik</string>
+    <string name="share_image">Kép megosztása…</string>
+    <string name="search_by_hashtag">Hashtag keresése: #%1$s</string>
 </resources>

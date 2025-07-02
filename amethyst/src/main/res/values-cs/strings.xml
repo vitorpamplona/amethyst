@@ -286,7 +286,6 @@
     <string name="quick_action_unfollow">Přestat sledovat</string>
     <string name="quick_action_follow">Sledovat</string>
     <string name="quick_action_request_deletion_gallery_title">Odstranit z galerie</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Odstraňte tato média z vaší galerie, můžete je přidat později</string>
     <string name="quick_action_request_deletion_alert_title">Požadavek na smazání</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst požádá o smazání vaší poznámky ze spojek, ke kterým jste v současnosti připojeni. Není zaručeno, že vaše poznámka bude trvale smazána z těchto spojek nebo z dalších spojek, kde může být uložena.</string>
     <string name="quick_action_block_dialog_btn">Blokovat</string>
@@ -535,10 +534,7 @@
     <string name="are_you_sure_you_want_to_log_out">Odhlášení vymaže všechny vaše místní informace. Ujistěte se, že máte zálohované své privátní klíče, abyste se vyhnuli ztrátě účtu. Chcete pokračovat?</string>
     <string name="followed_tags">Sledované značky</string>
     <string name="relay_setup">Rele</string>
-    <string name="discover_content">Objevování poznámek</string>
     <string name="discover_marketplace">Trh</string>
-    <string name="discover_live">Živě</string>
-    <string name="discover_community">Komunita</string>
     <string name="discover_chat">Chaty</string>
     <string name="community_approved_posts">Schválené příspěvky</string>
     <string name="groups_no_descriptor">Tato skupina nemá popis ani pravidla. Promluvte si s majitelem, aby je přidal/a.</string>

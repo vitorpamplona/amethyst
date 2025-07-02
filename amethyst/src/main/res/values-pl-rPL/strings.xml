@@ -297,7 +297,7 @@
     <string name="quick_action_unfollow">Porzuć</string>
     <string name="quick_action_follow">Śledź</string>
     <string name="quick_action_request_deletion_gallery_title">Usuń z Galerii</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Usuń te media z galerii, możesz dodać je ponownie później</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Usuń ten plik z Galerii.</string>
     <string name="quick_action_request_deletion_alert_title">Poproś o usunięcie</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst poprosi o usunięcie Twojego wpisu z aktualnie podłączonych transmiterów. Nie ma gwarancji, że Twój wpis zostanie trwale usunięty z tych lub z innych transmiterów, gdzie może być przechowywany.</string>
     <string name="quick_action_block_dialog_btn">Zablokuj</string>
@@ -556,10 +556,12 @@
     <string name="are_you_sure_you_want_to_log_out">Wylogowanie usuwa wszystkie informacje lokalne. Upewnij się, że masz kopię zapasową kluczy prywatnych, aby uniknąć utraty konta. Czy chcesz kontynuować?</string>
     <string name="followed_tags">Obserwowane tagi</string>
     <string name="relay_setup">Transmitery</string>
-    <string name="discover_content">Kategorie Wpisów</string>
+    <string name="discover_follows">Obserwowani</string>
+    <string name="discover_reads">Wyświetlenia</string>
+    <string name="discover_content_v2">Algorytmy kanału</string>
     <string name="discover_marketplace">Market</string>
-    <string name="discover_live">Na żywo</string>
-    <string name="discover_community">Społeczności</string>
+    <string name="discover_live_v2">Transmisja na żywo</string>
+    <string name="discover_community_v2">Społeczności</string>
     <string name="discover_chat">Czaty</string>
     <string name="community_approved_posts">Zatwierdzone posty</string>
     <string name="groups_no_descriptor">Ta grupa nie ma opisu ani reguł. Porozmawiaj z właścicielem, aby je dodać</string>
@@ -611,6 +613,8 @@
     <string name="geohash_explainer">Dodaje Geohash twojej lokalizacji do wpisu. Użytkownicy będą wiedzieli, że jesteś mniej niż 5 km od bieżącej lokalizacji</string>
     <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji zobaczą to. Twoi ogólni obserwatorzy tego nie zobaczą.</string>
+    <string name="hashtag_exclusive">Wpis hashtagowy</string>
+    <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag zobaczą go. Twoi ogólni obserwujący go nie zobaczą.</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
     <string name="add_sensitive_content_explainer">Dodaje ostrzeżenie o wrażliwych treściach przed wyświetleniem treści. Jest to idealne dla dowolnych treści NSFW lub treści, które niektóre osoby mogą uznać za obraźliwe lub przeszkadzające</string>
@@ -813,6 +817,7 @@
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
     <string name="new_product">Nowy produkt</string>
+    <string name="new_exclusive_geo_note">Nowy GEO-ekskluzywny Wpis</string>
     <string name="open_all_reactions_to_this_post">Otwórz wszystkie odzewy na ten post</string>
     <string name="close_all_reactions_to_this_post">Zamknij wszystkie odzewy na ten post</string>
     <string name="reply_description">Odpowiedz</string>
@@ -962,6 +967,8 @@
     <string name="select_list_to_filter">Wybierz listę, aby filtrować kanał</string>
     <string name="temporary_account">Wyloguj się przy blokowaniu urządzenia</string>
     <string name="private_message">Wiadomość prywatna</string>
+    <string name="group_relay">Transmiter Czatu</string>
     <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
+    <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
 </resources>

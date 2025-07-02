@@ -381,8 +381,6 @@
     <string name="are_you_sure_you_want_to_log_out">Вихід з облікового запису видаляє всю вашу локальну інформацію. Переконайтеся, що ваші особисті ключі були збережені, щоб уникнути втрати вашого облікового запису. Ви хочете продовжити?</string>
     <string name="followed_tags">Відстежувані теги</string>
     <string name="discover_marketplace">Торгівельний майданчик</string>
-    <string name="discover_live">Наживо</string>
-    <string name="discover_community">Спільнота</string>
     <string name="discover_chat">Чати</string>
     <string name="community_approved_posts">Затверджені публікації</string>
     <string name="groups_no_descriptor">Ця група не має опису або правил. Зверніться до автора, щоб додати один</string>

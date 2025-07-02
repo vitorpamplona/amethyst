@@ -3,9 +3,9 @@
     <string name="point_to_the_qr_code">Nasměrujte na QR kód</string>
     <string name="show_qr">Zobrazit QR kód</string>
     <string name="profile_image">Profilový obrázek</string>
-    <string name="your_profile_image">Profilový obrázek</string>
+    <string name="your_profile_image">Váš profilový obrázek</string>
     <string name="scan_qr">Skenovat QR kód</string>
-    <string name="show_anyway">Zobrazit přesto</string>
+    <string name="show_anyway">Přesto zobrazit</string>
     <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl označen jako nevhodný uživatelem</string>
     <string name="post_not_found">Příspěvek nenalezen</string>
@@ -298,7 +298,7 @@
     <string name="quick_action_unfollow">Přestat sledovat</string>
     <string name="quick_action_follow">Sledovat</string>
     <string name="quick_action_request_deletion_gallery_title">Odstranit z galerie</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Odstraňte tato média z vaší galerie, můžete je přidat později</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Odstranit toto médium z vaší galerie.</string>
     <string name="quick_action_request_deletion_alert_title">Požadavek na smazání</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst požádá o smazání vaší poznámky ze spojek, ke kterým jste v současnosti připojeni. Není zaručeno, že vaše poznámka bude trvale smazána z těchto spojek nebo z dalších spojek, kde může být uložena.</string>
     <string name="quick_action_block_dialog_btn">Blokovat</string>
@@ -559,10 +559,10 @@
     <string name="relay_setup">Rele</string>
     <string name="discover_follows">Balíčky Sledování</string>
     <string name="discover_reads">Přečtené</string>
-    <string name="discover_content">Algoritmy kanálu</string>
+    <string name="discover_content_v2">Algoritmy kanálu</string>
     <string name="discover_marketplace">Trh</string>
-    <string name="discover_live">Živě</string>
-    <string name="discover_community">Komunita</string>
+    <string name="discover_live_v2">Živé vysílání</string>
+    <string name="discover_community_v2">Komunity</string>
     <string name="discover_chat">Chaty</string>
     <string name="community_approved_posts">Schválené příspěvky</string>
     <string name="groups_no_descriptor">Tato skupina nemá popis ani pravidla. Promluvte si s majitelem, aby je přidal/a.</string>
@@ -614,6 +614,8 @@
     <string name="geohash_explainer">Přidá Geohash vaší polohy do příspěvku. Veřejnost bude vědět, že se nacházíte do 5 km od aktuální polohy</string>
     <string name="geohash_exclusive">Lokace-Exkluzívní příspěvek</string>
     <string name="geohash_exclusive_explainer">Uvidí to pouze následovníci umístění. Tvoji obecní následovníci to neuvidí.</string>
+    <string name="hashtag_exclusive">Hashtag-exkluzivní příspěvek</string>
+    <string name="hashtag_exclusive_explainer">Uvidí to pouze následovníci hashtagu. Tvůj všeobecní následovníci to neuvidí.</string>
     <string name="loading_location">Načítání umístění</string>
     <string name="lack_location_permissions">Žádná lokace oprávnění</string>
     <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>
@@ -816,6 +818,7 @@
     <string name="new_short">Nové Shorts: obrázky nebo videa</string>
     <string name="new_community_note">Nová poznámka komunity</string>
     <string name="new_product">Nový produkt</string>
+    <string name="new_exclusive_geo_note">Nový geoexkluzivní příspěvek</string>
     <string name="open_all_reactions_to_this_post">Otevřít všechny reakce pro tento příspěvek</string>
     <string name="close_all_reactions_to_this_post">Zavřít všechny reakce na tento příspěvek</string>
     <string name="reply_description">Odpověď</string>
@@ -968,4 +971,5 @@
     <string name="group_relay">Relé chatu</string>
     <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
     <string name="share_image">Sdílet obrázek…</string>
+    <string name="search_by_hashtag">Vyhledávání hashtag: #%1$s</string>
 </resources>

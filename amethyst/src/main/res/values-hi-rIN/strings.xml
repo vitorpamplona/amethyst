@@ -300,7 +300,7 @@
     <string name="quick_action_unfollow">अनुचरण ना करें</string>
     <string name="quick_action_follow">अनुचरण करें</string>
     <string name="quick_action_request_deletion_gallery_title">चित्रालय से मिटाएँ</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">इस अभिलेख को चित्रालय से हटाएँ। तत्पश्चात कभी भी आप इसे पुनः जोड सकते हैं</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">इस अभिलेख को आपके चित्रालय से हटाएँ।</string>
     <string name="quick_action_request_deletion_alert_title">हटाने की याचना</string>
     <string name="quick_action_request_deletion_alert_body">अमेथिस्ट अनुरोध करेगा कि आपका टीका मिटा दिया जाए उन पुनःप्रसारकों से जिनके साथ आप अब जुडे हुए हैं। कोई आश्वासन नहीं कि आपका टीका सर्वदा के लिए मिटा दिया जाएगा उन पुनःप्रसारकों से, अथवा अन्य पुनःप्रसारकों में से जहाँ यह रखा गया हो।</string>
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
@@ -561,10 +561,10 @@
     <string name="relay_setup">पुनःप्रसारक</string>
     <string name="discover_follows">अनुचरण पोटलियाँ</string>
     <string name="discover_reads">पठितव्य</string>
-    <string name="discover_content">लेख आविष्करण</string>
+    <string name="discover_content_v2">सूचनावली विधियाँ</string>
     <string name="discover_marketplace">पण्यक्षेत्र</string>
-    <string name="discover_live">तत्क्षणप्रसार</string>
-    <string name="discover_community">समुदाय</string>
+    <string name="discover_live_v2">तत्क्षणप्रसार</string>
+    <string name="discover_community_v2">समुदाय</string>
     <string name="discover_chat">चर्चाएँ</string>
     <string name="community_approved_posts">अनुमति प्राप्त पत्र</string>
     <string name="groups_no_descriptor">इस झुण्ड का कोई विवरण नहीं नियम नहीं। इसके अधिपति से बात करें इनहें जोडने के लिए</string>
@@ -616,6 +616,8 @@
     <string name="geohash_explainer">आपका भूगोलिक स्थान विभेदक जोडता है पत्र में। जनता जान जाएगी कि आप वर्तमान स्थान से ५ कि॰मे॰ (३ मी॰) की दूरी के अन्दर हैं</string>
     <string name="geohash_exclusive">स्थल विशेष पत्र</string>
     <string name="geohash_exclusive_explainer">स्थल के अनुचर ही देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
+    <string name="hashtag_exclusive">विषयसूचक विशेष पत्र</string>
+    <string name="hashtag_exclusive_explainer">केवल विषयसूचक के अनुचर इसे देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
     <string name="loading_location">स्थान प्राप्त किया जा रहा है</string>
     <string name="lack_location_permissions">स्थान प्राप्त करने की अनुमति नहीं</string>
     <string name="add_sensitive_content_explainer">आपके विषयवस्तु दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है। यह आदर्श है किसी कार्यालय अनुचित विषयवस्तु के लिए अथवा जो कुछ लोगों के लिए आपत्तिजनक अथवा व्याकुल करनेवाला लग सकता है</string>
@@ -818,6 +820,7 @@
     <string name="new_short">नये छोटे : चित्र अथवा चलचित्र</string>
     <string name="new_community_note">नया सामुदायिक टीका</string>
     <string name="new_product">नया उत्पाद</string>
+    <string name="new_exclusive_geo_note">नया स्थान विशेष पत्र</string>
     <string name="open_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को खोलें</string>
     <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को अवरोधित करें</string>
     <string name="reply_description">उत्तर</string>
@@ -970,4 +973,5 @@
     <string name="group_relay">चर्चा पुनःप्रसारक</string>
     <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
     <string name="share_image">चित्र बाँटें…</string>
+    <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
 </resources>

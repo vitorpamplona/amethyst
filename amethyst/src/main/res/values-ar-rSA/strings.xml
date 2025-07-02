@@ -274,7 +274,6 @@
     <string name="quick_action_unfollow">الغاء المتابعة</string>
     <string name="quick_action_follow">متابعة</string>
     <string name="quick_action_request_deletion_gallery_title">إزالته من المعرض</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">إزالة هذه الوسيطة من المعرض.</string>
     <string name="quick_action_request_deletion_alert_title">طلب حذفها</string>
     <string name="quick_action_request_deletion_alert_body">سيطلب Amethyst حذف ملاحظتك من المرحلات المتصل بها حاليا، لا يوجد ضمان لحذفها من هذه المرحلات أو من المرحلات الأخرى التي ربما حفظت فيها.</string>
     <string name="quick_action_block_dialog_btn">حظر </string>
@@ -476,7 +475,6 @@
     <string name="are_you_sure_you_want_to_log_out">تسجيل الخروج سوف يحذف معلوماتك من على الجهاز. تأكد من نسخ مفتاحك الخاص لتجنب فقدان الحساب. هل تريد ألاستمرار؟</string>
     <string name="followed_tags">العلامات المُتابعة</string>
     <string name="relay_setup">مرحلات</string>
-    <string name="discover_community">مجتمع</string>
     <string name="discover_chat">االدردشات</string>
     <string name="community_approved_posts">المنشورات الموافق عليها</string>
     <string name="groups_no_descriptor">هذه المجموعة ليس لديها وصف أو قواعد.

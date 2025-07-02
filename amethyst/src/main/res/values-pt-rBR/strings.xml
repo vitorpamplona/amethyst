@@ -298,7 +298,7 @@
     <string name="quick_action_unfollow">Remover seguidor</string>
     <string name="quick_action_follow">Seguir</string>
     <string name="quick_action_request_deletion_gallery_title">Excluir da Galeria</string>
-    <string name="quick_action_request_deletion_gallery_alert_body">Remover essa mídia de sua galeria, você pode adicionar mais tarde</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">Remover essa mídia de sua galeria.</string>
     <string name="quick_action_request_deletion_alert_title">Pedir para excluir</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst solicitará que sua nota seja excluída dos relays aos quais você está conectado no momento. Não há garantia de que sua nota será excluída permanentemente desses relays ou de outros relays onde possa estar armazenada.</string>
     <string name="quick_action_block_dialog_btn">Bloquear</string>
@@ -559,10 +559,10 @@
     <string name="relay_setup">Relés</string>
     <string name="discover_follows">Pacotes Seguir</string>
     <string name="discover_reads">Leituras</string>
-    <string name="discover_content">Descoberta de Notas</string>
+    <string name="discover_content_v2">Algoritmos de feed</string>
     <string name="discover_marketplace">Mercado</string>
-    <string name="discover_live">Ao vivo</string>
-    <string name="discover_community">Comunidade</string>
+    <string name="discover_live_v2">Transmissões Ao Vivo</string>
+    <string name="discover_community_v2">Comunidades</string>
     <string name="discover_chat">Conversas</string>
     <string name="community_approved_posts">Postagens Aprovadas</string>
     <string name="groups_no_descriptor">Este grupo não tem uma descrição ou regras. Fale com o proprietário para adicionar</string>
@@ -614,6 +614,8 @@
     <string name="geohash_explainer">Adicione um geohash da sua localização à postagem. O público saberá que você está a 5 km (3 milhas) do local atual</string>
     <string name="geohash_exclusive">Postagem exclusiva de localização</string>
     <string name="geohash_exclusive_explainer">Somente seguidores da localização verão isso. Seus seguidores gerais não verão isso.</string>
+    <string name="hashtag_exclusive">Postagem exclusiva de Hashtag</string>
+    <string name="hashtag_exclusive_explainer">Somente seguidores da hashtag verão isso. Seus seguidores gerais não verão isso.</string>
     <string name="loading_location">Carregando localização</string>
     <string name="lack_location_permissions">Sem permissões para localização</string>
     <string name="add_sensitive_content_explainer">Adiciona aviso de conteúdo sensível antes de mostrar seu conteúdo. Isso é ideal para qualquer conteúdo NSFW ou conteúdo que algumas pessoas possam considerar ofensivo ou perturbador</string>
@@ -816,6 +818,7 @@
     <string name="new_short">Novos Vídeos Curtos: imagens ou vídeos</string>
     <string name="new_community_note">Nova Nota da Comunidade</string>
     <string name="new_product">Produto Novo</string>
+    <string name="new_exclusive_geo_note">Nova Postagem Geo-Exclusiva</string>
     <string name="open_all_reactions_to_this_post">Abrir todas as reações a esta postagem</string>
     <string name="close_all_reactions_to_this_post">Fechar todas as reações a esta postagem</string>
     <string name="reply_description">Responder</string>
@@ -968,4 +971,5 @@
     <string name="group_relay">Relé de chat</string>
     <string name="group_relay_explanation">O relé a qual todos os usuários deste chat se conectam</string>
     <string name="share_image">Compartilhar imagem…</string>
+    <string name="search_by_hashtag">Pesquisar hashtag: #%1$s</string>
 </resources>
