@@ -23,17 +23,20 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.acessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 fun NostrClient.downloadFirstEvent(
     subscriptionId: String = newSubId(),
     filters: List<RelayBasedFilter> = listOf(),
     onResponse: (Event) -> Unit,
 ) {
-    subscribe(
+    val listener =
         object : IRelayClientListener {
             override fun onEvent(
                 relay: IRelayClient,
@@ -49,49 +52,14 @@ fun NostrClient.downloadFirstEvent(
                     onResponse(event)
                 }
             }
+        }
 
-            override fun onClosed(
-                relay: IRelayClient,
-                subId: String,
-                message: String,
-            ) {
-                unsubscribe(this)
-                close(subscriptionId)
-                super.onClosed(relay, subId, message)
-            }
-
-            override fun onEOSE(
-                relay: IRelayClient,
-                subId: String,
-                arrivalTime: Long,
-            ) {
-                unsubscribe(this)
-                close(subscriptionId)
-                super.onEOSE(relay, subId, arrivalTime)
-            }
-
-            override fun onError(
-                relay: IRelayClient,
-                subId: String,
-                error: Error,
-            ) {
-                unsubscribe(this)
-                close(subscriptionId)
-                super.onError(relay, subId, error)
-            }
-
-            override fun onRelayStateChange(
-                relay: IRelayClient,
-                type: RelayState,
-            ) {
-                if (type == RelayState.DISCONNECTED) {
-                    unsubscribe(this)
-                    close(subscriptionId)
-                }
-                super.onRelayStateChange(relay, type)
-            }
-        },
-    )
+    subscribe(listener)
 
     sendFilter(subscriptionId, filters)
+
+    GlobalScope.launch(Dispatchers.IO) {
+        delay(30000)
+        unsubscribe(listener)
+    }
 }
