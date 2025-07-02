@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import android.util.Log
 import android.util.LruCache
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -35,28 +36,61 @@ import okhttp3.Response
 import java.io.IOException
 
 object Nip11CachedRetriever {
-    open class RetrieveResult(
-        val time: Long,
-    )
-
-    class RetrieveResultError(
-        val error: Nip11Retriever.ErrorCode,
-        val msg: String? = null,
-    ) : RetrieveResult(TimeUtils.now())
-
-    class RetrieveResultSuccess(
+    sealed class RetrieveResult(
         val data: Nip11RelayInformation,
-    ) : RetrieveResult(TimeUtils.now())
+        val time: Long,
+    ) {
+        class Error(
+            data: Nip11RelayInformation,
+            val error: Nip11Retriever.ErrorCode,
+            val msg: String? = null,
+        ) : RetrieveResult(data, TimeUtils.now())
 
-    class RetrieveResultLoading : RetrieveResult(TimeUtils.now())
+        class Success(
+            data: Nip11RelayInformation,
+        ) : RetrieveResult(data, TimeUtils.now())
 
-    private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult?>(100)
+        class Loading(
+            data: Nip11RelayInformation,
+        ) : RetrieveResult(data, TimeUtils.now())
+
+        class Empty(
+            data: Nip11RelayInformation,
+        ) : RetrieveResult(data, TimeUtils.now())
+    }
+
+    private val relayInformationEmptyCache = LruCache<NormalizedRelayUrl, Nip11RelayInformation>(1000)
+    private val relayInformationDocumentCache = LruCache<NormalizedRelayUrl, RetrieveResult?>(1000)
     private val retriever = Nip11Retriever()
 
-    fun getFromCache(relay: NormalizedRelayUrl): Nip11RelayInformation? {
-        val result = relayInformationDocumentCache.get(relay) ?: return null
-        if (result is RetrieveResultSuccess) return result.data
-        return null
+    fun getEmpty(relay: NormalizedRelayUrl): Nip11RelayInformation {
+        relayInformationEmptyCache.get(relay)?.let { return it }
+
+        val info =
+            Nip11RelayInformation(
+                name = relay.displayUrl(),
+                icon = relay.toHttp() + "favicon.ico",
+            )
+
+        relayInformationEmptyCache.put(relay, info)
+
+        return info
+    }
+
+    fun getFromCache(relay: NormalizedRelayUrl): Nip11RelayInformation {
+        val result = relayInformationDocumentCache.get(relay)
+
+        return when (result) {
+            is RetrieveResult.Success -> return result.data
+            is RetrieveResult.Error -> return result.data
+            is RetrieveResult.Empty -> return result.data
+            is RetrieveResult.Loading -> return result.data
+            else -> {
+                val empty = getEmpty(relay)
+                relayInformationDocumentCache.put(relay, RetrieveResult.Empty(empty))
+                empty
+            }
+        }
     }
 
     suspend fun loadRelayInfo(
@@ -65,23 +99,25 @@ object Nip11CachedRetriever {
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
-        checkNotInMainThread()
         val doc = relayInformationDocumentCache.get(relay)
         if (doc != null) {
-            if (doc is RetrieveResultSuccess) {
+            if (doc is RetrieveResult.Success) {
                 onInfo(doc.data)
-            } else if (doc is RetrieveResultLoading) {
+            } else if (doc is RetrieveResult.Loading) {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_MINUTE) {
                     // just wait.
                 } else {
                     retrieve(relay, okHttpClient, onInfo, onError)
                 }
-            } else if (doc is RetrieveResultError) {
+            } else if (doc is RetrieveResult.Error) {
                 if (TimeUtils.now() - doc.time < TimeUtils.ONE_HOUR) {
                     onError(relay, doc.error, null)
                 } else {
                     retrieve(relay, okHttpClient, onInfo, onError)
                 }
+            } else {
+                // Empty
+                retrieve(relay, okHttpClient, onInfo, onError)
             }
         } else {
             retrieve(relay, okHttpClient, onInfo, onError)
@@ -94,16 +130,16 @@ object Nip11CachedRetriever {
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
-        relayInformationDocumentCache.put(relay, RetrieveResultLoading())
+        relayInformationDocumentCache.put(relay, RetrieveResult.Loading(getEmpty(relay)))
         retriever.loadRelayInfo(
             relay = relay,
             okHttpClient = okHttpClient,
             onInfo = {
-                relayInformationDocumentCache.put(relay, RetrieveResultSuccess(it))
+                relayInformationDocumentCache.put(relay, RetrieveResult.Success(it))
                 onInfo(it)
             },
             onError = { relay, code, errorMsg ->
-                relayInformationDocumentCache.put(relay, RetrieveResultError(code, errorMsg))
+                relayInformationDocumentCache.put(relay, RetrieveResult.Error(getEmpty(relay), code, errorMsg))
                 onError(relay, code, errorMsg)
             },
         )
