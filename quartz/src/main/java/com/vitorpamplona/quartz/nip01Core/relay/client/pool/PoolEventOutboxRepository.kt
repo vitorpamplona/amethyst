@@ -57,10 +57,7 @@ class PoolEventOutboxRepository {
         id: HexKey,
         url: NormalizedRelayUrl,
     ) {
-        val waiting = eventOutbox[id]
-        if (waiting != null) {
-            waiting.newTry(url)
-        }
+        eventOutbox[id]?.newTry(url)
     }
 
     fun newResponse(
