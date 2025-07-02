@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.bloom.BloomFilterMurMur3
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.utils.LargeCache
 
 /**
@@ -43,8 +44,10 @@ class HintIndexer {
         relay: NormalizedRelayUrl,
         bloom: BloomFilterMurMur3,
     ) {
-        relayDB.put(relay, relay)
-        bloom.add(id, relay.hashCode())
+        if (!relay.isLocalHost()) {
+            relayDB.put(relay, relay)
+            bloom.add(id, relay.hashCode())
+        }
     }
 
     private fun getHintsFor(
