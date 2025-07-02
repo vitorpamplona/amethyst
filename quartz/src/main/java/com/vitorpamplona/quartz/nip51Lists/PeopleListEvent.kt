@@ -44,10 +44,10 @@ class PeopleListEvent(
         val words: Set<String> = setOf(),
     )
 
-    fun publicUsersAndWords() =
+    fun publicAndCachedPrivateUsersAndWords() =
         UsersAndWords(
-            filterTagList("p", tags),
-            filterTagList("word", tags),
+            filterTagList("p", cachedPrivateTags()),
+            filterTagList("word", cachedPrivateTags()),
         )
 
     fun publicAndPrivateUsersAndWords(

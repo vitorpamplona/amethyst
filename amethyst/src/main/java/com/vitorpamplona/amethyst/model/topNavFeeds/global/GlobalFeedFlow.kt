@@ -34,7 +34,9 @@ class GlobalFeedFlow(
 
     override fun flow() = MutableStateFlow(default)
 
+    override fun startValue(): GlobalTopNavFilter = default
+
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(default)
+        collector.emit(startValue())
     }
 }

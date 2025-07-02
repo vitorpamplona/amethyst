@@ -44,7 +44,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class HomeOutboxEventsEoseManager(
@@ -95,7 +94,7 @@ class HomeOutboxEventsEoseManager(
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followRelayFlow().sample(2000).collectLatest {
+                    key.followRelayFlow().collectLatest {
                         invalidateFilters()
                     }
                 },

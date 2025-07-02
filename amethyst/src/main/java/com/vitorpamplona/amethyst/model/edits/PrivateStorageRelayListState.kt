@@ -68,7 +68,7 @@ class PrivateStorageRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                emptySet(),
+                normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()),
             )
 
     fun saveRelayList(

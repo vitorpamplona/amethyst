@@ -47,6 +47,8 @@ class GeohashListEvent(
 
     fun publicGeohashes() = tags.mapNotNull(GeoHashTag::parse)
 
+    fun publicAndCachedPrivateGeohash() = publicGeohashes().toSet() + (publicAndPrivateGeohashCache ?: emptySet())
+
     fun publicAndPrivateGeohash(
         signer: NostrSigner,
         onReady: (Set<String>) -> Unit,

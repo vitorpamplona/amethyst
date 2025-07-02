@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsFeedFlo
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.NoteFeedFlow
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.unknown.UnknownFeedFlow
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -80,6 +79,6 @@ class FeedTopNavFilterState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                AuthorsByOutboxTopNavFilter(emptySet()),
+                loadFlowsFor(feedFilterListName.value).startValue(),
             )
 }

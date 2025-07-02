@@ -49,17 +49,51 @@ class NoteFeedFlow(
     val signer: NostrSigner,
     val allFollowRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
+    fun process(noteEvent: Event): IFeedTopNavFilter =
+        when (noteEvent) {
+            is PeopleListEvent -> {
+                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                    MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users)
+                } else {
+                    AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users)
+                }
+            }
+            is MuteListEvent -> {
+                MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users)
+            }
+            is FollowListEvent -> {
+                AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet())
+            }
+            is CommunityListEvent -> {
+                AllCommunitiesTopNavFilter(noteEvent.publicAndCachedPrivateCommunityIds().toSet())
+            }
+            is HashtagListEvent -> {
+                HashtagTopNavFilter(noteEvent.publicAndCachedPrivateHashtags(), allFollowRelays)
+            }
+            is GeohashListEvent -> {
+                LocationTopNavFilter(noteEvent.publicAndCachedPrivateGeohash(), allFollowRelays)
+            }
+            is CommunityDefinitionEvent -> {
+                SingleCommunityTopNavFilter(
+                    community = noteEvent.addressTag(),
+                    authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
+                    relays = noteEvent.relayUrls().toSet(),
+                )
+            }
+            else -> AuthorsByOutboxTopNavFilter(emptySet())
+        }
+
     suspend fun FlowCollector<IFeedTopNavFilter>.process(noteEvent: Event) {
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
-                    emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicUsersAndWords().users))
+                    emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users))
 
                     noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
                         emit(MutedAuthorsByOutboxTopNavFilter(it.users))
                     }
                 } else {
-                    emit(AuthorsByOutboxTopNavFilter(noteEvent.publicUsersAndWords().users))
+                    emit(AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users))
 
                     noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
                         emit(AuthorsByOutboxTopNavFilter(it.users))
@@ -67,7 +101,7 @@ class NoteFeedFlow(
                 }
             }
             is MuteListEvent -> {
-                emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicUsersAndWords().users))
+                emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users))
 
                 noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
                     emit(MutedAuthorsByOutboxTopNavFilter(it.users))
@@ -99,13 +133,18 @@ class NoteFeedFlow(
                 }
             }
             is CommunityDefinitionEvent -> {
-                SingleCommunityTopNavFilter(
-                    community = noteEvent.addressTag(),
-                    authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
-                    relays = noteEvent.relayUrls().toSet(),
+                emit(
+                    SingleCommunityTopNavFilter(
+                        community = noteEvent.addressTag(),
+                        authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
+                        relays = noteEvent.relayUrls().toSet(),
+                    ),
                 )
             }
-            else -> AuthorsByOutboxTopNavFilter(emptySet())
+            else ->
+                emit(
+                    AuthorsByOutboxTopNavFilter(emptySet()),
+                )
         }
     }
 
@@ -120,10 +159,19 @@ class NoteFeedFlow(
             }
         }
 
+    override fun startValue(): IFeedTopNavFilter {
+        val noteEvent = metadataFlow.value?.note?.event
+        if (noteEvent == null) {
+            return AuthorsByOutboxTopNavFilter(emptySet())
+        } else {
+            return process(noteEvent)
+        }
+    }
+
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
         val noteEvent = metadataFlow.value?.note?.event
         if (noteEvent == null) {
-            AuthorsByOutboxTopNavFilter(emptySet())
+            collector.emit(AuthorsByOutboxTopNavFilter(emptySet()))
         } else {
             collector.process(noteEvent)
         }

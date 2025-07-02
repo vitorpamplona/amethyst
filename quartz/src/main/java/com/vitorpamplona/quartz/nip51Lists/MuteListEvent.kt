@@ -41,19 +41,19 @@ class MuteListEvent(
 ) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun dTag() = FIXED_D_TAG
 
-    fun publicUsersAndWords() =
-        PeopleListEvent.UsersAndWords(
-            filterTagList("p", tags),
-            filterTagList("word", tags),
+    fun publicAndCachedUsersAndWords() =
+        UsersAndWords(
+            filterTagList("p", cachedPrivateTags()),
+            filterTagList("word", cachedPrivateTags()),
         )
 
     fun publicAndPrivateUsersAndWords(
         signer: NostrSigner,
-        onReady: (PeopleListEvent.UsersAndWords) -> Unit,
+        onReady: (UsersAndWords) -> Unit,
     ) {
         privateTagsOrEmpty(signer) {
             onReady(
-                PeopleListEvent.UsersAndWords(
+                UsersAndWords(
                     filterTagList("p", it),
                     filterTagList("word", it),
                 ),

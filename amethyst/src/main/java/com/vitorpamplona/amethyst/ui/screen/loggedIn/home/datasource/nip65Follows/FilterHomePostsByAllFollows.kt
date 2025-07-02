@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.f
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsFromAllCommunities
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 
 fun filterHomePostsByAllFollows(
@@ -36,29 +35,26 @@ fun filterHomePostsByAllFollows(
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
-    return followsSet.set.flatMap {
-        val since = since?.get(it.key)?.time ?: defaultSince
-        val relay = it.key
+    return followsSet.set.flatMap { (relay, filter) ->
+        val since = since?.get(relay)?.time
 
         listOfNotNull(
-            it.value.authors?.let {
+            filter.authors?.let {
                 filterHomePostsByAuthors(relay, it, since)
             },
-            it.value.geotags?.let {
+            filter.geotags?.let {
                 filterHomePostsByGeohashes(relay, it, since)
             },
-            it.value.geotagScopes?.let {
+            filter.geotagScopes?.let {
                 filterHomePostsByScopes(relay, it, since)
             },
-            it.value.hashtags?.let {
+            filter.hashtags?.let {
                 filterHomePostsByHashtags(relay, it, since)
             },
-            it.value.hashtagScopes?.let {
+            filter.hashtagScopes?.let {
                 filterHomePostsByScopes(relay, it, since)
             },
-            it.value.communities?.let {
+            filter.communities?.let {
                 filterHomePostsFromAllCommunities(relay, it, since)
             },
         ).flatten()

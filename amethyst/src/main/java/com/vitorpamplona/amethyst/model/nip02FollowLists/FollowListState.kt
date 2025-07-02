@@ -62,7 +62,7 @@ class FollowListState(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val innerFlow: Flow<Kind3Follows> =
         getFollowListFlow().transformLatest {
-            emit(buildKind3Follows(it.user.latestContactList))
+            emit(buildKind3Follows(it.user.latestContactList ?: settings.backupContactList))
         }
 
     val flow =

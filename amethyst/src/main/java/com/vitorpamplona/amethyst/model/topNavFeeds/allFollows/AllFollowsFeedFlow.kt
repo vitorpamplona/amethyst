@@ -50,7 +50,9 @@ class AllFollowsFeedFlow(
 
     override fun flow() = allFollows.map(::convert)
 
+    override fun startValue(): AllFollowsByOutboxTopNavFilter = convert(allFollows.value)
+
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(convert(allFollows.value))
+        collector.emit(startValue())
     }
 }

@@ -31,7 +31,10 @@ class UnknownFeedFlow(
     override fun flow() = MutableStateFlow(UnknownTopNavFilter(feedName))
 
     // empty feed
+    override fun startValue(): UnknownTopNavFilter = UnknownTopNavFilter(feedName)
+
+    // empty feed
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(UnknownTopNavFilter(feedName))
+        collector.emit(startValue())
     }
 }

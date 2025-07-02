@@ -26,5 +26,7 @@ import kotlinx.coroutines.flow.FlowCollector
 interface IFeedFlowsType {
     fun flow(): Flow<IFeedTopNavFilter>
 
+    fun startValue(): IFeedTopNavFilter
+
     suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>)
 }

@@ -46,6 +46,8 @@ class HashtagListEvent(
 
     fun publicHashtags() = tags.mapNotNull(HashtagTag::parse)
 
+    fun publicAndCachedPrivateHashtags() = publicHashtags().toSet() + (publicAndPrivateHashtagCache ?: emptySet())
+
     fun publicAndPrivateHashtag(
         signer: NostrSigner,
         onReady: (Set<String>) -> Unit,

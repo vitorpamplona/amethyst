@@ -56,7 +56,7 @@ val HomePostsByGeohashKinds =
 fun filterHomePostsByGeohashes(
     relay: NormalizedRelayUrl,
     geotags: Set<String>,
-    since: Long,
+    since: Long?,
 ): List<RelayBasedFilter> {
     if (geotags.isEmpty()) return emptyList()
 

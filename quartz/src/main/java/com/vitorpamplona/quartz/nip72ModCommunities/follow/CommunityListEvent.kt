@@ -54,6 +54,8 @@ class CommunityListEvent(
 
     fun publicCommunityIds() = tags.mapNotNull(ATag::parseAddressId)
 
+    fun publicAndCachedPrivateCommunityIds() = publicCommunityIds() + (publicAndPrivateAddressCache?.map { it.addressId } ?: emptyList())
+
     fun publicAndPrivateCommunities(
         signer: NostrSigner,
         onReady: (Set<AddressHint>) -> Unit,

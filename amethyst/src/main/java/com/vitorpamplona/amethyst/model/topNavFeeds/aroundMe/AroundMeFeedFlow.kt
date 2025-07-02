@@ -49,7 +49,9 @@ class AroundMeFeedFlow(
 
     override fun flow() = location.map(::convert)
 
+    override fun startValue(): LocationTopNavFilter = convert(location.value)
+
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(convert(location.value))
+        collector.emit(startValue())
     }
 }

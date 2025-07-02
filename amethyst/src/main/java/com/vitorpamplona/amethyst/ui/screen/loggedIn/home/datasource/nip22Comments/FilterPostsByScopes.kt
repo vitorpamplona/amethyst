@@ -30,7 +30,7 @@ val CommentKinds = listOf(CommentEvent.KIND)
 fun filterHomePostsByScopes(
     relay: NormalizedRelayUrl,
     scopesToLoad: Set<String>,
-    since: Long,
+    since: Long?,
 ): List<RelayBasedFilter> {
     if (scopesToLoad.isEmpty()) return emptyList()
 
