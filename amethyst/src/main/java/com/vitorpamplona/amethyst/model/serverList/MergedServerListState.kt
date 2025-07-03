@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.serverList
 
-import android.R.attr.host
+import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
+import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -30,14 +31,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import org.czeal.rfc3986.URIReference
 
 class MergedServerListState(
-    val fileServers: StateFlow<List<String>>,
-    val blossomServers: StateFlow<List<String>>,
+    val fileServers: FileStorageServerListState,
+    val blossomServers: BlossomServerListState,
     val scope: CoroutineScope,
 ) {
     fun host(url: String): String =
@@ -59,15 +59,15 @@ class MergedServerListState(
         return result + ServerName("NIP95", "", ServerType.NIP95)
     }
 
-    val liveServerList: StateFlow<List<ServerName>> by lazy {
-        combine(fileServers, blossomServers) { nip96s, blossoms ->
+    val liveServerList: StateFlow<List<ServerName>> =
+        combine(fileServers.flow, blossomServers.flow) { nip96s, blossoms ->
             mergeServerList(nip96s, blossoms)
-        }.onStart { emit(mergeServerList(fileServers.value, blossomServers.value)) }
-            .flowOn(Dispatchers.Default)
+        }.onStart {
+            emit(mergeServerList(fileServers.flow.value, blossomServers.flow.value))
+        }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                emptyList(),
+                DEFAULT_MEDIA_SERVERS,
             )
-    }
 }

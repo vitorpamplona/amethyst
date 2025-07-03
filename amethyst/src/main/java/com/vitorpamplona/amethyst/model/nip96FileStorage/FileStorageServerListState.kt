@@ -55,7 +55,7 @@ class FileStorageServerListState(
         return event?.servers() ?: emptyList()
     }
 
-    val fileServers =
+    val flow =
         getFileServersListFlow()
             .map { normalizeServers(it.note) }
             .onStart { emit(normalizeServers(getFileServersNote())) }

@@ -56,7 +56,7 @@ class BlossomServerListState(
         return event?.servers() ?: emptyList()
     }
 
-    val fileServers =
+    val flow =
         getBlossomServersListFlow()
             .map { normalizeServers(it.note) }
             .onStart { emit(normalizeServers(getBlossomServersNote())) }

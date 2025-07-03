@@ -102,8 +102,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -260,7 +258,7 @@ class Account(
 
     val blossomServers = BlossomServerListState(signer, cache, scope, settings)
     val fileStorageServers = FileStorageServerListState(signer, cache, scope, settings)
-    val serverLists = MergedServerListState(fileStorageServers.fileServers, blossomServers.fileServers, scope)
+    val serverLists = MergedServerListState(fileStorageServers, blossomServers, scope)
 
     // Relay settings
     val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
