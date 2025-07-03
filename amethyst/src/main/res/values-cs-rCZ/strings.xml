@@ -570,6 +570,7 @@
     <string name="add_sensitive_content_label">Citlivý obsah</string>
     <string name="add_sensitive_content_description">Před zobrazením tohoto obsahu přidá upozornění na citlivý obsah.</string>
     <string name="preferences">Nastavení aplikace</string>
+    <string name="user_preferences">Uživatelské nastavení</string>
     <string name="settings">Nastavení</string>
     <string name="connectivity_type_always">Vždy</string>
     <string name="connectivity_type_wifi_only">Pouze Wi-Fi</string>
@@ -972,4 +973,6 @@
     <string name="group_relay_explanation">Relé, ke kterému se všichni uživatelé tohoto chatu připojují</string>
     <string name="share_image">Sdílet obrázek…</string>
     <string name="search_by_hashtag">Vyhledávání hashtag: #%1$s</string>
+    <string name="dont_translate_from">Nepřekládat z</string>
+    <string name="dont_translate_from_description">Zde zobrazené jazyky nebudou přeloženy. Vyberte jazyk, který chcete odstranit a nechat je znovu přeložit.</string>
 </resources>

@@ -572,6 +572,7 @@
     <string name="add_sensitive_content_label">敏感内容</string>
     <string name="add_sensitive_content_description">在显示此内容之前添加敏感内容警告</string>
     <string name="preferences">偏好设置</string>
+    <string name="user_preferences">用户首选项</string>
     <string name="settings">设置</string>
     <string name="connectivity_type_always">始终</string>
     <string name="connectivity_type_wifi_only">仅限 WiFi</string>
@@ -974,4 +975,6 @@
     <string name="group_relay_explanation">此聊天所有用户都连接到的中继</string>
     <string name="share_image">分享图片…</string>
     <string name="search_by_hashtag">搜索话题标签：#%1$s</string>
+    <string name="dont_translate_from">不要翻译自</string>
+    <string name="dont_translate_from_description">此处显示的语言不会被翻译。请选择一种语言来移除它并重新翻译它。</string>
 </resources>
