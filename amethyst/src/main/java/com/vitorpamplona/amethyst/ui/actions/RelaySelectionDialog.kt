@@ -47,11 +47,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.google.common.collect.Multimaps.index
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
@@ -89,7 +87,7 @@ fun RelaySelectionDialog(
 ) {
     var relays by remember {
         mutableStateOf(
-            accountViewModel.account.client.connectedRelayList().map {
+            accountViewModel.account.client.allAvailableRelays().map {
                 RelayList(
                     relay = it,
                     isSelected = preSelectedList.any { relayUrl -> it == relayUrl },

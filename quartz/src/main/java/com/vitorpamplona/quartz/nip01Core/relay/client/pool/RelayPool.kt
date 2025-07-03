@@ -54,7 +54,7 @@ class RelayPool(
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
-    fun getAll() = relays.keys()
+    fun getAll() = statusFlow.value.connected
 
     fun getAllNeedsToReconnect() = relays.filter { url, relay -> relay.needsToReconnect() }
 

@@ -39,7 +39,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -89,7 +88,7 @@ class NostrClient(
             eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
         }
 
-    fun connectedRelayList() = relayPool.getAll()
+    fun allAvailableRelays() = relayPool.getAll()
 
     // Reconnects all relays that may have disconnected
     fun connect() = relayPool.connect()
@@ -238,8 +237,6 @@ class NostrClient(
     }
 
     fun getSubscriptionFiltersOrNull(subId: String): List<RelayBasedFilter>? = activeSubscriptions.getSubscriptionFiltersOrNull(subId)
-
-    fun connectedRelays() = relayPool.connectedRelays()
 
     fun relayStatusFlow() = relayPool.statusFlow
 }
