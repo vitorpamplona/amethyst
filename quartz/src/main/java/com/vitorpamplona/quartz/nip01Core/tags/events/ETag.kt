@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.events
 
+import android.R.attr.tag
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
@@ -72,8 +73,7 @@ data class ETag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-            return ETag(tag[1], hint, tag.getOrNull(3))
+            return ETag(tag[1], pickRelayHint(tag), pickAuthor(tag))
         }
 
         @JvmStatic
@@ -84,6 +84,32 @@ data class ETag(
             return tag[1]
         }
 
+        // simple case   ["e", "id", "relay"]
+        // empty tags    ["e", "id", "relay", ""]
+        // current root  ["e", "id", "relay", "marker"]
+        // current root  ["e", "id", "relay", "marker", "pubkey"]
+        // empty tags    ["e", "id", "relay", "", "pubkey"]
+        // pubkey marker ["e", "id", "relay", "pubkey"]
+        // pubkey marker ["e", "id", "relay", "pubkey", "marker"]
+        // pubkey marker ["e", "id", "pubkey"] // incorrect
+        // current root  ["e", "id", "marker"] // incorrect
+
+        @JvmStatic
+        private fun pickRelayHint(tag: Array<String>): NormalizedRelayUrl? {
+            if (tag.has(2) && tag[2].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[2])) return RelayUrlNormalizer.normalizeOrNull(tag[2])
+            if (tag.has(3) && tag[3].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[3])) return RelayUrlNormalizer.normalizeOrNull(tag[3])
+            if (tag.has(4) && tag[4].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[4])) return RelayUrlNormalizer.normalizeOrNull(tag[4])
+            return null
+        }
+
+        @JvmStatic
+        private fun pickAuthor(tag: Array<String>): HexKey? {
+            if (tag.has(2) && tag[2].length == 64) return tag[2]
+            if (tag.has(3) && tag[3].length == 64) return tag[3]
+            if (tag.has(4) && tag[4].length == 64) return tag[4]
+            return null
+        }
+
         @JvmStatic
         fun parseAsHint(tag: Array<String>): EventIdHint? {
             ensure(tag.has(2)) { return null }
@@ -91,7 +117,8 @@ data class ETag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            val hint = pickRelayHint(tag)
+
             ensure(hint != null) { return null }
 
             return EventIdHint(tag[1], hint)

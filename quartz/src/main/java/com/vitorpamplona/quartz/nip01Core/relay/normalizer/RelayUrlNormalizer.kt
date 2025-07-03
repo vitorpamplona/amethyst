@@ -20,8 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.normalizer
 
+import android.util.Log
+import android.util.Log.e
 import androidx.collection.LruCache
+import kotlinx.coroutines.CancellationException
 import org.czeal.rfc3986.URIReference
+import kotlin.contracts.ExperimentalContracts
 
 val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
 
@@ -37,6 +41,27 @@ class RelayUrlNormalizer {
 
         fun isOnion(url: String) = url.endsWith(".onion") || url.contains(".onion/")
 
+        fun isRelaySchemePrefix(url: String) = url.length > 6 && url[0] == 'w' && url[1] == 's'
+
+        fun isRelaySchemePrefixSecure(url: String) = url[2] == 's' && url[3] == ':' && url[4] == '/' && url[5] == '/' && url[6] != '/'
+
+        fun isRelaySchemePrefixInsecure(url: String) = url[2] == ':' && url[3] == '/' && url[4] == '/' && url[5] != '/'
+
+        fun isRelayUrl(url: String): Boolean {
+            val trimmed = url.trim().ifEmpty { return false }
+
+            // fast
+            if (isRelaySchemePrefix(trimmed)) {
+                if (isRelaySchemePrefixSecure(trimmed)) {
+                    return true
+                } else if (isRelaySchemePrefixInsecure(trimmed)) {
+                    return true
+                }
+            }
+
+            return false
+        }
+
         private fun norm(url: String) =
             NormalizedRelayUrl(
                 URIReference
@@ -46,19 +71,20 @@ class RelayUrlNormalizer {
                     .intern(),
             )
 
-        fun fix(url: String): String {
-            val trimmed = url.trim()
+        @OptIn(ExperimentalContracts::class)
+        fun fix(url: String): String? {
+            val trimmed = url.trim().ifEmpty { return null }
 
-            // fast
-            if (trimmed.length > 4 && trimmed[0] == 'w' && trimmed[1] == 's') {
-                if (trimmed[2] == 's' && trimmed[3] == ':' && trimmed[4] == '/' && trimmed[5] == '/') {
-                    return trimmed
-                } else if (trimmed[2] == ':' && trimmed[3] == '/' && trimmed[4] == '/') {
+            if (trimmed.isEmpty()) return null
+
+            // fast for good wss:// urls
+            if (isRelaySchemePrefix(trimmed)) {
+                if (isRelaySchemePrefixSecure(trimmed) || isRelaySchemePrefixInsecure(trimmed)) {
                     return trimmed
                 }
             }
 
-            // fast
+            // fast for good https:// urls
             if (trimmed.length > 8 && trimmed[0] == 'h' && trimmed[1] == 't' && trimmed[2] == 't' && trimmed[3] == 'p') {
                 if (trimmed[4] == 's' && trimmed[5] == ':' && trimmed[6] == '/' && trimmed[7] == '/') {
                     // https://
@@ -67,6 +93,12 @@ class RelayUrlNormalizer {
                     // http://
                     return "ws://${trimmed.drop(7)}"
                 }
+            }
+
+            if (trimmed.contains("://")) {
+                // some other scheme we cannot connect to.
+                Log.w("RelayUrlNormalizer", "Rejected relay URL: $url")
+                return null
             }
 
             return if (isOnion(trimmed) || isLocalHost(trimmed)) {
@@ -80,7 +112,8 @@ class RelayUrlNormalizer {
             normalizedUrls.get(url)?.let { return it }
 
             return try {
-                val normalized = norm(fix(url))
+                val fixed = fix(url) ?: return NormalizedRelayUrl(url)
+                val normalized = norm(fixed)
                 normalizedUrls.put(url, normalized)
                 normalized
             } catch (e: Exception) {
@@ -89,13 +122,22 @@ class RelayUrlNormalizer {
         }
 
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
-            normalizedUrls.get(url)?.let { return it }
+            if (url.isEmpty()) return null
+            normalizedUrls[url]?.let { return it }
 
             return try {
-                val normalized = norm(fix(url))
-                normalizedUrls.put(url, normalized)
-                normalized
+                val fixed = fix(url)
+                if (fixed != null) {
+                    val normalized = norm(fixed)
+                    normalizedUrls.put(url, normalized)
+                    return normalized
+                } else {
+                    Log.w("NormalizedRelayUrl", "Rejected Error $url")
+                    null
+                }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("NormalizedRelayUrl", "Rejected Error $url")
                 null
             }
         }

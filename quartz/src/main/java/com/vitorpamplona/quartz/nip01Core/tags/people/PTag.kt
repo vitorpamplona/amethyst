@@ -66,9 +66,14 @@ data class PTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            val hint = pickRelayHint(tag)
 
             return PTag(tag[1], hint)
+        }
+
+        private fun pickRelayHint(tag: Array<String>): NormalizedRelayUrl? {
+            if (tag.has(2) && tag[2].length > 7 && RelayUrlNormalizer.isRelayUrl(tag[2])) return RelayUrlNormalizer.normalizeOrNull(tag[2])
+            return null
         }
 
         @JvmStatic
@@ -89,10 +94,11 @@ data class PTag(
             ensure(tag[1].length == 64) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
 
-            val normalized = RelayUrlNormalizer.normalizeOrNull(tag[2])
-            ensure(normalized != null) { return null }
+            val hint = pickRelayHint(tag)
 
-            return PubKeyHint(tag[1], normalized)
+            ensure(hint != null) { return null }
+
+            return PubKeyHint(tag[1], hint)
         }
 
         @JvmStatic
