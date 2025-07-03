@@ -59,7 +59,7 @@ fun MessageButton(
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_dm),
+            painter = painterRes(R.drawable.ic_dm, 1),
             stringRes(R.string.send_a_direct_message),
             modifier = Size20Modifier,
         )

@@ -166,7 +166,7 @@ fun GenericCommentPostScreen(
                                 onClick = { postViewModel.showRelaysDialog = true },
                             ) {
                                 Icon(
-                                    painter = painterRes(R.drawable.relays),
+                                    painter = painterRes(R.drawable.relays, 5),
                                     contentDescription = stringRes(id = R.string.relay_list_selector),
                                     modifier = Modifier.height(25.dp),
                                     tint = MaterialTheme.colorScheme.onBackground,

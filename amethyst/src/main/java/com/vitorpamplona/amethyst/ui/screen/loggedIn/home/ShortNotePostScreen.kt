@@ -71,8 +71,6 @@ import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.Nav
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.PollIcon
-import com.vitorpamplona.amethyst.ui.note.RegularPostIcon
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
@@ -100,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -195,7 +194,7 @@ private fun NewPostScreenInner(
                                 onClick = { postViewModel.showRelaysDialog = true },
                             ) {
                                 Icon(
-                                    painter = painterRes(R.drawable.relays),
+                                    painter = painterRes(R.drawable.relays, 6),
                                     contentDescription = stringRes(id = R.string.relay_list_selector),
                                     modifier = Modifier.height(25.dp),
                                     tint = MaterialTheme.colorScheme.onBackground,
@@ -530,9 +529,19 @@ private fun AddPollButton(
         onClick = { onClick() },
     ) {
         if (!isPollActive) {
-            PollIcon()
+            Icon(
+                painter = painterRes(R.drawable.ic_poll, 1),
+                contentDescription = stringRes(id = R.string.poll),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         } else {
-            RegularPostIcon()
+            Icon(
+                painter = painterRes(R.drawable.ic_lists, 1),
+                contentDescription = stringRes(id = R.string.disable_poll),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
         }
     }
 }

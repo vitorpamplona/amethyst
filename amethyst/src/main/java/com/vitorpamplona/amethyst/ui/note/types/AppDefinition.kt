@@ -122,7 +122,7 @@ fun RenderAppDefinition(
                 }
             } else {
                 Image(
-                    painter = painterRes(R.drawable.profile_banner),
+                    painter = painterRes(R.drawable.profile_banner, 6),
                     contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =

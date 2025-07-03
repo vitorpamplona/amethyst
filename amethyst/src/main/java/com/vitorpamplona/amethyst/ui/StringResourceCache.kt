@@ -37,7 +37,7 @@ private val resourceCache = LruCache<Int, String>(300)
 private var resourceCacheLanguage: String? = null
 
 // Caches most common icons in the app to avoid using disk
-private val iconCache = LruCache<Int, Painter>(30)
+private val iconCache = LruCache<Int, LruCache<Int, Painter>>(30)
 
 fun checkLanguage(currentLanguage: String) {
     if (resourceCacheLanguage == null) {
@@ -127,19 +127,29 @@ fun stringRes(
 
 /**
  * This cache can only be used if the painter is the only copy on the screen
+ * It should store a separate Painter for each size. It's safe to just assume
+ * Different compositions use different sizes.
  */
 @Composable
 fun painterRes(
-    @DrawableRes id: Int,
+    @DrawableRes resourceId: Int,
+    sizeReference: Int,
 ): Painter {
-    val cached = iconCache.get(id)
+    val cached = iconCache.get(resourceId)
     if (cached != null) {
-        return cached
+        val composition = cached.get(sizeReference)
+        if (composition != null) {
+            return composition
+        }
     }
 
-    val loaded = painterResource(id)
+    val loaded = painterResource(resourceId)
 
-    iconCache.put(id, loaded)
+    if (cached == null) {
+        iconCache.put(resourceId, LruCache<Int, Painter>(10))
+    } else {
+        cached.put(sizeReference, loaded)
+    }
 
     return loaded
 }

@@ -20,9 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -34,11 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.note.IncognitoIconOff
-import com.vitorpamplona.amethyst.ui.note.IncognitoIconOn
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialog
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.IncognitoIconButtonModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
 
@@ -72,19 +71,17 @@ fun ToggleNip17Button(
         },
     ) {
         if (channelScreenModel.nip17) {
-            IncognitoIconOn(
-                modifier =
-                    Modifier
-                        .padding(top = 2.dp)
-                        .size(20.dp),
+            Icon(
+                painter = painterRes(R.drawable.incognito, 2),
+                contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
+                modifier = IncognitoIconButtonModifier,
                 tint = MaterialTheme.colorScheme.primary,
             )
         } else {
-            IncognitoIconOff(
-                modifier =
-                    Modifier
-                        .padding(top = 2.dp)
-                        .size(20.dp),
+            Icon(
+                painter = painterRes(R.drawable.incognito_off, 2),
+                contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
+                modifier = IncognitoIconButtonModifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
             )
         }
@@ -103,6 +100,7 @@ fun NewFeatureNIP17AlertDialog(
         title = stringRes(R.string.new_feature_nip17_might_not_be_available_title),
         textContent = stringRes(R.string.new_feature_nip17_might_not_be_available_description),
         buttonIconResource = R.drawable.incognito,
+        buttonIconReference = 3,
         buttonText = stringRes(R.string.new_feature_nip17_activate),
         onClickDoOnce = {
             scope.launch { onConfirm() }

@@ -184,7 +184,7 @@ private fun NotifiableIcon(
 ) {
     Box(route.notifSize) {
         Icon(
-            painter = painterRes(id = route.icon),
+            painter = painterRes(resourceId = route.icon, 0),
             contentDescription = stringRes(route.contentDescriptor),
             modifier = route.iconSize,
             tint = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,

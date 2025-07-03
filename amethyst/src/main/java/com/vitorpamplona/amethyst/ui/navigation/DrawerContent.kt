@@ -225,7 +225,7 @@ fun ProfileContentTemplate(
             )
         } else {
             Image(
-                painter = painterRes(R.drawable.profile_banner),
+                painter = painterRes(R.drawable.profile_banner, 3),
                 contentDescription = stringRes(R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = bannerModifier,
@@ -480,6 +480,7 @@ fun ListContent(
         NavigationRow(
             title = R.string.privacy_options,
             icon = R.drawable.ic_tor,
+            iconReference = 1,
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.PrivacyOptions,
@@ -567,6 +568,7 @@ private fun RenderRelayStatus(relayPool: RelayPool.RelayPoolStatus) {
 fun NavigationRow(
     title: Int,
     icon: Int,
+    iconReference: Int,
     tint: Color,
     nav: INav,
     route: Route,
@@ -574,6 +576,7 @@ fun NavigationRow(
     IconRow(
         title,
         icon,
+        iconReference,
         tint,
         onClick = {
             nav.closeDrawer()
@@ -622,6 +625,7 @@ fun NavigationRow(
 fun IconRow(
     title: Int,
     icon: Int,
+    iconReference: Int,
     tint: Color,
     onClick: () -> Unit,
 ) {
@@ -638,7 +642,7 @@ fun IconRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                painter = painterRes(icon),
+                painter = painterRes(icon, iconReference),
                 contentDescription = stringRes(title),
                 modifier = Size22Modifier,
                 tint = tint,
@@ -724,8 +728,8 @@ fun IconRowRelays(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                painter = painterRes(R.drawable.relays),
-                null,
+                painter = painterRes(R.drawable.relays, 4),
+                contentDescription = stringRes(R.string.relay_setup),
                 modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
@@ -800,7 +804,7 @@ fun BottomContent(
                 },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode),
+                    painter = painterRes(R.drawable.ic_qrcode, 2),
                     contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

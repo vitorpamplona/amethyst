@@ -146,7 +146,7 @@ fun DrawAdditionalInfo(
             onClick = { dialogOpen = true },
         ) {
             Icon(
-                painter = painterRes(R.drawable.ic_qrcode),
+                painter = painterRes(R.drawable.ic_qrcode, 1),
                 contentDescription = stringRes(id = R.string.show_npub_as_a_qr_code),
                 modifier = Size15Modifier,
                 tint = MaterialTheme.colorScheme.placeholderText,
@@ -196,7 +196,7 @@ fun DrawAdditionalInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     tint = Color.Unspecified,
-                    painter = painterRes(id = getIdentityClaimIcon(identity)),
+                    painter = painterRes(resourceId = getIdentityClaimIcon(identity), getIdentityClaimIconReference(identity)),
                     contentDescription = stringRes(getIdentityClaimDescription(identity)),
                     modifier = Modifier.size(16.dp),
                 )
@@ -252,4 +252,13 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
         is MastodonIdentity -> R.string.mastodon
         is GitHubIdentity -> R.string.github
         else -> R.drawable.github
+    }
+
+fun getIdentityClaimIconReference(identity: IdentityClaimTag): Int =
+    when (identity) {
+        is TwitterIdentity -> 0
+        is TelegramIdentity -> 0
+        is MastodonIdentity -> 0
+        is GitHubIdentity -> 0
+        else -> 0
     }

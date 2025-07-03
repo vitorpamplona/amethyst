@@ -31,13 +31,11 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DownloadForOffline
-import androidx.compose.material.icons.filled.Downloading
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.Close
@@ -49,7 +47,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
@@ -64,7 +61,6 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Reposted
 import com.vitorpamplona.amethyst.commons.icons.Search
 import com.vitorpamplona.amethyst.commons.icons.Zap
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
@@ -109,16 +105,6 @@ fun ArrowBackIcon(tint: Color = MaterialTheme.colorScheme.grayText) {
 }
 
 @Composable
-fun MessageIcon(modifier: Modifier) {
-    Icon(
-        painter = painterRes(R.drawable.ic_dm),
-        null,
-        modifier = modifier,
-        tint = MaterialTheme.colorScheme.primary,
-    )
-}
-
-@Composable
 fun DownloadForOfflineIcon(
     iconSize: Dp,
     tint: Color = MaterialTheme.colorScheme.primary,
@@ -128,26 +114,6 @@ fun DownloadForOfflineIcon(
         contentDescription = stringRes(id = R.string.accessibility_download_for_offline),
         modifier = remember(iconSize) { Modifier.size(iconSize) },
         tint = tint,
-    )
-}
-
-@Composable
-fun HashCheckIcon(iconSize: Dp) {
-    Icon(
-        painter = painterRes(R.drawable.original),
-        contentDescription = stringRes(id = R.string.hash_verification_passed),
-        modifier = remember(iconSize) { Modifier.size(iconSize) },
-        tint = Color.Unspecified,
-    )
-}
-
-@Composable
-fun HashCheckFailedIcon(iconSize: Dp) {
-    Icon(
-        imageVector = Icons.Default.Report,
-        contentDescription = stringRes(id = R.string.hash_verification_failed),
-        modifier = remember(iconSize) { Modifier.size(iconSize) },
-        tint = Color.Red,
     )
 }
 
@@ -362,26 +328,6 @@ fun CommentIcon(
 }
 
 @Composable
-fun PollIcon() {
-    Icon(
-        painter = painterRes(R.drawable.ic_poll),
-        contentDescription = stringRes(id = R.string.poll),
-        modifier = Size20Modifier,
-        tint = MaterialTheme.colorScheme.onBackground,
-    )
-}
-
-@Composable
-fun RegularPostIcon() {
-    Icon(
-        painter = painterRes(R.drawable.ic_lists),
-        contentDescription = stringRes(id = R.string.disable_poll),
-        modifier = Size20Modifier,
-        tint = MaterialTheme.colorScheme.onBackground,
-    )
-}
-
-@Composable
 fun CancelIcon() {
     Icon(
         imageVector = Icons.Default.Cancel,
@@ -480,61 +426,5 @@ fun VerticalDotsIcon() {
         contentDescription = stringRes(id = R.string.note_options),
         modifier = Size19Modifier,
         tint = MaterialTheme.colorScheme.placeholderText,
-    )
-}
-
-@Composable
-fun NIP05CheckingIcon(modifier: Modifier) {
-    Icon(
-        imageVector = Icons.Default.Downloading,
-        contentDescription = stringRes(id = R.string.nip05_checking),
-        modifier = modifier,
-        tint = Color.Yellow,
-    )
-}
-
-@Composable
-fun NIP05VerifiedIcon(modifier: Modifier) {
-    Icon(
-        painter = painterRes(R.drawable.nip_05),
-        contentDescription = stringRes(id = R.string.nip05_verified),
-        modifier = modifier,
-        tint = Color.Unspecified,
-    )
-}
-
-@Composable
-fun NIP05FailedVerification(modifier: Modifier) {
-    Icon(
-        imageVector = Icons.Default.Report,
-        contentDescription = stringRes(id = R.string.nip05_failed),
-        modifier = modifier,
-        tint = Color.Red,
-    )
-}
-
-@Composable
-fun IncognitoIconOn(
-    modifier: Modifier,
-    tint: Color,
-) {
-    Icon(
-        painter = painterResource(id = R.drawable.incognito),
-        contentDescription = stringRes(id = R.string.accessibility_turn_off_sealed_message),
-        modifier = modifier,
-        tint = tint,
-    )
-}
-
-@Composable
-fun IncognitoIconOff(
-    modifier: Modifier,
-    tint: Color,
-) {
-    Icon(
-        painter = painterResource(id = R.drawable.incognito_off),
-        contentDescription = stringRes(id = R.string.accessibility_turn_on_sealed_message),
-        modifier = modifier,
-        tint = tint,
     )
 }

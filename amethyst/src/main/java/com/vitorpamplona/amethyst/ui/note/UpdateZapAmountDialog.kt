@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
+import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -460,9 +461,9 @@ fun UpdateZapAmountContent(
                 },
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.alby),
+                    painter = painterRes(R.drawable.alby, 1),
                     contentDescription = stringRes(id = R.string.accessibility_navigate_to_alby),
-                    modifier = Modifier.size(24.dp),
+                    modifier = Size24Modifier,
                     tint = Color.Unspecified,
                 )
             }
@@ -475,14 +476,14 @@ fun UpdateZapAmountContent(
                 Icon(
                     Icons.Outlined.ContentPaste,
                     contentDescription = stringRes(id = R.string.paste_from_clipboard),
-                    modifier = Modifier.size(24.dp),
+                    modifier = Size24Modifier,
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
 
             IconButton(onClick = { qrScanning = true }) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode),
+                    painter = painterRes(R.drawable.ic_qrcode, 3),
                     contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.primary,

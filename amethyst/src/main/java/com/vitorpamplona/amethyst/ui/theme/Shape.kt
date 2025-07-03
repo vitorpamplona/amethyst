@@ -284,10 +284,8 @@ val inlinePlaceholder =
         placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
     )
 
-val incognitoIconModifier =
-    Modifier
-        .padding(top = 1.dp)
-        .size(14.dp)
+val IncognitoIconModifier = Modifier.padding(top = 1.dp).size(14.dp)
+val IncognitoIconButtonModifier = Modifier.padding(top = 2.dp).size(20.dp)
 
 val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
 

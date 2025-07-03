@@ -90,7 +90,7 @@ fun BannerImage(
             accountViewModel = accountViewModel,
             onError = {
                 Image(
-                    painter = painterRes(R.drawable.profile_banner),
+                    painter = painterRes(R.drawable.profile_banner, 4),
                     contentDescription = stringRes(R.string.profile_banner),
                     contentScale = ContentScale.Crop,
                     modifier = modifier,
@@ -99,7 +99,7 @@ fun BannerImage(
         )
     } else {
         Image(
-            painter = painterRes(R.drawable.profile_banner),
+            painter = painterRes(R.drawable.profile_banner, 5),
             contentDescription = stringRes(R.string.profile_banner),
             contentScale = ContentScale.Crop,
             modifier = modifier,

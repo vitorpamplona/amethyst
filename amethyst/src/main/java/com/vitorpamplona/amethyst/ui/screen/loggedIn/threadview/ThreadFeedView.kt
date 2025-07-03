@@ -849,7 +849,7 @@ private fun RenderClassifiedsReaderForThread(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_dm),
+                    painter = painterRes(R.drawable.ic_dm, 5),
                     stringRes(R.string.send_a_direct_message),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,

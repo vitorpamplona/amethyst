@@ -592,7 +592,7 @@ fun KeyTextField(
             }
             IconButton(onClick = { dialogOpen = true }) {
                 Icon(
-                    painter = painterRes(R.drawable.ic_qrcode),
+                    painter = painterRes(R.drawable.ic_qrcode, 5),
                     contentDescription =
                         stringRes(
                             R.string.login_with_qr_code,

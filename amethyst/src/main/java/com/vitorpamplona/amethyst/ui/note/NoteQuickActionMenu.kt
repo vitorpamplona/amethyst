@@ -528,6 +528,7 @@ fun QuickActionAlertDialog(
     title: String,
     textContent: String,
     buttonIconResource: Int,
+    buttonIconReference: Int,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -539,7 +540,7 @@ fun QuickActionAlertDialog(
         textContent = textContent,
         icon = {
             Icon(
-                painter = painterRes(buttonIconResource),
+                painter = painterRes(buttonIconResource, buttonIconReference),
                 contentDescription = null,
             )
         },
@@ -626,6 +627,7 @@ fun QuickActionAlertDialogOneButton(
     title: String,
     textContent: String,
     buttonIconResource: Int,
+    buttonIconReference: Int,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -636,7 +638,7 @@ fun QuickActionAlertDialogOneButton(
         textContent = textContent,
         icon = {
             Icon(
-                painter = painterRes(buttonIconResource),
+                painter = painterRes(buttonIconResource, buttonIconReference),
                 contentDescription = null,
             )
         },

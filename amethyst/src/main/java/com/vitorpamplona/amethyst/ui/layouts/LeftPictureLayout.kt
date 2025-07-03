@@ -65,7 +65,7 @@ fun LeftPictureLayoutPreviewCard() {
     LeftPictureLayout(
         onImage = {
             Image(
-                painter = painterRes(R.drawable.github),
+                painter = painterRes(R.drawable.github, 3),
                 contentDescription = stringRes(id = R.string.profile_banner),
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxSize().clip(QuoteBorder),

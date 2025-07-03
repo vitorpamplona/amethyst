@@ -65,7 +65,7 @@ fun PollField(postViewModel: ShortNotePostViewModel) {
                 ),
         ) {
             Image(
-                painterRes(id = android.R.drawable.ic_input_add),
+                painter = painterRes(resourceId = android.R.drawable.ic_input_add, 1),
                 contentDescription = "Add poll option button",
                 modifier = Size18Modifier,
             )

@@ -140,7 +140,7 @@ fun ErrorRow(
                         } ?: stringRes(R.string.error_dialog_talk_to_user)
 
                     Icon(
-                        painter = painterRes(R.drawable.ic_dm),
+                        painter = painterRes(R.drawable.ic_dm, 2),
                         contentDescription = descriptor,
                         modifier = Size20Modifier,
                         tint = MaterialTheme.colorScheme.primary,
