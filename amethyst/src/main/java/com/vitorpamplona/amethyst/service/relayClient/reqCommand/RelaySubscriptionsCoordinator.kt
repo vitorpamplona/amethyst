@@ -98,10 +98,6 @@ class RelaySubscriptionsCoordinator(
             nwc,
         )
 
-    fun start() = all.forEach { it.start() }
-
-    fun stop() = all.forEach { it.stop() }
-
     fun destroy() = all.forEach { it.destroy() }
 
     fun printCounters() = all.forEach { it.printStats() }

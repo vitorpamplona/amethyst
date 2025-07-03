@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinatorSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -97,9 +96,6 @@ fun LoggedInPage(
     ChatroomListFilterAssemblerSubscription(accountViewModel)
     VideoFilterAssemblerSubscription(accountViewModel)
     DiscoveryFilterAssemblerSubscription(accountViewModel)
-
-    // TODO: Is this needed?
-    RelaySubscriptionsCoordinatorSubscription(accountViewModel)
 
     // Updates local cache of the anti-spam filter choice of this user.
     ObserveAntiSpamFilterSettings(accountViewModel)
