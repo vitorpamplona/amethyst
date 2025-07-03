@@ -68,6 +68,7 @@ abstract class PerUserAndFollowListEoseManager<T>(
         subId: String,
     ) {
         orchestrator.dismissSubscription(subId)
+        userSubscriptionMap.remove(key)
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
@@ -87,15 +88,13 @@ abstract class PerUserAndFollowListEoseManager<T>(
 
         uniqueSubscribedAccounts.forEach {
             val user = user(it)
-            findOrCreateSubFor(it).relayBasedFilters = updateFilter(it, since(it))?.ifEmpty { null }
-
+            val sub = findOrCreateSubFor(it)
+            sub.relayBasedFilters = updateFilter(it, since(it))?.ifEmpty { null }
             updated.add(user)
         }
 
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                endSub(it.key, it.value)
-            }
+        userSubscriptionMap.filter { it.key !in updated }.forEach {
+            endSub(it.key, it.value)
         }
     }
 

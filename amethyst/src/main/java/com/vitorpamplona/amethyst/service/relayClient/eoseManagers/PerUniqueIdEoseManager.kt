@@ -70,6 +70,7 @@ abstract class PerUniqueIdEoseManager<T>(
         subId: String,
     ) {
         orchestrator.dismissSubscription(subId)
+        userSubscriptionMap.remove(key)
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
@@ -94,10 +95,8 @@ abstract class PerUniqueIdEoseManager<T>(
             updated.add(mainKey)
         }
 
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                endSub(it.key, it.value)
-            }
+        userSubscriptionMap.filter { it.key !in updated }.forEach {
+            endSub(it.key, it.value)
         }
     }
 

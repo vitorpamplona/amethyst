@@ -67,6 +67,7 @@ abstract class PerUserEoseManager<T>(
         subId: String,
     ) {
         orchestrator.dismissSubscription(subId)
+        userSubscriptionMap.remove(key)
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
@@ -91,10 +92,8 @@ abstract class PerUserEoseManager<T>(
             updated.add(user)
         }
 
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                endSub(it.key, it.value)
-            }
+        userSubscriptionMap.filter { it.key !in updated }.forEach {
+            endSub(it.key, it.value)
         }
     }
 
