@@ -58,7 +58,16 @@ fun debugState(context: Context) {
         Log.d("STATE DUMP", "Memory Class $memClass MB (largeHeap $isLargeHeap)")
     }
 
-    Log.d("STATE DUMP", "Connected Relays: " + Amethyst.instance.client.connectedRelays())
+    Log.d(
+        "STATE DUMP",
+        "Connected Relays: " +
+            Amethyst.instance.client
+                .relayStatusFlow()
+                .value.connected.size + "/" +
+            Amethyst.instance.client
+                .relayStatusFlow()
+                .value.available.size,
+    )
 
     Log.d(
         "STATE DUMP",
