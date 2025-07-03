@@ -570,6 +570,7 @@
     <string name="add_sensitive_content_label">Conteúdo sensível</string>
     <string name="add_sensitive_content_description">Adiciona aviso de conteúdo sensível antes de mostrar este conteúdo</string>
     <string name="preferences">Preferências do aplicativo</string>
+    <string name="user_preferences">Preferências do Usuário</string>
     <string name="settings">Configurações</string>
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_wifi_only">Somente wifi</string>
@@ -972,4 +973,6 @@
     <string name="group_relay_explanation">O relé a qual todos os usuários deste chat se conectam</string>
     <string name="share_image">Compartilhar imagem…</string>
     <string name="search_by_hashtag">Pesquisar hashtag: #%1$s</string>
+    <string name="dont_translate_from">Não Traduzir de</string>
+    <string name="dont_translate_from_description">Os idiomas mostrados aqui não serão traduzidos. Selecione um idioma para removê-lo e traduzi-lo novamente.</string>
 </resources>
