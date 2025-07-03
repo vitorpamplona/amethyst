@@ -569,6 +569,7 @@
     <string name="add_sensitive_content_label">Känsligt innehåll</string>
     <string name="add_sensitive_content_description">Lägger till varning för känsligt innehåll innan detta innehåll visas.</string>
     <string name="preferences">Appinställningar</string>
+    <string name="user_preferences">Användarinställningar</string>
     <string name="settings">Inställningar</string>
     <string name="connectivity_type_always">Alltid</string>
     <string name="connectivity_type_wifi_only">Endast Wi-Fi</string>
@@ -971,4 +972,6 @@
     <string name="group_relay_explanation">Reläet som alla användare av den här chatten ansluter till</string>
     <string name="share_image">Dela bild…</string>
     <string name="search_by_hashtag">Sök hashtag: #%1$s</string>
+    <string name="dont_translate_from">Översätt inte från</string>
+    <string name="dont_translate_from_description">Språk som visas här kommer inte att översättas. Välj ett språk för att ta bort det och få det översatt igen.</string>
 </resources>

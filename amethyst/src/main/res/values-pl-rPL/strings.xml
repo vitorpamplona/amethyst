@@ -569,6 +569,7 @@
     <string name="add_sensitive_content_label">Treść wrażliwa</string>
     <string name="add_sensitive_content_description">Dodaje ostrzeżenie o wrażliwej treści przed wyświetleniem tej zawartości</string>
     <string name="preferences">Ustawienia Aplikacji</string>
+    <string name="user_preferences">Preferencje użytkownika</string>
     <string name="settings">Ustawienia</string>
     <string name="connectivity_type_always">Zawsze</string>
     <string name="connectivity_type_wifi_only">Tylko WiFi</string>
@@ -971,4 +972,6 @@
     <string name="group_relay_explanation">Transmiter, z którym łączą się wszyscy użytkownicy tego czatu</string>
     <string name="share_image">Udostępnij zdjęcie…</string>
     <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
+    <string name="dont_translate_from">Nie tłumacz z</string>
+    <string name="dont_translate_from_description">Języki wyświetlane tutaj nie będą tłumaczone. Wybierz język, aby usunąć go z listy języków nietłumaczonych.</string>
 </resources>

@@ -575,6 +575,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_sensitive_content_label">Sensibler Inhalt</string>
     <string name="add_sensitive_content_description">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor dieser Inhalt angezeigt wird.</string>
     <string name="preferences">App Einstellungen</string>
+    <string name="user_preferences">Benutzereinstellungen</string>
     <string name="settings">Einstellungen</string>
     <string name="connectivity_type_always">Immer</string>
     <string name="connectivity_type_wifi_only">Nur WLAN</string>
@@ -977,4 +978,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
     <string name="share_image">Bild teilen…</string>
     <string name="search_by_hashtag">Suche Hashtag: #%1$s</string>
+    <string name="dont_translate_from">Nicht übersetzen von</string>
+    <string name="dont_translate_from_description">Die hier angezeigten Sprachen werden nicht übersetzt. Wählen Sie eine Sprache, um sie zu entfernen und lassen Sie sie erneut übersetzen.</string>
 </resources>

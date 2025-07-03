@@ -572,6 +572,7 @@
     <string name="add_sensitive_content_label">संवेदनशील विषयवस्तु</string>
     <string name="add_sensitive_content_description">इसे दिखाने से पूर्व संवेदनशील विषयवस्तु चेतावनी जोडता है</string>
     <string name="preferences">क्रमक आद्यताएँ</string>
+    <string name="user_preferences">उपयोगकर्ता आद्यताएँ</string>
     <string name="settings">स्थापना विकल्प</string>
     <string name="connectivity_type_always">सर्वदा</string>
     <string name="connectivity_type_wifi_only">केवल वै॰फै॰</string>
@@ -974,4 +975,6 @@
     <string name="group_relay_explanation">वह पुनःप्रसारक जिससे इस चर्चा के सभी उपयोगकर्ता जुडते हैं</string>
     <string name="share_image">चित्र बाँटें…</string>
     <string name="search_by_hashtag">विषयसूचक खोज : #%1$s</string>
+    <string name="dont_translate_from">अनुवाद ना करें</string>
+    <string name="dont_translate_from_description">यहाँ प्रस्तुत भाषाओं का अनुवाद नहीं होगा। भाषा चयन करें हटाने के लिए जिससे उसका अनुवाद पुनः होने लगेगा।</string>
 </resources>
