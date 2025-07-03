@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
@@ -62,6 +63,8 @@ open class BasicRelayClient(
         // waits 3 minutes to reconnect once things fail
         const val DELAY_TO_RECONNECT_IN_MSECS = 500L
     }
+
+    private val logTag = "Relay ${url.displayUrl()}"
 
     private var socket: WebSocket? = null
     private var isReady: Boolean = false
@@ -109,7 +112,7 @@ open class BasicRelayClient(
                 return
             }
 
-            Log.d("Relay", "${url.url} connecting...")
+            Log.d(logTag, "Connecting...")
 
             lastConnectTentative = TimeUtils.now()
 
@@ -118,7 +121,7 @@ open class BasicRelayClient(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
-            Log.w("Relay", "${url.url} Crash before connecting $url", e)
+            Log.w(logTag, "Crash before connecting", e)
             stats.newError(e.message ?: "Error trying to connect: ${e.javaClass.simpleName}")
 
             markConnectionAsClosed()
@@ -135,7 +138,7 @@ open class BasicRelayClient(
             pingMillis: Long,
             compression: Boolean,
         ) {
-            Log.d("Relay", "${url.url} onConnect $socket")
+            Log.d(logTag, "OnOpen (ping: ${pingMillis}ms${if (compression) ", using compression" else ""})")
 
             markConnectionAsReady(pingMillis, compression)
 
@@ -145,6 +148,8 @@ open class BasicRelayClient(
         }
 
         override fun onMessage(text: String) {
+            // Log.d(logTag, "Receiving: $text")
+
             stats.addBytesReceived(text.bytesUsedInMemory())
 
             try {
@@ -161,7 +166,7 @@ open class BasicRelayClient(
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 stats.newError("Error processing: $text")
-                Log.e("Relay", "${url.url} Error processing: $text")
+                Log.e(logTag, "Error processing: $text")
                 listener.onError(this@BasicRelayClient, "", Error("Error processing $text"))
             }
         }
@@ -170,7 +175,7 @@ open class BasicRelayClient(
             code: Int,
             reason: String,
         ) {
-            Log.w("Relay", "${url.url} onClosing: $code $reason")
+            Log.w(logTag, "OnClosing $code $reason")
 
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTING)
         }
@@ -179,10 +184,9 @@ open class BasicRelayClient(
             code: Int,
             reason: String,
         ) {
+            Log.w(logTag, "OnClosed $reason")
+
             markConnectionAsClosed()
-
-            Log.w("Relay", "${url.url} onClosed $reason")
-
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.DISCONNECTED)
         }
 
@@ -201,7 +205,7 @@ open class BasicRelayClient(
             // Failures disconnect the relay.
             markConnectionAsClosed()
 
-            Log.w("Relay", "${url.url} onFailure $code $response ${t.message} $socket")
+            Log.w(logTag, "OnFailure $code $response ${t.message} $socket")
             t.printStackTrace()
             listener.onError(
                 this@BasicRelayClient,
@@ -233,6 +237,7 @@ open class BasicRelayClient(
     }
 
     private fun processEvent(msg: EventMessage) {
+        // Log.w(logTag, "Event ${msg.subId} ${msg.event.toJson()}")
         listener.onEvent(
             relay = this,
             subId = msg.subId,
@@ -243,13 +248,13 @@ open class BasicRelayClient(
     }
 
     private fun processEose(msg: EoseMessage) {
-        // Log.w("Relay", "Relay onEOSE $url $newMessage")
+        // Log.w(logTag, "EOSE ${msg.subId}")
         afterEOSEPerSubscription[msg.subId] = true
         listener.onEOSE(this, msg.subId, TimeUtils.now())
     }
 
     private fun processNotice(msg: NoticeMessage) {
-        // Log.w("Relay", "Relay onNotice $url, $newMessage")
+        Log.w(logTag, "Notice ${msg.message}")
         stats.newNotice(msg.message)
         listener.onError(this@BasicRelayClient, msg.message, Error("Relay sent notice: $msg.message"))
     }
@@ -258,7 +263,7 @@ open class BasicRelayClient(
         msg: OkMessage,
         onConnected: () -> Unit,
     ) {
-        Log.w("Relay", "${url.url} onOK: ${msg.eventId} ${msg.success} ${msg.message}")
+        // Log.w(logTag, "OK: ${msg.eventId} ${msg.success} ${msg.message}")
 
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
         if (authResponseWatcher.containsKey(msg.eventId)) {
@@ -278,29 +283,29 @@ open class BasicRelayClient(
     }
 
     private fun processAuth(msg: AuthMessage) {
-        // Log.d("Relay", "Relay onAuth $url, $newMessage")
+        // Log.d(logTag, "Auth $newMessage")
         listener.onAuth(this@BasicRelayClient, msg.challenge)
     }
 
     private fun processNotify(msg: NotifyMessage) {
-        // Log.w("Relay", "Relay onNotify $url, $newMessage")
+        // Log.w(logTag, "Notify $newMessage")
         listener.onNotify(this@BasicRelayClient, msg.message)
     }
 
     private fun processClosed(msg: ClosedMessage) {
+        // Log.w(logTag, "Relay Closed Subscription $newMessage")
         afterEOSEPerSubscription[msg.subscriptionId] = false
-        // Log.w("Relay", "Relay Closed Subscription $url, $newMessage")
         listener.onClosed(this@BasicRelayClient, msg.subscriptionId, msg.message)
     }
 
     private fun processUnkownMessage(newMessage: String) {
         stats.newError("Unsupported message: $newMessage")
-        Log.w("Relay", "Unsupported message: $newMessage")
+        Log.w(logTag, "Unsupported message: $newMessage")
         listener.onError(this, "", Error("Unsupported message: $newMessage"))
     }
 
     override fun disconnect() {
-        Log.d("Relay", "${url.url} disconnecting...")
+        Log.d(logTag, "Disconnecting...")
         lastConnectTentative = 0L // this is not an error, so prepare to reconnect as soon as requested.
         delayToConnect = DELAY_TO_RECONNECT_IN_MSECS
         socket?.disconnect()
@@ -410,6 +415,7 @@ open class BasicRelayClient(
             )
         }
         socket?.let {
+            // Log.d(logTag, "Sending: $str")
             val result = it.send(str)
             listener.onSend(this@BasicRelayClient, str, result)
             stats.addBytesSent(str.bytesUsedInMemory())
@@ -417,7 +423,10 @@ open class BasicRelayClient(
     }
 
     override fun close(subscriptionId: String) {
-        writeToSocket(CloseCmd.Companion.toJson(subscriptionId))
-        afterEOSEPerSubscription[subscriptionId] = false
+        // avoids sending closes for subscriptions that were never sent to this relay.
+        if (afterEOSEPerSubscription.containsKey(subscriptionId)) {
+            writeToSocket(CloseCmd.Companion.toJson(subscriptionId))
+            afterEOSEPerSubscription[subscriptionId] = false
+        }
     }
 }
