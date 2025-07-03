@@ -56,21 +56,25 @@ fun Waveform(
 
     val restartFlow = remember { mutableIntStateOf(0) }
 
+    val myController = mediaControllerState.controller
+
     // Keeps the screen on while playing and viewing videos.
-    DisposableEffect(key1 = mediaControllerState.controller) {
-        val listener =
-            object : Player.Listener {
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    // doesn't consider the mutex because the screen can turn off if the video
-                    // being played in the mutex is not visible.
-                    if (isPlaying) {
-                        restartFlow.intValue += 1
+    if (myController != null) {
+        DisposableEffect(key1 = myController) {
+            val listener =
+                object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        // doesn't consider the mutex because the screen can turn off if the video
+                        // being played in the mutex is not visible.
+                        if (isPlaying) {
+                            restartFlow.intValue += 1
+                        }
                     }
                 }
-            }
 
-        mediaControllerState.controller?.addListener(listener)
-        onDispose { mediaControllerState.controller?.removeListener(listener) }
+            myController.addListener(listener)
+            onDispose { myController.removeListener(listener) }
+        }
     }
 
     LaunchedEffect(key1 = restartFlow.intValue) {

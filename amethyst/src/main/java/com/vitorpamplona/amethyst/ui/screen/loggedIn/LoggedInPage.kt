@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.app.Activity
+import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -216,25 +217,27 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                     }
                 }
 
+            val launcher: (Intent) -> Unit = {
+                try {
+                    launcher.launch(it)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e("Signer", "Error opening Signer app", e)
+                    accountViewModel.toastManager.toast(
+                        R.string.error_opening_external_signer,
+                        R.string.error_opening_external_signer_description,
+                    )
+                }
+            }
+
             lifeCycleOwner.lifecycle.addObserver(observer)
             accountViewModel.account.signer.launcher.registerLauncher(
-                launcher = {
-                    try {
-                        launcher.launch(it)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e("Signer", "Error opening Signer app", e)
-                        accountViewModel.toastManager.toast(
-                            R.string.error_opening_external_signer,
-                            R.string.error_opening_external_signer_description,
-                        )
-                    }
-                },
+                launcher = launcher,
                 contentResolver = Amethyst.instance::contentResolverFn,
             )
             onDispose {
                 accountViewModel.account.signer.launcher
-                    .clearLauncher()
+                    .clearLauncherIf(launcher)
                 lifeCycleOwner.lifecycle.removeObserver(observer)
             }
         }

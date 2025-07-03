@@ -641,26 +641,30 @@ private fun PrepareExternalSignerReceiver(onLogin: (pubkey: String, packageName:
     val activity = getActivity() as MainActivity
 
     DisposableEffect(launcher, activity, externalSignerLauncher) {
-        externalSignerLauncher.registerLauncher(
-            launcher = {
-                try {
-                    launcher.launch(it)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.e("Signer", "Error opening Signer app", e)
-                    scope.launch(Dispatchers.Main) {
-                        Toast
-                            .makeText(
-                                Amethyst.instance,
-                                R.string.error_opening_external_signer,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                    }
+        val launcher: (Intent) -> Unit = {
+            try {
+                launcher.launch(it)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("Signer", "Error opening Signer app", e)
+                scope.launch(Dispatchers.Main) {
+                    Toast
+                        .makeText(
+                            Amethyst.instance,
+                            R.string.error_opening_external_signer,
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
-            },
+            }
+        }
+
+        externalSignerLauncher.registerLauncher(
+            launcher = launcher,
             contentResolver = Amethyst.instance::contentResolverFn,
         )
-        onDispose { externalSignerLauncher.clearLauncher() }
+        onDispose {
+            externalSignerLauncher.clearLauncherIf(launcher)
+        }
     }
 
     LaunchedEffect(externalSignerLauncher) {

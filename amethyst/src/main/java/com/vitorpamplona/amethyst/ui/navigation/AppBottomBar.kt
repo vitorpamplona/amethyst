@@ -104,7 +104,6 @@ fun keyboardAsState(): State<Keyboard> {
                 }
             }
         view.viewTreeObserver.addOnGlobalLayoutListener(onGlobalListener)
-
         onDispose { view.viewTreeObserver.removeOnGlobalLayoutListener(onGlobalListener) }
     }
 

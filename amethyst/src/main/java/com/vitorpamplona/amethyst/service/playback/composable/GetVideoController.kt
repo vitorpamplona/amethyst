@@ -54,6 +54,10 @@ fun GetVideoController(
     val scope = rememberCoroutineScope()
 
     // Prepares a VideoPlayer from the foreground service.
+    //
+    // TODO: Review this code because a new Disposable Effect can run
+    // before the onDispose of the previous composable and the onDispose
+    // sometimes affects the new variables, not the old ones.
     DisposableEffect(key1 = mediaItem.src.videoUri) {
         // If it is not null, the user might have come back from a playing video, like clicking on
         // the notification of the video player.

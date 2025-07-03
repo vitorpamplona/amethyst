@@ -40,7 +40,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,12 +71,6 @@ fun NewUserMetadataScreen(
 
     LaunchedEffect(Unit) {
         postViewModel.load(accountViewModel.account)
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            postViewModel.clear()
-        }
     }
 
     Scaffold(

@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -55,11 +54,13 @@ fun SetAccountCentricViewModelStore(
         content()
     }
 
-    DisposableEffect(key1 = state) {
-        onDispose {
-            state.currentViewModelStore.viewModelStore.clear()
-        }
-    }
+    // moved this clearing activity to the viewmodel account
+    // because the new composable might run before the onDispose.
+    // DisposableEffect(key1 = state) {
+    //    onDispose {
+    //        state.currentViewModelStore.viewModelStore.clear()
+    //    }
+    // }
 }
 
 class AccountCentricViewModelStore : ViewModelStoreOwner {

@@ -39,7 +39,7 @@ object BackgroundMedia {
     fun removeBackgroundControllerAndReleaseIt() {
         bgInstance.value?.let {
             PlaybackServiceClient.removeController(it)
-            clearBackground()
+            bgInstance.tryEmit(null)
         }
     }
 
@@ -47,7 +47,9 @@ object BackgroundMedia {
         bgInstance.tryEmit(mediaControllerState)
     }
 
-    fun clearBackground() {
-        bgInstance.tryEmit(null)
+    fun clearBackground(mediaControllerState: MediaControllerState) {
+        if (bgInstance.value == mediaControllerState) {
+            bgInstance.tryEmit(null)
+        }
     }
 }

@@ -58,9 +58,8 @@ fun rememberIsInPipMode(): Boolean {
             Consumer<PictureInPictureModeChangedInfo> { info ->
                 pipMode = info.isInPictureInPictureMode
             }
-        activity.addOnPictureInPictureModeChangedListener(
-            observer,
-        )
+
+        activity.addOnPictureInPictureModeChangedListener(observer)
         onDispose { activity.removeOnPictureInPictureModeChangedListener(observer) }
     }
     return pipMode

@@ -64,8 +64,6 @@ fun TabRelays(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            println("Profile Relay Dispose")
-            feedViewModel.unsubscribeTo(user)
         }
     }
 

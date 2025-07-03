@@ -114,9 +114,11 @@ class ExternalSignerLauncher(
     }
 
     /** Call this function when the activity is destroyed or is about to be replaced. */
-    fun clearLauncher() {
-        this.signerAppLauncher = null
-        this.contentResolver = null
+    fun clearLauncherIf(launcher: ((Intent) -> Unit)) {
+        if (signerAppLauncher == launcher) {
+            this.signerAppLauncher = null
+            this.contentResolver = null
+        }
     }
 
     fun newResult(data: Intent) {
