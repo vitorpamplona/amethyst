@@ -101,7 +101,7 @@ class RelayPool(
         relays.forEach { url, relay ->
             val filters = filters.mapNotNull { it.toFilter(url) }
             if (filters.isNotEmpty()) {
-                relay.sendRequest(subId, filters)
+                relay.sendCount(subId, filters)
             }
         }
     }
