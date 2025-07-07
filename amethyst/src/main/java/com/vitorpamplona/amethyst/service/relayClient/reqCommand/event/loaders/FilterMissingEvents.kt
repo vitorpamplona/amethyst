@@ -22,12 +22,12 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.relayHints
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.MapOfSetBuilder
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
     val missingEvents = mutableSetOf<String>()
@@ -51,15 +51,16 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
 fun filterMissingEvents(missingEventIds: Set<HexKey>): List<RelayBasedFilter> {
     if (missingEventIds.isEmpty()) return emptyList()
 
-    val relayHints = MapOfSetBuilder<NormalizedRelayUrl, HexKey>()
-
-    missingEventIds.forEach { eventId ->
-        LocalCache.relayHints.hintsForEvent(eventId).forEach { relayUrl ->
-            relayHints.add(relayUrl, eventId)
+    val relayHints =
+        mapOfSet {
+            missingEventIds.forEach { eventId ->
+                LocalCache.relayHints.hintsForEvent(eventId).forEach { relayUrl ->
+                    add(relayUrl, eventId)
+                }
+            }
         }
-    }
 
-    return relayHints.build().map {
+    return relayHints.map {
         RelayBasedFilter(
             relay = it.key,
             filter = Filter(ids = it.value.sorted()),
