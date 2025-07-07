@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -89,7 +90,8 @@ abstract class PerUserAndFollowListEoseManager<T>(
         uniqueSubscribedAccounts.forEach {
             val user = user(it)
             val sub = findOrCreateSubFor(it)
-            sub.relayBasedFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            val newFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            sub.updateFilters(newFilters?.groupByRelay())
             updated.add(user)
         }
 

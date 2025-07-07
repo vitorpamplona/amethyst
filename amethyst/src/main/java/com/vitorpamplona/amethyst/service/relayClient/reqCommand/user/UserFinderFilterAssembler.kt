@@ -42,10 +42,6 @@ class UserFinderFilterAssembler(
             UserWatcherSubAssembler(client, ::allKeys),
         )
 
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
-
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
     override fun invalidateKeys() = invalidateFilters()

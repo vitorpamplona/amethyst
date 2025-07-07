@@ -45,8 +45,6 @@ abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
     fun subscribe(query: T?) {
         if (query == null) return
 
-        val wasEmpty = composeSubscriptions.isEmpty()
-
         composeSubscriptions[query]?.cancel()
         composeSubscriptions[query] =
             scope.launch {
@@ -54,10 +52,6 @@ abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
                     invalidateKeys()
                 }
             }
-
-        if (wasEmpty) {
-            start()
-        }
 
         invalidateKeys()
     }
@@ -70,10 +64,6 @@ abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
         composeSubscriptions.remove(query)
 
         invalidateKeys()
-
-        if (composeSubscriptions.isEmpty()) {
-            stop()
-        }
     }
 
     fun allKeys() = composeSubscriptions.keys

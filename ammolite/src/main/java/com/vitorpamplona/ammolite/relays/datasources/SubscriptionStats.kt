@@ -21,17 +21,19 @@
 package com.vitorpamplona.ammolite.relays.datasources
 
 import android.util.Log
+import com.vitorpamplona.quartz.utils.LargeCache
 
 class SubscriptionStats {
     data class Counter(
         val subscriptionId: String,
         val eventKind: Int,
-        var counter: Int,
-    )
+    ) {
+        var counter: Int = 0
+    }
 
-    private var eventCounter = mapOf<Int, Counter>()
+    private var eventCounter = LargeCache<Int, Counter>()
 
-    fun eventCounterIndex(
+    private fun eventCounterIndex(
         str1: String,
         str2: Int,
     ): Int = 31 * str1.hashCode() + str2.hashCode()
@@ -41,19 +43,15 @@ class SubscriptionStats {
         eventKind: Int,
     ) {
         val key = eventCounterIndex(subscriptionId, eventKind)
-        val keyValue = eventCounter[key]
-        if (keyValue != null) {
-            keyValue.counter++
-        } else {
-            eventCounter = eventCounter + Pair(key, Counter(subscriptionId, eventKind, 1))
-        }
+        val stats = eventCounter.getOrCreate(key) { Counter(subscriptionId, eventKind) }
+        stats.counter++
     }
 
     fun printCounter(tag: String) {
-        eventCounter.forEach {
+        eventCounter.forEach { _, stats ->
             Log.d(
                 tag,
-                "Received Events ${it.value.subscriptionId} ${it.value.eventKind}: ${it.value.counter}",
+                "Received Events ${stats.subscriptionId} ${stats.eventKind}: ${stats.counter}",
             )
         }
     }

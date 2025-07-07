@@ -97,7 +97,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.acessories.downloadFirstEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -953,9 +952,8 @@ class Account(
                 it.host?.let { host ->
                     client.downloadFirstEvent(
                         filters =
-                            note.relays.map { relay ->
-                                RelayBasedFilter(
-                                    relay,
+                            note.relays.associateWith { relay ->
+                                listOf(
                                     Filter(
                                         ids = listOf(host.id),
                                     ),

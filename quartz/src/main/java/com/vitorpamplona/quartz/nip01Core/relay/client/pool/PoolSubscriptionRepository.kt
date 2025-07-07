@@ -22,20 +22,17 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class PoolSubscriptionRepository {
-    private var subscriptions = mapOf<String, PoolSubscription>()
+    private var subscriptions = LargeCache<String, Map<NormalizedRelayUrl, List<Filter>>>()
     val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
     fun updateRelays() {
         val myRelays = mutableSetOf<NormalizedRelayUrl>()
-        subscriptions.values.forEach {
-            it.filters.forEach {
-                if (!myRelays.contains(it.relay)) {
-                    myRelays.add(it.relay)
-                }
-            }
+        subscriptions.forEach { sub, perRelayFilters ->
+            myRelays.addAll(perRelayFilters.keys)
         }
 
         if (relays.value != myRelays) {
@@ -45,20 +42,15 @@ class PoolSubscriptionRepository {
 
     fun addOrUpdate(
         subscriptionId: String,
-        filters: List<RelayBasedFilter> = listOf(),
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
-        val currentFilter = subscriptions[subscriptionId]
-        if (currentFilter == null) {
-            subscriptions = subscriptions + Pair(subscriptionId, PoolSubscription(filters))
-        } else {
-            currentFilter.filters = filters
-        }
+        subscriptions.put(subscriptionId, filters)
         updateRelays()
     }
 
     fun remove(subscriptionId: String) {
-        if (subscriptions.contains(subscriptionId)) {
-            subscriptions = subscriptions.minus(subscriptionId)
+        if (subscriptions.containsKey(subscriptionId)) {
+            subscriptions.remove(subscriptionId)
             updateRelays()
         }
     }
@@ -67,9 +59,9 @@ class PoolSubscriptionRepository {
         relay: NormalizedRelayUrl,
         run: (String, List<Filter>) -> Unit,
     ) {
-        subscriptions.forEach { (subId, filters) ->
-            val filters = filters.toFilter(relay)
-            if (filters.isNotEmpty()) {
+        subscriptions.forEach { subId, filters ->
+            val filters = filters[relay]
+            if (!filters.isNullOrEmpty()) {
                 run(subId, filters)
             } else {
                 null
@@ -77,11 +69,5 @@ class PoolSubscriptionRepository {
         }
     }
 
-    fun isActive(subscriptionId: String): Boolean = subscriptions.contains(subscriptionId)
-
-    fun allSubscriptions(): Map<String, PoolSubscription> = subscriptions
-
-    fun getSubscriptionFilters(subId: String): List<RelayBasedFilter> = subscriptions[subId]?.filters ?: emptyList()
-
-    fun getSubscriptionFiltersOrNull(subId: String): List<RelayBasedFilter>? = subscriptions[subId]?.filters
+    fun getSubscriptionFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = subscriptions.get(subId)
 }

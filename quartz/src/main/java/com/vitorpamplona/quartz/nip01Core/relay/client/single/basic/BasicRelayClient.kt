@@ -293,7 +293,7 @@ open class BasicRelayClient(
     }
 
     private fun processClosed(msg: ClosedMessage) {
-        // Log.w(logTag, "Relay Closed Subscription $newMessage")
+        Log.w(logTag, "Relay Closed Subscription ${msg.subscriptionId} ${msg.message}")
         afterEOSEPerSubscription[msg.subscriptionId] = false
         listener.onClosed(this@BasicRelayClient, msg.subscriptionId, msg.message)
     }

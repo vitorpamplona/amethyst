@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.service.relays.EOSERelayList
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.collections.distinctBy
 
@@ -64,8 +65,9 @@ abstract class SingleSubEoseManager<T>(
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
+        val newFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
 
-        sub.relayBasedFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
+        sub.updateFilters(newFilters?.groupByRelay())
     }
 
     abstract fun updateFilter(

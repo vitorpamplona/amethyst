@@ -40,3 +40,11 @@ class RelayBasedFilter(
             null
         }
 }
+
+fun List<RelayBasedFilter>.groupByRelay(): Map<NormalizedRelayUrl, List<Filter>> {
+    val result = mutableMapOf<NormalizedRelayUrl, MutableList<Filter>>()
+    for (relayBasedFilter in this) {
+        result.getOrPut(relayBasedFilter.relay) { mutableListOf() }.add(relayBasedFilter.filter)
+    }
+    return result
+}

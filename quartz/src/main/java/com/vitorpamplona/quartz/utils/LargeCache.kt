@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import android.R.attr.value
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
+import kotlin.collections.LinkedHashMap
 
 class LargeCache<K, V> {
     private val cache = ConcurrentSkipListMap<K, V>()
@@ -170,14 +172,32 @@ class LargeCache<K, V> {
         return runner.count
     }
 
-    private fun innerForEach(runner: BiConsumer<K, V>) {
-        // val (value, elapsed) =
-        //    measureTimedValue {
-        cache.forEach(runner)
-        //    }
-        // println("LargeCache full loop $elapsed \t for $runner")
+    public fun <T, U> associate(transform: (K, V) -> Pair<T, U>): Map<T, U> {
+        val runner = BiAssociateCollector(size(), transform)
+        innerForEach(runner)
+        return runner.results
+    }
 
-        listOf(1, 2, 3).joinToString()
+    public fun <T, U> associateNotNull(transform: (K, V) -> Pair<T, U>?): Map<T, U> {
+        val runner = BiAssociateNotNullCollector(size(), transform)
+        innerForEach(runner)
+        return runner.results
+    }
+
+    public fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?> {
+        val runner = BiAssociateWithCollector(size(), transform)
+        innerForEach(runner)
+        return runner.results
+    }
+
+    public fun <U> associateNotNullWith(transform: (K, V) -> U): Map<K, U> {
+        val runner = BiAssociateNotNullWithCollector(size(), transform)
+        innerForEach(runner)
+        return runner.results
+    }
+
+    private fun innerForEach(runner: BiConsumer<K, V>) {
+        cache.forEach(runner)
     }
 
     fun joinToString(
@@ -255,6 +275,13 @@ fun interface BiMapper<K, V, R> {
     ): R?
 }
 
+fun interface BiMapperNotNull<K, V, R> {
+    fun map(
+        k: K,
+        v: V,
+    ): R
+}
+
 class BiMapCollector<K, V, R>(
     val mapper: BiMapper<K, V, R?>,
 ) : BiConsumer<K, V> {
@@ -267,6 +294,69 @@ class BiMapCollector<K, V, R>(
         val result = mapper.map(k, v)
         if (result != null) {
             results.add(result)
+        }
+    }
+}
+
+class BiAssociateCollector<K, V, T, U>(
+    val size: Int,
+    val mapper: BiMapperNotNull<K, V, Pair<T, U>>,
+) : BiConsumer<K, V> {
+    var results: LinkedHashMap<T, U> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val pair = mapper.map(k, v)
+        results.put(pair.first, pair.second)
+    }
+}
+
+class BiAssociateNotNullCollector<K, V, T, U>(
+    val size: Int,
+    val mapper: BiMapper<K, V, Pair<T, U>?>,
+) : BiConsumer<K, V> {
+    var results: LinkedHashMap<T, U> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val pair = mapper.map(k, v)
+        if (pair != null) {
+            results.put(pair.first, pair.second)
+        }
+    }
+}
+
+class BiAssociateWithCollector<K, V, U>(
+    val size: Int,
+    val mapper: BiMapper<K, V, U?>,
+) : BiConsumer<K, V> {
+    var results: LinkedHashMap<K, U?> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        results.put(k, mapper.map(k, v))
+    }
+}
+
+class BiAssociateNotNullWithCollector<K, V, U>(
+    val size: Int,
+    val mapper: BiMapper<K, V, U>,
+) : BiConsumer<K, V> {
+    var results: LinkedHashMap<K, U> = LinkedHashMap(size)
+
+    override fun accept(
+        k: K,
+        v: V,
+    ) {
+        val newValue = mapper.map(k, v)
+        if (newValue != null) {
+            results.put(k, newValue)
         }
     }
 }

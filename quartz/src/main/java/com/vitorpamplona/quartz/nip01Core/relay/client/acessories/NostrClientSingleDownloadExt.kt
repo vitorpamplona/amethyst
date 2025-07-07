@@ -23,9 +23,10 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.acessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -33,7 +34,7 @@ import kotlinx.coroutines.launch
 
 fun NostrClient.downloadFirstEvent(
     subscriptionId: String = newSubId(),
-    filters: List<RelayBasedFilter> = listOf(),
+    filters: Map<NormalizedRelayUrl, List<Filter>>,
     onResponse: (Event) -> Unit,
 ) {
     val listener =
@@ -56,7 +57,7 @@ fun NostrClient.downloadFirstEvent(
 
     subscribe(listener)
 
-    sendFilter(subscriptionId, filters)
+    sendRequest(subscriptionId, filters)
 
     GlobalScope.launch(Dispatchers.IO) {
         delay(30000)

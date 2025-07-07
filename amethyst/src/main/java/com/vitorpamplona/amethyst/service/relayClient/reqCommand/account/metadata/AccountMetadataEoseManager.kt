@@ -38,7 +38,7 @@ class AccountMetadataEoseManager(
     client: NostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(query: AccountQueryState) = query.account.userProfile()
+    override fun user(key: AccountQueryState) = key.account.userProfile()
 
     fun relayFlow(query: AccountQueryState) = query.account.outboxRelays.flow
 

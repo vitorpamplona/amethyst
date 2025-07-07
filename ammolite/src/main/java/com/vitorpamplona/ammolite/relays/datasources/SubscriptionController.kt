@@ -20,16 +20,13 @@
  */
 package com.vitorpamplona.ammolite.relays.datasources
 
-import com.vitorpamplona.ammolite.relays.BundledUpdate
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import java.util.concurrent.atomic.AtomicBoolean
+import com.vitorpamplona.quartz.utils.LargeCache
 
 /**
  * Semantically groups Nostr filters and subscriptions in data source objects that
@@ -37,13 +34,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class SubscriptionController(
     val client: NostrClient,
-    val updateSubscriptions: () -> Unit,
-) : SubscriptionControllerService {
-    private val subscriptions = SubscriptionSet()
-    private var active: Boolean = false
-    private val changingFilters = AtomicBoolean()
-
-    val stats = SubscriptionStats()
+) {
+    private val subscriptions = LargeCache<String, Subscription>()
+    private val stats = SubscriptionStats()
 
     private val clientListener =
         object : IRelayClientListener {
@@ -54,10 +47,10 @@ class SubscriptionController(
                 arrivalTime: Long,
                 afterEOSE: Boolean,
             ) {
-                if (subscriptions.contains(subId)) {
+                if (subscriptions.containsKey(subId)) {
                     stats.add(subId, event.kind)
                     if (afterEOSE) {
-                        runAfterEOSE(subId, relay, arrivalTime)
+                        subscriptions.get(subId)?.callEose(arrivalTime, relay.url)
                     }
                 }
             }
@@ -67,145 +60,63 @@ class SubscriptionController(
                 subId: String,
                 arrivalTime: Long,
             ) {
-                if (subscriptions.contains(subId)) {
-                    runAfterEOSE(subId, relay, arrivalTime)
+                if (subscriptions.containsKey(subId)) {
+                    subscriptions.get(subId)?.callEose(arrivalTime, relay.url)
                 }
             }
         }
-
-    private fun runAfterEOSE(
-        subscriptionId: String,
-        relay: IRelayClient,
-        arrivalTime: Long,
-    ) {
-        subscriptions[subscriptionId]?.callEose(arrivalTime, relay.url)
-    }
 
     init {
         client.subscribe(clientListener)
     }
 
-    override fun destroy() {
-        // makes sure to run
-        stop()
+    fun destroy() {
         client.unsubscribe(clientListener)
-        bundler.cancel()
     }
 
-    override fun start() {
-        active = true
-        invalidateFilters()
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    override fun stop() {
-        active = false
-
-        subscriptions.forEach { subscription ->
-            client.close(subscription.id)
-            subscription.reset()
-        }
-    }
-
-    override fun printStats(tag: String) = stats.printCounter(tag)
+    fun printStats(tag: String) = stats.printCounter(tag)
 
     fun getSub(subId: String) = subscriptions.get(subId)
 
-    fun requestNewSubscription(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null): Subscription = subscriptions.newSub(onEOSE)
+    fun requestNewSubscription(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null): Subscription = Subscription(onEose = onEOSE).also { subscriptions.put(it.id, it) }
 
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 
     fun dismissSubscription(subscription: Subscription) {
         client.close(subscription.id)
         subscription.reset()
-        subscriptions.remove(subscription)
+        subscriptions.remove(subscription.id)
     }
 
-    fun isUpdatingFilters() = changingFilters.get()
-
-    // Refreshes observers in batches.
-    private val bundler = BundledUpdate(300, Dispatchers.Default)
-
-    override fun invalidateFilters() {
-        bundler.invalidate {
-            // println("DataSource: ${this.javaClass.simpleName} InvalidateFilters")
-
-            // adds the time to perform the refresh into this delay
-            // holding off new updates in case of heavy refresh routines.
-            resetFiltersSuspend()
-        }
-    }
-
-    private fun resetFiltersSuspend() {
-        // only runs one at a time. Ignores the others
-        if (changingFilters.compareAndSet(false, true)) {
-            try {
-                resetFiltersSuspendInner()
-            } finally {
-                changingFilters.getAndSet(false)
+    fun updateRelays() {
+        val currentFilters =
+            subscriptions.associateWith { id, sub ->
+                client.getSubscriptionFiltersOrNull(id)
             }
-        }
-    }
 
-    private fun resetFiltersSuspendInner() {
-        // saves the channels that are currently active
-        val activeSubscriptions = subscriptions.actives()
-        // saves the current content to only update if it changes
-        val currentFilters = activeSubscriptions.associate { it.id to client.getSubscriptionFiltersOrNull(it.id) }
-
-        // updates all filters
-        updateSubscriptions()
-
-        // Makes sure to only send an updated filter when it actually changes.
-        subscriptions.forEach { newSubscriptionFilters ->
-            val currentFilters = currentFilters[newSubscriptionFilters.id]
-            updateRelaysIfNeeded(newSubscriptionFilters, currentFilters)
+        subscriptions.forEach { id, sub ->
+            updateRelaysIfNeeded(id, sub.filters(), currentFilters[id])
         }
     }
 
     fun updateRelaysIfNeeded(
-        updatedSubscription: Subscription,
-        currentFilters: List<RelayBasedFilter>?,
+        subId: String,
+        updatedFilters: Map<NormalizedRelayUrl, List<Filter>>?,
+        currentFilters: Map<NormalizedRelayUrl, List<Filter>>?,
     ) {
-        val updatedSubscriptionNewFilters = updatedSubscription.relayBasedFilters
-
-        val isActive = client.isActive(updatedSubscription.id)
-
-        if (!isActive && updatedSubscriptionNewFilters != null) {
-            // Filter was removed from the active list
-            // but it is supposed to be there. Send again.
-            if (active) {
-                client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
+        if (currentFilters != null) {
+            if (updatedFilters == null) {
+                // was active and is not active anymore, just close.
+                client.close(subId)
+            } else {
+                client.sendRequest(subId, updatedFilters)
             }
         } else {
-            if (currentFilters != null) {
-                if (updatedSubscriptionNewFilters == null) {
-                    // was active and is not active anymore, just close.
-                    client.close(updatedSubscription.id)
-                } else {
-                    // was active and is still active, check if it has changed.
-                    if (updatedSubscription.hasChangedFiltersFrom(currentFilters)) {
-                        client.close(updatedSubscription.id)
-                        if (active) {
-                            client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
-                        }
-                    } else {
-                        // hasn't changed, does nothing.
-                        // unless the relay has disconnected, then reconnect.
-                        if (active) {
-                            client.sendFilterOnlyIfDisconnected(updatedSubscription.id, updatedSubscriptionNewFilters)
-                        }
-                    }
-                }
+            if (updatedFilters == null) {
+                // was not active and is still not active, does nothing
             } else {
-                if (updatedSubscriptionNewFilters == null) {
-                    // was not active and is still not active, does nothing
-                } else {
-                    // was not active and becomes active, sends the filter.
-                    if (active) {
-                        client.sendFilter(updatedSubscription.id, updatedSubscriptionNewFilters)
-                    }
-                }
+                // was not active and becomes active, sends the entire filter.
+                client.sendRequest(subId, updatedFilters)
             }
         }
     }

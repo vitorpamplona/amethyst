@@ -109,7 +109,8 @@ private fun RelayOptions(
     onAddRelay: () -> Unit,
     onRemoveRelay: () -> Unit,
 ) {
-    val userState by accountViewModel.normalizedKind3RelaySetFlow.collectAsStateWithLifecycle()
+    val userState by accountViewModel.account.trustedRelays.flow
+        .collectAsStateWithLifecycle()
 
     if (!userState.contains(relay.url)) {
         AddRelayButton(onAddRelay)

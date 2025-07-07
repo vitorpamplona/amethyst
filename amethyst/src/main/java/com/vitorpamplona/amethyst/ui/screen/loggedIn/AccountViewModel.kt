@@ -161,22 +161,6 @@ class AccountViewModel(
 
     var firstRoute: Route? = null
 
-    val normalizedKind3RelaySetFlow: StateFlow<Set<NormalizedRelayUrl>> =
-        account
-            .userProfile()
-            .flow()
-            .relays.stateFlow
-            .map { contactListState ->
-                contactListState.user.latestContactList
-                    ?.relays()
-                    ?.keys ?: emptySet()
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(10000, 10000),
-                emptySet(),
-            )
-
     val toastManager = ToastManager()
 
     val feedStates = AccountFeedContentStates(this)

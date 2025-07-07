@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import kotlin.collections.distinctBy
 
 /**
@@ -43,8 +44,8 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
-
-        sub.relayBasedFilters = updateFilter(uniqueSubscribedAccounts)?.ifEmpty { null }
+        val newFilters = updateFilter(uniqueSubscribedAccounts)?.ifEmpty { null }
+        sub.updateFilters(newFilters?.groupByRelay())
     }
 
     abstract fun updateFilter(keys: List<T>): List<RelayBasedFilter>?

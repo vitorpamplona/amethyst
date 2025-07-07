@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientList
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.collections.forEach
 import kotlin.collections.isNotEmpty
-import kotlin.collections.mapNotNull
+import kotlin.collections.isNullOrEmpty
 
 val UnsupportedRelayCreation: (url: NormalizedRelayUrl) -> IRelayClient = {
     throw UnsupportedOperationException("Cannot create new relays")
@@ -77,30 +78,48 @@ class RelayPool(
             relay.connectAndSyncFiltersIfDisconnected()
         }
 
+    fun connectIfDisconnected(relay: NormalizedRelayUrl) = relays.get(relay)?.connectAndSyncFiltersIfDisconnected()
+
     fun disconnect() =
         relays.forEach { url, relay ->
             relay.disconnect()
         }
 
     fun sendRequest(
+        relay: NormalizedRelayUrl,
         subId: String,
-        filters: List<RelayBasedFilter>,
+        filters: List<Filter>,
+    ) {
+        relays.get(relay)?.sendRequest(subId, filters)
+    }
+
+    fun sendRequest(
+        subId: String,
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
         relays.forEach { url, relay ->
-            val filters = filters.mapNotNull { it.toFilter(url) }
-            if (filters.isNotEmpty()) {
+            val filters = filters[relay.url]
+            if (!filters.isNullOrEmpty()) {
                 relay.sendRequest(subId, filters)
             }
         }
     }
 
-    fun sendCounter(
+    fun sendCount(
+        relay: NormalizedRelayUrl,
         subId: String,
-        filters: List<RelayBasedFilter>,
+        filters: List<Filter>,
+    ) {
+        relays.get(relay)?.sendRequest(subId, filters)
+    }
+
+    fun sendCount(
+        subId: String,
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
         relays.forEach { url, relay ->
-            val filters = filters.mapNotNull { it.toFilter(url) }
-            if (filters.isNotEmpty()) {
+            val filters = filters[relay.url]
+            if (!filters.isNullOrEmpty()) {
                 relay.sendCount(subId, filters)
             }
         }
@@ -110,6 +129,11 @@ class RelayPool(
         relays.forEach { url, relay ->
             relay.close(subscriptionId)
         }
+
+    fun close(
+        relay: NormalizedRelayUrl,
+        subscriptionId: String,
+    ) = relays.get(relay)?.close(subscriptionId)
 
     fun send(
         signedEvent: Event,

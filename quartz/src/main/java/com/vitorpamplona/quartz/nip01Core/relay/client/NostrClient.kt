@@ -25,12 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientLis
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayState
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutboxRepository
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolSubscriptionRepository
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlinx.coroutines.CoroutineScope
@@ -44,14 +44,15 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * The Nostr Client manages a relay pool, keeps active subscriptions and manages sending of events.
+ * The Nostr Client manages a relay pool, keeps active subscriptions and manages re-sending of events.
  */
 class NostrClient(
     private val websocketBuilder: WebsocketBuilder,
     private val scope: CoroutineScope,
 ) : IRelayClientListener {
     private val relayPool: RelayPool = RelayPool(this, ::buildRelay)
-    private val activeSubscriptions: PoolSubscriptionRepository = PoolSubscriptionRepository()
+    private val activeRequests: PoolSubscriptionRepository = PoolSubscriptionRepository()
+    private val activeCounts: PoolSubscriptionRepository = PoolSubscriptionRepository()
     private val eventOutbox: PoolEventOutboxRepository = PoolEventOutboxRepository()
 
     private var listeners = setOf<IRelayClientListener>()
@@ -62,19 +63,20 @@ class NostrClient(
      */
     private val allRelays =
         combine(
-            activeSubscriptions.relays,
+            activeRequests.relays,
+            activeCounts.relays,
             eventOutbox.relays,
-        ) { subs, outbox ->
-            subs + outbox
+        ) { reqs, counts, outbox ->
+            reqs + counts + outbox
         }.onStart {
-            activeSubscriptions.relays.value + eventOutbox.relays.value
+            activeRequests.relays.value + activeCounts.relays.value + eventOutbox.relays.value
         }.onEach {
             relayPool.updatePool(it)
         }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,
-                activeSubscriptions.relays.value + eventOutbox.relays.value,
+                activeRequests.relays.value + activeCounts.relays.value + eventOutbox.relays.value,
             )
 
     fun buildRelay(relay: NormalizedRelayUrl): IRelayClient =
@@ -84,7 +86,8 @@ class NostrClient(
             listener = relayPool,
             stats = RelayStats.get(relay),
         ) { liveRelay ->
-            activeSubscriptions.forEachSub(relay, liveRelay::sendRequest)
+            activeRequests.forEachSub(relay, liveRelay::sendRequest)
+            activeCounts.forEachSub(relay, liveRelay::sendCount)
             eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
         }
 
@@ -109,20 +112,124 @@ class NostrClient(
         }
     }
 
-    fun sendFilter(
-        subscriptionId: String = newSubId(),
-        filters: List<RelayBasedFilter> = listOf(),
-    ) {
-        activeSubscriptions.addOrUpdate(subscriptionId, filters)
-        relayPool.sendRequest(subscriptionId, filters)
+    fun needsToResendRequest(
+        oldFilters: List<Filter>,
+        newFilters: List<Filter>,
+    ): Boolean {
+        if (oldFilters.size != newFilters.size) return true
+
+        oldFilters.forEachIndexed { index, oldFilter ->
+            val newFilter = newFilters.getOrNull(index) ?: return true
+
+            return needsToResendRequest(oldFilter, newFilter)
+        }
+        return false
     }
 
-    fun sendFilterOnlyIfDisconnected(
-        subscriptionId: String = newSubId(),
-        filters: List<RelayBasedFilter> = listOf(),
+    /**
+     * Checks if the filter has changed, with a special case for when the since changes due to new
+     * EOSE times.
+     */
+    fun needsToResendRequest(
+        oldFilter: Filter,
+        newFilter: Filter,
+    ): Boolean {
+        // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
+        // fast check
+        if (oldFilter.authors?.size != newFilter.authors?.size ||
+            oldFilter.ids?.size != newFilter.ids?.size ||
+            oldFilter.tags?.size != newFilter.tags?.size ||
+            oldFilter.kinds?.size != newFilter.kinds?.size ||
+            oldFilter.limit != newFilter.limit ||
+            oldFilter.search?.length != newFilter.search?.length ||
+            oldFilter.until != newFilter.until
+        ) {
+            return true
+        }
+
+        // deep check
+        if (oldFilter.ids != newFilter.ids ||
+            oldFilter.authors != newFilter.authors ||
+            oldFilter.tags != newFilter.tags ||
+            oldFilter.kinds != newFilter.kinds ||
+            oldFilter.search != newFilter.search
+        ) {
+            return true
+        }
+
+        if (oldFilter.since != null) {
+            if (newFilter.since == null) {
+                // went was checking the future only and now wants everything
+                return true
+            } else if (oldFilter.since > newFilter.since) {
+                // went backwards in time, forces update
+                return true
+            }
+        }
+
+        return false
+    }
+
+    fun sendRequest(
+        subId: String = newSubId(),
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
     ) {
-        activeSubscriptions.addOrUpdate(subscriptionId, filters)
-        relayPool.connectIfDisconnected()
+        val oldFilters = activeRequests.getSubscriptionFiltersOrNull(subId) ?: emptyMap()
+        activeRequests.addOrUpdate(subId, filters)
+
+        val allRelays = filters.keys + oldFilters.keys
+
+        allRelays.forEach { relay ->
+            val oldFilters = oldFilters[relay]
+            val newFilters = filters[relay]
+
+            if (newFilters.isNullOrEmpty()) {
+                // some relays are not in this sub anymore. Stop their subscriptions
+                relayPool.close(relay, subId)
+            } else if (oldFilters.isNullOrEmpty()) {
+                // new relays were added. Start a new sub in them
+                relayPool.sendRequest(relay, subId, newFilters)
+            } else if (needsToResendRequest(oldFilters, newFilters)) {
+                // filters were changed enough (not only an update in since) to warn a new update
+                relayPool.sendRequest(relay, subId, newFilters)
+            } else {
+                // makes sure the relay wakes up if it was disconnected by the server
+                // upon connection, the relay will run the default Sync and update all
+                // filters, including this one.
+                relayPool.connectIfDisconnected(relay)
+            }
+        }
+    }
+
+    fun sendCount(
+        subId: String = newSubId(),
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+    ) {
+        val oldFilters = activeCounts.getSubscriptionFiltersOrNull(subId) ?: emptyMap()
+        activeCounts.addOrUpdate(subId, filters)
+
+        val allRelays = filters.keys + oldFilters.keys
+
+        allRelays.forEach { relay ->
+            val oldFilters = oldFilters[relay]
+            val newFilters = filters[relay]
+
+            if (newFilters.isNullOrEmpty()) {
+                // some relays are not in this sub anymore. Stop their subscriptions
+                relayPool.close(relay, subId)
+            } else if (oldFilters.isNullOrEmpty()) {
+                // new relays were added. Start a new sub in them
+                relayPool.sendCount(relay, subId, newFilters)
+            } else if (needsToResendRequest(oldFilters, newFilters)) {
+                // filters were changed enough (not only an update in since) to warn a new update
+                relayPool.sendCount(relay, subId, newFilters)
+            } else {
+                // makes sure the relay wakes up if it was disconnected by the server
+                // upon connection, the relay will run the default Sync and update all
+                // filters, including this one.
+                relayPool.connectIfDisconnected(relay)
+            }
+        }
     }
 
     fun sendIfExists(
@@ -142,10 +249,9 @@ class NostrClient(
 
     fun close(subscriptionId: String) {
         relayPool.close(subscriptionId)
-        activeSubscriptions.remove(subscriptionId)
+        activeRequests.remove(subscriptionId)
+        activeCounts.remove(subscriptionId)
     }
-
-    fun isActive(subscriptionId: String): Boolean = activeSubscriptions.isActive(subscriptionId)
 
     override fun onEvent(
         relay: IRelayClient,
@@ -236,7 +342,7 @@ class NostrClient(
         listeners = listeners.minus(listener)
     }
 
-    fun getSubscriptionFiltersOrNull(subId: String): List<RelayBasedFilter>? = activeSubscriptions.getSubscriptionFiltersOrNull(subId)
+    fun getSubscriptionFiltersOrNull(subId: String): Map<NormalizedRelayUrl, List<Filter>>? = activeRequests.getSubscriptionFiltersOrNull(subId)
 
     fun relayStatusFlow() = relayPool.statusFlow
 }

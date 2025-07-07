@@ -20,70 +20,34 @@
  */
 package com.vitorpamplona.ammolite.relays.datasources
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlin.collections.forEachIndexed
+import kotlin.contracts.ExperimentalContracts
 
 data class Subscription(
     val id: String = newSubId(),
     val onEose: ((time: Long, relayUrl: NormalizedRelayUrl) -> Unit)? = null,
 ) {
-    var relayBasedFilters: List<RelayBasedFilter>? = null // Inactive when null
+    private var filters: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
 
     fun reset() {
-        relayBasedFilters = null
+        filters = null
     }
+
+    fun updateFilters(newFilters: Map<NormalizedRelayUrl, List<Filter>>?) {
+        filters = newFilters
+    }
+
+    fun filters() = filters
+
+    @OptIn(ExperimentalContracts::class)
+    fun isActive() = filters != null
 
     fun callEose(
         time: Long,
         relay: NormalizedRelayUrl,
     ) {
         onEose?.let { it(time, relay) }
-    }
-
-    fun hasChangedFiltersFrom(otherFilters: List<RelayBasedFilter>?): Boolean {
-        if (relayBasedFilters == null && otherFilters == null) return false
-        if (relayBasedFilters?.size != otherFilters?.size) return true
-
-        relayBasedFilters?.forEachIndexed { index, relaySetFilter ->
-            val otherFilter = otherFilters?.getOrNull(index) ?: return true
-
-            if (relaySetFilter.relay != otherFilter.relay) return true
-
-            return isDifferent(relaySetFilter.filter, otherFilter.filter)
-        }
-        return false
-    }
-
-    fun isDifferent(
-        filter1: Filter,
-        filter2: Filter,
-    ): Boolean {
-        // Does not check SINCE on purpose. Avoids replacing the filter if SINCE was all that changed.
-        // fast check
-        if (filter1.authors?.size != filter2.authors?.size ||
-            filter1.ids?.size != filter2.ids?.size ||
-            filter1.tags?.size != filter2.tags?.size ||
-            filter1.kinds?.size != filter2.kinds?.size ||
-            filter1.limit != filter2.limit ||
-            filter1.search?.length != filter2.search?.length ||
-            filter1.until != filter2.until
-        ) {
-            return true
-        }
-
-        // deep check
-        if (filter1.ids != filter2.ids ||
-            filter1.authors != filter2.authors ||
-            filter1.tags != filter2.tags ||
-            filter1.kinds != filter2.kinds ||
-            filter1.search != filter2.search
-        ) {
-            return true
-        }
-
-        return false
     }
 }
