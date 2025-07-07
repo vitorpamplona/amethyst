@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.mapNotNull
 
 @Immutable
 class RepostEvent(
@@ -54,9 +55,15 @@ class RepostEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     fun boostedEvents() = tags.mapNotNull(ETag::parse)
 

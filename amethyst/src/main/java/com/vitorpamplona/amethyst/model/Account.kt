@@ -1462,7 +1462,7 @@ class Account(
             when (it) {
                 is NPub -> null
                 is NProfile -> null
-                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> cache.getOrCreateNote(it.hex)
+                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> cache.getOrCreateNote(it.hex)
                 is NEvent -> cache.getOrCreateNote(it.hex)
                 is NEmbed -> cache.getOrCreateNote(it.event.id)
                 is NAddress -> cache.checkGetOrCreateAddressableNote(it.aTag())

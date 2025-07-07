@@ -49,9 +49,9 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -163,7 +163,7 @@ fun uriToRoute(
             when (nip19) {
                 is NPub -> Route.Profile(nip19.hex)
                 is NProfile -> Route.Profile(nip19.hex)
-                is Note -> Route.Note(nip19.hex)
+                is NNote -> Route.Note(nip19.hex)
                 is NEvent -> {
                     if (nip19.kind == PrivateDmEvent.KIND) {
                         nip19.author?.let { Route.RoomByAuthor(it) }

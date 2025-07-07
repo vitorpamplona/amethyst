@@ -191,8 +191,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.compareTo
-import kotlin.text.get
 
 interface ILocalCache {
     fun markAsSeen(
@@ -2912,7 +2910,7 @@ object LocalCache : ILocalCache {
                 }
                 getOrCreateUser(nip19.hex)
             }
-            is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
+            is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
                 getOrCreateNote(nip19.hex)
             }
             is NEvent -> {
@@ -2976,11 +2974,41 @@ object LocalCache : ILocalCache {
     ): Boolean {
         val wasNew = justConsumeInnerInner(event, relay, wasVerified)
 
-        if (wasNew && relay != null) {
+        if (wasNew) {
             updateHintIndexes(event)
         }
 
+        if (relay != null) {
+            addIncomingRelayAsHintToAllRelatedEvents(event, relay)
+        }
+
         return wasNew
+    }
+
+    fun addIncomingRelayAsHintToAllRelatedEvents(
+        event: Event,
+        relay: NormalizedRelayUrl,
+    ) {
+        relayHints.addEvent(event.id, relay)
+        if (event is AddressableEvent) {
+            relayHints.addAddress(event.addressTag(), relay)
+        }
+
+        if (event is EventHintProvider) {
+            event.linkedEventIds().forEach {
+                relayHints.addEvent(it, relay)
+            }
+        }
+        if (event is AddressHintProvider) {
+            event.linkedAddressIds().forEach {
+                relayHints.addAddress(it, relay)
+            }
+        }
+        if (event is PubKeyHintProvider) {
+            event.linkedPubKeys().forEach {
+                relayHints.addKey(it, relay)
+            }
+        }
     }
 
     fun updateHintIndexes(event: Event) {

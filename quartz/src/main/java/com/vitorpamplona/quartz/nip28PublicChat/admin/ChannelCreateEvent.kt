@@ -48,6 +48,8 @@ class ChannelCreateEvent(
     EventHintProvider {
     override fun eventHints() = channelInfo().relays?.map { EventIdHint(id, it) } ?: emptyList()
 
+    override fun linkedEventIds() = listOf(id)
+
     fun channelInfo(): ChannelDataNorm =
         try {
             ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()

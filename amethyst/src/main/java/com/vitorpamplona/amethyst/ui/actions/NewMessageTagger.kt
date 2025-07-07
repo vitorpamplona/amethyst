@@ -73,7 +73,7 @@ class NewMessageTagger(
                     is NPub -> addUserToMentions(dao.getOrCreateUser(entity.hex))
                     is NProfile -> addUserToMentions(dao.getOrCreateUser(entity.hex))
 
-                    is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
+                    is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
                     is NEvent -> addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
                     is NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
 
@@ -107,7 +107,7 @@ class NewMessageTagger(
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
 
-                                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
+                                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }
                                 is NEvent -> {

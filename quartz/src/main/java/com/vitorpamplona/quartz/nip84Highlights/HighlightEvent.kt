@@ -25,6 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parseAsHint
@@ -41,6 +44,12 @@ import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
@@ -60,11 +69,51 @@ class HighlightEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
-    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+    override fun eventHints(): List<EventIdHint> {
+        val eHints = tags.mapNotNull(ETag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseEventAsHint)
+        val nip19Hints = citedNIP19().eventHints()
 
-    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+        return eHints + qHints + nip19Hints
+    }
 
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+    override fun linkedEventIds(): List<HexKey> {
+        val eHints = tags.mapNotNull(ETag::parseId)
+        val qHints = tags.mapNotNull(QTag::parseEventId)
+        val nip19Hints = citedNIP19().eventIds()
+
+        return eHints + qHints + nip19Hints
+    }
+
+    override fun addressHints(): List<AddressHint> {
+        val aHints = tags.mapNotNull(ATag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
+        val nip19Hints = citedNIP19().addressHints()
+
+        return aHints + qHints + nip19Hints
+    }
+
+    override fun linkedAddressIds(): List<String> {
+        val aHints = tags.mapNotNull(ATag::parseAddressId)
+        val qHints = tags.mapNotNull(QTag::parseAddressId)
+        val nip19Hints = citedNIP19().addressIds()
+
+        return aHints + qHints + nip19Hints
+    }
+
+    override fun pubKeyHints(): List<PubKeyHint> {
+        val pHints = tags.mapNotNull(PTag::parseAsHint)
+        val nip19Hints = citedNIP19().pubKeyHints()
+
+        return pHints + nip19Hints
+    }
+
+    override fun linkedPubKeys(): List<HexKey> {
+        val pHints = tags.mapNotNull(PTag::parseKey)
+        val nip19Hints = citedNIP19().pubKeys()
+
+        return pHints + nip19Hints
+    }
 
     fun inUrl() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 

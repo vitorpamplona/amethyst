@@ -23,27 +23,23 @@ package com.vitorpamplona.quartz.nip10Notes
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithEventsOrAddresses
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithPeople
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
+import kotlin.collections.plus
 
 @Immutable
 open class BaseThreadedEvent(
@@ -54,21 +50,15 @@ open class BaseThreadedEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig),
-    EventHintProvider,
-    AddressHintProvider,
-    PubKeyHintProvider {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
     @Transient
     private var citedUsersCache: Set<String>? = null
 
     @Transient
     private var citedNotesCache: Set<String>? = null
 
-    override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
-
-    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
-
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+    @Transient
+    private var citedNIP19Cache: List<Entity>? = null
 
     fun mentions() = taggedUsers()
 
@@ -95,22 +85,20 @@ open class BaseThreadedEvent(
             ?: markedRoot()?.eventId
             ?: unmarkedReply()?.eventId
 
-    /*
-    Not sure if this is needed
-    open fun replyingToAddress(): ATag? {
-        val oldStylePositional = tags.lastOrNull { it.size > 1 && it.size <= 3 && it[0] == "a" }?.let { ATag.parseAtag(it[1], it[2]) }
-        val newStyleReply = tags.lastOrNull { it.size > 3 && it[0] == "a" && it[3] == "reply" }?.let { ATag.parseAtag(it[1], it[2]) }
-        val newStyleRoot = tags.lastOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }?.let { ATag.parseAtag(it[1], it[2]) }
-
-        return newStyleReply ?: newStyleRoot ?: oldStylePositional
-    }*/
-
     open fun replyingToAddressOrEvent(): String? {
         val oldStylePositional = tags.lastOrNull { it.size > 1 && it.size <= 3 && (it[0] == "e" || it[0] == "a") }?.get(1)
         val newStyleReply = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "reply" }?.get(1)
         val newStyleRoot = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }?.get(1)
 
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
+    }
+
+    fun citedNIP19(): List<Entity> {
+        citedNIP19Cache?.let {
+            return it
+        }
+
+        return findNostrUris(content).also { citedNIP19Cache = it }
     }
 
     fun citedUsers(): Set<HexKey> {
@@ -121,7 +109,7 @@ open class BaseThreadedEvent(
         val citedUsers = mutableSetOf<String>()
 
         findIndexTagsWithPeople(content, tags, citedUsers)
-        findNostrUris(content).forEach { parsed ->
+        citedNIP19().forEach { parsed ->
             when (parsed) {
                 is NProfile -> citedUsers.add(parsed.hex)
                 is NPub -> citedUsers.add(parsed.hex)
@@ -140,11 +128,11 @@ open class BaseThreadedEvent(
         val citations = mutableSetOf<String>()
 
         findIndexTagsWithEventsOrAddresses(content, tags, citations).toMutableSet()
-        findNostrUris(content).forEach { entity ->
+        citedNIP19().forEach { entity ->
             when (entity) {
                 is NEvent -> citations.add(entity.hex)
                 is NAddress -> citations.add(entity.aTag())
-                is Note -> citations.add(entity.hex)
+                is NNote -> citations.add(entity.hex)
                 is NEmbed -> citations.add(entity.event.id)
             }
         }

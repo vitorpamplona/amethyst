@@ -116,7 +116,7 @@ class AccountStateViewModel : ViewModel() {
                 is NSec -> null
                 is NPub -> parsed.hex.hexToByteArray()
                 is NProfile -> parsed.hex.hexToByteArray()
-                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> null
+                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> null
                 is NEvent -> null
                 is NEmbed -> null
                 is NRelay -> null

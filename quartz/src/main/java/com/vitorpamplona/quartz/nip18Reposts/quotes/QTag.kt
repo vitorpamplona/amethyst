@@ -63,9 +63,17 @@ interface QTag {
         }
 
         @JvmStatic
-        fun parseKey(tag: Array<String>): String? {
+        fun parseId(tag: Array<String>): String? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
+            return tag[1]
+        }
+
+        @JvmStatic
+        fun parseEventId(tag: Array<String>): HexKey? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
             return tag[1]
         }
 
@@ -80,6 +88,14 @@ interface QTag {
             ensure(relayHint != null) { return null }
 
             return EventIdHint(tag[1], relayHint)
+        }
+
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length != 64) { return null }
+            ensure(!tag[1].contains(':')) { return null }
+            return tag[1]
         }
 
         @JvmStatic

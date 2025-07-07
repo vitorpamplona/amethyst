@@ -58,11 +58,17 @@ class DraftEvent(
     EventHintProvider,
     AddressHintProvider,
     PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
-    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
 

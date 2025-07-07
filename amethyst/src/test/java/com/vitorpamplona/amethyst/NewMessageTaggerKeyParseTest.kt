@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,10 +53,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn")
-        assertTrue(result?.key?.entity is Note)
+        assertTrue(result?.key?.entity is NNote)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Note)?.hex,
+            (result?.key?.entity as? NNote)?.hex,
         )
         assertEquals(null, result?.restOfWord)
     }
@@ -79,10 +79,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,")
-        assertTrue(result?.key?.entity is Note)
+        assertTrue(result?.key?.entity is NNote)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Note)?.hex,
+            (result?.key?.entity as? NNote)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -105,10 +105,10 @@ class NewMessageTaggerKeyParseTest {
         val result =
             NewMessageTagger(message = "", dao = dao)
                 .parseDirtyWordForKey("@note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,")
-        assertTrue(result?.key?.entity is Note)
+        assertTrue(result?.key?.entity is NNote)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Note)?.hex,
+            (result?.key?.entity as? NNote)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -133,10 +133,10 @@ class NewMessageTaggerKeyParseTest {
                 .parseDirtyWordForKey(
                     "nostr:note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,",
                 )
-        assertTrue(result?.key?.entity is Note)
+        assertTrue(result?.key?.entity is NNote)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Note)?.hex,
+            (result?.key?.entity as? NNote)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }
@@ -163,10 +163,10 @@ class NewMessageTaggerKeyParseTest {
                 .parseDirtyWordForKey(
                     "Nostr:note1z5e2m0smx6d7e2d0zaq8d3rnd7httm6j0uf8tf90yqqjrs842czshwtkmn,",
                 )
-        assertTrue(result?.key?.entity is Note)
+        assertTrue(result?.key?.entity is NNote)
         assertEquals(
             "1532adbe1b369beca9af174076c4736faeb5ef527f1275a4af200121c0f55605",
-            (result?.key?.entity as? Note)?.hex,
+            (result?.key?.entity as? NNote)?.hex,
         )
         assertEquals(",", result?.restOfWord)
     }

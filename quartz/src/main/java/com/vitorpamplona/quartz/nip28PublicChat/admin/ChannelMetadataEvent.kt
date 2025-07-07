@@ -48,7 +48,12 @@ class ChannelMetadataEvent(
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider {
-    override fun eventHints() = channelInfo().relays?.map { EventIdHint(id, it) } ?: emptyList()
+    override fun eventHints() =
+        channelInfo().relays?.mapNotNull { relay ->
+            channelId()?.let { EventIdHint(it, relay) }
+        } ?: emptyList()
+
+    override fun linkedEventIds() = channelId()?.let { listOf(it) } ?: emptyList()
 
     fun channelInfo(): ChannelDataNorm =
         try {

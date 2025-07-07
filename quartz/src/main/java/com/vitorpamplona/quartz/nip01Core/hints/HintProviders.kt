@@ -20,18 +20,25 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 
 interface EventHintProvider {
     fun eventHints(): List<EventIdHint>
+
+    fun linkedEventIds(): List<HexKey>
 }
 
 interface AddressHintProvider {
     fun addressHints(): List<AddressHint>
+
+    fun linkedAddressIds(): List<String>
 }
 
 interface PubKeyHintProvider {
     fun pubKeyHints(): List<PubKeyHint>
+
+    fun linkedPubKeys(): List<HexKey>
 }

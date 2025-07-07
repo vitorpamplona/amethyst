@@ -27,13 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.toNote
 
 @Immutable
-data class Note(
+data class NNote(
     val hex: String,
 ) : Entity {
-    companion object {
-        fun parse(bytes: ByteArray): Note? {
+    companion object Companion {
+        fun parse(bytes: ByteArray): NNote? {
             if (bytes.isEmpty()) return null
-            return Note(bytes.toHexKey())
+            return NNote(bytes.toHexKey())
         }
 
         fun create(eventId: HexKey): String = eventId.hexToByteArray().toNote()

@@ -46,6 +46,8 @@ class ChannelMuteUserEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     fun usersToMute() = tags.taggedUserIds()
 
     companion object {

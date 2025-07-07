@@ -46,6 +46,8 @@ class AppRecommendationEvent(
     AddressHintProvider {
     override fun addressHints() = tags.mapNotNull(RecommendationTag::parseAsHint)
 
+    override fun linkedAddressIds() = tags.mapNotNull(RecommendationTag::parseAddressId)
+
     fun recommendations() = tags.mapNotNull(RecommendationTag::parse)
 
     fun recommendationAddresses() = tags.mapNotNull(RecommendationTag::parseAddressId)

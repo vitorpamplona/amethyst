@@ -42,6 +42,8 @@ open class BaseDMGroupEvent(
     PubKeyHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     /** Recipients intended to receive this conversation */
     fun recipients() = tags.mapNotNull(PTag::parse)
 

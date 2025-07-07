@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parse
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseKey
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
@@ -65,9 +66,15 @@ class LiveActivitiesEvent(
     PubKeyHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
 
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(QTag::parseAddressId)
+
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

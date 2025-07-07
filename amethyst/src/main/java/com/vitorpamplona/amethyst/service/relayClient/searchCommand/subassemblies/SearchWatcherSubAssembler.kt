@@ -31,11 +31,11 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import com.vitorpamplona.quartz.utils.Hex
 
 /**
@@ -69,7 +69,7 @@ class SearchWatcherSubAssembler(
                             is NSec -> filterByAuthor(parsed.toPubKeyHex())
                             is NPub -> filterByAuthor(parsed.hex)
                             is NProfile -> filterByAuthor(parsed.hex)
-                            is Note -> filterByEvent(parsed.hex)
+                            is NNote -> filterByEvent(parsed.hex)
                             is NEvent -> filterByEvent(parsed.hex)
                             is NEmbed -> emptyList()
                             is NRelay -> emptyList()

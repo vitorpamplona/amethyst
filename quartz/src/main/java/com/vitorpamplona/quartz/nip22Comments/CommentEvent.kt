@@ -29,9 +29,24 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
+import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
+import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAddressTag
 import com.vitorpamplona.quartz.nip22Comments.tags.ReplyAuthorTag
@@ -62,11 +77,55 @@ class CommentEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider {
-    override fun pubKeyHints() = tags.mapNotNull(RootAuthorTag::parseAsHint) + tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+    override fun pubKeyHints(): List<PubKeyHint> {
+        val pHints =
+            tags.mapNotNull(RootAuthorTag::parseAsHint) +
+                tags.mapNotNull(ReplyAuthorTag::parseAsHint)
+        val nip19Hints = citedNIP19().pubKeyHints()
 
-    override fun eventHints() = tags.mapNotNull(RootEventTag::parseAsHint) + tags.mapNotNull(ReplyEventTag::parseAsHint)
+        return pHints + nip19Hints
+    }
 
-    override fun addressHints() = tags.mapNotNull(RootAddressTag::parseAsHint) + tags.mapNotNull(ReplyAddressTag::parseAsHint)
+    override fun linkedPubKeys(): List<HexKey> {
+        val pHints =
+            tags.mapNotNull(RootAuthorTag::parseKey) +
+                tags.mapNotNull(ReplyAuthorTag::parseKey)
+        val nip19Hints = citedNIP19().pubKeys()
+
+        return pHints + nip19Hints
+    }
+
+    override fun eventHints(): List<EventIdHint> {
+        val eHints = tags.mapNotNull(RootEventTag::parseAsHint) + tags.mapNotNull(ReplyEventTag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseEventAsHint)
+        val nip19Hints = citedNIP19().eventHints()
+
+        return eHints + qHints + nip19Hints
+    }
+
+    override fun linkedEventIds(): List<HexKey> {
+        val eHints = tags.mapNotNull(RootEventTag::parseKey) + tags.mapNotNull(ReplyEventTag::parseKey)
+        val qHints = tags.mapNotNull(QTag::parseEventId)
+        val nip19Hints = citedNIP19().eventIds()
+
+        return eHints + qHints + nip19Hints
+    }
+
+    override fun addressHints(): List<AddressHint> {
+        val aHints = tags.mapNotNull(RootAddressTag::parseAsHint) + tags.mapNotNull(ReplyAddressTag::parseAsHint)
+        val qHints = tags.mapNotNull(QTag::parseAddressAsHint)
+        val nip19Hints = citedNIP19().addressHints()
+
+        return aHints + qHints + nip19Hints
+    }
+
+    override fun linkedAddressIds(): List<String> {
+        val aHints = tags.mapNotNull(RootAddressTag::parseAddressId) + tags.mapNotNull(ReplyAddressTag::parseAddressId)
+        val qHints = tags.mapNotNull(QTag::parseAddressId)
+        val nip19Hints = citedNIP19().addressIds()
+
+        return aHints + qHints + nip19Hints
+    }
 
     fun rootAuthor() = tags.firstNotNullOfOrNull(RootAuthorTag::parse)
 

@@ -46,6 +46,8 @@ class ChannelHideMessageEvent(
     EventHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
     fun eventsToHide() = tags.taggedEventIds()
 
     companion object {

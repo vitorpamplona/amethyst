@@ -1705,7 +1705,7 @@ class AccountViewModel(
                         is NSec -> {}
                         is NPub -> {}
                         is NProfile -> {}
-                        is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
+                        is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }

@@ -56,9 +56,15 @@ abstract class GeneralListEvent(
     PubKeyHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + (cachedPrivateTags()?.mapNotNull(ETag::parseAsHint) ?: emptyList())
 
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + (cachedPrivateTags()?.mapNotNull(ETag::parseId) ?: emptyList())
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + (cachedPrivateTags()?.mapNotNull(ATag::parseAsHint) ?: emptyList())
 
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId) + (cachedPrivateTags()?.mapNotNull(ATag::parseAddressId) ?: emptyList())
+
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint) + (cachedPrivateTags()?.mapNotNull(PTag::parseAsHint) ?: emptyList())
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey) + (cachedPrivateTags()?.mapNotNull(PTag::parseKey) ?: emptyList())
 
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)
 

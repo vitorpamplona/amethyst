@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseId
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -48,9 +50,15 @@ class GitPatchEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     private fun innerRepository() =
         tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }

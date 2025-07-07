@@ -104,7 +104,7 @@ data class MarkedETag(
 
         @JvmStatic
         fun parseId(tag: Array<String>): HexKey? {
-            ensure(tag.has(2)) { return null }
+            ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 

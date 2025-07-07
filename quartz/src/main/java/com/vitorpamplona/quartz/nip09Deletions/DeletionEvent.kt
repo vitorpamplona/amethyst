@@ -55,7 +55,11 @@ class DeletionEvent(
     AddressHintProvider {
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     fun deleteEvents() = taggedEvents()
 

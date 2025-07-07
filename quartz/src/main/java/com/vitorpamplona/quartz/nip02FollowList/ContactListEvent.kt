@@ -31,10 +31,13 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.tags.AddressFollowTag
 import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
@@ -54,7 +57,11 @@ class ContactListEvent(
     PubKeyHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
     override fun pubKeyHints() = tags.mapNotNull(ContactTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(ContactTag::parseKey)
 
     /**
      * Returns a list of p-tags that are verified as hex keys.

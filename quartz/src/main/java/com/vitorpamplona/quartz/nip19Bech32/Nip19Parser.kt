@@ -31,11 +31,11 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CancellationException
 import java.util.regex.Pattern
@@ -121,7 +121,7 @@ object Nip19Parser {
             when (type.lowercase()) {
                 "nsec1" -> NSec.parse(bytes)
                 "npub1" -> NPub.parse(bytes)
-                "note1" -> Note.parse(bytes)
+                "note1" -> NNote.parse(bytes)
                 "nprofile1" -> NProfile.parse(bytes)
                 "nevent1" -> NEvent.parse(bytes)
                 "nrelay1" -> NRelay.parse(bytes)
@@ -177,7 +177,7 @@ fun decodePrivateKeyAsHexOrNull(key: String): HexKey? =
             is NSec -> parsed.hex
             is NPub -> null
             is NProfile -> null
-            is Note -> null
+            is NNote -> null
             is NEvent -> null
             is NEmbed -> null
             is NRelay -> null
@@ -195,7 +195,7 @@ fun decodePublicKeyAsHexOrNull(key: String): HexKey? =
             is NSec -> Nip01.pubKeyCreate(parsed.hex.hexToByteArray()).toHexKey()
             is NPub -> parsed.hex
             is NProfile -> parsed.hex
-            is Note -> null
+            is NNote -> null
             is NEvent -> null
             is NEmbed -> null
             is NRelay -> null
@@ -213,7 +213,7 @@ fun decodeEventIdAsHexOrNull(key: String): HexKey? =
             is NSec -> null
             is NPub -> null
             is NProfile -> null
-            is Note -> parsed.hex
+            is NNote -> parsed.hex
             is NEvent -> parsed.hex
             is NAddress -> parsed.aTag()
             is NEmbed -> null

@@ -32,7 +32,7 @@ fun <R> TagArray.mapTaggedQuoteId(map: (eventId: HexKey) -> R) = this.mapValueTa
 
 fun TagArray.taggedQuotes() = this.mapNotNull(QTag::parse)
 
-fun TagArray.taggedQuoteIds() = this.mapNotNull(QTag::parseKey)
+fun TagArray.taggedQuoteIds() = this.mapNotNull(QTag::parseId)
 
 fun TagArray.firstTaggedQuote() = this.firstNotNullOfOrNull(QTag.Companion::parse)
 
