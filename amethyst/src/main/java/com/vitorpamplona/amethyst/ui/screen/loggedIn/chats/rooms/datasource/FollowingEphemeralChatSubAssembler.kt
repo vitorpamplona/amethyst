@@ -56,7 +56,7 @@ class FollowingEphemeralChatSubAssembler(
         userJobMap[key.account.userProfile()] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.ephemeralChatList.liveEphemeralChatList.sample(5000).collectLatest {
+                    key.account.ephemeralChatList.liveEphemeralChatList.sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },

@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,7 +59,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -189,6 +193,58 @@ fun DisplaySearchRelayList(
 }
 
 @Composable
+fun DisplayBlockedRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = baseNote.event as? BlockedRelayListEvent ?: return
+
+    val relays by
+        remember(baseNote) {
+            mutableStateOf(
+                noteEvent.relays().toImmutableList(),
+            )
+        }
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.blocked_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayTrustedRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = baseNote.event as? TrustedRelayListEvent ?: return
+
+    val relays by
+        remember(baseNote) {
+            mutableStateOf(
+                noteEvent.relays().toImmutableList(),
+            )
+        }
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.trusted_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
 fun DisplayRelaySet(
     relays: ImmutableList<NormalizedRelayUrl>,
     relayListName: String,
@@ -280,14 +336,16 @@ private fun RelayOptionsAction(
     nav: INav,
 ) {
     val isCurrentlyOnTheUsersList by observeUserRelayIntoList(accountViewModel.userProfile(), relay, accountViewModel)
+    val clipboardManager = LocalClipboardManager.current
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {
-            nav.nav(Route.EditRelays(relay.url))
+            clipboardManager.setText(AnnotatedString(relay.url))
+            nav.nav(Route.EditRelays)
         }
     } else {
         RemoveRelayButton {
-            nav.nav(Route.EditRelays(relay.url))
+            nav.nav(Route.EditRelays)
         }
     }
 }

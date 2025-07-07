@@ -50,6 +50,7 @@ class AllFollowsByOutboxTopNavFilter(
     val geotags: Set<String>? = null,
     val communities: Set<String>? = null,
     val defaultRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedTopNavFilter {
     val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.Companion.toScope(it) }
     val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.Companion.toScope(it) }
@@ -91,8 +92,8 @@ class AllFollowsByOutboxTopNavFilter(
                 MutableStateFlow(emptyMap())
             }
 
-        return combine(authorsPerRelay, communitiesPerRelay, defaultRelays) { perRelayAuthors, perRelayCommunities, default ->
-            val allRelays = (perRelayAuthors.keys + perRelayCommunities.keys).ifEmpty { default }
+        return combine(authorsPerRelay, communitiesPerRelay, defaultRelays, blockedRelays) { perRelayAuthors, perRelayCommunities, default, blockedRelays ->
+            val allRelays = (perRelayAuthors.keys + perRelayCommunities.keys).filter { it !in blockedRelays }.ifEmpty { default }
 
             AllFollowsByOutboxTopNavPerRelayFilterSet(
                 allRelays.associateWith {
@@ -121,7 +122,7 @@ class AllFollowsByOutboxTopNavFilter(
                 emptyMap()
             }
 
-        val allRelays = (authorsPerRelay.keys + communitiesPerRelay.keys).ifEmpty { defaultRelays.value }
+        val allRelays = (authorsPerRelay.keys + communitiesPerRelay.keys).filter { it !in blockedRelays.value }.ifEmpty { defaultRelays.value }
 
         return AllFollowsByOutboxTopNavPerRelayFilterSet(
             allRelays.associateWith {

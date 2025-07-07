@@ -43,10 +43,12 @@ import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.model.nip50Search.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.BlockPeopleListState
+import com.vitorpamplona.amethyst.model.nip51Lists.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nip51Lists.MuteListState
+import com.vitorpamplona.amethyst.model.nip51Lists.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
@@ -239,6 +241,8 @@ class Account(
     val searchRelayList = SearchRelayListState(signer, cache, scope, settings)
     val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
+    val trustedRelayList = TrustedRelayListState(signer, cache, scope, settings)
+    val blockedRelayList = BlockedRelayListState(signer, cache, scope, settings)
 
     val kind3FollowList = FollowListState(signer, cache, scope, settings)
     val ephemeralChatList = EphemeralChatListState(signer, cache, scope, settings)
@@ -264,14 +268,14 @@ class Account(
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
-    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, scope)
+    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, scope)
 
     // Follows Relays
-    val followOutboxes = FollowListOutboxRelays(kind3FollowList, cache, scope)
+    val followOutboxes = FollowListOutboxRelays(kind3FollowList, blockedRelayList, cache, scope)
     val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
-    val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, cache, scope).flow
+    val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
     val allFollows = MergedFollowListsState(kind3FollowList, hashtagList, geohashList, communityList, scope)
@@ -283,6 +287,7 @@ class Account(
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
+            blockedRelays = blockedRelayList.flow,
             signer = signer,
             scope = scope,
         ).flow
@@ -295,6 +300,7 @@ class Account(
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
+            blockedRelays = blockedRelayList.flow,
             signer = signer,
             scope = scope,
         ).flow
@@ -307,6 +313,7 @@ class Account(
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
+            blockedRelays = blockedRelayList.flow,
             signer = signer,
             scope = scope,
         ).flow
@@ -319,6 +326,7 @@ class Account(
             allFollows = allFollows.flow,
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
+            blockedRelays = blockedRelayList.flow,
             signer = signer,
             scope = scope,
         ).flow
@@ -2098,6 +2106,16 @@ class Account(
     fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) {
         if (!isWriteable()) return
         searchRelayList.saveRelayList(searchRelays, ::sendMyPublicAndPrivateOutbox)
+    }
+
+    fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) {
+        if (!isWriteable()) return
+        trustedRelayList.saveRelayList(trustedRelays, ::sendMyPublicAndPrivateOutbox)
+    }
+
+    fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) {
+        if (!isWriteable()) return
+        blockedRelayList.saveRelayList(blockedRelays, ::sendMyPublicAndPrivateOutbox)
     }
 
     fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) {

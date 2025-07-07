@@ -53,9 +53,7 @@ sealed class Route {
 
     @Serializable object EditProfile : Route()
 
-    @Serializable data class EditRelays(
-        val toAdd: String? = null,
-    ) : Route()
+    @Serializable object EditRelays : Route()
 
     @Serializable data class Nip47NWCSetup(
         val nip47: String? = null,

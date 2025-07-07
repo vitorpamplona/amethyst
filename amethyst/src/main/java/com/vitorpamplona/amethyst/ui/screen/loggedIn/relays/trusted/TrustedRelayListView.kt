@@ -18,58 +18,64 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.relays
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.note.RelayCompose
+import com.vitorpamplona.amethyst.ui.navigation.rememberExtendedNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditField
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 
 @Composable
-fun RelayFeedView(
-    viewModel: RelayFeedViewModel,
+fun TrustedRelayList(
+    postViewModel: TrustedRelayListViewModel,
     accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
     nav: INav,
-    enablePullRefresh: Boolean = true,
 ) {
-    val feedState by viewModel.feedContent.collectAsStateWithLifecycle()
+    val feedState by postViewModel.relays.collectAsStateWithLifecycle()
 
-    RefresheableBox(viewModel, enablePullRefresh) {
-        val listState = rememberLazyListState()
-        val clipboardManager = LocalClipboardManager.current
+    val newNav = rememberExtendedNav(nav, onClose)
 
+    Row(verticalAlignment = Alignment.CenterVertically) {
         LazyColumn(
             contentPadding = FeedPadding,
-            state = listState,
         ) {
-            itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
-                RelayCompose(
-                    item,
-                    accountViewModel = accountViewModel,
-                    onAddRelay = {
-                        clipboardManager.setText(AnnotatedString(item.url.url))
-                        nav.nav(Route.EditRelays)
-                    },
-                    onRemoveRelay = {
-                        nav.nav(Route.EditRelays)
-                    },
-                )
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
-            }
+            renderTrustedItems(feedState, postViewModel, accountViewModel, newNav)
         }
+    }
+}
+
+fun LazyListScope.renderTrustedItems(
+    feedState: List<BasicRelaySetupInfo>,
+    postViewModel: TrustedRelayListViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    itemsIndexed(feedState, key = { _, item -> "Trusted" + item.relay }) { index, item ->
+        BasicRelaySetupInfoDialog(
+            item,
+            onDelete = { postViewModel.deleteRelay(item) },
+            accountViewModel = accountViewModel,
+            nav,
+        )
+    }
+
+    item {
+        Spacer(modifier = StdVertSpacer)
+        RelayUrlEditField { postViewModel.addRelay(relaySetupInfoBuilder(it)) }
     }
 }

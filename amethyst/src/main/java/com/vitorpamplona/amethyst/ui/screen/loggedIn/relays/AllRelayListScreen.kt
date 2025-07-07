@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
@@ -68,6 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65Hom
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip65.renderNip65NotifItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.renderSearchItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
@@ -79,17 +83,15 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
 fun AllRelayListScreen(
-    relayToAdd: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    MappedAllRelayListView(relayToAdd ?: "", accountViewModel, nav)
+    MappedAllRelayListView(accountViewModel, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MappedAllRelayListView(
-    relayToAdd: String = "",
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
@@ -106,6 +108,12 @@ fun MappedAllRelayListView(
     val searchViewModel: SearchRelayListViewModel = viewModel()
     val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
 
+    val blockedViewModel: BlockedRelayListViewModel = viewModel()
+    val blockedFeedState by blockedViewModel.relays.collectAsStateWithLifecycle()
+
+    val trustedViewModel: TrustedRelayListViewModel = viewModel()
+    val trustedFeedState by trustedViewModel.relays.collectAsStateWithLifecycle()
+
     val localViewModel: LocalRelayListViewModel = viewModel()
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
 
@@ -119,6 +127,8 @@ fun MappedAllRelayListView(
         localViewModel.load(accountViewModel.account)
         privateOutboxViewModel.load(accountViewModel.account)
         connectedViewModel.load(accountViewModel.account)
+        blockedViewModel.load(accountViewModel.account)
+        trustedViewModel.load(accountViewModel.account)
     }
 
     Scaffold(
@@ -148,6 +158,8 @@ fun MappedAllRelayListView(
                                 searchViewModel.create()
                                 localViewModel.create()
                                 privateOutboxViewModel.create()
+                                trustedViewModel.create()
+                                blockedViewModel.create()
                                 newNav.popBack()
                             },
                             true,
@@ -164,6 +176,8 @@ fun MappedAllRelayListView(
                                 searchViewModel.clear()
                                 localViewModel.clear()
                                 privateOutboxViewModel.clear()
+                                trustedViewModel.clear()
+                                blockedViewModel.clear()
                                 newNav.popBack()
                             },
                         )
@@ -247,6 +261,24 @@ fun MappedAllRelayListView(
                 )
             }
             renderLocalItems(localFeedState, localViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.trusted_section),
+                    stringRes(R.string.trusted_section_explainer),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderTrustedItems(trustedFeedState, trustedViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.blocked_section),
+                    stringRes(R.string.blocked_section_explainer),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderBlockedItems(blockedFeedState, blockedViewModel, accountViewModel, newNav)
 
             item {
                 SettingsCategory(

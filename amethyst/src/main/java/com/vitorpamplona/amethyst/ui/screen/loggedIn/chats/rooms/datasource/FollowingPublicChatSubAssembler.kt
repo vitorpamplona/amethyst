@@ -57,7 +57,7 @@ class FollowingPublicChatSubAssembler(
         userJobMap[key.account.userProfile()] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.publicChatList.flowSet.sample(5000).collectLatest {
+                    key.account.publicChatList.flowSet.sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },

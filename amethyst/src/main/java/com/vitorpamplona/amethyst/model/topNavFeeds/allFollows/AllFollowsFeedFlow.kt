@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.map
 class AllFollowsFeedFlow(
     val allFollows: StateFlow<FollowListState.Kind3Follows?>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
     fun convert(kind3: FollowListState.Kind3Follows?): AllFollowsByOutboxTopNavFilter =
         if (kind3 != null) {
@@ -40,11 +41,13 @@ class AllFollowsFeedFlow(
                 geotags = kind3.geotags,
                 communities = kind3.communities,
                 defaultRelays = followsRelays,
+                blockedRelays = blockedRelays,
             )
         } else {
             AllFollowsByOutboxTopNavFilter(
                 authors = emptySet(),
                 defaultRelays = followsRelays,
+                blockedRelays = blockedRelays,
             )
         }
 

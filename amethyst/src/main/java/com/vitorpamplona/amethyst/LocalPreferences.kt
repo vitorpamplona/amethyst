@@ -51,7 +51,9 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -96,6 +98,8 @@ private object PrefKeys {
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
     const val LATEST_NIP65_RELAY_LIST = "latestNIP65RelayList"
     const val LATEST_SEARCH_RELAY_LIST = "latestSearchRelayList"
+    const val LATEST_BLOCKED_RELAY_LIST = "latestSearchRelayList"
+    const val LATEST_TRUSTED_RELAY_LIST = "latestSearchRelayList"
     const val LATEST_MUTE_LIST = "latestMuteList"
     const val LATEST_PRIVATE_HOME_RELAY_LIST = "latestPrivateHomeRelayList"
     const val LATEST_APP_SPECIFIC_DATA = "latestAppSpecificData"
@@ -367,6 +371,24 @@ object LocalPreferences {
                         remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                     }
 
+                    if (settings.backupBlockedRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_BLOCKED_RELAY_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupBlockedRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
+                    }
+
+                    if (settings.backupTrustedRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_TRUSTED_RELAY_LIST,
+                            EventMapper.mapper.writeValueAsString(settings.backupTrustedRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
+                    }
+
                     if (settings.localRelayServers.value.isNotEmpty()) {
                         putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers.value)
                     } else {
@@ -562,6 +584,8 @@ object LocalPreferences {
                     val latestDmRelayList = parseEventOrNull<ChatMessageRelayListEvent>(PrefKeys.LATEST_DM_RELAY_LIST)
                     val latestNip65RelayList = parseEventOrNull<AdvertisedRelayListEvent>(PrefKeys.LATEST_NIP65_RELAY_LIST)
                     val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
+                    val latestBlockedRelayList = parseEventOrNull<BlockedRelayListEvent>(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
+                    val latestTrustedRelayList = parseEventOrNull<TrustedRelayListEvent>(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
                     val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
                     val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
                     val latestAppSpecificData = parseEventOrNull<AppSpecificDataEvent>(PrefKeys.LATEST_APP_SPECIFIC_DATA)
@@ -604,6 +628,8 @@ object LocalPreferences {
                         backupNIP65RelayList = latestNip65RelayList,
                         backupDMRelayList = latestDmRelayList,
                         backupSearchRelayList = latestSearchRelayList,
+                        backupBlockedRelayList = latestBlockedRelayList,
+                        backupTrustedRelayList = latestTrustedRelayList,
                         backupPrivateHomeRelayList = latestPrivateHomeRelayList,
                         backupMuteList = latestMuteList,
                         backupAppSpecificData = latestAppSpecificData,

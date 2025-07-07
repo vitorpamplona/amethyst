@@ -78,12 +78,14 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
+import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
@@ -181,10 +183,12 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -635,6 +639,8 @@ private fun RenderNoteRow(
         is ChatMessageRelayListEvent -> DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is AdvertisedRelayListEvent -> DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
         is SearchRelayListEvent -> DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is BlockedRelayListEvent -> DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is TrustedRelayListEvent -> DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is PinListEvent -> RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
         is EmojiPackEvent -> RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
         is LiveActivitiesEvent -> RenderLiveActivityEvent(baseNote, accountViewModel, nav)

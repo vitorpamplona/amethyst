@@ -29,10 +29,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 
 @Immutable
 class MutedAuthorsByOutboxTopNavFilter(
     val authors: Set<String>,
+    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey) = pubkey in authors
 
@@ -48,7 +51,17 @@ class MutedAuthorsByOutboxTopNavFilter(
             map.mapValues { MutedAuthorsByOutboxTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsByOutboxTopNavPerRelayFilterSet> = OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache, ::convert)
+    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsByOutboxTopNavPerRelayFilterSet> {
+        val authorsPerRelay = OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache) { it }
 
-    override fun startValue(cache: LocalCache): MutedAuthorsByOutboxTopNavPerRelayFilterSet = OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache, ::convert)
+        return combine(authorsPerRelay, blockedRelays) { authors, blocked ->
+            convert(authors.minus(blocked))
+        }
+    }
+
+    override fun startValue(cache: LocalCache): MutedAuthorsByOutboxTopNavPerRelayFilterSet {
+        val authorsPerRelay = OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache) { it }
+
+        return convert(authorsPerRelay.minus(blockedRelays.value))
+    }
 }

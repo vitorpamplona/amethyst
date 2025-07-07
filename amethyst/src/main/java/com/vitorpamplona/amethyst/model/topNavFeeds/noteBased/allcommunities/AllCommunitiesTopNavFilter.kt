@@ -29,10 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNotes
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlin.collections.minus
 
 @Immutable
 class AllCommunitiesTopNavFilter(
     val communities: Set<String>,
+    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
@@ -43,13 +47,17 @@ class AllCommunitiesTopNavFilter(
             map.mapValues { AllCommunitiesTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllCommunitiesTopNavPerRelayFilterSet> =
-        CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) {
-            convert(it)
-        }
+    override fun toPerRelayFlow(cache: LocalCache): Flow<AllCommunitiesTopNavPerRelayFilterSet> {
+        val communitiesPerRelay = CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) { it }
 
-    override fun startValue(cache: LocalCache): AllCommunitiesTopNavPerRelayFilterSet =
-        CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) {
-            convert(it)
+        return combine(communitiesPerRelay, blockedRelays) { communitiesPerRelay, blockedRelays ->
+            convert(communitiesPerRelay.minus(blockedRelays))
         }
+    }
+
+    override fun startValue(cache: LocalCache): AllCommunitiesTopNavPerRelayFilterSet {
+        val communitiesPerRelay = CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) { it }
+
+        return convert(communitiesPerRelay.minus(blockedRelays.value))
+    }
 }

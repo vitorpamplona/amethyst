@@ -38,6 +38,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -70,9 +71,10 @@ class NostrClient(
             reqs + counts + outbox
         }.onStart {
             activeRequests.relays.value + activeCounts.relays.value + eventOutbox.relays.value
-        }.onEach {
-            relayPool.updatePool(it)
-        }.flowOn(Dispatchers.Default)
+        }.debounce(300)
+            .onEach {
+                relayPool.updatePool(it)
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Companion.Eagerly,

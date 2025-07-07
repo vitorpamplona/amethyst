@@ -127,7 +127,7 @@ fun AppNavigation(
             composableFromEnd<Route.Settings> { SettingsScreen(sharedPreferencesViewModel, accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
             composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
-            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(it.toAdd, accountViewModel, nav) }
+            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }

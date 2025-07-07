@@ -40,7 +40,9 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.ExternalSignerLauncher
@@ -116,6 +118,8 @@ class AccountSettings(
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
     var backupNIP65RelayList: AdvertisedRelayListEvent? = null,
     var backupSearchRelayList: SearchRelayListEvent? = null,
+    var backupBlockedRelayList: BlockedRelayListEvent? = null,
+    var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
     var backupAppSpecificData: AppSpecificDataEvent? = null,
@@ -347,6 +351,26 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupSearchRelayList?.id != newSearchRelayList.id) {
             backupSearchRelayList = newSearchRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateBlockedRelayList(newBlockedRelayList: BlockedRelayListEvent?) {
+        if (newBlockedRelayList == null || newBlockedRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupBlockedRelayList?.id != newBlockedRelayList.id) {
+            backupBlockedRelayList = newBlockedRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateTrustedRelayList(newTrustedRelayList: TrustedRelayListEvent?) {
+        if (newTrustedRelayList == null || newTrustedRelayList.tags.isEmpty()) return
+
+        // Events might be different objects, we have to compare their ids.
+        if (backupTrustedRelayList?.id != newTrustedRelayList.id) {
+            backupTrustedRelayList = newTrustedRelayList
             saveAccountSettings()
         }
     }

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip50Search.SearchRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -41,32 +42,33 @@ class TrustedRelayListsState(
     val localRelayList: LocalRelayListState,
     val dmRelayList: DmRelayListState,
     val searchRelayListState: SearchRelayListState,
+    val trustedRelayList: TrustedRelayListState,
     val scope: CoroutineScope,
 ) {
-    fun mergeLists(
-        nip65: Set<NormalizedRelayUrl>,
-        private: Set<NormalizedRelayUrl>,
-        local: Set<NormalizedRelayUrl>,
-        dm: Set<NormalizedRelayUrl>,
-        search: Set<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> = nip65 + private + local + dm + search
+    fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
 
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
-            nip65RelayList.allFlow,
-            privateOutboxRelayList.flow,
-            localRelayList.flow,
-            dmRelayList.flow,
-            searchRelayListState.flow,
+            listOf(
+                nip65RelayList.allFlow,
+                privateOutboxRelayList.flow,
+                localRelayList.flow,
+                dmRelayList.flow,
+                searchRelayListState.flow,
+                trustedRelayList.flow,
+            ),
             ::mergeLists,
         ).onStart {
             emit(
                 mergeLists(
-                    nip65RelayList.allFlow.value,
-                    privateOutboxRelayList.flow.value,
-                    localRelayList.flow.value,
-                    dmRelayList.flow.value,
-                    searchRelayListState.flow.value,
+                    arrayOf(
+                        nip65RelayList.allFlow.value,
+                        privateOutboxRelayList.flow.value,
+                        localRelayList.flow.value,
+                        dmRelayList.flow.value,
+                        searchRelayListState.flow.value,
+                        trustedRelayList.flow.value,
+                    ),
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -74,11 +76,14 @@ class TrustedRelayListsState(
                 scope,
                 SharingStarted.Eagerly,
                 mergeLists(
-                    nip65RelayList.allFlow.value,
-                    privateOutboxRelayList.flow.value,
-                    localRelayList.flow.value,
-                    dmRelayList.flow.value,
-                    searchRelayListState.flow.value,
+                    arrayOf(
+                        nip65RelayList.allFlow.value,
+                        privateOutboxRelayList.flow.value,
+                        localRelayList.flow.value,
+                        dmRelayList.flow.value,
+                        searchRelayListState.flow.value,
+                        trustedRelayList.flow.value,
+                    ),
                 ),
             )
 }

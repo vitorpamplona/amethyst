@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
@@ -49,6 +51,12 @@ val AccountInfoAndListsFromKeyKinds =
         PrivateOutboxRelayListEvent.KIND,
     )
 
+val AccountInfoAndListsFromKeyKinds2 =
+    listOf(
+        BlockedRelayListEvent.KIND,
+        TrustedRelayListEvent.KIND,
+    )
+
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)
 val AmethystMetadataTagMapFilter = mapOf("d" to listOf(APP_SPECIFIC_DATA_D_TAG))
 
@@ -65,6 +73,16 @@ fun filterAccountInfoAndListsFromKey(
             filter =
                 Filter(
                     kinds = AccountInfoAndListsFromKeyKinds,
+                    authors = listOf(pubkey),
+                    limit = 20,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = AccountInfoAndListsFromKeyKinds2,
                     authors = listOf(pubkey),
                     limit = 20,
                     since = since,

@@ -117,12 +117,14 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
+import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
@@ -201,10 +203,12 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
@@ -589,6 +593,10 @@ private fun FullBleedNoteCompose(
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {
                     DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is BlockedRelayListEvent) {
+                    DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is TrustedRelayListEvent) {
+                    DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is FhirResourceEvent) {
                     RenderFhirResource(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GitRepositoryEvent) {

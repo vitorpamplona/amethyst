@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -41,6 +43,8 @@ val BasicAccountInfoKinds =
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+        BlockedRelayListEvent.KIND,
+        TrustedRelayListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(

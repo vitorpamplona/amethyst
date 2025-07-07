@@ -92,7 +92,7 @@ class VideoOutboxEventsFilterSubAssembler(
         userJobMap[user] =
             listOf(
                 key.scope.launch(Dispatchers.Default) {
-                    key.followsPerRelayFlow().sample(5000).collectLatest {
+                    key.followsPerRelayFlow().sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },

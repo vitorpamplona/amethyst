@@ -125,12 +125,14 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -968,6 +970,18 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: SearchRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: BlockedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: TrustedRelayListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -3045,6 +3059,7 @@ object LocalCache : ILocalCache {
                 is BadgeAwardEvent -> consume(event, relay, wasVerified)
                 is BadgeDefinitionEvent -> consume(event, relay, wasVerified)
                 is BadgeProfilesEvent -> consume(event, relay, wasVerified)
+                is BlockedRelayListEvent -> consume(event, relay, wasVerified)
                 is BlossomServersEvent -> consume(event, relay, wasVerified)
                 is BookmarkListEvent -> consume(event, relay, wasVerified)
                 is CalendarEvent -> consume(event, relay, wasVerified)
@@ -3126,6 +3141,7 @@ object LocalCache : ILocalCache {
                 is TextNoteModificationEvent -> consume(event, relay, wasVerified)
                 is TorrentEvent -> consume(event, relay, wasVerified)
                 is TorrentCommentEvent -> consume(event, relay, wasVerified)
+                is TrustedRelayListEvent -> consume(event, relay, wasVerified)
                 is VideoHorizontalEvent -> consume(event, relay, wasVerified)
                 is VideoVerticalEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)

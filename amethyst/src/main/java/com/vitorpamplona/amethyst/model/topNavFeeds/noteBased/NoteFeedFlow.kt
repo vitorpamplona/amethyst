@@ -48,24 +48,25 @@ class NoteFeedFlow(
     val metadataFlow: StateFlow<NoteState?>,
     val signer: NostrSigner,
     val allFollowRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
     fun process(noteEvent: Event): IFeedTopNavFilter =
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
-                    MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users)
+                    MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays)
                 } else {
-                    AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users)
+                    AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays)
                 }
             }
             is MuteListEvent -> {
-                MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users)
+                MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users, blockedRelays)
             }
             is FollowListEvent -> {
-                AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet())
+                AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet(), blockedRelays)
             }
             is CommunityListEvent -> {
-                AllCommunitiesTopNavFilter(noteEvent.publicAndCachedPrivateCommunityIds().toSet())
+                AllCommunitiesTopNavFilter(noteEvent.publicAndCachedPrivateCommunityIds().toSet(), blockedRelays)
             }
             is HashtagListEvent -> {
                 HashtagTopNavFilter(noteEvent.publicAndCachedPrivateHashtags(), allFollowRelays)
@@ -78,44 +79,45 @@ class NoteFeedFlow(
                     community = noteEvent.addressTag(),
                     authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
                     relays = noteEvent.relayUrls().toSet(),
+                    blockedRelays = blockedRelays,
                 )
             }
-            else -> AuthorsByOutboxTopNavFilter(emptySet())
+            else -> AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
         }
 
     suspend fun FlowCollector<IFeedTopNavFilter>.process(noteEvent: Event) {
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
-                    emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users))
+                    emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays))
 
                     noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
-                        emit(MutedAuthorsByOutboxTopNavFilter(it.users))
+                        emit(MutedAuthorsByOutboxTopNavFilter(it.users, blockedRelays))
                     }
                 } else {
-                    emit(AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users))
+                    emit(AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays))
 
                     noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
-                        emit(AuthorsByOutboxTopNavFilter(it.users))
+                        emit(AuthorsByOutboxTopNavFilter(it.users, blockedRelays))
                     }
                 }
             }
             is MuteListEvent -> {
-                emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users))
+                emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users, blockedRelays))
 
                 noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
-                    emit(MutedAuthorsByOutboxTopNavFilter(it.users))
+                    emit(MutedAuthorsByOutboxTopNavFilter(it.users, blockedRelays))
                 }
             }
             is FollowListEvent -> {
-                emit(AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet()))
+                emit(AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet(), blockedRelays))
             }
             is CommunityListEvent -> {
-                emit(AllCommunitiesTopNavFilter(noteEvent.publicCommunityIds().toSet()))
+                emit(AllCommunitiesTopNavFilter(noteEvent.publicCommunityIds().toSet(), blockedRelays))
 
                 noteEvent.publicAndPrivateCommunities(signer)?.let {
                     val communities = it.map { it.addressId }.toSet()
-                    emit(AllCommunitiesTopNavFilter(communities))
+                    emit(AllCommunitiesTopNavFilter(communities, blockedRelays))
                 }
             }
             is HashtagListEvent -> {
@@ -138,12 +140,13 @@ class NoteFeedFlow(
                         community = noteEvent.addressTag(),
                         authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
                         relays = noteEvent.relayUrls().toSet(),
+                        blockedRelays = blockedRelays,
                     ),
                 )
             }
             else ->
                 emit(
-                    AuthorsByOutboxTopNavFilter(emptySet()),
+                    AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays),
                 )
         }
     }
@@ -153,7 +156,7 @@ class NoteFeedFlow(
         metadataFlow.transformLatest { noteState ->
             val noteEvent = noteState?.note?.event
             if (noteEvent == null) {
-                AuthorsByOutboxTopNavFilter(emptySet())
+                AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
             } else {
                 process(noteEvent)
             }
@@ -162,7 +165,7 @@ class NoteFeedFlow(
     override fun startValue(): IFeedTopNavFilter {
         val noteEvent = metadataFlow.value?.note?.event
         if (noteEvent == null) {
-            return AuthorsByOutboxTopNavFilter(emptySet())
+            return AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
         } else {
             return process(noteEvent)
         }
@@ -171,7 +174,7 @@ class NoteFeedFlow(
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
         val noteEvent = metadataFlow.value?.note?.event
         if (noteEvent == null) {
-            collector.emit(AuthorsByOutboxTopNavFilter(emptySet()))
+            collector.emit(AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays))
         } else {
             collector.process(noteEvent)
         }
