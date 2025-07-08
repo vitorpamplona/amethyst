@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
+import android.R.attr.onClick
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
@@ -50,7 +51,7 @@ fun BasicRelaySetupInfoClickableRow(
     item: BasicRelaySetupInfo,
     loadProfilePicture: Boolean,
     loadRobohash: Boolean,
-    onDelete: (BasicRelaySetupInfo) -> Unit,
+    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     onClick: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {

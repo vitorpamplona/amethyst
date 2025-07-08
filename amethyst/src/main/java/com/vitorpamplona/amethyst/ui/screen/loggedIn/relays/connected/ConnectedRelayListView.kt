@@ -63,7 +63,7 @@ fun LazyListScope.renderConnectedItems(
     itemsIndexed(feedState, key = { _, item -> "Connected" + item.relay }) { index, item ->
         BasicRelaySetupInfoDialog(
             item,
-            onDelete = { },
+            onDelete = null,
             accountViewModel = accountViewModel,
             nav,
         )

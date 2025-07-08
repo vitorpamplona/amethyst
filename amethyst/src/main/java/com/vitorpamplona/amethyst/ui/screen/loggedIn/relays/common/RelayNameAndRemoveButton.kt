@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
@@ -51,7 +51,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 fun RelayNameAndRemoveButton(
     item: BasicRelaySetupInfo,
     onClick: () -> Unit,
-    onDelete: (BasicRelaySetupInfo) -> Unit,
+    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     modifier: Modifier,
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -95,19 +95,21 @@ fun RelayNameAndRemoveButton(
             }
         }
 
-        IconButton(
-            modifier = Modifier.size(30.dp),
-            onClick = { onDelete(item) },
-        ) {
-            Icon(
-                imageVector = Icons.Default.Cancel,
-                contentDescription = stringRes(id = R.string.remove),
-                modifier =
-                    Modifier
-                        .padding(start = 10.dp)
-                        .size(15.dp),
-                tint = WarningColor,
-            )
+        if (onDelete != null) {
+            IconButton(
+                modifier = Modifier.size(30.dp),
+                onClick = { onDelete(item) },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = stringRes(id = R.string.remove),
+                    modifier =
+                        Modifier
+                            .padding(start = 10.dp)
+                            .size(15.dp),
+                    tint = LightRedColor,
+                )
+            }
         }
     }
 }

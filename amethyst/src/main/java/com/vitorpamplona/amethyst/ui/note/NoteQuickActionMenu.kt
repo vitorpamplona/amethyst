@@ -89,7 +89,7 @@ import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -480,7 +480,7 @@ private fun BlockAlertDialog(
     buttonText = stringRes(R.string.quick_action_block_dialog_btn),
     buttonColors =
         ButtonDefaults.buttonColors(
-            containerColor = WarningColor,
+            containerColor = LightRedColor,
             contentColor = Color.White,
         ),
     onClickDoOnce = {

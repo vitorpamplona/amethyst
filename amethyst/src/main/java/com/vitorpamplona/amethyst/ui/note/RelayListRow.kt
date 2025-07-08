@@ -26,6 +26,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,11 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -59,15 +61,19 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size17dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.redColorOnSecondSurface
 import com.vitorpamplona.amethyst.ui.theme.relayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
+import com.vitorpamplona.amethyst.ui.theme.warningColorOnSecondSurface
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @Composable
 public fun RelayBadgesHorizontal(
@@ -191,6 +197,39 @@ fun RenderRelay(
     }
 }
 
+@Preview
+@Composable
+fun RenderRelayIconPreview() {
+    ThemeComparisonColumn {
+        Row {
+            RenderRelayIcon(
+                displayUrl = "wss://relay.damus.io",
+                iconUrl = "wss://relay.damus.io",
+                loadProfilePicture = true,
+                pingInMs = 100,
+                loadRobohash = true,
+                iconModifier = LargeRelayIconModifier,
+            )
+            RenderRelayIcon(
+                displayUrl = "wss://relay.damus.io",
+                iconUrl = "wss://relay.damus.io",
+                loadProfilePicture = true,
+                pingInMs = 300,
+                loadRobohash = true,
+                iconModifier = LargeRelayIconModifier,
+            )
+            RenderRelayIcon(
+                displayUrl = "wss://relay.damus.io",
+                iconUrl = "wss://relay.damus.io",
+                loadProfilePicture = true,
+                pingInMs = 500,
+                loadRobohash = true,
+                iconModifier = LargeRelayIconModifier,
+            )
+        }
+    }
+}
+
 @Composable
 fun RenderRelayIcon(
     displayUrl: String,
@@ -200,6 +239,9 @@ fun RenderRelayIcon(
     pingInMs: Long,
     iconModifier: Modifier = MaterialTheme.colorScheme.relayIconModifier,
 ) {
+    val green = MaterialTheme.colorScheme.allGoodColor
+    val yellow = MaterialTheme.colorScheme.warningColorOnSecondSurface
+    val red = MaterialTheme.colorScheme.redColorOnSecondSurface
     Box(
         contentAlignment = Alignment.TopEnd,
     ) {
@@ -212,29 +254,35 @@ fun RenderRelayIcon(
             loadProfilePicture = loadProfilePicture,
             loadRobohash = loadRobohash,
         )
+
+        val textStyle =
+            remember(pingInMs) {
+                TextStyle(
+                    color =
+                        if (pingInMs <= 150) {
+                            green
+                        } else if (pingInMs <= 300) {
+                            yellow
+                        } else {
+                            red
+                        },
+                )
+            }
+
         if (pingInMs > 0) {
             Box(
                 modifier =
                     Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(
-                            Color.Gray,
+                            MaterialTheme.colorScheme.secondaryContainer,
                         ),
             ) {
                 Text(
-                    modifier = Modifier.padding(4.dp),
-                    style =
-                        TextStyle(
-                            color =
-                                if (pingInMs <= 150) {
-                                    Color.Green
-                                } else if (pingInMs <= 300) {
-                                    Color.Yellow
-                                } else {
-                                    Color.Red
-                                },
-                        ),
+                    modifier = Modifier.padding(3.dp),
+                    style = textStyle,
                     text = "$pingInMs",
+                    fontSize = 10.sp,
                 )
             }
         }

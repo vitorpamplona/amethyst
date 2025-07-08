@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.collections.map
@@ -69,11 +68,6 @@ import kotlin.collections.map
 data class RelayList(
     val relay: NormalizedRelayUrl,
     val isSelected: Boolean,
-)
-
-data class RelayInfoDialog(
-    val relay: NormalizedRelayUrl,
-    val relayInfo: Nip11RelayInformation,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -156,7 +150,7 @@ fun RelaySelectionDialog(
                 ) {
                     itemsIndexed(
                         relays,
-                        key = { _, item -> item.relay },
+                        key = { _, item -> item.relay.url },
                     ) { index, item ->
                         RenderRelaySwitch(
                             item,
