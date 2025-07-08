@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingCommunityInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayFollowingHashtagsInPost
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
@@ -952,6 +953,7 @@ private fun RenderLongFormHeaderForThread(
                 mainImageModifier = Modifier,
                 loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
                 accountViewModel = accountViewModel,
+                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
                 onError = { DefaultImageHeader(note, accountViewModel) },
             )
         } ?: run {

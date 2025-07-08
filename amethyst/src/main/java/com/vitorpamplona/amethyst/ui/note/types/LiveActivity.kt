@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
@@ -232,6 +233,7 @@ fun RenderLiveActivityEventInner(
                                 mainImageModifier = Modifier.fillMaxWidth(),
                                 loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
                                 accountViewModel = accountViewModel,
+                                onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
                                 onError = { DefaultImageHeader(baseNote, accountViewModel) },
                             )
                         }

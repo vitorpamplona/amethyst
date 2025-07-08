@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -47,13 +46,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -87,16 +88,22 @@ fun DisplayFollowList(
     val image = noteEvent.image()
 
     image?.let {
-        AsyncImage(
-            model = it,
+        MyAsyncImage(
+            imageUrl = it,
             contentDescription =
                 stringRes(
                     R.string.preview_card_image_for,
                     it,
                 ),
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().padding(top = 5.dp).heightIn(max = 150.dp),
+            mainImageModifier = Modifier.fillMaxWidth(),
+            loadedImageModifier = Modifier,
+            accountViewModel = accountViewModel,
+            onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+            onError = { DefaultImageHeader(baseNote, accountViewModel) },
         )
+    } ?: run {
+        DefaultImageHeader(baseNote, accountViewModel)
     }
 
     Text(

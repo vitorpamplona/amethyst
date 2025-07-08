@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -95,6 +96,7 @@ fun LongFormHeader(
                 mainImageModifier = Modifier.fillMaxWidth(),
                 loadedImageModifier = Modifier,
                 accountViewModel = accountViewModel,
+                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
                 onError = { DefaultImageHeader(note, accountViewModel) },
             )
         } ?: run {

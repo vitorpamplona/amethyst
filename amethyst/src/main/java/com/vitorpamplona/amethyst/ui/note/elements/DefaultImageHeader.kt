@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.authorNotePictureForImageHeader
 
@@ -51,6 +53,22 @@ fun DefaultImageHeader(
     WatchAuthor(baseNote = note, accountViewModel) {
         Box {
             BannerImage(it, Modifier.fillMaxWidth().heightIn(max = 200.dp), accountViewModel)
+
+            Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
+                BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
+            }
+        }
+    }
+}
+
+@Composable
+fun DefaultImageHeaderBackground(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    WatchAuthor(baseNote = note, accountViewModel) {
+        Box {
+            BannerImage(it, Modifier.fillMaxWidth().heightIn(max = 200.dp).blur(Size16dp), accountViewModel)
 
             Box(authorNotePictureForImageHeader.align(Alignment.BottomStart)) {
                 BaseUserPicture(it, Size55dp, accountViewModel, Modifier)
@@ -88,6 +106,14 @@ fun BannerImage(
             mainImageModifier = Modifier,
             loadedImageModifier = modifier,
             accountViewModel = accountViewModel,
+            onLoadingBackground = {
+                Image(
+                    painter = painterRes(R.drawable.profile_banner, 4),
+                    contentDescription = stringRes(R.string.profile_banner),
+                    contentScale = ContentScale.Crop,
+                    modifier = modifier,
+                )
+            },
             onError = {
                 Image(
                     painter = painterRes(R.drawable.profile_banner, 4),
