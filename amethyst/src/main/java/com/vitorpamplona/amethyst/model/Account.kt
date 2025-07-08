@@ -277,7 +277,7 @@ class Account(
 
     // Follows Relays
     val followOutboxes = FollowListOutboxRelays(kind3FollowList, blockedRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, scope)
+    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, trustedRelayList, localRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, cache, scope).flow
