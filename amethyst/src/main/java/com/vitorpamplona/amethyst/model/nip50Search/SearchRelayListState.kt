@@ -76,6 +76,7 @@ class SearchRelayListState(
         searchRelays: List<NormalizedRelayUrl>,
         onDone: (SearchRelayListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val relayListForSearch = getSearchRelayList()
 
         if (relayListForSearch != null && relayListForSearch.tags.isNotEmpty()) {

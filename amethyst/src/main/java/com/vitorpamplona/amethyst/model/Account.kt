@@ -195,7 +195,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -229,7 +228,7 @@ import kotlin.coroutines.resume
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
     val signer: NostrSigner = settings.createSigner(),
-    val geolocationFlow: StateFlow<LocationState.LocationResult>,
+    geolocationFlow: StateFlow<LocationState.LocationResult>,
     val cache: LocalCache,
     val client: NostrClient,
     val scope: CoroutineScope,
@@ -698,28 +697,12 @@ class Account(
         hash: HexKey,
         size: Long,
         alt: String,
-    ): BlossomAuthorizationEvent? {
-        if (!isWriteable()) return null
-
-        return tryAndWait { continuation ->
-            BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer) {
-                continuation.resume(it)
-            }
-        }
-    }
+    ) = blossomServers.createBlossomUploadAuth(hash, size, alt)
 
     suspend fun createBlossomDeleteAuth(
         hash: HexKey,
         alt: String,
-    ): BlossomAuthorizationEvent? {
-        if (!isWriteable()) return null
-
-        return tryAndWait { continuation ->
-            BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer) {
-                continuation.resume(it)
-            }
-        }
-    }
+    ) = blossomServers.createBlossomDeleteAuth(hash, alt)
 
     suspend fun boost(note: Note) {
         RepostAction.repost(note, signer) {
@@ -1849,29 +1832,9 @@ class Account(
         relay: IRelayClient,
         challenge: String,
     ) {
-        createAuthEvent(relay.url, challenge) {
+        RelayAuthEvent.create(relay.url, challenge, signer) {
             client.sendIfExists(it, relay.url)
         }
-    }
-
-    fun createAuthEvent(
-        relayUrl: NormalizedRelayUrl,
-        challenge: String,
-        onReady: (RelayAuthEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
-
-        RelayAuthEvent.create(relayUrl, challenge, signer, onReady = onReady)
-    }
-
-    fun createAuthEvent(
-        relayUrls: List<NormalizedRelayUrl>,
-        challenge: String,
-        onReady: (RelayAuthEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
-
-        RelayAuthEvent.create(relayUrls, challenge, signer, onReady = onReady)
     }
 
     fun isInPrivateBookmarks(
@@ -2096,45 +2059,21 @@ class Account(
         ).toSet()
     }
 
-    fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) {
-        if (!isWriteable()) return
-        dmRelayList.saveRelayList(dmRelays, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = dmRelayList.saveRelayList(dmRelays, ::sendMyPublicAndPrivateOutbox)
 
-    fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) {
-        if (!isWriteable()) return
-        privateStorageRelayList.saveRelayList(relays, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = privateStorageRelayList.saveRelayList(relays, ::sendMyPublicAndPrivateOutbox)
 
-    fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) {
-        if (!isWriteable()) return
-        searchRelayList.saveRelayList(searchRelays, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = searchRelayList.saveRelayList(searchRelays, ::sendMyPublicAndPrivateOutbox)
 
-    fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) {
-        if (!isWriteable()) return
-        trustedRelayList.saveRelayList(trustedRelays, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = trustedRelayList.saveRelayList(trustedRelays, ::sendMyPublicAndPrivateOutbox)
 
-    fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) {
-        if (!isWriteable()) return
-        blockedRelayList.saveRelayList(blockedRelays, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = blockedRelayList.saveRelayList(blockedRelays, ::sendMyPublicAndPrivateOutbox)
 
-    fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) {
-        if (!isWriteable()) return
-        nip65RelayList.saveRelayList(relays, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = nip65RelayList.saveRelayList(relays, ::sendMyPublicAndPrivateOutbox)
 
-    fun sendFileServersList(servers: List<String>) {
-        if (!isWriteable()) return
-        fileStorageServers.saveFileServersList(servers, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun sendFileServersList(servers: List<String>) = fileStorageServers.saveFileServersList(servers, ::sendMyPublicAndPrivateOutbox)
 
-    fun sendBlossomServersList(servers: List<String>) {
-        if (!isWriteable()) return
-        blossomServers.saveBlossomServersList(servers, ::sendMyPublicAndPrivateOutbox)
-    }
+    fun sendBlossomServersList(servers: List<String>) = blossomServers.saveBlossomServersList(servers, ::sendMyPublicAndPrivateOutbox)
 
     fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(signer.pubKey)
 

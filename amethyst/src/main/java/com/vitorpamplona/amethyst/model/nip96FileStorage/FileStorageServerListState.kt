@@ -70,6 +70,7 @@ class FileStorageServerListState(
         servers: List<String>,
         onDone: (FileServersEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val serverList = getFileServersList()
 
         val template =

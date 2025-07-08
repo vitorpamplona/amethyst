@@ -75,6 +75,7 @@ class TrustedRelayListState(
         trustedRelays: List<NormalizedRelayUrl>,
         onDone: (TrustedRelayListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val relayListForTrusted = getTrustedRelayList()
 
         if (relayListForTrusted != null && relayListForTrusted.tags.isNotEmpty()) {

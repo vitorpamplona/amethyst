@@ -75,6 +75,7 @@ class PrivateStorageRelayListState(
         relays: List<NormalizedRelayUrl>,
         onDone: (PrivateOutboxRelayListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val relayListForPrivateOutbox = getPrivateOutboxRelayList()
 
         if (relayListForPrivateOutbox != null && !relayListForPrivateOutbox.cachedPrivateTags().isNullOrEmpty()) {

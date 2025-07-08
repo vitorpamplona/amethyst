@@ -25,9 +25,12 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +39,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlin.coroutines.resume
 
 class BlossomServerListState(
     val signer: NostrSigner,
@@ -71,6 +75,8 @@ class BlossomServerListState(
         servers: List<String>,
         onDone: (BlossomServersEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
+
         val serverList = getBlossomServersList()
 
         if (serverList != null && serverList.tags.isNotEmpty()) {
@@ -86,6 +92,33 @@ class BlossomServerListState(
                 signer = signer,
                 onReady = onDone,
             )
+        }
+    }
+
+    suspend fun createBlossomUploadAuth(
+        hash: HexKey,
+        size: Long,
+        alt: String,
+    ): BlossomAuthorizationEvent? {
+        if (!signer.isWriteable()) return null
+
+        return tryAndWait { continuation ->
+            BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, signer) {
+                continuation.resume(it)
+            }
+        }
+    }
+
+    suspend fun createBlossomDeleteAuth(
+        hash: HexKey,
+        alt: String,
+    ): BlossomAuthorizationEvent? {
+        if (!signer.isWriteable()) return null
+
+        return tryAndWait { continuation ->
+            BlossomAuthorizationEvent.createDeleteAuth(hash, alt, signer) {
+                continuation.resume(it)
+            }
         }
     }
 }

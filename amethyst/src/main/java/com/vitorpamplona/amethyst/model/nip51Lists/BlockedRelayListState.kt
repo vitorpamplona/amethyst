@@ -75,6 +75,7 @@ class BlockedRelayListState(
         blockedRelays: List<NormalizedRelayUrl>,
         onDone: (BlockedRelayListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
         val relayListForBlocked = getBlockedRelayList()
 
         if (relayListForBlocked != null && relayListForBlocked.tags.isNotEmpty()) {

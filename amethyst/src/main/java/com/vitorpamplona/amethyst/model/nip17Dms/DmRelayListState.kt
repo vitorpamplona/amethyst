@@ -75,6 +75,8 @@ class DmRelayListState(
         dmRelays: List<NormalizedRelayUrl>,
         onDone: (ChatMessageRelayListEvent) -> Unit,
     ) {
+        if (!signer.isWriteable()) return
+
         val relayListForDMs = getDMRelayList()
         if (relayListForDMs != null && relayListForDMs.tags.isNotEmpty()) {
             ChatMessageRelayListEvent.updateRelayList(
