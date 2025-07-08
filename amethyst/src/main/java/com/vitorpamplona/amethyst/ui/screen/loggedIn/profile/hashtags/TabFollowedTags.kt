@@ -22,15 +22,17 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.hashtags
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserTagFollows
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -43,28 +45,23 @@ fun TabFollowedTags(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val items =
-        remember(baseUser.latestContactList?.id) {
-            baseUser.latestContactList?.unverifiedFollowTagSet()
-        }
-
     Column(
         Modifier
             .fillMaxHeight()
             .padding(vertical = 0.dp),
     ) {
-        items?.let {
-            LazyColumn {
-                itemsIndexed(items) { index, hashtag ->
-                    HashtagHeader(
-                        tag = hashtag,
-                        account = accountViewModel,
-                        onClick = { nav.nav(Route.Hashtag(hashtag)) },
-                    )
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
-                }
+        val items by observeUserTagFollows(baseUser, accountViewModel)
+
+        LazyColumn(Modifier.fillMaxSize()) {
+            itemsIndexed(items) { index, hashtag ->
+                HashtagHeader(
+                    tag = hashtag,
+                    account = accountViewModel,
+                    onClick = { nav.nav(Route.Hashtag(hashtag)) },
+                )
+                HorizontalDivider(
+                    thickness = DividerThickness,
+                )
             }
         }
     }

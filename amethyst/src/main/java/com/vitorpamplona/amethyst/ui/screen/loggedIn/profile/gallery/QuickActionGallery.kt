@@ -64,7 +64,7 @@ fun DeleteFromGalleryDialog(
         buttonIcon = Icons.Default.Delete,
         buttonText = stringRes(R.string.quick_action_delete_dialog_btn),
         onClickDoOnce = {
-            accountViewModel.removefromMediaGallery(note)
+            accountViewModel.removeFromMediaGallery(note)
             onDismiss()
         },
         onDismiss = onDismiss,

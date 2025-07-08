@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import java.math.BigDecimal
 
@@ -259,7 +261,7 @@ fun observeUserFollowCount(
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @Composable
-fun observeUserTagFollows(
+fun observeUserTagFollowCount(
     user: User,
     accountViewModel: AccountViewModel,
 ): State<Int> {
@@ -269,17 +271,48 @@ fun observeUserTagFollows(
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(user) {
-            user
+            accountViewModel
+                .hashtagFollows(user)
                 .flow()
-                .follows.stateFlow
+                .metadata.stateFlow
                 .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.latestContactList?.countFollowTags() ?: 0
+                .mapLatest { noteState ->
+                    (noteState.note.event as? HashtagListEvent)?.publicAndCachedPrivateHashtags()?.size ?: 0
+                }.onStart {
+                    emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.publicAndCachedPrivateHashtags()?.size ?: 0)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
     return flow.collectAsStateWithLifecycle(0)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeUserTagFollows(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<List<String>> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            accountViewModel
+                .hashtagFollows(user)
+                .flow()
+                .metadata.stateFlow
+                .sample(1000)
+                .mapLatest { noteState ->
+                    (noteState.note.event as? HashtagListEvent)?.publicAndCachedPrivateHashtags()?.sorted() ?: emptyList()
+                }.onStart {
+                    emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.publicAndCachedPrivateHashtags()?.sorted() ?: emptyList())
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(emptyList())
 }
 
 @Composable

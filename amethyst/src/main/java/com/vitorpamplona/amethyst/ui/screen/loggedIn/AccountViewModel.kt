@@ -113,6 +113,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
+import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -719,9 +720,11 @@ class AccountViewModel(
         viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
     }
 
-    fun removefromMediaGallery(note: Note) {
+    fun removeFromMediaGallery(note: Note) {
         viewModelScope.launch(Dispatchers.IO) { account.removeFromGallery(note) }
     }
+
+    fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
     fun addPrivateBookmark(note: Note) {
         viewModelScope.launch(Dispatchers.IO) { account.addBookmark(note, true) }

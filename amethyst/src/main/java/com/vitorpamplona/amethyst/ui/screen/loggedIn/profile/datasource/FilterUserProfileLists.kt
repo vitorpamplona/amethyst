@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 
 val UserProfileListKinds =
@@ -34,6 +35,7 @@ val UserProfileListKinds =
         BookmarkListEvent.KIND,
         PeopleListEvent.KIND,
         FollowListEvent.KIND,
+        HashtagListEvent.KIND,
         AppRecommendationEvent.KIND,
     )
 

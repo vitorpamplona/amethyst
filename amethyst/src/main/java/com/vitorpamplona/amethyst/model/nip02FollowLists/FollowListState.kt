@@ -124,9 +124,6 @@ class FollowListState(
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = listOf(ContactTag(user.pubkeyHex, user.bestRelayHint(), null)),
-                followTags = emptyList(),
-                followGeohashes = emptyList(),
-                followCommunities = emptyList(),
                 relayUse = emptyMap(),
                 signer = signer,
                 onReady = onDone,
