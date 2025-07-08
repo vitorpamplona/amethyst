@@ -2997,7 +2997,17 @@ object LocalCache : ILocalCache {
         }
 
         if (relay != null) {
-            addIncomingRelayAsHintToAllRelatedEvents(event, relay)
+            // uses the internal event to avoid reprocessing cached items.
+            val note =
+                if (event is AddressableEvent) {
+                    getAddressableNoteIfExists(event.address())
+                } else {
+                    getNoteIfExists(event.id)
+                }
+
+            note?.event?.let { consumedEvent ->
+                addIncomingRelayAsHintToAllRelatedEvents(consumedEvent, relay)
+            }
         }
 
         return wasNew
