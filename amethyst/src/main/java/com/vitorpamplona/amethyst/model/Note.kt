@@ -464,7 +464,7 @@ open class Note(
         }
     }
 
-    fun hasRelay(relay: NormalizedRelayUrl) = relay !in relays
+    fun hasRelay(relay: NormalizedRelayUrl) = relay in relays
 
     fun addRelay(relay: NormalizedRelayUrl) {
         if (relay !in relays) {

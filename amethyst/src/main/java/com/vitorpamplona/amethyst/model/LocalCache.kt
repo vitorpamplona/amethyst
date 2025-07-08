@@ -2971,7 +2971,11 @@ object LocalCache : ILocalCache {
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url)) {
-                        Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")
+                        Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
+
+                        // only send once.
+                        note.addRelay(relay.url)
+
                         relay.send(existingEvent)
                     }
                 }
