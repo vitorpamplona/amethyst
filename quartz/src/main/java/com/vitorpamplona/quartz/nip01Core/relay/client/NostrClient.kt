@@ -36,12 +36,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -62,6 +63,7 @@ class NostrClient(
      * Whatches for any changes in the relay list from subscriptions or outbox
      * and updates the relayPool as needed.
      */
+    @OptIn(FlowPreview::class)
     private val allRelays =
         combine(
             activeRequests.relays,
@@ -71,7 +73,7 @@ class NostrClient(
             reqs + counts + outbox
         }.onStart {
             activeRequests.relays.value + activeCounts.relays.value + eventOutbox.relays.value
-        }.debounce(300)
+        }.sample(300)
             .onEach {
                 relayPool.updatePool(it)
             }.flowOn(Dispatchers.Default)
