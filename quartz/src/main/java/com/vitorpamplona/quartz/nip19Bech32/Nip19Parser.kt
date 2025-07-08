@@ -43,13 +43,13 @@ import java.util.regex.Pattern
 object Nip19Parser {
     private val nip19PlusNip46regex: Pattern =
         Pattern.compile(
-            "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1|nembed1|ncryptsec1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
+            "(nostr:)?@?((nsec1|npub1|note1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58})|(nevent1|naddr1|nprofile1|nrelay1|nembed1|ncryptsec1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+))([\\S]*)",
             Pattern.CASE_INSENSITIVE,
         )
 
     val nip19regex: Pattern =
         Pattern.compile(
-            "(nostr:)?@?(nsec1|npub1|nevent1|naddr1|note1|nprofile1|nrelay1|nembed1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)([\\S]*)",
+            "(nostr:)?@?((nsec1|npub1|note1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58})|(nevent1|naddr1|nprofile1|nrelay1|nembed1)([qpzry9x8gf2tvdw0s3jn54khce6mua7l]+))([\\S]*)",
             Pattern.CASE_INSENSITIVE,
         )
 
@@ -75,8 +75,8 @@ object Nip19Parser {
                 return null
             }
 
-            val type = matcher.group(2) // npub1
-            val key = matcher.group(3) // bech32
+            val type = matcher.group(3) ?: matcher.group(5) // npub1
+            val key = matcher.group(4) ?: matcher.group(6) // bech32
 
             return type!! + key
         } catch (e: Throwable) {
@@ -95,9 +95,9 @@ object Nip19Parser {
                 return null
             }
 
-            val type = matcher.group(2) // npub1
-            val key = matcher.group(3) // bech32
-            val additionalChars = matcher.group(4) // additional chars
+            val type = matcher.group(3) ?: matcher.group(5) // npub1
+            val key = matcher.group(4) ?: matcher.group(6) // bech32
+            val additionalChars = matcher.group(7) // additional chars
 
             if (type == null) return null
 
@@ -136,11 +136,27 @@ object Nip19Parser {
             null
         }
 
-    fun parseAll(
-        content: String,
-        regex: Pattern,
-    ): List<Entity> {
-        val matcher2 = regex.matcher(content)
+    fun parseAll(content: String): List<Entity> {
+        val matcher = nip19regex.matcher(content)
+        val returningList = mutableListOf<Entity>()
+        while (matcher.find()) {
+            val type = matcher.group(3) ?: matcher.group(5) // npub1
+            val key = matcher.group(4) ?: matcher.group(6) // bech32
+            val additionalChars = matcher.group(7) // additional chars
+
+            if (type != null) {
+                val parsed = parseComponents(type, key, additionalChars)?.entity
+
+                if (parsed != null) {
+                    returningList.add(parsed)
+                }
+            }
+        }
+        return returningList
+    }
+
+    fun parseAllEvents(content: String): List<Entity> {
+        val matcher2 = nip19regexEvents.matcher(content)
         val returningList = mutableListOf<Entity>()
         while (matcher2.find()) {
             val type = matcher2.group(2) // npub1
@@ -157,10 +173,6 @@ object Nip19Parser {
         }
         return returningList
     }
-
-    fun parseAll(content: String): List<Entity> = parseAll(content, nip19regex)
-
-    fun parseAllEvents(content: String): List<Entity> = parseAll(content, nip19regexEvents)
 }
 
 fun decodePublicKey(key: String): ByteArray =
