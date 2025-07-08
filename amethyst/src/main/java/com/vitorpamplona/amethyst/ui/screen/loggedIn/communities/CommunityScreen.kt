@@ -42,16 +42,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal.CommunityFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource.CommunityFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.theme.BottomTopHeight
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
 @Composable
 fun CommunityScreen(
-    aTagHex: String?,
+    aTagHex: Address,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (aTagHex == null) return
-
-    LoadAddressableNote(aTagHex = aTagHex, accountViewModel) {
+    LoadAddressableNote(aTagHex, accountViewModel) {
         it?.let {
             PrepareViewModelsCommunityScreen(
                 note = it,
@@ -94,7 +93,7 @@ fun CommunityScreen(
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            CommunityTopBar(note.idHex, accountViewModel, nav)
+            CommunityTopBar(note.address, accountViewModel, nav)
         },
         floatingButton = {
             NewCommunityNoteButton(note.idHex, accountViewModel, nav)
@@ -116,11 +115,11 @@ fun CommunityScreen(
 
 @Composable
 fun CommunityTopBar(
-    id: String,
+    id: Address,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LoadAddressableNote(aTagHex = id, accountViewModel) { baseNote ->
+    LoadAddressableNote(id, accountViewModel) { baseNote ->
         if (baseNote != null) {
             TopBarExtensibleWithBackButton(
                 title = { ShortCommunityHeader(baseNote, accountViewModel, nav) },

@@ -170,7 +170,7 @@ class FollowListState(
                             "Community/${communityNote.idHex}",
                             CommunityName(communityNote),
                             CodeNameType.ROUTE,
-                            route = Route.Community(communityNote.idHex),
+                            route = Route.Community(communityNote.address.kind, communityNote.address.pubKeyHex, communityNote.address.dTag),
                             kinds = DEFAULT_COMMUNITY_FEEDS,
                             aTags = listOf(communityNote.idHex),
                         )

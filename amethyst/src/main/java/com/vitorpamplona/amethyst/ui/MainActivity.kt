@@ -180,7 +180,7 @@ fun uriToRoute(
 
                 is NAddress -> {
                     if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        Route.Community(nip19.aTag())
+                        Route.Community(nip19.kind, nip19.author, nip19.dTag)
                     } else if (nip19.kind == LiveActivitiesEvent.KIND) {
                         Route.Channel(nip19.aTag())
                     } else {

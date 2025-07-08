@@ -313,7 +313,7 @@ object LocalCache : ILocalCache {
 
     fun getAddressableNoteIfExists(key: String): AddressableNote? = Address.parse(key)?.let { addressables.get(it) }
 
-    fun getAddressableNoteIfExists(address: Address): AddressableNote? = getAddressableNoteIfExists(address)
+    fun getAddressableNoteIfExists(address: Address): AddressableNote? = addressables.get(address)
 
     fun getNoteIfExists(key: String): Note? = if (key.length == 64) notes.get(key) else Address.parse(key)?.let { addressables.get(it) }
 
@@ -2968,7 +2968,7 @@ object LocalCache : ILocalCache {
 
         if (event is AddressableEvent && relay != null) {
             // updates relay with a new event.
-            getAddressableNoteIfExists(event.addressTag())?.let { note ->
+            getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
                     if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url)) {
                         Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.toJson()} to ${existingEvent.toJson()}")

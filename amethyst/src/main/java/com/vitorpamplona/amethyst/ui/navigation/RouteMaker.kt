@@ -102,7 +102,7 @@ fun routeFor(
         loggedIn.createChatroom(room)
         return Route.Room(room.hashCode())
     } else if (noteEvent is CommunityDefinitionEvent) {
-        return Route.Community(noteEvent.aTag().toTag())
+        return Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
     } else if (noteEvent is AddressableEvent) {
         return Route.Note(noteEvent.aTag().toTag())
     } else {

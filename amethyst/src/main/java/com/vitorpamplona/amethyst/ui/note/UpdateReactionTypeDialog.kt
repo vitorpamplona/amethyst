@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
@@ -386,7 +387,7 @@ private fun EmojiSelector(
     ) { emptyNote ->
         emptyNote?.let { usersEmojiList ->
             val collections by observeNoteEventAndMap(usersEmojiList, accountViewModel) { event: EmojiPackSelectionEvent ->
-                event.emojiPackIds().toImmutableList()
+                event.emojiPacks().toImmutableList()
             }
 
             collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
@@ -396,7 +397,7 @@ private fun EmojiSelector(
 
 @Composable
 fun EmojiCollectionGallery(
-    emojiCollections: ImmutableList<String>,
+    emojiCollections: ImmutableList<Address>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: ((EmojiUrlTag) -> Unit)? = null,

@@ -90,37 +90,13 @@ fun LoadDecryptedContentOrNull(
 
 @Composable
 fun LoadAddressableNote(
-    aTagHex: String,
-    accountViewModel: AccountViewModel,
-    content: @Composable (AddressableNote?) -> Unit,
-) {
-    var note by
-        remember(aTagHex) {
-            mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTagHex))
-        }
-
-    if (note == null) {
-        LaunchedEffect(key1 = aTagHex) {
-            accountViewModel.checkGetOrCreateAddressableNote(aTagHex) { newNote ->
-                if (newNote != note) {
-                    note = newNote
-                }
-            }
-        }
-    }
-
-    content(note)
-}
-
-@Composable
-fun LoadAddressableNote(
     address: Address,
     accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
     var note by
         remember(address) {
-            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address.toValue()))
+            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address))
         }
 
     if (note == null) {

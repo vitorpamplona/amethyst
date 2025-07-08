@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -134,7 +135,7 @@ fun AppNavigation(
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
-            composableFromEndArgs<Route.Community> { CommunityScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
             composableFromEndArgs<Route.Room> { ChatroomScreen(it.id.toString(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
             composableFromEndArgs<Route.Channel> { ChannelScreen(it.id, accountViewModel, nav) }

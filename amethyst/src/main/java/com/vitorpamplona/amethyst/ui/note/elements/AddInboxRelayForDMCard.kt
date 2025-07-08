@@ -102,7 +102,7 @@ fun ObserveRelayListForDMs(
     inner: @Composable (relayListEvent: ChatMessageRelayListEvent?) -> Unit,
 ) {
     LoadAddressableNote(
-        ChatMessageRelayListEvent.createAddressTag(pubkey),
+        ChatMessageRelayListEvent.createAddress(pubkey),
         accountViewModel,
     ) { relayList ->
         if (relayList != null) {

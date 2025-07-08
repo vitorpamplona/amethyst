@@ -80,7 +80,9 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class Community(
-        val id: String,
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
     ) : Route()
 
     @Serializable data class Channel(

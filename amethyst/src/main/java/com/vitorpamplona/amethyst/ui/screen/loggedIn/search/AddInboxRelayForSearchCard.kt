@@ -101,7 +101,7 @@ fun ObserveRelayListForSearch(
     inner: @Composable (relayListEvent: SearchRelayListEvent?) -> Unit,
 ) {
     LoadAddressableNote(
-        SearchRelayListEvent.createAddressTag(pubkey),
+        SearchRelayListEvent.createAddress(pubkey),
         accountViewModel,
     ) { relayList ->
         if (relayList != null) {

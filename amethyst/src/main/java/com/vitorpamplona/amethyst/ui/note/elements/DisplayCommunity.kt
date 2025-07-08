@@ -59,7 +59,7 @@ private fun DisplayCommunity(
 
     val displayTag =
         remember(note) {
-            buildLinkString(getCommunityShortName(communityTag)) { nav.nav(Route.Community(communityTag.toTag())) }
+            buildLinkString(getCommunityShortName(communityTag)) { nav.nav(Route.Community(communityTag.kind, communityTag.pubKeyHex, communityTag.dTag)) }
         }
 
     Text(
