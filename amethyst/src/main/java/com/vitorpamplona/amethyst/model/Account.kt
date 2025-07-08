@@ -97,7 +97,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.acessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -131,7 +134,6 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
@@ -793,43 +795,27 @@ class Account(
             relaysItCameFrom
     }
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
-        val author = cache.getUserIfExists(event.pubKey)
+    private fun computeRelayListForLinkedUser(user: User): Set<NormalizedRelayUrl> =
+        if (user == userProfile()) {
+            notificationRelays.flow.value
+        } else {
+            user.inboxRelays().ifEmpty { null }?.toSet()
+                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.relaysBeingUsed.keys)
+        }
 
-        val authorOutboxRelays =
-            if (author != null) {
-                if (author == userProfile()) {
-                    outboxRelays.flow.value
-                } else {
-                    author.outboxRelays().ifEmpty { null }?.toSet()
-                        ?: cache.relayHints
-                            .hintsForKey(author.pubkeyHex)
-                            .ifEmpty { null }
-                            ?.toSet()
-                        ?: emptySet()
-                }
-            } else {
-                cache.relayHints
-                    .hintsForKey(event.pubKey)
-                    .ifEmpty { null }
-                    ?.toSet()
-                emptySet()
-            }
+    private fun computeRelayListForLinkedUser(pubkey: HexKey): Set<NormalizedRelayUrl> =
+        if (pubkey == userProfile().pubkeyHex) {
+            notificationRelays.flow.value
+        } else {
+            LocalCache
+                .getUserIfExists(pubkey)
+                ?.inboxRelays()
+                ?.ifEmpty { null }
+                ?.toSet()
+                ?: cache.relayHints.hintsForKey(pubkey).toSet()
+        }
 
-        val taggedUserInboxRelays =
-            event.taggedUserIds().flatMapTo(mutableSetOf()) { pubkey ->
-                if (pubkey == userProfile().pubkeyHex) {
-                    notificationRelays.flow.value
-                } else {
-                    LocalCache
-                        .getUserIfExists(pubkey)
-                        ?.inboxRelays()
-                        ?.ifEmpty { null }
-                        ?.toSet()
-                        ?: cache.relayHints.hintsForKey(pubkey).toSet()
-                }
-            }
-
+    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> {
         val isInChannel =
             if (
                 event is ChannelMessageEvent ||
@@ -849,109 +835,118 @@ class Account(
                 null
             }
 
-        val channelRelays =
-            if (isInChannel != null) {
-                val channel = LocalCache.checkGetOrCreateChannel(isInChannel)
-                channel?.relays() ?: emptySet()
+        return if (isInChannel != null) {
+            val channel = LocalCache.checkGetOrCreateChannel(isInChannel)
+            channel?.relays() ?: emptySet()
+        } else {
+            emptySet()
+        }
+    }
+
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
+        if (event is GiftWrapEvent) {
+            val receiver = event.recipientPubKey()
+            if (receiver != null) {
+                val relayList =
+                    cache
+                        .getOrCreateUser(receiver)
+                        .dmInboxRelayList()
+                        ?.relays()
+                        ?.ifEmpty { null }
+                if (relayList != null) {
+                    client.send(event, relayList.toSet())
+                } else {
+                    val publicRelayList = computeRelayListForLinkedUser(receiver)
+                    client.send(event, publicRelayList)
+                }
             } else {
-                emptySet()
+                return emptySet()
             }
+        }
+        if (event is WrappedEvent) {
+            return emptySet()
+        }
 
-        val replyRelays =
-            cache.computeReplyTo(event).flatMapTo(mutableSetOf()) {
-                val existingRelays = it.relays.toSet()
-                val replyToAuthor = it.author
+        val relayList = mutableSetOf<NormalizedRelayUrl>()
 
-                val replyAuthorRelays =
-                    if (replyToAuthor != null) {
-                        if (replyToAuthor == userProfile()) {
-                            outboxRelays.flow.value
-                        } else {
-                            replyToAuthor.outboxRelays().ifEmpty { null }?.toSet()
-                                ?: cache.relayHints
-                                    .hintsForKey(replyToAuthor.pubkeyHex)
-                                    .ifEmpty { null }
-                                    ?.toSet()
-                                ?: emptySet()
-                        }
+        val author = cache.getUserIfExists(event.pubKey)
+
+        if (author != null) {
+            if (author == userProfile()) {
+                relayList.addAll(outboxRelays.flow.value)
+            } else {
+                relayList.addAll(
+                    author.outboxRelays().ifEmpty { null }
+                        ?: cache.relayHints.hintsForKey(author.pubkeyHex),
+                )
+            }
+        } else {
+            relayList.addAll(cache.relayHints.hintsForKey(event.pubKey))
+        }
+
+        if (event is PubKeyHintProvider) {
+            event.pubKeyHints().forEach {
+                relayList.add(it.relay)
+            }
+            event.linkedPubKeys().forEach { pubkey ->
+                relayList.addAll(computeRelayListForLinkedUser(pubkey))
+            }
+        }
+
+        if (event is EventHintProvider) {
+            event.eventHints().forEach {
+                relayList.add(it.relay)
+            }
+            event.linkedEventIds().forEach { eventId ->
+                cache.getNoteIfExists(eventId)?.let { linkedNote ->
+                    val linkedNoteAuthor = linkedNote.author
+
+                    if (linkedNoteAuthor != null) {
+                        relayList.addAll(computeRelayListForLinkedUser(linkedNoteAuthor))
                     } else {
-                        emptySet()
+                        relayList.addAll(linkedNote.relays.toSet())
                     }
 
-                existingRelays + replyAuthorRelays
+                    linkedNote.event?.let { linkedEvent ->
+                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                    }
+                }
             }
+        }
 
-        return authorOutboxRelays + taggedUserInboxRelays + channelRelays + replyRelays
+        if (event is AddressHintProvider) {
+            event.addressHints().forEach {
+                relayList.add(it.relay)
+            }
+            event.linkedAddressIds().forEach { addressId ->
+                cache.getAddressableNoteIfExists(addressId)?.let { linkedNote ->
+                    val linkedNoteAuthor = linkedNote.author
+
+                    if (linkedNoteAuthor != null) {
+                        relayList.addAll(computeRelayListForLinkedUser(linkedNoteAuthor))
+                    } else {
+                        relayList.addAll(linkedNote.relays.toSet())
+                    }
+
+                    linkedNote.event?.let { linkedEvent ->
+                        relayList.addAll(computeRelaysForChannels(linkedEvent))
+                    }
+                }
+            }
+        }
+
+        relayList.addAll(computeRelaysForChannels(event))
+
+        return relayList
     }
 
     fun computeRelayListToBroadcast(note: Note): Set<NormalizedRelayUrl> {
-        val author = note.author
-
-        val authorOutboxRelays =
-            if (author != null) {
-                if (author == userProfile()) {
-                    outboxRelays.flow.value
-                } else {
-                    author.outboxRelays().ifEmpty { null }?.toSet()
-                        ?: cache.relayHints
-                            .hintsForKey(author.pubkeyHex)
-                            .ifEmpty { null }
-                            ?.toSet()
-                        ?: emptySet()
-                }
-            } else {
-                emptySet()
-            }
-
-        val taggedUserInboxRelays =
-            note.event?.taggedUserIds()?.flatMapTo(mutableSetOf()) { pubkey ->
-                if (pubkey == userProfile().pubkeyHex) {
-                    notificationRelays.flow.value
-                } else {
-                    LocalCache
-                        .getUserIfExists(pubkey)
-                        ?.inboxRelays()
-                        ?.ifEmpty { null }
-                        ?.toSet()
-                        ?: cache.relayHints.hintsForKey(pubkey).toSet()
-                }
-            } ?: emptySet()
-
-        val isInChannel = note.channelHex()
-        val channelRelays =
-            if (isInChannel != null) {
-                val channel = LocalCache.checkGetOrCreateChannel(isInChannel)
-                channel?.relays() ?: emptySet()
-            } else {
-                emptySet()
-            }
-
-        val replyRelays =
-            note.replyTo?.flatMapTo(mutableSetOf()) {
-                val existingRelays = it.relays.toSet()
-
-                val replyToAuthor = it.author
-
-                val replyAuthorRelays =
-                    if (replyToAuthor != null) {
-                        if (replyToAuthor == userProfile()) {
-                            outboxRelays.flow.value
-                        } else {
-                            replyToAuthor.outboxRelays().ifEmpty { null }?.toSet()
-                                ?: cache.relayHints
-                                    .hintsForKey(replyToAuthor.pubkeyHex)
-                                    .ifEmpty { null }
-                                    ?.toSet()
-                                ?: emptySet()
-                        }
-                    } else {
-                        emptySet()
-                    }
-
-                existingRelays + replyAuthorRelays
-            } ?: emptySet()
-
-        return authorOutboxRelays + taggedUserInboxRelays + channelRelays + replyRelays
+        val noteEvent = note.event
+        return if (noteEvent != null) {
+            computeRelayListToBroadcast(noteEvent)
+        } else {
+            note.relays.toSet()
+        }
     }
 
     fun broadcast(note: Note) {
@@ -1735,37 +1730,8 @@ class Account(
                 cache.getOrAddAliasNote(wrap.id, mineNote)
             }
 
-            val receiver = wrap.recipientPubKey()
-            if (receiver != null) {
-                val relayList =
-                    (
-                        cache
-                            .getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(receiver))
-                            ?.event as? ChatMessageRelayListEvent
-                    )?.relays()?.ifEmpty { null }?.toSet()
-
-                if (relayList != null) {
-                    client.send(event = wrap, relayList = relayList)
-                } else {
-                    val taggedUserInboxRelays =
-                        wrap.taggedUserIds().flatMapTo(mutableSetOf()) { pubkey ->
-                            if (pubkey == userProfile().pubkeyHex) {
-                                notificationRelays.flow.value
-                            } else {
-                                LocalCache
-                                    .getUserIfExists(pubkey)
-                                    ?.inboxRelays()
-                                    ?.ifEmpty { null }
-                                    ?.toSet()
-                                    ?: cache.relayHints.hintsForKey(pubkey).toSet()
-                            }
-                        }
-
-                    client.send(wrap, taggedUserInboxRelays)
-                }
-            } else {
-                client.send(wrap, outboxRelays.flow.value)
-            }
+            val relayList = computeRelayListToBroadcast(wrap)
+            client.send(wrap, relayList)
         }
     }
 
