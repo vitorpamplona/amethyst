@@ -101,6 +101,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.acessories.downloadFirstEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -174,6 +175,7 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
@@ -844,6 +846,9 @@ class Account(
     }
 
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
+        if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
+            return followPlusAllMine.flow.value + client.relayStatusFlow().value.available
+        }
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
             if (receiver != null) {
