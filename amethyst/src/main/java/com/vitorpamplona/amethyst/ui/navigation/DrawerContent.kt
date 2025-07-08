@@ -785,7 +785,7 @@ fun BottomContent(
                                 nav.closeDrawer()
                             },
                         ) {
-                            append("v12" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
+                            append("v" + BuildConfig.VERSION_NAME + "-" + BuildConfig.FLAVOR.uppercase())
                         }
                     }
                 }
