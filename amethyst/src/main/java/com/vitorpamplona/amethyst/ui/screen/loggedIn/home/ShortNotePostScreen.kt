@@ -25,7 +25,6 @@ import android.net.Uri
 import android.os.Parcelable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,8 +49,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -62,7 +59,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -173,8 +169,6 @@ private fun NewPostScreenInner(
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
-    val scope = rememberCoroutineScope()
-
     WatchAndLoadMyEmojiList(accountViewModel)
 
     Scaffold(
@@ -188,19 +182,6 @@ private fun NewPostScreenInner(
                     ) {
                         Spacer(modifier = StdHorzSpacer)
 
-                        Box {
-                            IconButton(
-                                modifier = Modifier.align(Alignment.Center),
-                                onClick = { postViewModel.showRelaysDialog = true },
-                            ) {
-                                Icon(
-                                    painter = painterRes(R.drawable.relays, 6),
-                                    contentDescription = stringRes(id = R.string.relay_list_selector),
-                                    modifier = Modifier.height(25.dp),
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                )
-                            }
-                        }
                         PostButton(
                             onPost = {
                                 // uses the accountViewModel scope to avoid cancelling this
@@ -238,15 +219,6 @@ private fun NewPostScreenInner(
             )
         },
     ) { pad ->
-        if (postViewModel.showRelaysDialog) {
-            RelaySelectionDialog(
-                preSelectedList = postViewModel.relayList ?: persistentListOf(),
-                onClose = { postViewModel.showRelaysDialog = false },
-                onPost = { postViewModel.relayList = it },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
         Surface(
             modifier =
                 Modifier
@@ -419,7 +391,7 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                if (postViewModel.wantsZapraiser && postViewModel.hasLnAddress()) {
+                if (postViewModel.wantsZapRaiser && postViewModel.hasLnAddress()) {
                     Row(
                         verticalAlignment = CenterVertically,
                         modifier = Modifier.padding(vertical = Size5dp, horizontal = Size10dp),
@@ -495,8 +467,8 @@ private fun BottomRowActions(postViewModel: ShortNotePostViewModel) {
         }
 
         if (postViewModel.canAddZapRaiser) {
-            AddZapraiserButton(postViewModel.wantsZapraiser) {
-                postViewModel.wantsZapraiser = !postViewModel.wantsZapraiser
+            AddZapraiserButton(postViewModel.wantsZapRaiser) {
+                postViewModel.wantsZapRaiser = !postViewModel.wantsZapRaiser
             }
         }
 

@@ -74,7 +74,6 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -115,12 +114,13 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -151,8 +151,8 @@ open class ShortNotePostViewModel :
     var accountViewModel: AccountViewModel? = null
     var account: Account? = null
 
-    var originalNote: Note? by mutableStateOf<Note?>(null)
-    var forkedFromNote: Note? by mutableStateOf<Note?>(null)
+    var originalNote: Note? by mutableStateOf(null)
+    var forkedFromNote: Note? by mutableStateOf(null)
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
@@ -185,9 +185,8 @@ open class ShortNotePostViewModel :
     var consensusThreshold: Int? = null
     var closedAt: Long? = null
 
-    var isValidRecipients = mutableStateOf(true)
-    var isValidvalueMaximum = mutableStateOf(true)
-    var isValidvalueMinimum = mutableStateOf(true)
+    var isValidValueMaximum = mutableStateOf(true)
+    var isValidValueMinimum = mutableStateOf(true)
     var isValidConsensusThreshold = mutableStateOf(true)
     var isValidClosedAt = mutableStateOf(true)
 
@@ -212,11 +211,8 @@ open class ShortNotePostViewModel :
 
     // ZapRaiser
     var canAddZapRaiser by mutableStateOf(false)
-    var wantsZapraiser by mutableStateOf(false)
+    var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
-
-    var showRelaysDialog by mutableStateOf(false)
-    var relayList by mutableStateOf<ImmutableList<NormalizedRelayUrl>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -295,10 +291,10 @@ open class ShortNotePostViewModel :
             canUsePoll = originalNote == null
             multiOrchestrator = null
 
-            quote?.let {
-                message = TextFieldValue(message.text + "\nnostr:${it.toNEvent()}")
+            quote?.let { quotedNote ->
+                message = TextFieldValue(message.text + "\nnostr:${quotedNote.toNEvent()}")
 
-                it.author?.let { quotedUser ->
+                quotedNote.author?.let { quotedUser ->
                     if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
                         if (forwardZapTo.value.items.none { it.key.pubkeyHex == quotedUser.pubkeyHex }) {
                             forwardZapTo.value.addItem(quotedUser)
@@ -313,21 +309,21 @@ open class ShortNotePostViewModel :
                 }
             }
 
-            fork?.let {
-                message = TextFieldValue(version?.event?.content ?: it.event?.content ?: "")
+            fork?.let { forkedNoted ->
+                message = TextFieldValue(version?.event?.content ?: forkedNoted.event?.content ?: "")
 
-                it.event?.isSensitiveOrNSFW()?.let {
+                forkedNoted.event?.isSensitiveOrNSFW()?.let {
                     if (it) wantsToMarkAsSensitive = true
                 }
 
-                it.event?.zapraiserAmount()?.let {
+                forkedNoted.event?.zapraiserAmount()?.let {
                     zapRaiserAmount.value = it
                 }
 
-                it.event?.zapSplitSetup()?.let {
-                    val totalWeight = it.sumOf { if (it is ZapSplitSetupLnAddress) 0.0 else it.weight }
+                forkedNoted.event?.zapSplitSetup()?.let { setup ->
+                    val totalWeight = setup.sumOf { if (it is ZapSplitSetupLnAddress) 0.0 else it.weight }
 
-                    it.forEach {
+                    setup.forEach {
                         if (it is ZapSplitSetup) {
                             forwardZapTo.value.addItem(LocalCache.getOrCreateUser(it.pubKeyHex), (it.weight / totalWeight).toFloat())
                         }
@@ -336,7 +332,7 @@ open class ShortNotePostViewModel :
 
                 // Only adds if it is not already set up.
                 if (forwardZapTo.value.items.isEmpty()) {
-                    it.author?.let { forkedAuthor ->
+                    forkedNoted.author?.let { forkedAuthor ->
                         if (forkedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
                             if (forwardZapTo.value.items.none { it.key.pubkeyHex == forkedAuthor.pubkeyHex }) forwardZapTo.value.addItem(forkedAuthor)
                             if (forwardZapTo.value.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) forwardZapTo.value.addItem(accountViewModel.userProfile())
@@ -347,7 +343,7 @@ open class ShortNotePostViewModel :
                     }
                 }
 
-                it.author?.let {
+                forkedNoted.author?.let {
                     if (this.pTags == null) {
                         this.pTags = listOf(it)
                     } else if (this.pTags?.contains(it) != true) {
@@ -355,7 +351,7 @@ open class ShortNotePostViewModel :
                     }
                 }
 
-                forkedFromNote = it
+                forkedFromNote = forkedNoted
             } ?: run {
                 forkedFromNote = null
             }
@@ -380,15 +376,15 @@ open class ShortNotePostViewModel :
         canAddZapRaiser = accountViewModel?.userProfile()?.info?.lnAddress() != null
         multiOrchestrator = null
 
-        val localfowardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
+        val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
-        localfowardZapTo.forEach {
+        localForwardZapTo.forEach {
             val user = LocalCache.getOrCreateUser(it[1])
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }
         forwardZapToEditting.value = TextFieldValue("")
-        wantsForwardZapTo = localfowardZapTo.isNotEmpty()
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
 
@@ -398,11 +394,11 @@ open class ShortNotePostViewModel :
             wantsExclusiveGeoPost = draftEvent.kind == CommentEvent.KIND
         }
 
-        val zapraiser = draftEvent.zapraiserAmount()
-        wantsZapraiser = zapraiser != null
+        val zapRaiser = draftEvent.zapraiserAmount()
+        wantsZapRaiser = zapRaiser != null
         zapRaiserAmount.value = null
-        if (zapraiser != null) {
-            zapRaiserAmount.value = zapraiser
+        if (zapRaiser != null) {
+            zapRaiserAmount.value = zapRaiser
         }
 
         eTags =
@@ -416,7 +412,7 @@ open class ShortNotePostViewModel :
                 LocalCache.getOrCreateUser(it[1])
             }
 
-        draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it.get(3) == "fork" }.forEach {
+        draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
             val note = LocalCache.checkGetOrCreateNote(it[1])
             forkedFromNote = note
         }
@@ -470,21 +466,23 @@ open class ShortNotePostViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val relayList = relayList
+        val extraNotesToBroadcast = mutableListOf<Event>()
 
-        if (nip95attachments.isNotEmpty() && relayList != null && relayList.isNotEmpty()) {
+        if (nip95attachments.isNotEmpty()) {
             val usedImages = template.tags.taggedQuoteIds().toSet()
             nip95attachments.forEach {
                 if (usedImages.contains(it.second.id)) {
-                    account?.sendNip95(it.first, it.second, relayList.toSet())
+                    extraNotesToBroadcast.add(it.first)
+                    extraNotesToBroadcast.add(it.second)
                 }
             }
         }
 
-        accountViewModel?.account?.signAndSendPrivatelyOrBroadcast(
-            template,
-            relayList = { relayList },
-        )
+        tryAndWait { continuation ->
+            accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast) {
+                continuation.resume(it)
+            }
+        }
 
         accountViewModel?.deleteDraft(draftTag.current)
 
@@ -526,7 +524,7 @@ open class ShortNotePostViewModel :
         val zapReceiver = if (wantsForwardZapTo) forwardZapTo.value.toZapSplitSetup() else null
 
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
-        val localZapRaiserAmount = if (wantsZapraiser) zapRaiserAmount.value else null
+        val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
         val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
         val urls = findURLs(tagger.message)
@@ -565,7 +563,7 @@ open class ShortNotePostViewModel :
                 replyingTo = originalNote?.toEventHint<TextNoteEvent>(),
                 forkingFrom = forkedFromNote?.toEventHint<TextNoteEvent>(),
             ) {
-                tagger.pTags?.let { notify(it.map { it.toPTag() }) }
+                tagger.pTags?.let { pTagList -> notify(pTagList.map { it.toPTag() }) }
 
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
@@ -619,9 +617,9 @@ open class ShortNotePostViewModel :
                 )
 
             if (results.allGood) {
-                results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, alt, contentWarningReason) { nip95 ->
+                results.successful.forEach { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason) { nip95 ->
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
@@ -630,20 +628,20 @@ open class ShortNotePostViewModel :
                                 urlPreviews.update(message)
                             }
                         }
-                    } else if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                    } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
-                            IMetaTagBuilder(it.result.url)
+                            IMetaTagBuilder(state.result.url)
                                 .apply {
-                                    hash(it.result.fileHeader.hash)
-                                    size(it.result.fileHeader.size)
-                                    it.result.fileHeader.mimeType
+                                    hash(state.result.fileHeader.hash)
+                                    size(state.result.fileHeader.size)
+                                    state.result.fileHeader.mimeType
                                         ?.let { mimeType(it) }
-                                    it.result.fileHeader.dim
+                                    state.result.fileHeader.dim
                                         ?.let { dims(it) }
-                                    it.result.fileHeader.blurHash
+                                    state.result.fileHeader.blurHash
                                         ?.let { blurhash(it.blurhash) }
-                                    it.result.magnet?.let { magnet(it) }
-                                    it.result.uploadedHash?.let { originalHash(it) }
+                                    state.result.magnet?.let { magnet(it) }
+                                    state.result.uploadedHash?.let { originalHash(it) }
 
                                     alt?.let { alt(it) }
                                     contentWarningReason?.let { sensitiveContent(contentWarningReason) }
@@ -651,7 +649,7 @@ open class ShortNotePostViewModel :
 
                         iMetaAttachments.replace(iMeta.url, iMeta)
 
-                        message = message.insertUrlAtCursor(it.result.url)
+                        message = message.insertUrlAtCursor(state.result.url)
                         urlPreviews.update(message)
                     }
                 }
@@ -677,7 +675,7 @@ open class ShortNotePostViewModel :
         pTags = null
 
         wantsPoll = false
-        zapRecipients = mutableStateListOf<HexKey>()
+        zapRecipients = mutableStateListOf()
         pollOptions = newStateMapPollOptions()
         valueMaximum = null
         valueMinimum = null
@@ -685,7 +683,7 @@ open class ShortNotePostViewModel :
         closedAt = null
 
         wantsInvoice = false
-        wantsZapraiser = false
+        wantsZapRaiser = false
         zapRaiserAmount.value = null
 
         wantsForwardZapTo = false
@@ -706,19 +704,7 @@ open class ShortNotePostViewModel :
 
         emojiSuggestions?.reset()
 
-        showRelaysDialog = false
-
-        reloadRelaySet()
-
         draftTag.rotate()
-    }
-
-    fun reloadRelaySet() {
-        val account = accountViewModel?.account ?: return
-
-        relayList =
-            account.outboxRelays.flow.value
-                .toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
@@ -733,8 +719,8 @@ open class ShortNotePostViewModel :
         updateMessage(TextFieldValue(message.text + " " + it))
     }
 
-    override fun updateMessage(it: TextFieldValue) {
-        message = it
+    override fun updateMessage(newMessage: TextFieldValue) {
+        message = newMessage
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
@@ -793,8 +779,12 @@ open class ShortNotePostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
-            )
+            ) {
+                Amethyst.instance.okHttpClients.getHttpClient(
+                    accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url)
+                        ?: false,
+                )
+            }
         }
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -811,13 +801,13 @@ open class ShortNotePostViewModel :
         message.text.isNotBlank() &&
             !isUploadingImage &&
             !wantsInvoice &&
-            (!wantsZapraiser || zapRaiserAmount.value != null) &&
+            (!wantsZapRaiser || zapRaiserAmount.value != null) &&
             (
                 !wantsPoll ||
                     (
                         pollOptions.values.all { it.isNotEmpty() } &&
-                            isValidvalueMinimum.value &&
-                            isValidvalueMaximum.value
+                            isValidValueMinimum.value &&
+                            isValidValueMaximum.value
                     )
             ) &&
             multiOrchestrator == null
@@ -857,11 +847,11 @@ open class ShortNotePostViewModel :
 
     fun checkMinMax() {
         if ((valueMinimum ?: 0) > (valueMaximum ?: Long.MAX_VALUE)) {
-            isValidvalueMinimum.value = false
-            isValidvalueMaximum.value = false
+            isValidValueMinimum.value = false
+            isValidValueMaximum.value = false
         } else {
-            isValidvalueMinimum.value = true
-            isValidvalueMaximum.value = true
+            isValidValueMinimum.value = true
+            isValidValueMaximum.value = true
         }
     }
 

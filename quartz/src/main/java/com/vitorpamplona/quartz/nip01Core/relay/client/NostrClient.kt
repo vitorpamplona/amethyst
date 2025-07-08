@@ -237,18 +237,18 @@ class NostrClient(
     }
 
     fun sendIfExists(
-        signedEvent: Event,
+        event: Event,
         connectedRelay: NormalizedRelayUrl,
     ) {
-        relayPool.getRelay(connectedRelay)?.send(signedEvent)
+        relayPool.getRelay(connectedRelay)?.send(event)
     }
 
     fun send(
-        signedEvent: Event,
+        event: Event,
         relayList: Set<NormalizedRelayUrl>,
     ) {
-        eventOutbox.markAsSending(signedEvent, relayList)
-        relayPool.send(signedEvent, relayList)
+        eventOutbox.markAsSending(event, relayList)
+        relayPool.send(event, relayList)
     }
 
     fun close(subscriptionId: String) {

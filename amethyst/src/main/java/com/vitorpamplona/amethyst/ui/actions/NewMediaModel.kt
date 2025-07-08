@@ -39,7 +39,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
@@ -82,13 +81,11 @@ open class NewMediaModel : ViewModel() {
 
     fun upload(
         context: Context,
-        relayList: List<NormalizedRelayUrl>,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch {
             val myAccount = account ?: return@launch
-            if (relayList.isEmpty()) return@launch
             val serverToUse = selectedServer ?: return@launch
 
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
@@ -141,7 +138,7 @@ open class NewMediaModel : ViewModel() {
                             withTimeoutOrNull(30000) {
                                 suspendCancellableCoroutine { continuation ->
                                     account?.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null) { nip95 ->
-                                        account?.consumeAndSendNip95(nip95.first, nip95.second, relayList)
+                                        account?.consumeAndSendNip95(nip95.first, nip95.second)
                                         continuation.resume(true)
                                     }
                                 }
@@ -156,13 +153,12 @@ open class NewMediaModel : ViewModel() {
                             withTimeoutOrNull(30000) {
                                 suspendCancellableCoroutine { continuation ->
                                     account?.sendHeader(
-                                        it.url,
-                                        it.magnet,
-                                        it.fileHeader,
-                                        caption,
-                                        if (sensitiveContent) "" else null,
-                                        it.uploadedHash,
-                                        relayList.toSet(),
+                                        url = it.url,
+                                        magnetUri = it.magnet,
+                                        headerInfo = it.fileHeader,
+                                        alt = caption,
+                                        contentWarningReason = if (sensitiveContent) "" else null,
+                                        originalHash = it.uploadedHash,
                                     ) {
                                         continuation.resume(true)
                                     }
@@ -178,10 +174,9 @@ open class NewMediaModel : ViewModel() {
                                 withTimeoutOrNull(30000) {
                                     suspendCancellableCoroutine { continuation ->
                                         account?.sendAllAsOnePictureEvent(
-                                            imageUrls,
-                                            caption,
-                                            if (sensitiveContent) "" else null,
-                                            relayList.toSet(),
+                                            urlHeaderInfo = imageUrls,
+                                            caption = caption,
+                                            contentWarningReason = if (sensitiveContent) "" else null,
                                         ) {
                                             continuation.resume(true)
                                         }

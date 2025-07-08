@@ -54,7 +54,6 @@ fun HashtagPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        postViewModel.reloadRelaySet()
         hashtag?.let {
             postViewModel.newPostFor(HashtagId(it))
         }

@@ -54,7 +54,6 @@ fun GeoHashPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        postViewModel.reloadRelaySet()
         geohash?.let {
             postViewModel.newPostFor(GeohashId(it))
         }

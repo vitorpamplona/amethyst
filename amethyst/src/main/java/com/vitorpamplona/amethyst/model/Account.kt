@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.dimension
 import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -1085,14 +1086,15 @@ class Account(
     fun consumeAndSendNip95(
         data: FileStorageEvent,
         signedEvent: FileStorageHeaderEvent,
-        relayList: List<NormalizedRelayUrl>,
     ): Note? {
         if (!isWriteable()) return null
 
-        client.send(data, relayList = relayList.toSet())
+        val relayList = computeRelayListToBroadcast(signedEvent)
+
+        client.send(data, relayList = relayList)
         cache.justConsumeMyOwnEvent(data)
 
-        client.send(signedEvent, relayList = relayList.toSet())
+        client.send(signedEvent, relayList = relayList)
         cache.justConsumeMyOwnEvent(signedEvent)
 
         return cache.getNoteIfExists(signedEvent.id)
@@ -1161,7 +1163,6 @@ class Account(
         urlHeaderInfo: Map<String, FileHeader>,
         caption: String?,
         contentWarningReason: String?,
-        relayList: Set<NormalizedRelayUrl>,
         onReady: (Note) -> Unit,
     ) {
         val iMetas =
@@ -1180,7 +1181,7 @@ class Account(
                 )
             }
 
-        signer.sign(
+        val template =
             PictureEvent.build(iMetas, caption ?: "") {
                 caption?.let {
                     hashtags(findHashtags(it))
@@ -1192,9 +1193,10 @@ class Account(
                 // add geohashes
                 // add title
                 contentWarningReason?.let { contentWarning(contentWarningReason) }
-            },
-        ) {
-            sendHeader(it, relayList = relayList, onReady)
+            }
+
+        signAndComputeBroadcast(template) { event ->
+            cache.getNoteIfExists(event.id)?.let { onReady(it) }
         }
     }
 
@@ -1205,7 +1207,6 @@ class Account(
         alt: String?,
         contentWarningReason: String?,
         originalHash: String? = null,
-        relayList: Set<NormalizedRelayUrl>,
         onReady: (Note) -> Unit,
     ) {
         if (!isWriteable()) return
@@ -1273,8 +1274,8 @@ class Account(
                 }
             }
 
-        signer.sign(template) {
-            sendHeader(it, relayList = relayList, onReady)
+        signAndComputeBroadcast(template) { event ->
+            cache.getNoteIfExists(event.id)?.let { onReady(it) }
         }
     }
 
@@ -1302,6 +1303,30 @@ class Account(
                 client.send(it, computeRelayListToBroadcast(it))
             }
             onDone(it)
+        }
+    }
+
+    fun <T : Event> signAndComputeBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+        onDone: (T) -> Unit = {},
+    ) {
+        signer.sign(template) { event ->
+            cache.justConsumeMyOwnEvent(event)
+            val note =
+                if (event is AddressableEvent) {
+                    cache.getOrCreateAddressableNote(event.address())
+                } else {
+                    cache.getOrCreateNote(event.id)
+                }
+
+            val relayList = computeRelayListToBroadcast(note)
+
+            client.send(event, relayList)
+
+            broadcast.forEach { client.send(it, relayList) }
+
+            onDone(event)
         }
     }
 
@@ -1581,7 +1606,7 @@ class Account(
         originalNote: Note,
         notify: HexKey?,
         summary: String? = null,
-        relayList: List<NormalizedRelayUrl>,
+        broadcast: List<Event>,
     ) {
         if (!isWriteable()) return
 
@@ -1593,9 +1618,14 @@ class Account(
             notify = notify,
             summary = summary,
             signer = signer,
-        ) {
-            cache.justConsumeMyOwnEvent(it)
-            client.send(it, relayList = relayList.toSet())
+        ) { event ->
+            cache.justConsumeMyOwnEvent(event)
+            val note = cache.getOrCreateNote(event.id)
+            val relayList = computeRelayListToBroadcast(note)
+
+            client.send(event, relayList = relayList)
+
+            broadcast.forEach { client.send(it, relayList) }
         }
     }
 
@@ -1715,7 +1745,7 @@ class Account(
                     )?.relays()?.ifEmpty { null }?.toSet()
 
                 if (relayList != null) {
-                    client.send(signedEvent = wrap, relayList = relayList)
+                    client.send(event = wrap, relayList = relayList)
                 } else {
                     val taggedUserInboxRelays =
                         wrap.taggedUserIds().flatMapTo(mutableSetOf()) { pubkey ->

@@ -64,7 +64,6 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
@@ -99,13 +98,14 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.collections.plus
+import kotlin.coroutines.resume
 
 @Stable
 open class CommentPostViewModel :
@@ -131,7 +131,7 @@ open class CommentPostViewModel :
     var account: Account? = null
 
     var externalIdentity by mutableStateOf<ExternalId?>(null)
-    var replyingTo: Note? by mutableStateOf<Note?>(null)
+    var replyingTo: Note? by mutableStateOf(null)
 
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(
@@ -176,9 +176,6 @@ open class CommentPostViewModel :
     var canAddZapRaiser by mutableStateOf(false)
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
-
-    var showRelaysDialog by mutableStateOf(false)
-    var relayList by mutableStateOf<ImmutableList<NormalizedRelayUrl>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -270,15 +267,15 @@ open class CommentPostViewModel :
         canAddZapRaiser = accountViewModel?.userProfile()?.info?.lnAddress() != null
         multiOrchestrator = null
 
-        val localfowardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
+        val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
         forwardZapTo.value = SplitBuilder()
-        localfowardZapTo.forEach {
+        localForwardZapTo.forEach {
             val user = LocalCache.getOrCreateUser(it[1])
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }
         forwardZapToEditting.value = TextFieldValue("")
-        wantsForwardZapTo = localfowardZapTo.isNotEmpty()
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
 
@@ -311,21 +308,23 @@ open class CommentPostViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val relayList = relayList
+        val extraNotesToBroadcast = mutableListOf<Event>()
 
-        if (nip95attachments.isNotEmpty() && relayList != null && relayList.isNotEmpty()) {
+        if (nip95attachments.isNotEmpty()) {
             val usedImages = template.tags.taggedQuoteIds().toSet()
             nip95attachments.forEach {
                 if (usedImages.contains(it.second.id)) {
-                    account?.sendNip95(it.first, it.second, relayList.toSet())
+                    extraNotesToBroadcast.add(it.first)
+                    extraNotesToBroadcast.add(it.second)
                 }
             }
         }
 
-        accountViewModel?.account?.signAndSendPrivatelyOrBroadcast(
-            template,
-            relayList = { relayList },
-        )
+        tryAndWait { continuation ->
+            accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast) {
+                continuation.resume(it)
+            }
+        }
 
         accountViewModel?.deleteDraft(draftTag.current)
 
@@ -378,7 +377,7 @@ open class CommentPostViewModel :
                     msg = tagger.message,
                     replyingTo = eventHint,
                 ) {
-                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
+                    tagger.pTags?.let { pTagList -> notify(pTagList.map { it.toPTag() }) }
 
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
@@ -398,7 +397,7 @@ open class CommentPostViewModel :
                     msg = tagger.message,
                     extId = externalIdentity,
                 ) {
-                    tagger.pTags?.let { notify(it.map { it.toPTag() }) }
+                    tagger.pTags?.let { pTagList -> notify(pTagList.map { it.toPTag() }) }
 
                     hashtags(findHashtags(tagger.message))
                     references(findURLs(tagger.message))
@@ -458,9 +457,9 @@ open class CommentPostViewModel :
                 )
 
             if (results.allGood) {
-                results.successful.forEach {
-                    if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, alt, contentWarningReason) { nip95 ->
+                results.successful.forEach { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason) { nip95 ->
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
@@ -469,20 +468,20 @@ open class CommentPostViewModel :
                                 urlPreviews.update(message)
                             }
                         }
-                    } else if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                    } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
-                            IMetaTagBuilder(it.result.url)
+                            IMetaTagBuilder(state.result.url)
                                 .apply {
-                                    hash(it.result.fileHeader.hash)
-                                    size(it.result.fileHeader.size)
-                                    it.result.fileHeader.mimeType
+                                    hash(state.result.fileHeader.hash)
+                                    size(state.result.fileHeader.size)
+                                    state.result.fileHeader.mimeType
                                         ?.let { mimeType(it) }
-                                    it.result.fileHeader.dim
+                                    state.result.fileHeader.dim
                                         ?.let { dims(it) }
-                                    it.result.fileHeader.blurHash
+                                    state.result.fileHeader.blurHash
                                         ?.let { blurhash(it.blurhash) }
-                                    it.result.magnet?.let { magnet(it) }
-                                    it.result.uploadedHash?.let { originalHash(it) }
+                                    state.result.magnet?.let { magnet(it) }
+                                    state.result.uploadedHash?.let { originalHash(it) }
 
                                     alt?.let { alt(it) }
                                     contentWarningReason?.let { sensitiveContent(contentWarningReason) }
@@ -490,7 +489,7 @@ open class CommentPostViewModel :
 
                         iMetaAttachments.replace(iMeta.url, iMeta)
 
-                        message = message.insertUrlAtCursor(it.result.url)
+                        message = message.insertUrlAtCursor(state.result.url)
                         urlPreviews.update(message)
                     }
                 }
@@ -546,19 +545,7 @@ open class CommentPostViewModel :
 
         emojiSuggestions?.reset()
 
-        showRelaysDialog = false
-
-        reloadRelaySet()
-
         draftTag.rotate()
-    }
-
-    fun reloadRelaySet() {
-        val account = accountViewModel?.account ?: return
-
-        relayList =
-            account.outboxRelays.flow.value
-                .toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
@@ -569,8 +556,8 @@ open class CommentPostViewModel :
         notifying = notifying?.filter { it != userToRemove }
     }
 
-    override fun updateMessage(it: TextFieldValue) {
-        message = it
+    override fun updateMessage(newMessage: TextFieldValue) {
+        message = newMessage
         urlPreviews.update(message)
 
         if (message.selection.collapsed) {
@@ -627,13 +614,13 @@ open class CommentPostViewModel :
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(
-                item.link.url,
-                {
-                    Amethyst.Companion.instance.okHttpClients
-                        .getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false)
-                },
-            )
+            iMetaAttachments.downloadAndPrepare(item.link.url) {
+                Amethyst.Companion.instance.okHttpClients
+                    .getHttpClient(
+                        accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url)
+                            ?: false,
+                    )
+            }
         }
 
         message = message.replaceCurrentWord(wordToInsert)

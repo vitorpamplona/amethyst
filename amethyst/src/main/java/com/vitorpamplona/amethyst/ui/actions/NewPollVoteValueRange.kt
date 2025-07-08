@@ -66,7 +66,7 @@ fun NewPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
             onValueChange = { pollViewModel.updateMinZapAmountForPoll(it) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
-            colors = if (pollViewModel.isValidvalueMinimum.value) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidValueMinimum.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringRes(R.string.poll_zap_value_min),
@@ -88,7 +88,7 @@ fun NewPollVoteValueRange(pollViewModel: ShortNotePostViewModel) {
             onValueChange = { pollViewModel.updateMaxZapAmountForPoll(it) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
-            colors = if (pollViewModel.isValidvalueMaximum.value) colorValid else colorInValid,
+            colors = if (pollViewModel.isValidValueMaximum.value) colorValid else colorInValid,
             label = {
                 Text(
                     text = stringRes(R.string.poll_zap_value_max),

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.note.nip22Comments
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,8 +36,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -46,7 +43,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,7 +52,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -85,7 +80,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -116,7 +110,6 @@ fun ReplyCommentPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        postViewModel.reloadRelaySet()
         reply?.let {
             postViewModel.reply(it)
         }
@@ -159,20 +152,6 @@ fun GenericCommentPostScreen(
                         verticalAlignment = CenterVertically,
                     ) {
                         Spacer(modifier = StdHorzSpacer)
-
-                        Box {
-                            IconButton(
-                                modifier = Modifier.align(Alignment.Center),
-                                onClick = { postViewModel.showRelaysDialog = true },
-                            ) {
-                                Icon(
-                                    painter = painterRes(R.drawable.relays, 5),
-                                    contentDescription = stringRes(id = R.string.relay_list_selector),
-                                    modifier = Modifier.height(25.dp),
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                )
-                            }
-                        }
                         PostButton(
                             onPost = {
                                 // uses the accountViewModel scope to avoid cancelling this
@@ -209,15 +188,6 @@ fun GenericCommentPostScreen(
             )
         },
     ) { pad ->
-        if (postViewModel.showRelaysDialog) {
-            RelaySelectionDialog(
-                preSelectedList = postViewModel.relayList ?: persistentListOf(),
-                onClose = { postViewModel.showRelaysDialog = false },
-                onPost = { postViewModel.relayList = it },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
         Surface(
             modifier =
                 Modifier

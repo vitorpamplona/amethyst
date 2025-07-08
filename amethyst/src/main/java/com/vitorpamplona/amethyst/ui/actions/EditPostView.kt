@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -96,7 +95,6 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -108,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -128,12 +125,6 @@ fun EditPostView(
 
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
-    var showRelaysDialog by remember { mutableStateOf(false) }
-    var relayList =
-        remember {
-            accountViewModel.account.outboxRelays.flow.value
-                .toImmutableList()
-        }
 
     LaunchedEffect(Unit) {
         postViewModel.load(edit, versionLookingAt, accountViewModel)
@@ -148,16 +139,6 @@ fun EditPostView(
                 decorFitsSystemWindows = false,
             ),
     ) {
-        if (showRelaysDialog) {
-            RelaySelectionDialog(
-                preSelectedList = relayList,
-                onClose = { showRelaysDialog = false },
-                onPost = { relayList = it },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -169,22 +150,9 @@ fun EditPostView(
                         ) {
                             Spacer(modifier = StdHorzSpacer)
 
-                            Box {
-                                IconButton(
-                                    modifier = Modifier.align(Alignment.Center),
-                                    onClick = { showRelaysDialog = true },
-                                ) {
-                                    Icon(
-                                        painter = painterRes(R.drawable.relays, 2),
-                                        contentDescription = stringRes(id = R.string.relay_list_selector),
-                                        modifier = Modifier.height(25.dp),
-                                        tint = MaterialTheme.colorScheme.onBackground,
-                                    )
-                                }
-                            }
                             PostButton(
                                 onPost = {
-                                    postViewModel.sendPost(relayList = relayList)
+                                    postViewModel.sendPost()
                                     scope.launch {
                                         delay(100)
                                         onClose()

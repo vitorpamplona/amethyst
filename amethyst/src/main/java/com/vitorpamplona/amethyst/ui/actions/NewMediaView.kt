@@ -35,8 +35,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -49,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.SettingSwitchItem
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
@@ -100,13 +96,6 @@ fun NewMediaView(
         postViewModel.load(account, uris)
     }
 
-    var showRelaysDialog by remember { mutableStateOf(false) }
-    var relayList =
-        remember {
-            accountViewModel.account.outboxRelays.flow.value
-                .toImmutableList()
-        }
-
     Dialog(
         onDismissRequest = { onClose() },
         properties =
@@ -128,23 +117,9 @@ fun NewMediaView(
                         ) {
                             Spacer(modifier = StdHorzSpacer)
 
-                            Box {
-                                IconButton(
-                                    modifier = Modifier.align(Alignment.Center),
-                                    onClick = { showRelaysDialog = true },
-                                ) {
-                                    Icon(
-                                        painter = painterRes(R.drawable.relays, 3),
-                                        contentDescription = stringRes(id = R.string.relay_list_selector),
-                                        modifier = Modifier.height(25.dp),
-                                        tint = MaterialTheme.colorScheme.onBackground,
-                                    )
-                                }
-                            }
-
                             PostButton(
                                 onPost = {
-                                    postViewModel.upload(context, relayList, onClose, accountViewModel.toastManager::toast)
+                                    postViewModel.upload(context, onClose, accountViewModel.toastManager::toast)
                                     postViewModel.selectedServer?.let {
                                         if (it.type != ServerType.NIP95) {
                                             account.settings.changeDefaultFileServer(it)
@@ -173,16 +148,6 @@ fun NewMediaView(
                 )
             },
         ) { pad ->
-            if (showRelaysDialog) {
-                RelaySelectionDialog(
-                    preSelectedList = relayList,
-                    onClose = { showRelaysDialog = false },
-                    onPost = { relayList = it },
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
             Surface(
                 modifier =
                     Modifier

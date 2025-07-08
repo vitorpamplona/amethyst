@@ -47,7 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -120,18 +120,21 @@ open class EditPostViewModel : ViewModel() {
         editedFromNote = edit
     }
 
-    fun sendPost(relayList: List<NormalizedRelayUrl>) {
-        viewModelScope.launch(Dispatchers.IO) { innerSendPost(relayList) }
+    fun sendPost() {
+        viewModelScope.launch(Dispatchers.IO) { innerSendPost() }
     }
 
-    suspend fun innerSendPost(relayList: List<NormalizedRelayUrl>) {
+    suspend fun innerSendPost() {
         if (accountViewModel == null) {
             cancel()
             return
         }
 
+        val extraNotesToBroadcast = mutableListOf<Event>()
+
         nip95attachments.forEach {
-            account?.sendNip95(it.first, it.second, relayList.toSet())
+            extraNotesToBroadcast.add(it.first)
+            extraNotesToBroadcast.add(it.second)
         }
 
         val notify =
@@ -147,7 +150,7 @@ open class EditPostViewModel : ViewModel() {
             originalNote = editedFromNote!!,
             notify = notify,
             summary = subject.text.ifBlank { null },
-            relayList = relayList,
+            extraNotesToBroadcast,
         )
 
         cancel()
