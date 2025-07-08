@@ -22,19 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
-import com.vitorpamplona.amethyst.service.Nip11Retriever
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun BasicRelaySetupInfoDialog(
@@ -43,21 +35,7 @@ fun BasicRelaySetupInfoDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-
     val relayInfo by loadRelayInfo(item.relay, accountViewModel)
-
-    var openRelayDialog by remember { mutableStateOf(false) }
-
-    if (openRelayDialog) {
-        RelayInformationDialog(
-            onClose = { openRelayDialog = false },
-            relayInfo = relayInfo,
-            relay = item.relay,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
 
     BasicRelaySetupInfoClickableRow(
         item = item,
@@ -65,53 +43,6 @@ fun BasicRelaySetupInfoDialog(
         loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         onDelete = onDelete,
         accountViewModel = accountViewModel,
-        onClick = {
-            openRelayDialog = true
-            accountViewModel.retrieveRelayDocument(
-                relay = item.relay,
-                onInfo = { },
-                onError = { relay, errorCode, exceptionMessage ->
-                    val msg =
-                        when (errorCode) {
-                            Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    relay.url,
-                                    exceptionMessage,
-                                )
-
-                            Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    relay.url,
-                                    exceptionMessage,
-                                )
-
-                            Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    relay.url,
-                                    exceptionMessage,
-                                )
-
-                            Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                stringRes(
-                                    context,
-                                    R.string.relay_information_document_error_assemble_url,
-                                    relay.url,
-                                    exceptionMessage,
-                                )
-                        }
-
-                    accountViewModel.toastManager.toast(
-                        stringRes(context, R.string.unable_to_download_relay_document),
-                        msg,
-                    )
-                },
-            )
-        },
+        onClick = { nav.nav(Route.RelayInfo(item.relay.url)) },
     )
 }

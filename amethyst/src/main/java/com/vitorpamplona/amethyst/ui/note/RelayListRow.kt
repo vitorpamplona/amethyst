@@ -53,13 +53,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.LargeRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -130,18 +129,6 @@ fun RenderRelay(
 ) {
     val relayInfo by loadRelayInfo(relay, accountViewModel)
 
-    var openRelayDialog by remember { mutableStateOf(false) }
-
-    if (openRelayDialog) {
-        RelayInformationDialog(
-            onClose = { openRelayDialog = false },
-            relayInfo = relayInfo,
-            relay = relay,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
-
     val clipboardManager = LocalClipboardManager.current
     val clickableModifier =
         remember(relay) {
@@ -153,33 +140,7 @@ fun RenderRelay(
                     onLongClick = {
                         clipboardManager.setText(AnnotatedString(relay.url))
                     },
-                    onClick = {
-                        openRelayDialog = true
-                        accountViewModel.retrieveRelayDocument(
-                            relay,
-                            onInfo = { },
-                            onError = { url, errorCode, exceptionMessage ->
-                                accountViewModel.toastManager.toast(
-                                    R.string.unable_to_download_relay_document,
-                                    when (errorCode) {
-                                        Nip11Retriever.ErrorCode.FAIL_TO_ASSEMBLE_URL ->
-                                            R.string.relay_information_document_error_failed_to_assemble_url
-
-                                        Nip11Retriever.ErrorCode.FAIL_TO_REACH_SERVER ->
-                                            R.string.relay_information_document_error_failed_to_reach_server
-
-                                        Nip11Retriever.ErrorCode.FAIL_TO_PARSE_RESULT ->
-                                            R.string.relay_information_document_error_failed_to_parse_response
-
-                                        Nip11Retriever.ErrorCode.FAIL_WITH_HTTP_STATUS ->
-                                            R.string.relay_information_document_error_failed_with_http
-                                    },
-                                    url.url,
-                                    exceptionMessage ?: errorCode.toString(),
-                                )
-                            },
-                        )
-                    },
+                    onClick = { nav.nav(Route.RelayInfo(relay.url)) },
                 )
         }
 

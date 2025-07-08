@@ -107,6 +107,7 @@
     <string name="my_awesome_group">My Awesome Group</string>
     <string name="picture_url">Picture Url</string>
     <string name="description">Description</string>
+    <string name="no_description">Description not found</string>
     <string name="about_us">"About us.. "</string>
     <string name="what_s_on_your_mind">What\'s on your mind?</string>
     <string name="write_a_message">Write a message…</string>

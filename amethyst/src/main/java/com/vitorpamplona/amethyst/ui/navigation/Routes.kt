@@ -89,6 +89,10 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class RelayInfo(
+        val url: String,
+    ) : Route()
+
     @Serializable data class EphemeralChat(
         val id: String,
         val relayUrl: String,
@@ -196,6 +200,8 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.Hashtag>() -> entry.toRoute<Route.Hashtag>()
         dest.hasRoute<Route.Geohash>() -> entry.toRoute<Route.Geohash>()
         dest.hasRoute<Route.Community>() -> entry.toRoute<Route.Community>()
+
+        dest.hasRoute<Route.RelayInfo>() -> entry.toRoute<Route.RelayInfo>()
 
         dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
         dest.hasRoute<Route.Channel>() -> entry.toRoute<Route.Channel>()
