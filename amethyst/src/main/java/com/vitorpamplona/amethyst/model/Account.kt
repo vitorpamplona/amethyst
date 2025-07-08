@@ -61,7 +61,6 @@ import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.MergedTopFeedAuthorListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
@@ -277,7 +276,7 @@ class Account(
 
     // Follows Relays
     val followOutboxes = FollowListOutboxRelays(kind3FollowList, blockedRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, scope)
+    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, trustedRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, cache, scope).flow
@@ -338,6 +337,7 @@ class Account(
 
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
+    /*
     val mergedTopFeedAuthorLists =
         MergedTopFeedAuthorListsState(
             liveHomeFollowListsPerRelay,
@@ -346,6 +346,8 @@ class Account(
             liveNotificationFollowListsPerRelay,
             scope,
         ).flow
+
+     */
 
     val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)
 

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.serverList
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxRelays
+import com.vitorpamplona.amethyst.model.nip51Lists.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -39,32 +40,33 @@ class MergedFollowPlusMineRelayListsState(
     val nip65RelayList: Nip65RelayListState,
     val privateOutboxRelayList: PrivateStorageRelayListState,
     val localRelayList: LocalRelayListState,
+    val trustedRelayList: TrustedRelayListState,
     val scope: CoroutineScope,
 ) {
-    fun mergeLists(
-        kind3: Set<NormalizedRelayUrl>,
-        outbox: Set<NormalizedRelayUrl>,
-        inbox: Set<NormalizedRelayUrl>,
-        private: Set<NormalizedRelayUrl>,
-        local: Set<NormalizedRelayUrl>,
-    ): Set<NormalizedRelayUrl> = kind3 + outbox + inbox + private + local
+    fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
 
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
-            followsOutboxRelayList.flow,
-            nip65RelayList.outboxFlow,
-            nip65RelayList.inboxFlow,
-            privateOutboxRelayList.flow,
-            localRelayList.flow,
+            listOf(
+                followsOutboxRelayList.flow,
+                nip65RelayList.outboxFlow,
+                nip65RelayList.inboxFlow,
+                privateOutboxRelayList.flow,
+                localRelayList.flow,
+                trustedRelayList.flow,
+            ),
             ::mergeLists,
         ).onStart {
             emit(
                 mergeLists(
-                    followsOutboxRelayList.flow.value,
-                    nip65RelayList.outboxFlow.value,
-                    nip65RelayList.inboxFlow.value,
-                    privateOutboxRelayList.flow.value,
-                    localRelayList.flow.value,
+                    arrayOf(
+                        followsOutboxRelayList.flow.value,
+                        nip65RelayList.outboxFlow.value,
+                        nip65RelayList.inboxFlow.value,
+                        privateOutboxRelayList.flow.value,
+                        localRelayList.flow.value,
+                        trustedRelayList.flow.value,
+                    ),
                 ),
             )
         }.flowOn(Dispatchers.Default)
@@ -72,11 +74,14 @@ class MergedFollowPlusMineRelayListsState(
                 scope,
                 SharingStarted.Eagerly,
                 mergeLists(
-                    followsOutboxRelayList.flow.value,
-                    nip65RelayList.outboxFlow.value,
-                    nip65RelayList.inboxFlow.value,
-                    privateOutboxRelayList.flow.value,
-                    localRelayList.flow.value,
+                    arrayOf(
+                        followsOutboxRelayList.flow.value,
+                        nip65RelayList.outboxFlow.value,
+                        nip65RelayList.inboxFlow.value,
+                        privateOutboxRelayList.flow.value,
+                        localRelayList.flow.value,
+                        trustedRelayList.flow.value,
+                    ),
                 ),
             )
 }
