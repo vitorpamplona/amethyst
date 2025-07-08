@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 
 fun filterLongFormByCommunity(
@@ -75,15 +74,13 @@ fun filterLongFormByCommunity(
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return communitySet.set
         .mapNotNull {
             filterLongFormByCommunity(
                 relay = it.key,
                 community = it.value.community,
                 authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
+                since = since?.get(it.key)?.time,
             )
         }.flatten()
 }

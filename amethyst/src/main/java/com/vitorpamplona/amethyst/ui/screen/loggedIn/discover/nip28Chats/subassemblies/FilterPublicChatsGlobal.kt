@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterPublicChatsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -35,10 +34,8 @@ fun filterPublicChatsGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return relays.set.map {
-        val since = since?.get(it.key)?.time ?: defaultSince
+        val since = since?.get(it.key)?.time
         RelayBasedFilter(
             relay = it.key,
             filter =

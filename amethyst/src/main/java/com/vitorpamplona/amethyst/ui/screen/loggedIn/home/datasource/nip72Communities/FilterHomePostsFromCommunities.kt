@@ -33,7 +33,6 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 import kotlin.collections.mapNotNull
 
@@ -106,15 +105,13 @@ fun filterHomePostsByCommunity(
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return communitySet.set
         .mapNotNull {
             filterHomePostsFromCommunity(
                 relay = it.key,
                 community = it.value.community,
                 authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
+                since = since?.get(it.key)?.time,
             )
         }.flatten()
 }

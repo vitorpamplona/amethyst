@@ -35,7 +35,6 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 import kotlin.collections.mapNotNull
 import kotlin.collections.sorted
@@ -80,8 +79,6 @@ fun filterHomePostsByGeohashes(
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return geoSet.set
         .mapNotNull {
             if (it.value.geotags.isEmpty()) {
@@ -90,12 +87,12 @@ fun filterHomePostsByGeohashes(
                 filterHomePostsByGeohashes(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 ) +
                     filterHomePostsByScopes(
                         relay = it.key,
                         scopesToLoad = it.value.geotagScopes,
-                        since = since?.get(it.key)?.time ?: defaultSince,
+                        since = since?.get(it.key)?.time,
                     )
             }
         }.flatten()

@@ -42,7 +42,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.mapNotNull
 
 val HomePostsKinds =
@@ -105,8 +104,6 @@ fun filterHomePostsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return authorSet.set
         .mapNotNull {
             if (it.value.authors.isEmpty()) {
@@ -115,7 +112,7 @@ fun filterHomePostsByAuthors(
                 filterHomePostsByAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()
@@ -127,8 +124,6 @@ fun filterHomePostsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return authorSet.set
         .mapNotNull {
             if (it.value.authors.isEmpty()) {
@@ -137,7 +132,7 @@ fun filterHomePostsByAuthors(
                 filterHomePostsByAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()

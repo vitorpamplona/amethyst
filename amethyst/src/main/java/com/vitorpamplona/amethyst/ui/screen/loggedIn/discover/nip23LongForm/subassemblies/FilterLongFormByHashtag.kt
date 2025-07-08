@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.mapNotNull
 
 fun filterLongFormByHashtag(
@@ -59,8 +58,6 @@ fun filterLongFormByHashtag(
 ): List<RelayBasedFilter> {
     if (hashSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return hashSet.set
         .mapNotNull { relayHashSet ->
             if (relayHashSet.value.hashtags.isEmpty()) {
@@ -69,7 +66,7 @@ fun filterLongFormByHashtag(
                 filterLongFormByHashtag(
                     relay = relayHashSet.key,
                     hashtags = relayHashSet.value.hashtags,
-                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                    since = since?.get(relayHashSet.key)?.time,
                 )
             }
         }.flatten()

@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 import kotlin.collections.mapNotNull
 
@@ -84,14 +83,12 @@ fun filterHomePostsByHashtags(
 ): List<RelayBasedFilter> {
     if (hashtagSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return hashtagSet.set
         .mapNotNull {
             if (it.value.hashtags.isEmpty()) {
                 null
             } else {
-                val since = since?.get(it.key)?.time ?: defaultSince
+                val since = since?.get(it.key)?.time
 
                 return filterHomePostsByHashtags(
                     relay = it.key,

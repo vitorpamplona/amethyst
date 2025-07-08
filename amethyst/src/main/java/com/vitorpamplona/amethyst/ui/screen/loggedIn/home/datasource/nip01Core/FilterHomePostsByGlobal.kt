@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 val HomePostsByGlobalKinds =
     listOf(
@@ -70,10 +69,8 @@ fun filterHomePostsByGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return relays.set.flatMap {
-        val since = since?.get(it.key)?.time ?: defaultSince
+        val since = since?.get(it.key)?.time
         val relayUrl = it.key
         listOf(
             RelayBasedFilter(

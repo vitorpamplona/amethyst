@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.mapNotNull
 
 fun filterLiveActivitiesByHashtag(
@@ -60,8 +59,6 @@ fun filterLiveActivitiesByHashtag(
 ): List<RelayBasedFilter> {
     if (hashSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return hashSet.set
         .mapNotNull { relayHashSet ->
             if (relayHashSet.value.hashtags.isEmpty()) {
@@ -70,7 +67,7 @@ fun filterLiveActivitiesByHashtag(
                 filterLiveActivitiesByHashtag(
                     relay = relayHashSet.key,
                     hashtags = relayHashSet.value.hashtags,
-                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                    since = since?.get(relayHashSet.key)?.time,
                 )
             }
         }.flatten()

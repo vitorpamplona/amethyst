@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterCommunitiesGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -34,10 +33,8 @@ fun filterCommunitiesGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return relays.set.flatMap {
-        val since = since?.get(it.key)?.time ?: defaultSince
+        val since = since?.get(it.key)?.time
         listOf(
             RelayBasedFilter(
                 relay = it.key,

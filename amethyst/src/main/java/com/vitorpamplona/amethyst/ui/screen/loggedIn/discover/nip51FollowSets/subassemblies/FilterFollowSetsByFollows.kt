@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.s
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatMap
 
 fun filterFollowSetsByFollows(
@@ -32,10 +31,8 @@ fun filterFollowSetsByFollows(
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return followsSet.set.flatMap {
-        val since = since?.get(it.key)?.time ?: defaultSince
+        val since = since?.get(it.key)?.time
         val relay = it.key
 
         listOfNotNull(

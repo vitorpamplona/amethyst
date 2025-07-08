@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.mapNotNull
 
 fun filterPublicChatsByGeohash(
@@ -65,8 +64,6 @@ fun filterPublicChatsByGeohash(
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return geoSet.set
         .mapNotNull {
             if (it.value.geotags.isEmpty()) {
@@ -75,7 +72,7 @@ fun filterPublicChatsByGeohash(
                 filterPublicChatsByGeohash(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()

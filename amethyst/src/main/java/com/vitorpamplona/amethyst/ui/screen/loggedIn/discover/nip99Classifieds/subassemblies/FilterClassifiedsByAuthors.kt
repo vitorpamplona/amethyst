@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 import kotlin.collections.mapNotNull
 
@@ -58,8 +57,6 @@ fun filterClassifiedsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return authorSet.set
         .mapNotNull {
             if (it.value.authors.isEmpty()) {
@@ -68,7 +65,7 @@ fun filterClassifiedsByAuthors(
                 filterClassifiedsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()
@@ -80,8 +77,6 @@ fun filterClassifiedsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return authorSet.set
         .mapNotNull {
             if (it.value.authors.isEmpty()) {
@@ -90,7 +85,7 @@ fun filterClassifiedsByAuthors(
                 filterClassifiedsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()

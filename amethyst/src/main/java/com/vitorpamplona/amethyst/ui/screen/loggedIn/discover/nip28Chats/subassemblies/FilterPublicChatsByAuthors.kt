@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 import kotlin.collections.mapNotNull
 
@@ -65,8 +64,6 @@ fun filterPublicChatsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return authorSet.set
         .mapNotNull {
             if (it.value.authors.isEmpty()) {
@@ -75,7 +72,7 @@ fun filterPublicChatsByAuthors(
                 filterPublicChatsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()
@@ -87,8 +84,6 @@ fun filterPublicChatsByAuthors(
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return authorSet.set
         .mapNotNull {
             if (it.value.authors.isEmpty()) {
@@ -97,7 +92,7 @@ fun filterPublicChatsByAuthors(
                 filterPublicChatsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()

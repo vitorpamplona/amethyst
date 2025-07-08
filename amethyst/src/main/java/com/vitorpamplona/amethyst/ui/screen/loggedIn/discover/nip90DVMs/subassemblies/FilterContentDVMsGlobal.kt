@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterContentDVMsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -33,10 +32,8 @@ fun filterContentDVMsGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return relays.set.flatMap {
-        val since = since?.get(it.key)?.time ?: defaultSince
+        val since = since?.get(it.key)?.time
         listOf(
             RelayBasedFilter(
                 relay = it.key,

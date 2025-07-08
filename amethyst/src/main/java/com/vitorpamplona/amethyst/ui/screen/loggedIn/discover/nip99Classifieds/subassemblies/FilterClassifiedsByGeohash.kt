@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.mapNotNull
 
 fun filterClassifiedsByGeohash(
@@ -58,8 +57,6 @@ fun filterClassifiedsByGeohash(
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return geoSet.set
         .mapNotNull {
             if (it.value.geotags.isEmpty()) {
@@ -68,7 +65,7 @@ fun filterClassifiedsByGeohash(
                 filterClassifiedsByGeohash(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time ?: defaultSince,
+                    since = since?.get(it.key)?.time,
                 )
             }
         }.flatten()

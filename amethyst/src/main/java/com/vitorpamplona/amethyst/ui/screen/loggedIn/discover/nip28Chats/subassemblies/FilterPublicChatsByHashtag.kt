@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.mapNotNull
 
 fun filterPublicChatsByHashtag(
@@ -66,8 +65,6 @@ fun filterPublicChatsByHashtag(
 ): List<RelayBasedFilter> {
     if (hashSet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return hashSet.set
         .mapNotNull { relayHashSet ->
             if (relayHashSet.value.hashtags.isEmpty()) {
@@ -76,7 +73,7 @@ fun filterPublicChatsByHashtag(
                 filterPublicChatsByHashtag(
                     relay = relayHashSet.key,
                     hashtags = relayHashSet.value.hashtags,
-                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                    since = since?.get(relayHashSet.key)?.time,
                 )
             }
         }.flatten()

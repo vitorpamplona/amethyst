@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.flatten
 
 fun filterPublicChatsByCommunity(
@@ -82,15 +81,13 @@ fun filterPublicChatsByCommunity(
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
-    val defaultSince = TimeUtils.oneWeekAgo()
-
     return communitySet.set
         .mapNotNull {
             filterPublicChatsByCommunity(
                 relay = it.key,
                 community = it.value.community,
                 authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
+                since = since?.get(it.key)?.time,
             )
         }.flatten()
 }
