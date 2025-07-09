@@ -56,7 +56,7 @@ abstract class PerUserEoseManager<T>(
     ) = latestEOSEs.newEose(user(key), relay, time)
 
     open fun newSub(key: T): Subscription =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(key, relayUrl, time)
             if (invalidateAfterEose) {
                 invalidateFilters()
@@ -67,7 +67,7 @@ abstract class PerUserEoseManager<T>(
         key: User,
         subId: String,
     ) {
-        orchestrator.dismissSubscription(subId)
+        dismissSubscription(subId)
         userSubscriptionMap.remove(key)
     }
 
@@ -77,7 +77,7 @@ abstract class PerUserEoseManager<T>(
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[user] = it.id }
         } else {
-            orchestrator.getSub(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
+            getSubscription(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
         }
     }
 

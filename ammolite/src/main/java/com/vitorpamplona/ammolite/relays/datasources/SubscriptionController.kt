@@ -78,7 +78,10 @@ class SubscriptionController(
 
     fun getSub(subId: String) = subscriptions.get(subId)
 
-    fun requestNewSubscription(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null): Subscription = Subscription(onEose = onEOSE).also { subscriptions.put(it.id, it) }
+    fun requestNewSubscription(
+        subId: String,
+        onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null,
+    ): Subscription = Subscription(subId, onEose = onEOSE).also { subscriptions.put(it.id, it) }
 
     fun dismissSubscription(subId: String) = getSub(subId)?.let { dismissSubscription(it) }
 

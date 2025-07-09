@@ -141,10 +141,10 @@ fun debugState(context: Context) {
         LocalCache.addressables
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
 
-    qttNotes.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
+    qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
         Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes.get(kind)?.div((1024 * 1024))}MB ")
     }
-    qttAddressables.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
+    qttAddressables.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
         Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables.get(kind)?.div((1024 * 1024))}MB ")
     }
 }

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.collections.distinctBy
 
 /**
  * This query type creates a new relay subscription for every logged-in
@@ -57,7 +58,7 @@ abstract class PerUserAndFollowListEoseManager<T>(
     ) = latestEOSEs.newEose(user(key), list(key), relay, time)
 
     open fun newSub(key: T): Subscription =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(key, relayUrl, time)
             if (invalidateAfterEose) {
                 invalidateFilters()
@@ -68,7 +69,7 @@ abstract class PerUserAndFollowListEoseManager<T>(
         key: User,
         subId: String,
     ) {
-        orchestrator.dismissSubscription(subId)
+        dismissSubscription(subId)
         userSubscriptionMap.remove(key)
     }
 
@@ -78,7 +79,7 @@ abstract class PerUserAndFollowListEoseManager<T>(
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[user] = it.id }
         } else {
-            orchestrator.getSub(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
+            getSubscription(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
         }
     }
 

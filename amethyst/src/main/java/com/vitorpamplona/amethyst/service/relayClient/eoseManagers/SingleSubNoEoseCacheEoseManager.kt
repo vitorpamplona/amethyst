@@ -36,7 +36,7 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
     val sub =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             if (invalidateAfterEose) {
                 invalidateFilters()
             }

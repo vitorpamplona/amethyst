@@ -62,7 +62,7 @@ abstract class PerUniqueIdEoseManager<T>(
     }
 
     open fun newSub(key: T): Subscription =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(key, relayUrl, time)
         }
 
@@ -70,7 +70,7 @@ abstract class PerUniqueIdEoseManager<T>(
         key: String,
         subId: String,
     ) {
-        orchestrator.dismissSubscription(subId)
+        dismissSubscription(subId)
         userSubscriptionMap.remove(key)
     }
 
@@ -80,7 +80,7 @@ abstract class PerUniqueIdEoseManager<T>(
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[id] = it.id }
         } else {
-            orchestrator.getSub(subId) ?: newSub(key).also { userSubscriptionMap[id] = it.id }
+            getSubscription(subId) ?: newSub(key).also { userSubscriptionMap[id] = it.id }
         }
     }
 

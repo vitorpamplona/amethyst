@@ -38,7 +38,7 @@ class AccountGiftWrapsEoseManager(
     client: NostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(query: AccountQueryState) = query.account.userProfile()
+    override fun user(key: AccountQueryState) = key.account.userProfile()
 
     override fun updateFilter(
         key: AccountQueryState,

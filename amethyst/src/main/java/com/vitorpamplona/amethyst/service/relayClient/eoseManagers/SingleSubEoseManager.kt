@@ -56,7 +56,7 @@ abstract class SingleSubEoseManager<T>(
     ) = latestEOSEs.newEose(relay, time)
 
     val sub =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(relayUrl, time)
             if (invalidateAfterEose) {
                 invalidateFilters()
