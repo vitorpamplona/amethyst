@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 
+import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -29,22 +30,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 class RelayBasedFilter(
     val relay: NormalizedRelayUrl,
     val filter: Filter,
-) {
-    // This only exists because some relays confuse empty lists with null lists
-    fun isValidFor(relay: NormalizedRelayUrl) = relay == this.relay
-
-    fun toFilter(relay: NormalizedRelayUrl): Filter? =
-        if (isValidFor(relay)) {
-            filter
-        } else {
-            null
-        }
-}
+)
 
 fun List<RelayBasedFilter>.groupByRelay(): Map<NormalizedRelayUrl, List<Filter>> {
     val result = mutableMapOf<NormalizedRelayUrl, MutableList<Filter>>()
     for (relayBasedFilter in this) {
-        result.getOrPut(relayBasedFilter.relay) { mutableListOf() }.add(relayBasedFilter.filter)
+        if (relayBasedFilter.filter.isFilledFilter()) {
+            result.getOrPut(relayBasedFilter.relay) { mutableListOf() }.add(relayBasedFilter.filter)
+        } else {
+            Log.e("FilterError", "Ignoring empty filter for ${relayBasedFilter.relay}")
+        }
     }
     return result
 }

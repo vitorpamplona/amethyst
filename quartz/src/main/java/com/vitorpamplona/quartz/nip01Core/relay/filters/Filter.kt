@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.filters
 
+import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
 class Filter(
     val ids: List<String>? = null,
@@ -51,9 +53,32 @@ class Filter(
         (ids != null && ids.isNotEmpty()) ||
             (authors != null && authors.isNotEmpty()) ||
             (kinds != null && kinds.isNotEmpty()) ||
-            (tags != null && tags.isNotEmpty()) ||
+            (tags != null && tags.isNotEmpty() && tags.values.all { it.isNotEmpty() }) ||
             (since != null) ||
             (until != null) ||
             (limit != null) ||
             (search != null && search.isNotEmpty())
+
+    init {
+        if (!isFilledFilter()) {
+            Log.e("FilterError", "Filter is empty: ${toJson()}")
+        }
+
+        ids?.forEach {
+            if (it.length != 64) Log.e("FilterError", "Invalid id length $it on ${toJson()}")
+        }
+        authors?.forEach {
+            if (it.length != 64) Log.e("FilterError", "Invalid author length $it on ${toJson()}")
+        }
+        // tests common tags.
+        tags?.get("p")?.forEach {
+            if (it.length != 64) Log.e("FilterError", "Invalid p-tag length $it on ${toJson()}")
+        }
+        tags?.get("e")?.forEach {
+            if (it.length != 64) Log.e("FilterError", "Invalid e-tag length $it on ${toJson()}")
+        }
+        tags?.get("a")?.forEach {
+            if (Address.parse(it) == null) Log.e("FilterError", "Invalid a-tag $it on ${toJson()}")
+        }
+    }
 }
