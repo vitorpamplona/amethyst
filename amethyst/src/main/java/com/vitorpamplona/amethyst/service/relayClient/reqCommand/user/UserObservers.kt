@@ -249,7 +249,7 @@ fun observeUserFollowCount(
             user
                 .flow()
                 .followers.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { userState ->
                     userState.user.transientFollowCount() ?: 0
                 }.distinctUntilChanged()
@@ -303,7 +303,7 @@ fun observeUserTagFollows(
                 .hashtagFollows(user)
                 .flow()
                 .metadata.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { noteState ->
                     (noteState.note.event as? HashtagListEvent)?.publicAndCachedPrivateHashtags()?.sorted() ?: emptyList()
                 }.onStart {
@@ -345,7 +345,7 @@ fun observeUserBookmarkCount(
             user
                 .flow()
                 .followers.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { userState ->
                     userState.user.latestBookmarkList?.countBookmarks() ?: 0
                 }.distinctUntilChanged()
@@ -385,7 +385,7 @@ fun observeUserFollowerCount(
             user
                 .flow()
                 .followers.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { userState ->
                     userState.user.transientFollowerCount()
                 }.distinctUntilChanged()
