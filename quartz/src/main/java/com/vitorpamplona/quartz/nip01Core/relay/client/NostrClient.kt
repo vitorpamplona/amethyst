@@ -252,9 +252,9 @@ class NostrClient(
     }
 
     fun close(subscriptionId: String) {
-        relayPool.close(subscriptionId)
         activeRequests.remove(subscriptionId)
         activeCounts.remove(subscriptionId)
+        relayPool.close(subscriptionId)
     }
 
     override fun onEvent(
