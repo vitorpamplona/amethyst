@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.LargeCache
 
-class OutboxProtector(
+class OutboxCache(
     listener: IRelayClientListener,
 ) : RedirectRelayClientListener(listener) {
     /**

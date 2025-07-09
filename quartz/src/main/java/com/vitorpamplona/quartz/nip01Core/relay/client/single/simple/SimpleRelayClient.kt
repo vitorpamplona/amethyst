@@ -40,7 +40,7 @@ class SimpleRelayClient(
 ) : IRelayClient by BasicRelayClient(
         url,
         socketBuilder,
-        OutboxProtector(listener),
+        OutboxCache(listener),
         stats,
         defaultOnConnect,
     )
