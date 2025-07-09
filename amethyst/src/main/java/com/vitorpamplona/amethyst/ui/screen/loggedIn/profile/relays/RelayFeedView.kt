@@ -29,7 +29,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.navigation.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.note.RelayCompose
@@ -48,28 +50,37 @@ fun RelayFeedView(
 
     RefresheableBox(viewModel, enablePullRefresh) {
         val listState = rememberLazyListState()
-        val clipboardManager = LocalClipboardManager.current
 
         LazyColumn(
             contentPadding = FeedPadding,
             state = listState,
         ) {
-            itemsIndexed(feedState, key = { _, item -> item.url }) { _, item ->
-                RelayCompose(
-                    item,
-                    accountViewModel = accountViewModel,
-                    onAddRelay = {
-                        clipboardManager.setText(AnnotatedString(item.url.url))
-                        nav.nav(Route.EditRelays)
-                    },
-                    onRemoveRelay = {
-                        nav.nav(Route.EditRelays)
-                    },
-                )
-                HorizontalDivider(
-                    thickness = DividerThickness,
-                )
+            itemsIndexed(feedState, key = { _, item -> item.url.url }) { _, item ->
+                RenderRelayRow(item, accountViewModel, nav)
             }
         }
     }
+}
+
+@Composable
+private fun RenderRelayRow(
+    relay: RelayInfo,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val clipboardManager = LocalClipboardManager.current
+    RelayCompose(
+        relay,
+        accountViewModel = accountViewModel,
+        onAddRelay = {
+            clipboardManager.setText(AnnotatedString(relay.url.url))
+            nav.nav(Route.EditRelays)
+        },
+        onRemoveRelay = {
+            nav.nav(Route.EditRelays)
+        },
+    )
+    HorizontalDivider(
+        thickness = DividerThickness,
+    )
 }
