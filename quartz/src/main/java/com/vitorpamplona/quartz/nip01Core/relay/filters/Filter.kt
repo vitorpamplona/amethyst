@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
 class Filter(
     val ids: List<String>? = null,
@@ -48,22 +47,13 @@ class Filter(
         search: String? = this.search,
     ) = Filter(ids, authors, kinds, tags, since, until, limit, search)
 
-    init {
-        // TODO: Remove this in production
-        ids?.forEach {
-            if (it.length != 64) throw IllegalArgumentException("Invalid id length $it on ${toJson()}")
-        }
-        authors?.forEach {
-            if (it.length != 64) throw IllegalArgumentException("Invalid author length $it on ${toJson()}")
-        }
-        tags?.get("#p")?.forEach {
-            if (it.length != 64) throw IllegalArgumentException("Invalid p-tag length $it on ${toJson()}")
-        }
-        tags?.get("#e")?.forEach {
-            if (it.length != 64) throw IllegalArgumentException("Invalid e-tag length $it on ${toJson()}")
-        }
-        tags?.get("#a")?.forEach {
-            if (Address.parse(it) != null) throw IllegalArgumentException("Invalid a-tag length $it on ${toJson()}")
-        }
-    }
+    fun isFilledFilter() =
+        (ids != null && ids.isNotEmpty()) ||
+            (authors != null && authors.isNotEmpty()) ||
+            (kinds != null && kinds.isNotEmpty()) ||
+            (tags != null && tags.isNotEmpty()) ||
+            (since != null) ||
+            (until != null) ||
+            (limit != null) ||
+            (search != null && search.isNotEmpty())
 }

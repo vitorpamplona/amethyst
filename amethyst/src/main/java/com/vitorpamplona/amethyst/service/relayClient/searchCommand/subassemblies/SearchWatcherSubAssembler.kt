@@ -55,25 +55,27 @@ class SearchWatcherSubAssembler(
 
         if (mySearchString.isBlank()) return null
 
+        val defaultRelays = key.account.followPlusAllMine.flow.value
+
         val directFilters =
             runCatching {
                 if (Hex.isHex(mySearchString)) {
-                    val key = Hex.decode(mySearchString).toHexKey()
-                    filterByAuthor(key) + filterByEvent(key)
+                    val hexKey = Hex.decode(mySearchString).toHexKey()
+                    filterByAuthor(hexKey, defaultRelays) + filterByEvent(hexKey, defaultRelays)
                 } else {
                     val parsed = Nip19Parser.uriToRoute(mySearchString)?.entity
                     if (parsed != null) {
                         cache.consume(parsed)
 
                         when (parsed) {
-                            is NSec -> filterByAuthor(parsed.toPubKeyHex())
-                            is NPub -> filterByAuthor(parsed.hex)
-                            is NProfile -> filterByAuthor(parsed.hex)
-                            is NNote -> filterByEvent(parsed.hex)
-                            is NEvent -> filterByEvent(parsed.hex)
+                            is NSec -> filterByAuthor(parsed.toPubKeyHex(), defaultRelays)
+                            is NPub -> filterByAuthor(parsed.hex, defaultRelays)
+                            is NProfile -> filterByAuthor(parsed.hex, defaultRelays)
+                            is NNote -> filterByEvent(parsed.hex, defaultRelays)
+                            is NEvent -> filterByEvent(parsed.hex, defaultRelays)
                             is NEmbed -> emptyList()
                             is NRelay -> emptyList()
-                            is NAddress -> filterByAddress(parsed)
+                            is NAddress -> filterByAddress(parsed, defaultRelays)
                             else -> emptyList()
                         }
                     } else {

@@ -53,7 +53,7 @@ fun ThreadScreen(
         )
 
     WatchLifecycleAndUpdateModel(feedViewModel)
-    ThreadFilterAssemblerSubscription(noteId, accountViewModel.dataSources().thread)
+    ThreadFilterAssemblerSubscription(noteId, accountViewModel)
 
     LoadNote(noteId, accountViewModel) {
         if (it != null) {

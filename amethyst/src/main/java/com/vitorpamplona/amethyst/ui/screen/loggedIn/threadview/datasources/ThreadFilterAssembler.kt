@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadFilterSubAssembler
@@ -29,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 // This allows multiple screen to be listening to tags, even the same tag
 class ThreadQueryState(
     val eventId: HexKey,
+    val account: Account,
 )
 
 class ThreadFilterAssembler(

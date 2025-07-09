@@ -22,64 +22,113 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.relayHints
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
-    val missingAddressables = mutableSetOf<Address>()
+fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl> {
+    val set = mutableSetOf<NormalizedRelayUrl>()
 
-    keys.forEach {
-        if (it.note is AddressableNote && it.note.event == null) {
-            missingAddressables.add(it.note.address())
-        }
+    set.addAll(LocalCache.relayHints.hintsForAddress(note.idHex))
 
-        // loads threading that is event-based
-        it.note.replyTo?.forEach {
-            if (it is AddressableNote && it.event == null) {
-                missingAddressables.add(it.address())
-            }
+    val isInChannel = note.channelHex()
+    if (isInChannel != null) {
+        LocalCache.checkGetOrCreateChannel(isInChannel)?.relays()?.forEach {
+            set.add(it)
         }
     }
 
-    return filterMissingAddressables(missingAddressables)
+    note.replyTo?.map { parentNote ->
+        set.addAll(parentNote.relays)
+
+        parentNote
+            .channelHex()
+            ?.let { LocalCache.checkGetOrCreateChannel(it) }
+            ?.relays()
+            ?.forEach { set.add(it) }
+
+        parentNote.author?.inboxRelays()?.let { set.addAll(it) }
+    }
+
+    note.replies.map { childNote ->
+        set.addAll(childNote.relays)
+
+        childNote
+            .channelHex()
+            ?.let { LocalCache.checkGetOrCreateChannel(it) }
+            ?.relays()
+            ?.forEach { set.add(it) }
+
+        childNote.author?.outboxRelays()?.let { set.addAll(it) }
+    }
+
+    note.reactions.map { reactionType ->
+        reactionType.value.forEach { childNote ->
+            set.addAll(childNote.relays)
+            childNote.author?.outboxRelays()?.let { set.addAll(it) }
+        }
+    }
+
+    note.boosts.map { childNote ->
+        set.addAll(childNote.relays)
+        childNote.author?.outboxRelays()?.let { set.addAll(it) }
+    }
+
+    return set
 }
 
-fun filterMissingAddressables(missingAddressables: Set<Address>): List<RelayBasedFilter> {
+fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
+    val addressesPerRelay =
+        mapOfSet {
+            keys.forEach { key ->
+                val default = key.account.followPlusAllMine.flow.value
+                if (key.note is AddressableNote && key.note.event == null) {
+                    potentialRelaysToFindAddress(key.note).ifEmpty { default }.forEach { relayUrl ->
+                        add(relayUrl, key.note.address)
+                    }
+                }
+
+                // loads threading that is event-based
+                key.note.replyTo?.forEach { note ->
+                    if (note is AddressableNote && note.event == null) {
+                        potentialRelaysToFindAddress(note).ifEmpty { default }.forEach { relayUrl ->
+                            add(relayUrl, note.address)
+                        }
+                    }
+                }
+            }
+        }
+
+    return filterMissingAddressables(addressesPerRelay)
+}
+
+fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
     if (missingAddressables.isEmpty()) return emptyList()
 
-    return missingAddressables.flatMap { aTag ->
-        val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(aTag.pubKeyHex)
-        val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
-
-        val authorHomeRelays =
-            authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
-                ?: LocalCache.relayHints.hintsForKey(aTag.pubKeyHex).ifEmpty { null }
-                ?: listOfNotNull(LocalCache.getUserIfExists(aTag.pubKeyHex)?.latestMetadataRelay)
-
-        val relayHints = LocalCache.relayHints.hintsForAddress(aTag.toValue())
-
-        (authorHomeRelays + relayHints).toSet().map {
-            if (aTag.kind < 25000 && aTag.dTag.isBlank()) {
+    return missingAddressables.flatMap { relayEntry ->
+        relayEntry.value.map { address ->
+            if (address.kind < 25000 && address.dTag.isBlank()) {
                 RelayBasedFilter(
-                    relay = it,
+                    relay = relayEntry.key,
                     filter =
                         Filter(
-                            kinds = listOf(aTag.kind),
-                            authors = listOf(aTag.pubKeyHex),
+                            kinds = listOf(address.kind),
+                            authors = listOf(address.pubKeyHex),
                             limit = 1,
                         ),
                 )
             } else {
                 RelayBasedFilter(
-                    relay = it,
+                    relay = relayEntry.key,
                     filter =
                         Filter(
-                            kinds = listOf(aTag.kind),
-                            tags = mapOf("d" to listOf(aTag.dTag)),
-                            authors = listOf(aTag.pubKeyHex),
+                            kinds = listOf(address.kind),
+                            tags = mapOf("d" to listOf(address.dTag)),
+                            authors = listOf(address.pubKeyHex),
                             limit = 1,
                         ),
                 )

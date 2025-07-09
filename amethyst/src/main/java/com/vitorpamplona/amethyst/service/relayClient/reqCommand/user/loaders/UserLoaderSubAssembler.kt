@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class UserLoaderSubAssembler(
     client: NostrClient,
@@ -42,7 +43,11 @@ class UserLoaderSubAssembler(
             }
         }
 
+        val defaultRelays = mutableSetOf<NormalizedRelayUrl>()
+
         keys.mapTo(mutableSetOf()) { it.account }.forEach {
+            defaultRelays.addAll(it.followPlusAllMine.flow.value)
+
             it.kind3FollowList.flow.value.authors.forEach {
                 val user = LocalCache.getOrCreateUser(it)
                 if (user.latestMetadata == null) {
@@ -55,7 +60,7 @@ class UserLoaderSubAssembler(
 
         if (firstTimers.isEmpty()) return null
 
-        return filterFindUserMetadataForKey(firstTimers)
+        return filterFindUserMetadataForKey(firstTimers, defaultRelays)
     }
 
     override fun distinct(key: UserFinderQueryState) = key.user

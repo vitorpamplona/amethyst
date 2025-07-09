@@ -95,6 +95,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
@@ -2928,7 +2929,7 @@ object LocalCache : ILocalCache {
                 }
                 getOrCreateUser(nip19.hex)
             }
-            is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
+            is NNote -> {
                 getOrCreateNote(nip19.hex)
             }
             is NEvent -> {

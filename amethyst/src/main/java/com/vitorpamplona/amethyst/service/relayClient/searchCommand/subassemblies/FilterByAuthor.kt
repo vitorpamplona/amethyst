@@ -22,5 +22,9 @@ package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassembli
 
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.filterFindUserMetadataForKey
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-fun filterByAuthor(pubKey: HexKey) = filterFindUserMetadataForKey(pubKey)
+fun filterByAuthor(
+    pubKey: HexKey,
+    defaultRelays: Set<NormalizedRelayUrl>,
+) = filterFindUserMetadataForKey(pubKey, defaultRelays)

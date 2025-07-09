@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlin.collections.forEach
@@ -36,35 +37,44 @@ val MetadataAndRelayListKinds =
         AdvertisedRelayListEvent.KIND,
     )
 
-fun filterFindUserMetadataForKey(author: HexKey): List<RelayBasedFilter> =
+fun filterFindUserMetadataForKey(
+    author: HexKey,
+    defaultRelays: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> =
     LocalCache.checkGetOrCreateUser(author)?.let {
-        filterFindUserMetadataForKey(setOf(it))
+        filterFindUserMetadataForKey(setOf(it), defaultRelays)
     } ?: emptyList()
 
-fun filterFindUserMetadataForKey(authors: Set<User>): List<RelayBasedFilter> {
+fun filterFindUserMetadataForKey(
+    authors: Set<User>,
+    defaultRelays: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> {
     val perRelayKeys =
         mapOfSet {
             authors.forEach { key ->
                 val relays =
-                    key.authorRelayList()?.writeRelaysNorm()
+                    key.authorRelayList()?.writeRelaysNorm()?.ifEmpty { null }
                         ?: LocalCache.relayHints.hintsForKey(key.pubkeyHex).ifEmpty { null }
-                        ?: key.relaysBeingUsed.keys
+                        ?: (key.relaysBeingUsed.keys + defaultRelays).toList()
 
                 relays.forEach {
                     add(it, key.pubkeyHex)
                 }
-                // TODO, DESPERATION: TRY ALL THE CONNECTED RELAYS.
             }
         }
 
-    return perRelayKeys.map {
-        RelayBasedFilter(
-            relay = it.key,
-            filter =
-                Filter(
-                    kinds = MetadataAndRelayListKinds,
-                    authors = it.value.sorted(),
-                ),
-        )
+    return perRelayKeys.mapNotNull {
+        if (it.value.isNotEmpty()) {
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds = MetadataAndRelayListKinds,
+                        authors = it.value.sorted(),
+                    ),
+            )
+        } else {
+            null
+        }
     }
 }

@@ -22,48 +22,101 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.LocalCache.relayHints
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
-    val missingEvents = mutableSetOf<String>()
+fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
+    val set = mutableSetOf<NormalizedRelayUrl>()
 
-    keys.forEach {
-        if (it.note !is AddressableNote && it.note.event == null) {
-            missingEvents.add(it.note.idHex)
-        }
+    set.addAll(LocalCache.relayHints.hintsForEvent(note.idHex))
 
-        // loads threading that is event-based
-        it.note.replyTo?.forEach {
-            if (it !is AddressableNote && it.event == null) {
-                missingEvents.add(it.idHex)
-            }
+    val isInChannel = note.channelHex()
+    if (isInChannel != null) {
+        LocalCache.checkGetOrCreateChannel(isInChannel)?.relays()?.forEach {
+            set.add(it)
         }
     }
 
-    return filterMissingEvents(missingEvents)
+    note.replyTo?.map { parentNote ->
+        set.addAll(parentNote.relays)
+
+        parentNote
+            .channelHex()
+            ?.let { LocalCache.checkGetOrCreateChannel(it) }
+            ?.relays()
+            ?.forEach { set.add(it) }
+
+        parentNote.author?.inboxRelays()?.let { set.addAll(it) }
+    }
+
+    note.replies.map { childNote ->
+        set.addAll(childNote.relays)
+
+        childNote
+            .channelHex()
+            ?.let { LocalCache.checkGetOrCreateChannel(it) }
+            ?.relays()
+            ?.forEach { set.add(it) }
+
+        childNote.author?.outboxRelays()?.let { set.addAll(it) }
+    }
+
+    note.reactions.map { reactionType ->
+        reactionType.value.forEach { childNote ->
+            set.addAll(childNote.relays)
+            childNote.author?.outboxRelays()?.let { set.addAll(it) }
+        }
+    }
+
+    note.boosts.map { childNote ->
+        set.addAll(childNote.relays)
+        childNote.author?.outboxRelays()?.let { set.addAll(it) }
+    }
+
+    return set
 }
 
-fun filterMissingEvents(missingEventIds: Set<HexKey>): List<RelayBasedFilter> {
-    if (missingEventIds.isEmpty()) return emptyList()
-
-    val relayHints =
+fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter>? {
+    val eventsPerRelay =
         mapOfSet {
-            missingEventIds.forEach { eventId ->
-                LocalCache.relayHints.hintsForEvent(eventId).forEach { relayUrl ->
-                    add(relayUrl, eventId)
+            keys.forEach { key ->
+                val default = key.account.followPlusAllMine.flow.value
+
+                if (key.note !is AddressableNote && key.note.event == null) {
+                    potentialRelaysToFindEvent(key.note).ifEmpty { default }.forEach { relayUrl ->
+                        add(relayUrl, key.note.idHex)
+                    }
+                }
+
+                // loads threading that is event-based
+                key.note.replyTo?.forEach { note ->
+                    if (note !is AddressableNote && note.event == null) {
+                        potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                            add(relayUrl, note.idHex)
+                        }
+                    }
                 }
             }
         }
 
-    return relayHints.map {
-        RelayBasedFilter(
-            relay = it.key,
-            filter = Filter(ids = it.value.sorted()),
-        )
+    return filterMissingEvents(eventsPerRelay)
+}
+
+fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {
+    if (missingEventIds.isEmpty()) return emptyList()
+
+    return missingEventIds.mapNotNull {
+        if (it.value.isNotEmpty()) {
+            RelayBasedFilter(
+                relay = it.key,
+                filter = Filter(ids = it.value.sorted()),
+            )
+        } else {
+            null
+        }
     }
 }

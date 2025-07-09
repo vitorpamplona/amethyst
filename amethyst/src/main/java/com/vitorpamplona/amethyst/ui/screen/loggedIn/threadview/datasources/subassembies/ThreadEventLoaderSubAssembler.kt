@@ -45,7 +45,8 @@ class ThreadEventLoaderSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val branches = ThreadAssembler().findThreadFor(key.eventId) ?: return null
-        return filterMissingEventsForThread(branches)
+        val defaultRelays = key.account.followPlusAllMine.flow.value
+        return filterMissingEventsForThread(branches, defaultRelays)
     }
 
     override fun id(key: ThreadQueryState) = key.eventId
