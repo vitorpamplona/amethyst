@@ -324,7 +324,7 @@ object LocalPreferences {
                     )
                     putString(
                         PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
-                        EventMapper.mapper.writeValueAsString(settings.zapPaymentRequest),
+                        EventMapper.mapper.writeValueAsString(settings.zapPaymentRequest?.denormalize()),
                     )
                     if (settings.backupContactList != null) {
                         putString(

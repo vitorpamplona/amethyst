@@ -77,5 +77,7 @@ class Nip47WalletConnect {
         val pubKeyHex: HexKey,
         val relayUri: NormalizedRelayUrl,
         val secret: HexKey?,
-    )
+    ) {
+        fun denormalize(): Nip47URI? = Nip47URI(pubKeyHex, relayUri.url, secret)
+    }
 }
