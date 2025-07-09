@@ -167,6 +167,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
@@ -625,19 +626,23 @@ class Account(
     }
 
     fun createZapRequestFor(
-        userPubKeyHex: String,
+        user: User,
         message: String = "",
         zapType: LnZapEvent.ZapType,
         onReady: (LnZapRequestEvent) -> Unit,
     ) {
+        val relays = nip65RelayList.inboxFlow.value + user.inboxRelays()
+
         LnZapRequestEvent.create(
-            userPubKeyHex,
-            nip65RelayList.inboxFlow.value.toSet(),
-            signer,
-            message,
-            zapType,
-            onReady = onReady,
-        )
+            userHex = user.pubkeyHex,
+            relays = relays,
+            signer = signer,
+            message = message,
+            zapType = zapType,
+        ) { zapRequest ->
+            LocalCache.justConsumeMyOwnEvent(zapRequest)
+            onReady(zapRequest)
+        }
     }
 
     suspend fun report(
@@ -1988,6 +1993,21 @@ class Account(
             }
         }
     }
+
+    suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? =
+        if (event.isPrivateZap()) {
+            if (isWriteable()) {
+                tryAndWait { continuation ->
+                    event.decryptPrivateZap(signer) {
+                        continuation.resume(it)
+                    }
+                }
+            } else {
+                null
+            }
+        } else {
+            null
+        }
 
     fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 

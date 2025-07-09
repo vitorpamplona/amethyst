@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.service.CashuProcessor
-import com.vitorpamplona.amethyst.service.CashuToken
+import com.vitorpamplona.amethyst.service.cashu.CashuParser
+import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
@@ -38,7 +38,7 @@ class CashuBTest {
     @Test()
     fun parseCashuA() {
         runBlocking {
-            val parsed = (CashuProcessor().parse(cashuTokenA) as GenericLoadable.Loaded<List<CashuToken>>).loaded[0]
+            val parsed = (CashuParser().parse(cashuTokenA) as GenericLoadable.Loaded<List<CashuToken>>).loaded[0]
 
             assertEquals(cashuTokenA, parsed.token)
             assertEquals("https://8333.space:3338", parsed.mint)
@@ -59,7 +59,7 @@ class CashuBTest {
     @Test()
     fun parseCashuB() =
         runBlocking {
-            val parsed = (CashuProcessor().parse(cashuTokenB1) as GenericLoadable.Loaded<List<CashuToken>>).loaded
+            val parsed = (CashuParser().parse(cashuTokenB1) as GenericLoadable.Loaded<List<CashuToken>>).loaded
 
             assertEquals(cashuTokenB1, parsed[0].token)
             assertEquals("http://localhost:3338", parsed[0].mint)
@@ -84,7 +84,7 @@ class CashuBTest {
     @Test()
     fun parseCashuB2() =
         runBlocking {
-            val parsed = (CashuProcessor().parse(cashuTokenB2) as GenericLoadable.Loaded<List<CashuToken>>).loaded
+            val parsed = (CashuParser().parse(cashuTokenB2) as GenericLoadable.Loaded<List<CashuToken>>).loaded
 
             assertEquals(cashuTokenB2, parsed[0].token)
             assertEquals("http://lbutlh5lfggq5r7xpiwhrajdl7sxpupgagazxl65w4c5cg72wtofasad.onion:3338", parsed[0].mint)

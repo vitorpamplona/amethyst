@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -48,6 +50,12 @@ suspend fun <T> launchAndWaitAll(
         withTimeoutOrNull(15000) {
             jobs.joinAll()
         }
+
+        async {
+            jobs.forEach {
+                it.cancel("Timeout")
+            }
+        }
     }
 }
 
@@ -69,15 +77,14 @@ suspend inline fun <T> tryAndWait(
  * runs the request for that item,
  * and gathers all the results in the output map.
  */
-suspend fun <T, K> collectSuccessfulOperations(
+suspend fun <T, K> collectSuccessfulOperationsReturning(
     items: List<T>,
     runRequestFor: (T, (K) -> Unit) -> Unit,
-    output: MutableList<K> = mutableListOf(),
-    onReady: suspend (List<K>) -> Unit,
-) {
+): List<K> {
+    val output: MutableList<K> = mutableListOf()
+
     if (items.isEmpty()) {
-        onReady(output)
-        return
+        return output
     }
 
     launchAndWaitAll(items) {
@@ -91,5 +98,58 @@ suspend fun <T, K> collectSuccessfulOperations(
         }
     }
 
-    onReady(output)
+    return output
+}
+
+/**
+ * Executes multiple suspending functions concurrently using `async` and attempts to wait for all of them
+ * to complete within a default 15-second timeout.
+ *
+ * If the timeout is reached, it returns the results of all tasks that successfully completed by then
+ * and cancels any tasks that are still running. Tasks that completed with an exception are not
+ * included in the returned list.
+ *
+ * @param tasks A list of suspending functions, each returning a value of type [T].
+ * @return A list containing the results of tasks that successfully completed within the timeout.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+suspend fun <T, K> mapNotNullAsync(
+    items: List<T>,
+    timeoutMillis: Long = 30000,
+    runRequestFor: suspend (T) -> K?,
+): List<K> {
+    if (items.isEmpty()) {
+        return emptyList()
+    }
+
+    return coroutineScope {
+        // Launch all tasks asynchronously and get their Deferred handles.
+        val jobs =
+            items.map { item ->
+                async {
+                    runRequestFor(item)
+                }
+            }
+
+        // Use withTimeout to impose a 15-second limit on waiting for all deferreds.
+        // If all tasks complete within 15 seconds, awaitAll() will return their results,
+        // and this block will return those results.
+        withTimeoutOrNull(timeoutMillis) {
+            jobs.joinAll()
+        }
+
+        async {
+            jobs.forEach {
+                it.cancel("Timeout")
+            }
+        }
+
+        jobs.mapNotNull {
+            if (it.isCompleted) {
+                it.getCompleted()
+            } else {
+                null
+            }
+        }
+    }
 }

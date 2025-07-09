@@ -628,6 +628,7 @@ object LocalCache : ILocalCache {
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
+    @Suppress("DEPRECATION")
     fun consume(
         event: TorrentCommentEvent,
         relay: NormalizedRelayUrl?,
@@ -682,6 +683,7 @@ object LocalCache : ILocalCache {
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
 
+    @Suppress("DEPRECATION")
     fun consume(
         event: GitReplyEvent,
         relay: NormalizedRelayUrl?,
@@ -778,6 +780,7 @@ object LocalCache : ILocalCache {
         return false
     }
 
+    @Suppress("DEPRECATION")
     fun computeReplyTo(event: Event): List<Note> =
         when (event) {
             is PollNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
@@ -1318,6 +1321,7 @@ object LocalCache : ILocalCache {
         return false
     }
 
+    @Suppress("DEPRECATION")
     private fun deleteNote(deleteNote: Note) {
         val deletedEvent = deleteNote.event
 
@@ -3057,6 +3061,7 @@ object LocalCache : ILocalCache {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun justConsumeInnerInner(
         event: Event,
         relay: NormalizedRelayUrl?,

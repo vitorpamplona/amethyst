@@ -54,11 +54,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -92,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
-import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -315,11 +312,11 @@ fun EditPostView(
                                     ) {
                                         InvoiceRequest(
                                             lud16,
-                                            user.pubkeyHex,
+                                            user,
                                             accountViewModel,
                                             stringRes(id = R.string.lightning_invoice),
                                             stringRes(id = R.string.lightning_create_and_add_invoice),
-                                            onSuccess = {
+                                            onNewInvoice = {
                                                 postViewModel.message =
                                                     TextFieldValue(postViewModel.message.text + "\n\n" + it)
                                                 postViewModel.wantsInvoice = false

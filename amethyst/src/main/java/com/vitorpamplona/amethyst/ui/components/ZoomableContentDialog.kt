@@ -265,7 +265,7 @@ private fun DialogContent(
                                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
                                 writeStoragePermissionState.status.isGranted
                             ) {
-                                scope.launch {
+                                scope.launch(Dispatchers.IO) {
                                     saveMediaToGallery(myContent, localContext, accountViewModel)
                                 }
                                 scope.launch {
@@ -295,7 +295,7 @@ private fun DialogContent(
     }
 }
 
-private fun saveMediaToGallery(
+private suspend fun saveMediaToGallery(
     content: BaseMediaContent,
     localContext: Context,
     accountViewModel: AccountViewModel,

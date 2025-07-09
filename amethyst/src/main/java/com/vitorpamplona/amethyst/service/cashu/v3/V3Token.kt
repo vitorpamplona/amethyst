@@ -18,33 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.service.cashu.v3
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.service.cashu.Proof
+import kotlinx.serialization.Serializable
 
-@Composable
-fun NewPostInvoiceRequest(
-    onSuccess: (String) -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    val lnAddress =
-        accountViewModel.account
-            .userProfile()
-            .info
-            ?.lnAddress()
+@Serializable
+class V3Token(
+    val unit: String?,
+    val memo: String?,
+    val token: List<V3T>?,
+)
 
-    if (lnAddress != null) {
-        InvoiceRequest(
-            lud16 = lnAddress,
-            user = accountViewModel.account.userProfile(),
-            accountViewModel = accountViewModel,
-            titleText = stringRes(id = R.string.lightning_invoice),
-            buttonText = stringRes(id = R.string.lightning_create_and_add_invoice),
-            onNewInvoice = onSuccess,
-            onError = accountViewModel.toastManager::toast,
-        )
-    }
-}
+@Serializable
+class V3T(
+    val mint: String,
+    val proofs: List<Proof>,
+)

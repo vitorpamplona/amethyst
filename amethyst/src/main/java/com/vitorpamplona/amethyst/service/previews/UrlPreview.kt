@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.previews
 
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 
 class UrlPreview {
     suspend fun fetch(
@@ -52,24 +52,29 @@ class UrlPreview {
                     .url(url)
                     .get()
                     .build()
-            okHttpClient(url).newCall(request).execute().use {
-                checkNotInMainThread()
-                if (it.isSuccessful) {
-                    val mimeType =
-                        it.headers["Content-Type"]?.toMediaType()
-                            ?: throw IllegalArgumentException("Website returned unknown mimetype: ${it.headers["Content-Type"]}")
-                    if (mimeType.type == "text" && mimeType.subtype == "html") {
-                        val data = OpenGraphParser().extractUrlInfo(HtmlParser().parseHtml(it.body.source(), mimeType))
-                        UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
-                    } else if (mimeType.type == "image") {
-                        UrlInfoItem(url, image = url, mimeType = mimeType.toString())
-                    } else if (mimeType.type == "video") {
-                        UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+
+            val client = okHttpClient(url)
+
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    if (response.isSuccessful) {
+                        val mimeType =
+                            response.headers["Content-Type"]?.toMediaType()
+                                ?: throw IllegalArgumentException("Website returned unknown mimetype: ${response.headers["Content-Type"]}")
+                        if (mimeType.type == "text" && mimeType.subtype == "html") {
+                            val metaTags = HtmlParser().parseHtml(response.body.source(), mimeType)
+                            val data = OpenGraphParser().extractUrlInfo(metaTags)
+                            UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
+                        } else if (mimeType.type == "image") {
+                            UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                        } else if (mimeType.type == "video") {
+                            UrlInfoItem(url, image = url, mimeType = mimeType.toString())
+                        } else {
+                            throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
+                        }
                     } else {
-                        throw IllegalArgumentException("Website returned unknown encoding for previews: $mimeType")
+                        throw IllegalArgumentException("Website returned: " + response.code)
                     }
-                } else {
-                    throw IllegalArgumentException("Website returned: " + it.code)
                 }
             }
         }

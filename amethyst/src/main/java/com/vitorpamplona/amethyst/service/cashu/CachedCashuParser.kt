@@ -18,33 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.service.cashu
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import android.util.LruCache
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import kotlinx.collections.immutable.ImmutableList
 
-@Composable
-fun NewPostInvoiceRequest(
-    onSuccess: (String) -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    val lnAddress =
-        accountViewModel.account
-            .userProfile()
-            .info
-            ?.lnAddress()
+object CachedCashuParser {
+    val cashuCache = LruCache<String, GenericLoadable<ImmutableList<CashuToken>>>(20)
 
-    if (lnAddress != null) {
-        InvoiceRequest(
-            lud16 = lnAddress,
-            user = accountViewModel.account.userProfile(),
-            accountViewModel = accountViewModel,
-            titleText = stringRes(id = R.string.lightning_invoice),
-            buttonText = stringRes(id = R.string.lightning_create_and_add_invoice),
-            onNewInvoice = onSuccess,
-            onError = accountViewModel.toastManager::toast,
-        )
+    fun cached(token: String): GenericLoadable<ImmutableList<CashuToken>> = cashuCache[token] ?: GenericLoadable.Loading()
+
+    fun parse(token: String): GenericLoadable<ImmutableList<CashuToken>> {
+        if (cashuCache[token] !is GenericLoadable.Loaded) {
+            val newCachuData = CashuParser().parse(token)
+            cashuCache.put(token, newCachuData)
+        }
+
+        return cashuCache[token]
     }
 }

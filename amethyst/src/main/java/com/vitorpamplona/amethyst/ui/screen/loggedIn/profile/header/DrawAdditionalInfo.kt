@@ -186,9 +186,19 @@ fun DrawAdditionalInfo(
         }
     }
 
-    val lud16 = remember(userState) { user.info?.lud16?.trim() ?: user.info?.lud06?.trim() }
-    val pubkeyHex = remember { baseUser.pubkeyHex }
-    DisplayLNAddress(lud16, pubkeyHex, accountViewModel, nav)
+    val lud16 =
+        remember(userState) {
+            userState
+                ?.user
+                ?.info
+                ?.lud16
+                ?.trim() ?: userState
+                ?.user
+                ?.info
+                ?.lud06
+                ?.trim()
+        }
+    DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
 
     val identities = user.latestMetadata?.identityClaims()
     if (!identities.isNullOrEmpty()) {

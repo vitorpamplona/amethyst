@@ -22,18 +22,18 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import android.util.LruCache
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
-import okhttp3.Call
-import okhttp3.Callback
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import java.io.IOException
+import okhttp3.coroutines.executeAsync
 
 object Nip11CachedRetriever {
     sealed class RetrieveResult(
@@ -160,7 +160,6 @@ class Nip11Retriever {
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (NormalizedRelayUrl, ErrorCode, String?) -> Unit,
     ) {
-        checkNotInMainThread()
         val url = relay.toHttp()
         try {
             val request: Request =
@@ -170,44 +169,28 @@ class Nip11Retriever {
                     .url(url)
                     .build()
 
-            okHttpClient(url)
-                .newCall(request)
-                .enqueue(
-                    object : Callback {
-                        override fun onResponse(
-                            call: Call,
-                            response: Response,
-                        ) {
-                            checkNotInMainThread()
-                            response.use {
-                                val body = it.body.string()
-                                try {
-                                    if (it.isSuccessful) {
-                                        onInfo(Nip11RelayInformation.fromJson(body))
-                                    } else {
-                                        onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, it.code.toString())
-                                    }
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    Log.e(
-                                        "RelayInfoFail",
-                                        "Resulting Message from Relay ${relay.url} in not parseable: $body",
-                                        e,
-                                    )
-                                    onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
-                                }
-                            }
-                        }
+            val client = okHttpClient(url)
 
-                        override fun onFailure(
-                            call: Call,
-                            e: IOException,
-                        ) {
-                            Log.e("RelayInfoFail", "${relay.url} unavailable", e)
-                            onError(relay, ErrorCode.FAIL_TO_REACH_SERVER, e.message)
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    val body = response.body.string()
+                    try {
+                        if (response.isSuccessful) {
+                            onInfo(Nip11RelayInformation.fromJson(body))
+                        } else {
+                            onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
                         }
-                    },
-                )
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.e(
+                            "RelayInfoFail",
+                            "Resulting Message from Relay ${relay.url} in not parseable: $body",
+                            e,
+                        )
+                        onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
+                    }
+                }
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("RelayInfoFail", "Invalid URL ${relay.url}", e)

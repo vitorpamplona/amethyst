@@ -18,33 +18,51 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.service.cashu.v4
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.cbor.ByteString
 
-@Composable
-fun NewPostInvoiceRequest(
-    onSuccess: (String) -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    val lnAddress =
-        accountViewModel.account
-            .userProfile()
-            .info
-            ?.lnAddress()
+@Serializable
+class V4Token(
+    // mint
+    val m: String,
+    // unit
+    val u: String,
+    // memo
+    val d: String? = null,
+    val t: Array<V4T>?,
+)
 
-    if (lnAddress != null) {
-        InvoiceRequest(
-            lud16 = lnAddress,
-            user = accountViewModel.account.userProfile(),
-            accountViewModel = accountViewModel,
-            titleText = stringRes(id = R.string.lightning_invoice),
-            buttonText = stringRes(id = R.string.lightning_create_and_add_invoice),
-            onNewInvoice = onSuccess,
-            onError = accountViewModel.toastManager::toast,
-        )
-    }
-}
+@Serializable
+class V4T(
+    // identifier
+    @ByteString
+    val i: ByteArray,
+    val p: Array<V4Proof>,
+)
+
+@Serializable
+class V4Proof(
+    // amount
+    val a: Int,
+    // secret
+    val s: String,
+    // signature
+    @ByteString
+    val c: ByteArray,
+    // no idea what this is
+    val d: V4DleqProof? = null,
+    // witness
+    val w: String? = null,
+)
+
+@Serializable
+class V4DleqProof(
+    @ByteString
+    val e: ByteArray,
+    @ByteString
+    val s: ByteArray,
+    @ByteString
+    val r: ByteArray,
+)

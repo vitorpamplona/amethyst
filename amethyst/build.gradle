@@ -222,6 +222,7 @@ dependencies {
 
     // Websockets API
     implementation libs.okhttp
+    implementation libs.okhttpCoroutines
 
     // Encrypted Key Storage
     implementation libs.androidx.security.crypto.ktx

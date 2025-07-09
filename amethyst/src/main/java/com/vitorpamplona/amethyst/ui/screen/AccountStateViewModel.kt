@@ -233,7 +233,7 @@ class AccountStateViewModel : ViewModel() {
             } else if (EMAIL_PATTERN.matcher(key).matches()) {
                 Nip05NostrAddressVerifier().verifyNip05(
                     key,
-                    okttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(false) },
                     onSuccess = { publicKey ->
                         loginSync(Hex.decode(publicKey).toNpub(), torSettings, transientAccount, loginWithExternalSigner, packageName, onError)
                     },

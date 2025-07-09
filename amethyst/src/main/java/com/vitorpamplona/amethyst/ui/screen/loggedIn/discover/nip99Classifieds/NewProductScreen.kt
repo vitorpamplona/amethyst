@@ -43,8 +43,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -294,11 +292,11 @@ private fun NewProductBody(
                 postViewModel.lnAddress()?.let { lud16 ->
                     InvoiceRequest(
                         lud16,
-                        accountViewModel.account.userProfile().pubkeyHex,
+                        accountViewModel.account.userProfile(),
                         accountViewModel,
                         stringRes(id = R.string.lightning_invoice),
                         stringRes(id = R.string.lightning_create_and_add_invoice),
-                        onSuccess = {
+                        onNewInvoice = {
                             postViewModel.insertAtCursor(it)
                             postViewModel.wantsInvoice = false
                         },

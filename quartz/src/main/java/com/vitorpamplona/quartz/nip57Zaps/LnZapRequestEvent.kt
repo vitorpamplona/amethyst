@@ -100,7 +100,7 @@ class LnZapRequestEvent(
 
     fun decryptPrivateZap(
         signer: NostrSigner,
-        onReady: (Event) -> Unit,
+        onReady: (LnZapPrivateEvent) -> Unit,
     ) {
         privateZapEvent?.let {
             onReady(it)

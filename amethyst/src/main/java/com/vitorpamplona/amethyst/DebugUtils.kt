@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 
+@Suppress("SENSELESS_COMPARISON")
 val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
 fun debugState(context: Context) {
@@ -142,10 +143,10 @@ fun debugState(context: Context) {
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
 
     qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
-        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes.get(kind)?.div((1024 * 1024))}MB ")
+        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes[kind]?.div((1024 * 1024))}MB ")
     }
     qttAddressables.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
-        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables.get(kind)?.div((1024 * 1024))}MB ")
+        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB ")
     }
 }
 

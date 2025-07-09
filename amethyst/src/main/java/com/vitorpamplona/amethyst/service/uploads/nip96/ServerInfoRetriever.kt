@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.service.uploads.nip96
 
 import android.util.Log
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfoParser
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 
 class ServerInfoRetriever {
     val parser = ServerInfoParser()
@@ -42,24 +44,25 @@ class ServerInfoRetriever {
                 .url(parser.assembleUrl(baseUrl))
                 .build()
 
-        okHttpClient(baseUrl).newCall(request).execute().use { response ->
-            checkNotInMainThread()
-            response.use {
-                val body = it.body.string()
-                try {
-                    if (it.isSuccessful) {
-                        return parser.parse(baseUrl, body)
+        val client = okHttpClient(baseUrl)
+
+        return try {
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    if (response.isSuccessful) {
+                        val body = response.body.string()
+                        parser.parse(baseUrl, body)
                     } else {
                         throw RuntimeException(
                             "Resulting Message from $baseUrl is an error: ${response.code} ${response.message}",
                         )
                     }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.e("RelayInfoFail", "Resulting Message from $baseUrl in not parseable: $body", e)
-                    throw e
                 }
             }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("RelayInfoFail", "Resulting Message from $baseUrl", e)
+            throw e
         }
     }
 }

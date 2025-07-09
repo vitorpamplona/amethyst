@@ -20,18 +20,18 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 
 class Nip05NostrAddressVerifier {
     suspend fun fetchNip05Json(
         nip05: String,
-        okttpClient: (String) -> OkHttpClient,
+        okHttpClient: (String) -> OkHttpClient,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) = withContext(Dispatchers.IO) {
@@ -45,30 +45,22 @@ class Nip05NostrAddressVerifier {
         }
 
         try {
-            val request =
-                Request
-                    .Builder()
-                    .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
-                    .url(url)
-                    .build()
-            // Fetchers MUST ignore any HTTP redirects given by the /.well-known/nostr.json endpoint.
-            okttpClient(url)
-                .newBuilder()
-                .followRedirects(false)
-                .build()
-                .newCall(request)
-                .execute()
-                .use {
-                    checkNotInMainThread()
+            val request = Request.Builder().url(url).build()
 
-                    if (it.isSuccessful) {
-                        onSuccess(it.body.string())
+            // Fetchers MUST ignore any HTTP redirects given by the /.well-known/nostr.json endpoint.
+            val client = okHttpClient(url).newBuilder().followRedirects(false).build()
+
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    if (response.isSuccessful) {
+                        onSuccess(response.body.string())
                     } else {
                         onError(
-                            "Could not resolve $nip05. Error: ${it.code}. Check if the server is up and if the address $nip05 is correct",
+                            "Could not resolve $nip05. Error: ${response.code}. Check if the server is up and if the address $nip05 is correct",
                         )
                     }
                 }
+            }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onError("Could not resolve NIP-05 $nip05 as URL $url: ${e.message}")
@@ -77,7 +69,7 @@ class Nip05NostrAddressVerifier {
 
     suspend fun verifyNip05(
         nip05: String,
-        okttpClient: (String) -> OkHttpClient,
+        okHttpClient: (String) -> OkHttpClient,
         onSuccess: suspend (String) -> Unit,
         onError: (String) -> Unit,
     ) {
@@ -86,7 +78,7 @@ class Nip05NostrAddressVerifier {
 
         fetchNip05Json(
             nip05,
-            okttpClient,
+            okHttpClient,
             onSuccess = {
                 checkNotInMainThread()
 

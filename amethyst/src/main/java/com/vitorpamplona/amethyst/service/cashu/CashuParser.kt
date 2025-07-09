@@ -18,33 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.invoice
+package com.vitorpamplona.amethyst.service.cashu
 
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
+import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
+import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import kotlinx.collections.immutable.ImmutableList
 
-@Composable
-fun NewPostInvoiceRequest(
-    onSuccess: (String) -> Unit,
-    accountViewModel: AccountViewModel,
-) {
-    val lnAddress =
-        accountViewModel.account
-            .userProfile()
-            .info
-            ?.lnAddress()
+class CashuParser {
+    fun parse(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
+        checkNotInMainThread()
 
-    if (lnAddress != null) {
-        InvoiceRequest(
-            lud16 = lnAddress,
-            user = accountViewModel.account.userProfile(),
-            accountViewModel = accountViewModel,
-            titleText = stringRes(id = R.string.lightning_invoice),
-            buttonText = stringRes(id = R.string.lightning_create_and_add_invoice),
-            onNewInvoice = onSuccess,
-            onError = accountViewModel.toastManager::toast,
-        )
+        if (cashuToken.startsWith("cashuA")) {
+            return V3Parser.parseCashuA(cashuToken)
+        }
+
+        if (cashuToken.startsWith("cashuB")) {
+            return V4Parser.parseCashuB(cashuToken)
+        }
+
+        return GenericLoadable.Error("Could not parse this cashu token")
     }
 }

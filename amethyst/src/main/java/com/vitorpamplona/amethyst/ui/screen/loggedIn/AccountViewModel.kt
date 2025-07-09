@@ -56,16 +56,17 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
-import com.vitorpamplona.amethyst.service.CashuProcessor
-import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.cashu.CashuToken
+import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.actions.Dao
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
@@ -125,7 +126,8 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.collectSuccessfulOperations
+import com.vitorpamplona.quartz.utils.mapNotNullAsync
+import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -148,6 +150,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import kotlin.coroutines.resume
 
 @Stable
 class AccountViewModel(
@@ -480,22 +483,21 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulOperations<CombinedZap, DecryptedInfo>(
-                items = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
-                runRequestFor = { next, onReady ->
-                    checkNotInMainThread()
-
-                    innerDecryptAmountMessage(next.request, next.response) {
-                        onReady(DecryptedInfo(next.request, next.response, it))
+            val results =
+                mapNotNullAsync<CombinedZap, DecryptedInfo>(
+                    zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
+                ) { next ->
+                    val info = innerDecryptAmountMessage(next.request, next.response)
+                    if (info != null) {
+                        DecryptedInfo(next.request, next.response, info)
+                    } else {
+                        null
                     }
-                },
-            ) {
-                checkNotInMainThread()
+                }
 
-                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
 
-                onNewState(initialResults.values.toImmutableList())
-            }
+            onNewState(initialResults.values.toImmutableList())
         }
     }
 
@@ -586,18 +588,19 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulOperations<Pair<Note, Note?>, DecryptedInfo>(
-                items = myList,
-                runRequestFor = { next, onReady ->
-                    innerDecryptAmountMessage(next.first, next.second) {
-                        onReady(DecryptedInfo(next.first, next.second, it))
+            val decryptedInfo =
+                mapNotNullAsync(myList) { next ->
+                    val info = innerDecryptAmountMessage(next.first, next.second)
+                    if (info != null) {
+                        DecryptedInfo(next.first, next.second, info)
+                    } else {
+                        null
                     }
-                },
-            ) {
-                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+                }
 
-                onNewState(initialResults.values.toImmutableList())
-            }
+            decryptedInfo.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+
+            onNewState(initialResults.values.toImmutableList())
         }
     }
 
@@ -607,44 +610,39 @@ class AccountViewModel(
         onNewState: (ZapAmountCommentNotification?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            innerDecryptAmountMessage(zapRequest, zapEvent, onNewState)
+            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent))
         }
     }
 
-    private fun innerDecryptAmountMessage(
+    private suspend fun innerDecryptAmountMessage(
         zapRequest: Note,
         zapEvent: Note?,
-        onReady: (ZapAmountCommentNotification) -> Unit,
-    ) {
-        checkNotInMainThread()
-
+    ): ZapAmountCommentNotification? =
         (zapRequest.event as? LnZapRequestEvent)?.let {
+            val amount = showAmountInteger((zapEvent?.event as? LnZapEvent)?.amount)
             if (it.isPrivateZap()) {
-                decryptZap(zapRequest) { decryptedContent ->
-                    val amount = (zapEvent?.event as? LnZapEvent)?.amount
-                    val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    onReady(
-                        ZapAmountCommentNotification(
-                            newAuthor,
-                            decryptedContent.content.ifBlank { null },
-                            showAmountInteger(amount),
-                        ),
+                val decryptedContent = account.decryptZapOrNull(it)
+                if (decryptedContent != null) {
+                    ZapAmountCommentNotification(
+                        LocalCache.checkGetOrCreateUser(decryptedContent.pubKey),
+                        decryptedContent.content.ifBlank { null },
+                        amount,
+                    )
+                } else {
+                    ZapAmountCommentNotification(
+                        zapRequest.author,
+                        null,
+                        amount,
                     )
                 }
             } else {
-                val amount = (zapEvent?.event as? LnZapEvent)?.amount
-                if (!zapRequest.event?.content.isNullOrBlank() || amount != null) {
-                    onReady(
-                        ZapAmountCommentNotification(
-                            zapRequest.author,
-                            zapRequest.event?.content?.ifBlank { null },
-                            showAmountInteger(amount),
-                        ),
-                    )
-                }
+                ZapAmountCommentNotification(
+                    zapRequest.author,
+                    zapRequest.event?.content?.ifBlank { null },
+                    amount,
+                )
             }
         }
-    }
 
     fun zap(
         note: Note,
@@ -793,13 +791,6 @@ class AccountViewModel(
         onReady: (String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) { account.decryptContent(note, onReady) }
-    }
-
-    fun decryptZap(
-        note: Note,
-        onReady: (Event) -> Unit,
-    ) {
-        account.decryptZapContentAuthor(note, onReady)
     }
 
     fun follow(channel: PublicChatChannel) {
@@ -980,7 +971,7 @@ class AccountViewModel(
             Nip05NostrAddressVerifier()
                 .verifyNip05(
                     nip05,
-                    okttpClient = {
+                    okHttpClient = {
                         app.okHttpClients.getHttpClient(account.shouldUseTorForNIP05(it))
                     },
                     onSuccess = {
@@ -1377,15 +1368,26 @@ class AccountViewModel(
         val lud16 = account.userProfile().info?.lud16
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                CashuProcessor()
-                    .melt(
-                        token,
-                        lud16,
-                        okHttpClient = ::okHttpClientForMoney,
-                        onSuccess = { title, message -> onDone(title, message) },
-                        onError = { title, message -> onDone(title, message) },
-                        context,
+                try {
+                    val meltResult = MeltProcessor().melt(token, lud16, ::okHttpClientForMoney, context)
+                    onDone(
+                        stringRes(context, R.string.cashu_successful_redemption),
+                        stringRes(
+                            context,
+                            R.string.cashu_successful_redemption_explainer,
+                            token.totalAmount.toString(),
+                            meltResult.fees.toString(),
+                        ),
                     )
+                } catch (e: LightningAddressResolver.LightningAddressError) {
+                    onDone(e.title, e.msg)
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    onDone(
+                        stringRes(context, R.string.cashu_failed_redemption),
+                        stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                    )
+                }
             }
         } else {
             onDone(
@@ -1606,46 +1608,73 @@ class AccountViewModel(
     }
 
     fun sendSats(
-        lnaddress: String,
+        lnAddress: String,
+        user: User,
         milliSats: Long,
         message: String,
-        toUserPubKeyHex: HexKey,
-        onSuccess: (String) -> Unit,
+        onNewInvoice: (String) -> Unit,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (defaultZapType() == LnZapEvent.ZapType.NONZAP) {
-                LightningAddressResolver()
-                    .lnAddressInvoice(
-                        lnaddress,
-                        milliSats,
-                        message,
-                        null,
+            try {
+                val zapRequest = prepareZapRequestIfNeeded(user, message, defaultZapType())
+
+                val invoice =
+                    LightningAddressResolver().lnAddressInvoice(
+                        lnAddress = lnAddress,
+                        milliSats = milliSats,
+                        message = message,
+                        nostrRequest = zapRequest,
                         okHttpClient = ::okHttpClientForMoney,
-                        onSuccess = onSuccess,
-                        onError = onError,
                         onProgress = onProgress,
                         context = context,
                     )
-            } else {
-                account.createZapRequestFor(toUserPubKeyHex, message, defaultZapType()) { zapRequest ->
-                    LocalCache.justConsumeMyOwnEvent(zapRequest)
-                    LightningAddressResolver()
-                        .lnAddressInvoice(
-                            lnaddress,
-                            milliSats,
-                            message,
-                            zapRequest.toJson(),
-                            okHttpClient = ::okHttpClientForMoney,
-                            onSuccess = onSuccess,
-                            onError = onError,
-                            onProgress = onProgress,
-                            context = context,
-                        )
+
+                onNewInvoice(invoice)
+            } catch (e: LightningAddressResolver.LightningAddressError) {
+                onError(e.title, e.msg)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onError("Error", e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    private suspend fun prepareZapRequestIfNeeded(
+        user: User,
+        message: String,
+        zapType: LnZapEvent.ZapType,
+    ): LnZapRequestEvent? =
+        if (zapType != LnZapEvent.ZapType.NONZAP) {
+            tryAndWait { continuation ->
+                account.createZapRequestFor(user, message, zapType) { zapRequest ->
+                    continuation.resume(zapRequest)
                 }
             }
+        } else {
+            null
+        }
+
+    fun saveMediaToGallery(
+        videoUri: String?,
+        mimeType: String?,
+        localContext: Context,
+    ) {
+        viewModelScope.launch {
+            MediaSaverToDisk.saveDownloadingIfNeeded(
+                videoUri = videoUri,
+                okHttpClient = ::okHttpClientForVideo,
+                mimeType = mimeType,
+                localContext = localContext,
+                onSuccess = {
+                    toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
+                },
+                onError = {
+                    toastManager.toast(R.string.failed_to_save_the_video, null, it)
+                },
+            )
         }
     }
 

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.ots
 
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.quartz.nip03Timestamp.ots.ICalendarAsyncSubmit
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
 import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
@@ -45,7 +44,6 @@ class OkHttpCalendarAsyncSubmit(
         val request =
             okhttp3.Request
                 .Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .header("Accept", "application/vnd.opentimestamps.v1")
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .url(url)
