@@ -336,8 +336,8 @@ val LargeRelayIconModifier =
 val FollowSetImageModifier =
     Modifier
         .fillMaxWidth()
-        .aspectRatio(ratio = 21f / 9f)
         .clip(QuoteBorder)
+        .aspectRatio(ratio = 21f / 9f)
 
 val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
 

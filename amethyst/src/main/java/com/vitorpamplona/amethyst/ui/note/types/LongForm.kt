@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,11 +41,8 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
-import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
 @Composable
@@ -74,34 +69,20 @@ fun LongFormHeader(
             noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
         }
 
-    Column(
-        modifier =
-            Modifier
-                .padding(top = Size5dp)
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.subtleBorder,
-                    QuoteBorder,
-                ),
-    ) {
+    Column(MaterialTheme.colorScheme.replyModifier) {
         image?.let {
             MyAsyncImage(
                 imageUrl = it,
-                contentDescription =
-                    stringRes(
-                        R.string.preview_card_image_for,
-                        it,
-                    ),
+                contentDescription = stringRes(R.string.preview_card_image_for, it),
                 contentScale = ContentScale.FillWidth,
-                mainImageModifier = SimpleImageBorder,
+                mainImageModifier = Modifier.fillMaxWidth(),
                 loadedImageModifier = Modifier,
                 accountViewModel = accountViewModel,
                 onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
                 onError = { DefaultImageHeader(note, accountViewModel) },
             )
         } ?: run {
-            DefaultImageHeader(note, accountViewModel, SimpleImageBorder)
+            DefaultImageHeader(note, accountViewModel, Modifier.fillMaxWidth())
         }
         title?.let {
             Text(
