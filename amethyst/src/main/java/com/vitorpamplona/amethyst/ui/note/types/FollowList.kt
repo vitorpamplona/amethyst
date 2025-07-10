@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -97,13 +98,13 @@ fun DisplayFollowList(
                 ),
             contentScale = ContentScale.Crop,
             mainImageModifier = Modifier.fillMaxWidth(),
-            loadedImageModifier = Modifier,
+            loadedImageModifier = FollowSetImageModifier,
             accountViewModel = accountViewModel,
             onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
             onError = { DefaultImageHeader(baseNote, accountViewModel) },
         )
     } ?: run {
-        DefaultImageHeader(baseNote, accountViewModel)
+        DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier)
     }
 
     Text(

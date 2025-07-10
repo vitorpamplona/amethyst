@@ -237,7 +237,7 @@ fun RenderLiveActivityEventInner(
                                 onError = { DefaultImageHeader(baseNote, accountViewModel) },
                             )
                         }
-                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel) }
+                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
 
                     Text(
                         text = stringRes(id = R.string.live_stream_has_ended),

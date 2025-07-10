@@ -90,7 +90,18 @@ fun MyAsyncImage(
                     }
                     is AsyncImagePainter.State.Error -> {
                         if (onError != null) {
-                            onError()
+                            if (ratio != null) {
+                                Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                                    onError()
+                                }
+                            } else {
+                                Box(loadedImageModifier, contentAlignment = Alignment.Center) {
+                                    if (onLoadingBackground != null) {
+                                        onLoadingBackground()
+                                    }
+                                    DisplayUrlWithLoadingSymbol(imageUrl)
+                                }
+                            }
                         }
                     }
                     is AsyncImagePainter.State.Success -> {

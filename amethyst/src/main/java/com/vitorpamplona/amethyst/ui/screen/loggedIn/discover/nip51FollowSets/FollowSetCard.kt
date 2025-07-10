@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,7 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -158,17 +156,13 @@ fun RenderFollowSetThumb(
                             it,
                         ),
                     contentScale = ContentScale.Crop,
-                    mainImageModifier = Modifier.fillMaxWidth(),
-                    loadedImageModifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(ratio = 21f / 9f)
-                            .clip(QuoteBorder),
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = FollowSetImageModifier,
                     accountViewModel = accountViewModel,
                     onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
                     onError = { DefaultImageHeader(baseNote, accountViewModel) },
                 )
-            } ?: run { DefaultImageHeader(baseNote, accountViewModel) }
+            } ?: run { DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier) }
 
             Gallery(card.users, Modifier.padding(Size10dp), accountViewModel, nav)
         }

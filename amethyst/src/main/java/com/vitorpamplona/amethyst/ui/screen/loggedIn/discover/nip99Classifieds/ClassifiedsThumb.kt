@@ -118,7 +118,7 @@ fun InnerRenderClassifiedsThumb(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        } ?: run { DisplayAuthorBanner(note, accountViewModel) }
+        } ?: run { DisplayAuthorBanner(note, accountViewModel, Modifier.fillMaxSize()) }
 
         Row(
             Modifier

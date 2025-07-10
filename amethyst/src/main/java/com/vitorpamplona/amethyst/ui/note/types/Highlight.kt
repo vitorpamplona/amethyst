@@ -262,7 +262,7 @@ fun DisplayEntryForNote(
         RenderUserAsClickableText(author, null, accountViewModel, nav)
     }
 
-    val noteEvent = noteState?.note?.event as? BaseThreadedEvent ?: return
+    val noteEvent = noteState.note.event as? BaseThreadedEvent ?: return
 
     val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
 
@@ -274,7 +274,7 @@ fun DisplayEntryForNote(
             onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav.nav(it) } },
         )
     } else {
-        DisplayEvent(noteEvent.id, noteEvent.kind, note.toNostrUri(), null, accountViewModel, nav)
+        DisplayEvent(noteEvent.id, note.toNostrUri(), null, accountViewModel, nav)
     }
 }
 

@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
@@ -93,14 +94,14 @@ fun LongFormHeader(
                         it,
                     ),
                 contentScale = ContentScale.FillWidth,
-                mainImageModifier = Modifier.fillMaxWidth(),
+                mainImageModifier = SimpleImageBorder,
                 loadedImageModifier = Modifier,
                 accountViewModel = accountViewModel,
                 onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
                 onError = { DefaultImageHeader(note, accountViewModel) },
             )
         } ?: run {
-            DefaultImageHeader(note, accountViewModel)
+            DefaultImageHeader(note, accountViewModel, SimpleImageBorder)
         }
         title?.let {
             Text(
