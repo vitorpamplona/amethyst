@@ -154,7 +154,10 @@ class Amethyst : Application() {
         }
 
         // initializes diskcache on an IO thread.
-        applicationIOScope.launch { videoCache }
+        applicationIOScope.launch {
+            diskCache
+            videoCache
+        }
 
         // registers to receive events
         pokeyReceiver.register(this)
