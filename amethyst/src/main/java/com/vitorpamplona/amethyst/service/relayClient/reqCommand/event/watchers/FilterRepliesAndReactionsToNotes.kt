@@ -81,38 +81,42 @@ fun filterRepliesAndReactionsToNotes(
         val since = since?.get(it.key)?.time
         val sortedList = it.value.sorted()
         val relay = it.key
-        listOf(
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = RepliesAndReactionsKinds,
-                        tags = mapOf("e" to sortedList),
-                        since = since,
-                        // Max amount of "replies" to download on a specific event.
-                        limit = 1000,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = RepliesAndReactionsKinds2,
-                        tags = mapOf("e" to sortedList),
-                        since = since,
-                        limit = 100,
-                    ),
-            ),
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = listOf(TextNoteEvent.KIND),
-                        tags = mapOf("q" to sortedList),
-                        since = since,
-                        limit = 1000,
-                    ),
-            ),
-        )
+        if (sortedList.isNotEmpty()) {
+            listOf(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = RepliesAndReactionsKinds,
+                            tags = mapOf("e" to sortedList),
+                            since = since,
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = RepliesAndReactionsKinds2,
+                            tags = mapOf("e" to sortedList),
+                            since = since,
+                            limit = 100,
+                        ),
+                ),
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = listOf(TextNoteEvent.KIND),
+                            tags = mapOf("q" to sortedList),
+                            since = since,
+                            limit = 1000,
+                        ),
+                ),
+            )
+        } else {
+            emptyList()
+        }
     }
 }
