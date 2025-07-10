@@ -20,12 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.util.Log
-import com.vitorpamplona.amethyst.isDebug
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
@@ -51,6 +45,8 @@ class OkHttpClientFactory(
             maxRequests = 512
         }
 
+    /*
+    DEBUG OK HTTP connections here.
     init {
         if (isDebug) {
             GlobalScope.launch(Dispatchers.IO) {
@@ -61,6 +57,7 @@ class OkHttpClientFactory(
             }
         }
     }
+     */
 
     private val rootClient =
         OkHttpClient
