@@ -139,7 +139,7 @@ fun RenderLiveActivityEventInner(
     val subject = remember(eventUpdates) { noteEvent.title() }
     val content = remember(eventUpdates) { noteEvent.summary() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
-    val status = remember(eventUpdates) { noteEvent.status() }
+    val status = remember(eventUpdates) { noteEvent.statusEnum() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
 
     Row(
@@ -163,19 +163,22 @@ fun RenderLiveActivityEventInner(
 
         CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
-                StatusTag.STATUS.LIVE.code -> {
+                StatusTag.STATUS.LIVE -> {
                     media?.let { CrossfadeCheckIfVideoIsOnline(it, accountViewModel) { LiveFlag() } }
                 }
 
-                StatusTag.STATUS.PLANNED.code -> {
+                StatusTag.STATUS.PLANNED -> {
                     ScheduledFlag(starts)
                 }
+
+                StatusTag.STATUS.ENDED -> {}
+                null -> {}
             }
         }
     }
 
     media?.let { media ->
-        if (status == StatusTag.STATUS.LIVE.code) {
+        if (status == StatusTag.STATUS.LIVE) {
             CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
                 if (isOnline) {
                     Row(
@@ -210,7 +213,7 @@ fun RenderLiveActivityEventInner(
                 }
             }
         } else {
-            if (status == StatusTag.STATUS.ENDED.code || (status == StatusTag.STATUS.PLANNED.code && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
+            if (status == StatusTag.STATUS.ENDED || (status == StatusTag.STATUS.PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =

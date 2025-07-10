@@ -153,7 +153,7 @@ import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.LevelFeedViewModel
@@ -525,9 +525,8 @@ private fun FullBleedNoteCompose(
                     (noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) &&
                     baseNote.channelHex() != null
                 ) {
-                    ChannelHeader(
+                    PublicChatChannelHeader(
                         channelHex = baseNote.channelHex()!!,
-                        showVideo = true,
                         sendToChannel = true,
                         accountViewModel = accountViewModel,
                         nav = nav,

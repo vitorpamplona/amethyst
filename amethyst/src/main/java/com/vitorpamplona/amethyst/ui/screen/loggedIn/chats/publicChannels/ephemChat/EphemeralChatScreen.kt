@@ -18,34 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
+import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LongLiveActivityChannelHeader
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ShortLiveActivityChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.EphemeralChatTopBar
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
 @Composable
-fun LiveActivityTopBar(
-    baseChannel: LiveActivitiesChannel,
+fun EphemeralChatScreen(
+    channelId: RoomId,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    TopBarExtensibleWithBackButton(
-        title = {
-            ShortLiveActivityChannelHeader(
-                baseChannel = baseChannel,
-                showFlag = true,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+    DisappearingScaffold(
+        isInvertedLayout = true,
+        topBar = {
+            LoadEphemeralChatChannel(channelId, accountViewModel) {
+                EphemeralChatTopBar(it, accountViewModel, nav)
+            }
         },
-        extendableRow = {
-            LongLiveActivityChannelHeader(baseChannel = baseChannel, accountViewModel = accountViewModel, nav = nav)
-        },
-        popBack = nav::popBack,
-    )
+        accountViewModel = accountViewModel,
+    ) {
+        Column(Modifier.padding(it)) {
+            EphemeralChatChannelView(channelId, accountViewModel, nav)
+        }
+    }
 }

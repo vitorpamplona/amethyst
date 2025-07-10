@@ -2254,7 +2254,7 @@ class Account(
             delay(1000 * 60 * 1)
             // waits 5 minutes before migrating the list.
             val contactList = userProfile().latestContactList
-            val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { cache.getChannelIfExists(it) as? PublicChatChannel }
+            val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { cache.getPublicChatChannelIfExists(it) as? PublicChatChannel }
 
             if (oldChannels != null && oldChannels.isNotEmpty()) {
                 Log.d("DB UPGRADE", "Migrating List with ${oldChannels.size} old channels ")

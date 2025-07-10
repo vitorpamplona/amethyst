@@ -90,6 +90,10 @@ class LiveActivitiesEvent(
 
     fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parse))
 
+    fun statusEnum() = checkStatusEnum(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
+
+    fun isLive() = statusEnum() == StatusTag.STATUS.LIVE
+
     fun currentParticipants() = tags.firstNotNullOfOrNull(CurrentParticipantsTag::parse)
 
     fun totalParticipants() = tags.firstNotNullOfOrNull(TotalParticipantsTag::parse)
@@ -109,6 +113,13 @@ class LiveActivitiesEvent(
     fun checkStatus(eventStatus: String?): String? =
         if (eventStatus == StatusTag.STATUS.LIVE.code && createdAt < TimeUtils.eightHoursAgo()) {
             StatusTag.STATUS.ENDED.code
+        } else {
+            eventStatus
+        }
+
+    fun checkStatusEnum(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
+        if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {
+            StatusTag.STATUS.ENDED
         } else {
             eventStatus
         }

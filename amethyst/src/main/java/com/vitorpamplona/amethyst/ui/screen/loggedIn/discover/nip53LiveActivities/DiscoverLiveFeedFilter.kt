@@ -47,7 +47,7 @@ open class DiscoverLiveFeedFilter(
             followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
-        val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getNoteIfExists(channel.idHex) }
+        val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
         val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
 
         val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
@@ -94,7 +94,7 @@ open class DiscoverLiveFeedFilter(
         return collection
             .sortedWith(
                 compareBy(
-                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.status()) },
+                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.statusEnum()) },
                     { participantCounts[it] },
                     { allParticipants[it] },
                     { (it.event as? LiveActivitiesEvent)?.starts() ?: it.createdAt() },
@@ -103,11 +103,11 @@ open class DiscoverLiveFeedFilter(
             ).reversed()
     }
 
-    fun convertStatusToOrder(status: String?): Int =
+    fun convertStatusToOrder(status: StatusTag.STATUS?): Int =
         when (status) {
-            StatusTag.STATUS.LIVE.code -> 2
-            StatusTag.STATUS.PLANNED.code -> 1
-            StatusTag.STATUS.ENDED.code -> 0
+            StatusTag.STATUS.LIVE -> 2
+            StatusTag.STATUS.PLANNED -> 1
+            StatusTag.STATUS.ENDED -> 0
             else -> 0
         }
 }

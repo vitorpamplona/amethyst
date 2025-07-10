@@ -18,24 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.note.produceStateIfNotNull
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
-class GeoHashFeedFilterSubAssembler(
-    client: NostrClient,
-    allKeys: () -> Set<GeohashQueryState>,
-) : PerUniqueIdEoseManager<GeohashQueryState, String>(client, allKeys) {
-    override fun updateFilter(
-        key: GeohashQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? = filterPostsByGeohash(key.geohash, key.relays, since)
+@Composable
+fun LoadEphemeralChatChannel(
+    id: RoomId,
+    accountViewModel: AccountViewModel,
+    content: @Composable (EphemeralChatChannel) -> Unit,
+) {
+    val channel =
+        produceStateIfNotNull(accountViewModel.getEphemeralChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateEphemeralChatChannel(id)
+        }
 
-    /**
-     * Only one key per hashtag.
-     */
-    override fun id(key: GeohashQueryState) = key.lowercaseGeohash
+    channel.value?.let { content(it) }
 }

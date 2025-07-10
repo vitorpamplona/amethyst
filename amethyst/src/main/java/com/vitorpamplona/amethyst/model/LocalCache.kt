@@ -89,6 +89,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
@@ -320,11 +321,11 @@ object LocalCache : ILocalCache {
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
-    fun getChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
+    fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
-    fun getChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
+    fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
 
-    fun getChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
+    fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
         if (event is AddressableEvent) {
@@ -1345,10 +1346,10 @@ object LocalCache : ILocalCache {
             masterNote.removeReport(deleteNote)
         }
 
-        deleteNote.channelHex()?.let { getChannelIfExists(it)?.removeNote(deleteNote) }
+        deleteNote.channelHex()?.let { getPublicChatChannelIfExists(it)?.removeNote(deleteNote) }
 
         (deletedEvent as? LiveActivitiesChatMessageEvent)?.activity()?.let {
-            getChannelIfExists(it.toTag())?.removeNote(deleteNote)
+            getPublicChatChannelIfExists(it.toTag())?.removeNote(deleteNote)
         }
 
         (deletedEvent as? TorrentCommentEvent)?.torrentIds()?.let {
@@ -2318,31 +2319,45 @@ object LocalCache : ILocalCache {
             }
     }
 
-    fun findChannelsStartingWith(text: String): List<Channel> {
-        checkNotInMainThread()
-
+    fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> {
         if (text.isBlank()) return emptyList()
 
         val key = decodeEventIdAsHexOrNull(text)
-        if (key != null && getChannelIfExists(key) != null) {
-            return listOfNotNull(getChannelIfExists(key))
+        if (key != null) {
+            getPublicChatChannelIfExists(key)?.let {
+                return listOf(it)
+            }
         }
 
         return publicChatChannels.filter { _, channel ->
-            channel.anyNameStartsWith(text) ||
-                channel.idHex.startsWith(text, true) ||
-                channel.idNote().startsWith(text, true)
-        } +
-            ephemeralChannels.filter { _, channel ->
-                channel.anyNameStartsWith(text) ||
-                    channel.idHex.startsWith(text, true) ||
-                    channel.idNote().startsWith(text, true)
-            } +
-            liveChatChannels.filter { _, channel ->
-                channel.anyNameStartsWith(text) ||
-                    channel.idHex.startsWith(text, true) ||
-                    channel.idNote().startsWith(text, true)
+            channel.anyNameStartsWith(text)
+        }
+    }
+
+    fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> {
+        if (text.isBlank()) return emptyList()
+
+        return ephemeralChannels.filter { _, channel ->
+            channel.anyNameStartsWith(text)
+        }
+    }
+
+    fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> {
+        if (text.isBlank()) return emptyList()
+
+        try {
+            val parsed = Nip19Parser.uriToRoute(text)?.entity
+            if (parsed is NAddress && parsed.kind == LiveActivitiesEvent.KIND) {
+                return listOf(getOrCreateLiveChannel(parsed.address()))
             }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+
+        return liveChatChannels.filter { _, channel ->
+            channel.anyNameStartsWith(text)
+        }
     }
 
     suspend fun findStatusesForUser(user: User): ImmutableList<AddressableNote> {

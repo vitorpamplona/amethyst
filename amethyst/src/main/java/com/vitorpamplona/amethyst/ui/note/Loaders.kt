@@ -31,19 +31,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -161,36 +159,28 @@ fun LoadOts(
 }
 
 @Composable
-fun LoadChannel(
-    baseChannelHex: String,
+fun LoadPublicChatChannel(
+    id: String,
     accountViewModel: AccountViewModel,
-    content: @Composable (Channel) -> Unit,
+    content: @Composable (PublicChatChannel) -> Unit,
 ) {
-    var channel by
-        remember(baseChannelHex) {
-            mutableStateOf<Channel?>(accountViewModel.getChannelIfExists(baseChannelHex))
+    val channel =
+        produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
         }
 
-    if (channel == null) {
-        LaunchedEffect(key1 = baseChannelHex) {
-            accountViewModel.checkGetOrCreateChannel(baseChannelHex) { newChannel ->
-                launch(Dispatchers.Main) { channel = newChannel }
-            }
-        }
-    }
-
-    channel?.let { content(it) }
+    channel.value?.let { content(it) }
 }
 
 @Composable
-fun LoadChannel(
-    id: RoomId,
+fun LoadLiveActivityChannel(
+    id: Address,
     accountViewModel: AccountViewModel,
-    content: @Composable (EphemeralChatChannel) -> Unit,
+    content: @Composable (LiveActivitiesChannel) -> Unit,
 ) {
     val channel =
-        produceStateIfNotNull(accountViewModel.getChannelIfExists(id) as? EphemeralChatChannel, id) {
-            value = accountViewModel.checkGetOrCreateChannel(id) as? EphemeralChatChannel
+        produceStateIfNotNull(accountViewModel.getLiveActivityChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateLiveActivityChannel(id)
         }
 
     channel.value?.let { content(it) }

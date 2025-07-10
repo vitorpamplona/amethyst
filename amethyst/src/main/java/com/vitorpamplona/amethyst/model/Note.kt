@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.replace
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -91,7 +91,7 @@ class AddressableNote(
 
     override fun toNEvent() = toNAddr()
 
-    override fun idDisplayNote() = idNote().toShortenHex()
+    override fun idDisplayNote() = idNote().toShortDisplay()
 
     override fun address() = address
 
@@ -212,7 +212,7 @@ open class Note(
 
     fun toNostrUri(): String = "nostr:${toNEvent()}"
 
-    open fun idDisplayNote() = idNote().toShortenHex()
+    open fun idDisplayNote() = idNote().toShortDisplay()
 
     fun channelHex(): HexKey? =
         if (

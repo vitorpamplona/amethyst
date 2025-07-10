@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 class ChatroomFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
-) : PerUserAndFollowListEoseManager<ChatroomQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,

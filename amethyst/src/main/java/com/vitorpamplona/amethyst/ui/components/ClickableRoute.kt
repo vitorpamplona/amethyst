@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,30 +56,27 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.note.LoadChannel
 import com.vitorpamplona.amethyst.ui.note.njumpLink
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.toNIP19
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -95,19 +91,13 @@ fun ClickableRoute(
     when (val entity = nip19.entity) {
         is NPub -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is NProfile -> DisplayUser(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> DisplayEvent(entity.hex, null, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is NEvent -> DisplayEvent(entity.hex, entity.kind, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is NNote -> DisplayEvent(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
+        is NEvent -> DisplayEvent(entity.hex, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
         is NEmbed -> LoadAndDisplayEvent(entity.event, nip19.additionalChars, accountViewModel, nav)
         is NAddress -> DisplayAddress(entity, nip19.nip19raw, nip19.additionalChars, accountViewModel, nav)
-        is NRelay -> {
-            Text(word)
-        }
-        is NSec -> {
-            Text(word)
-        }
-        else -> {
-            Text(word)
-        }
+        is NRelay -> Text(word)
+        is NSec -> Text(word)
+        else -> Text(word)
     }
 }
 
@@ -138,7 +128,7 @@ private fun LoadAndDisplayEvent(
 ) {
     LoadOrCreateNote(event, accountViewModel) {
         if (it != null) {
-            DisplayNoteLink(it, event.id, event.kind, additionalChars, accountViewModel, nav)
+            DisplayNoteLink(it, event.id, additionalChars, accountViewModel, nav)
         } else {
             val externalLink = event.toNIP19()
             val uri = LocalUriHandler.current
@@ -158,7 +148,6 @@ private fun LoadAndDisplayEvent(
 @Composable
 fun DisplayEvent(
     hex: HexKey,
-    kind: Int?,
     nip19: String,
     additionalChars: String?,
     accountViewModel: AccountViewModel,
@@ -166,7 +155,7 @@ fun DisplayEvent(
 ) {
     LoadNote(hex, accountViewModel) {
         if (it != null) {
-            DisplayNoteLink(it, hex, kind, additionalChars, accountViewModel, nav)
+            DisplayNoteLink(it, hex, additionalChars, accountViewModel, nav)
         } else {
             val externalLink = njumpLink(nip19)
             val uri = LocalUriHandler.current
@@ -187,55 +176,21 @@ fun DisplayEvent(
 private fun DisplayNoteLink(
     it: Note,
     hex: HexKey,
-    kind: Int?,
     addedCharts: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteState by observeNote(it, accountViewModel)
-    val note = remember(noteState) { noteState?.note } ?: return
+    val noteIdDisplayNote = remember(noteState) { "@${noteState.note.idDisplayNote()}" }
 
-    val channelHex = remember(noteState) { note.channelHex() }
-    val noteIdDisplayNote = remember(noteState) { "@${note.idDisplayNote()}" }
+    val route = routeFor(it, accountViewModel.userProfile()) ?: Route.EventRedirect(hex)
 
-    if (note.event is ChannelCreateEvent || kind == ChannelCreateEvent.KIND) {
-        CreateClickableText(
-            clickablePart = noteIdDisplayNote,
-            suffix = addedCharts,
-            route = remember(noteState) { Route.Channel(hex) },
-            nav = nav,
-        )
-    } else if (note.event is PrivateDmEvent || kind == PrivateDmEvent.KIND) {
-        CreateClickableText(
-            clickablePart = noteIdDisplayNote,
-            suffix = addedCharts,
-            route =
-                remember(noteState) { (note.author?.pubkeyHex ?: hex).let { Route.RoomByAuthor(it) } },
-            nav = nav,
-        )
-    } else if (channelHex != null) {
-        LoadChannel(baseChannelHex = channelHex, accountViewModel) { baseChannel ->
-            val channelState by observeChannel(baseChannel, accountViewModel)
-            val channelDisplayName by
-                remember(channelState) {
-                    derivedStateOf { channelState?.channel?.toBestDisplayName() ?: noteIdDisplayNote }
-                }
-
-            CreateClickableText(
-                clickablePart = channelDisplayName,
-                suffix = addedCharts,
-                route = remember(noteState) { Route.Channel(baseChannel.idHex) },
-                nav = nav,
-            )
-        }
-    } else {
-        CreateClickableText(
-            clickablePart = noteIdDisplayNote,
-            suffix = addedCharts,
-            route = remember(noteState) { Route.EventRedirect(hex) },
-            nav = nav,
-        )
-    }
+    CreateClickableText(
+        clickablePart = noteIdDisplayNote,
+        suffix = addedCharts,
+        route = route,
+        nav = nav,
+    )
 }
 
 @Composable
@@ -258,7 +213,7 @@ private fun DisplayAddress(
         val noteState by observeNote(it, accountViewModel)
 
         val route = remember(noteState) { Route.Note(nip19.aTag()) }
-        val displayName = remember(noteState) { "@${noteState?.note?.idDisplayNote()}" }
+        val displayName = remember(noteState) { "@${noteState.note.idDisplayNote()}" }
 
         CreateClickableText(
             clickablePart = displayName,

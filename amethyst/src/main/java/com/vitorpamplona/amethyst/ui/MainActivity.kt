@@ -40,11 +40,12 @@ import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.prepareSharedViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -52,12 +53,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -165,30 +161,33 @@ fun uriToRoute(
                 is NProfile -> Route.Profile(nip19.hex)
                 is NNote -> Route.Note(nip19.hex)
                 is NEvent -> {
-                    if (nip19.kind == PrivateDmEvent.KIND) {
-                        nip19.author?.let { Route.RoomByAuthor(it) }
-                    } else if (
-                        nip19.kind == ChannelMessageEvent.KIND ||
-                        nip19.kind == ChannelCreateEvent.KIND ||
-                        nip19.kind == ChannelMetadataEvent.KIND
-                    ) {
-                        Route.Channel(nip19.hex)
-                    } else {
-                        Route.EventRedirect(nip19.hex)
-                    }
+                    routeFor(
+                        note = LocalCache.getOrCreateNote(nip19.hex),
+                        loggedIn = account.userProfile(),
+                    ) ?: Route.EventRedirect(nip19.hex)
                 }
 
                 is NAddress -> {
-                    if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        Route.Community(nip19.kind, nip19.author, nip19.dTag)
-                    } else if (nip19.kind == LiveActivitiesEvent.KIND) {
-                        Route.Channel(nip19.aTag())
-                    } else {
-                        Route.EventRedirect(nip19.aTag())
-                    }
+                    routeFor(
+                        note = LocalCache.getOrCreateAddressableNote(nip19.address()),
+                        loggedIn = account.userProfile(),
+                    ) ?: Route.EventRedirect(nip19.aTag())
                 }
 
-                is NEmbed -> Route.EventRedirect(nip19.event.id)
+                is NEmbed -> {
+                    val noteEvent = nip19.event
+                    if (noteEvent is AddressableEvent) {
+                        routeFor(
+                            note = LocalCache.getOrCreateAddressableNote(noteEvent.address()),
+                            loggedIn = account.userProfile(),
+                        ) ?: Route.EventRedirect(noteEvent.addressTag())
+                    } else {
+                        routeFor(
+                            note = LocalCache.getOrCreateNote(nip19.event.id),
+                            loggedIn = account.userProfile(),
+                        ) ?: Route.EventRedirect(nip19.event.id)
+                    }
+                }
 
                 else -> null
             }

@@ -43,7 +43,7 @@ import com.vitorpamplona.amethyst.ui.navigation.MainTopBar
 import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 
@@ -62,13 +62,9 @@ fun MessagesTwoPane(
     val strategy =
         remember {
             if (widthSizeClass == WindowWidthSizeClass.Expanded) {
-                HorizontalTwoPaneStrategy(
-                    splitFraction = 1f / 3f,
-                )
+                HorizontalTwoPaneStrategy(splitFraction = 1f / 3f)
             } else {
-                HorizontalTwoPaneStrategy(
-                    splitFraction = 1f / 2.5f,
-                )
+                HorizontalTwoPaneStrategy(splitFraction = 1f / 2.5f)
             }
         }
 
@@ -117,8 +113,8 @@ fun MessagesTwoPane(
                             )
                         }
 
-                        if (it is Route.Channel) {
-                            ChannelView(
+                        if (it is Route.PublicChatChannel) {
+                            PublicChatChannelView(
                                 channelId = it.id,
                                 accountViewModel = accountViewModel,
                                 nav = nav,

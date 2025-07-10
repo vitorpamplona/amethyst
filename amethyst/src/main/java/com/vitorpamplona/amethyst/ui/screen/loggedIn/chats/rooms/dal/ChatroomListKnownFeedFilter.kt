@@ -58,7 +58,7 @@ class ChatroomListKnownFeedFilter(
         val publicChannels =
             account
                 .publicChatList.flow.value
-                .mapNotNull { LocalCache.getChannelIfExists(it.eventId) }
+                .mapNotNull { LocalCache.getPublicChatChannelIfExists(it.eventId) }
                 .mapNotNull { it ->
                     it.notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }
@@ -69,7 +69,7 @@ class ChatroomListKnownFeedFilter(
         val ephemeralChats =
             account
                 .ephemeralChatList.liveEphemeralChatList.value
-                .mapNotNull { LocalCache.getChannelIfExists(it) }
+                .mapNotNull { LocalCache.getEphemeralChatChannelIfExists(it) }
                 .mapNotNull { it ->
                     it.notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }

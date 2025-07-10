@@ -54,9 +54,10 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.Gallery
+import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.EndedFlag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivitiesChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.OfflineFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.CheckIfVideoIsOnline
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
@@ -75,13 +77,14 @@ import kotlinx.coroutines.launch
 
 @Immutable
 data class LiveActivityCard(
+    val id: Address?,
     val name: String,
     val cover: String?,
     val media: String?,
     val subject: String?,
     val content: String?,
     val participants: ImmutableList<ParticipantTag>,
-    val status: String?,
+    val status: StatusTag.STATUS?,
     val starts: Long?,
 )
 
@@ -95,13 +98,14 @@ fun RenderLiveActivityThumb(
         val noteEvent = it.event as? LiveActivitiesEvent
 
         LiveActivityCard(
+            id = noteEvent?.address(),
             name = noteEvent?.dTag() ?: "",
             cover = noteEvent?.image()?.ifBlank { null },
             media = noteEvent?.streaming(),
             subject = noteEvent?.title()?.ifBlank { null },
             content = noteEvent?.summary(),
             participants = noteEvent?.participants()?.toImmutableList() ?: persistentListOf(),
-            status = noteEvent?.status(),
+            status = noteEvent?.statusEnum(),
             starts = noteEvent?.starts(),
         )
     }
@@ -146,7 +150,7 @@ fun RenderLiveActivityThumb(
             Box(Modifier.padding(10.dp)) {
                 CrossfadeIfEnabled(targetState = card.status, label = "RenderLiveActivityThumb", accountViewModel = accountViewModel) {
                     when (it) {
-                        StatusTag.STATUS.LIVE.code -> {
+                        StatusTag.STATUS.LIVE -> {
                             val url = card.media
                             if (url.isNullOrBlank()) {
                                 LiveFlag()
@@ -160,10 +164,10 @@ fun RenderLiveActivityThumb(
                                 }
                             }
                         }
-                        StatusTag.STATUS.ENDED.code -> {
+                        StatusTag.STATUS.ENDED -> {
                             EndedFlag()
                         }
-                        StatusTag.STATUS.PLANNED.code -> {
+                        StatusTag.STATUS.PLANNED -> {
                             ScheduledFlag(card.starts)
                         }
                         else -> {
@@ -188,15 +192,19 @@ fun RenderLiveActivityThumb(
 
         Spacer(modifier = DoubleVertSpacer)
 
-        ChannelHeader(
-            channelHex = baseNote.idHex,
-            showVideo = false,
-            showFlag = false,
-            sendToChannel = true,
-            modifier = Modifier,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        baseNote.address()?.let {
+            LoadLiveActivityChannel(it, accountViewModel) {
+                LiveActivitiesChannelHeader(
+                    baseChannel = it,
+                    showVideo = false,
+                    showFlag = false,
+                    sendToChannel = true,
+                    modifier = Modifier,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
     }
 }
 

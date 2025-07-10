@@ -76,5 +76,5 @@ class ChannelMetadataAndLiveActivityWatcherSubAssembler(
             }
     }
 
-    override fun distinct(key: ChannelFinderQueryState) = key.channel.idHex
+    override fun distinct(key: ChannelFinderQueryState) = key.channel
 }

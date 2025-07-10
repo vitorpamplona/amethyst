@@ -52,9 +52,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -125,7 +125,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.RenderChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -276,9 +276,8 @@ fun AcceptableNote(
             is ChannelCreateEvent,
             is ChannelMetadataEvent,
             ->
-                RenderChannelHeader(
+                RenderPublicChatChannelHeader(
                     channelNote = baseNote,
-                    showVideo = !makeItShort,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -316,9 +315,8 @@ fun AcceptableNote(
             is ChannelCreateEvent,
             is ChannelMetadataEvent,
             ->
-                RenderChannelHeader(
+                RenderPublicChatChannelHeader(
                     channelNote = baseNote,
-                    showVideo = !makeItShort,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -1186,7 +1184,7 @@ private fun RenderAuthorImages(
     if (baseNote.event is ChannelMessageEvent) {
         val baseChannelHex = remember(baseNote) { baseNote.channelHex() }
         if (baseChannelHex != null) {
-            LoadChannel(baseChannelHex, accountViewModel) { channel ->
+            LoadPublicChatChannel(baseChannelHex, accountViewModel) { channel ->
                 ChannelNotePicture(
                     channel,
                     accountViewModel,
@@ -1198,7 +1196,7 @@ private fun RenderAuthorImages(
 
 @Composable
 private fun ChannelNotePicture(
-    baseChannel: Channel,
+    baseChannel: PublicChatChannel,
     accountViewModel: AccountViewModel,
 ) {
     val model by observeChannelPicture(baseChannel, accountViewModel)

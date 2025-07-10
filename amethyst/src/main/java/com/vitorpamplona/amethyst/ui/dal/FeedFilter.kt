@@ -35,7 +35,7 @@ abstract class FeedFilter<T> {
     open fun limit() = 1000
 
     /** Returns a string that serves as the key to invalidate the list if it changes. */
-    abstract fun feedKey(): String
+    abstract fun feedKey(): Any
 
     open fun showHiddenKey(): Boolean = false
 

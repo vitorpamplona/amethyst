@@ -33,7 +33,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -60,9 +60,8 @@ fun RenderChannelMessage(
         }
 
     showChannelInfo?.let {
-        ChannelHeader(
+        PublicChatChannelHeader(
             channelHex = it,
-            showVideo = false,
             sendToChannel = true,
             modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
             accountViewModel = accountViewModel,

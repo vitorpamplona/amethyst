@@ -24,7 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
@@ -42,7 +42,7 @@ import kotlin.collections.distinctBy
 
 @Stable
 class ChannelFeedContentState(
-    val localFilter: AdditiveComplexFeedFilter<Channel, Note>,
+    val localFilter: AdditiveComplexFeedFilter<EphemeralChatChannel, Note>,
     val viewModelScope: CoroutineScope,
 ) : InvalidatableContent {
     private val _feedContent = MutableStateFlow<ChannelFeedState>(ChannelFeedState.Loading)
@@ -53,7 +53,7 @@ class ChannelFeedContentState(
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    private var lastFeedKey: String? = null
+    private var lastFeedKey: Any? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
@@ -78,7 +78,7 @@ class ChannelFeedContentState(
         isRefreshing.value = true
         try {
             lastFeedKey = localFilter.feedKey()
-            val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
+            val notes = localFilter.loadTop().distinctBy { it }.toImmutableList()
 
             val oldNotesState = _feedContent.value
             if (oldNotesState is ChannelFeedState.Loaded) {
@@ -93,15 +93,15 @@ class ChannelFeedContentState(
         }
     }
 
-    private fun updateFeed(notes: ImmutableList<Channel>) {
+    private fun updateFeed(notes: ImmutableList<EphemeralChatChannel>) {
         val currentState = _feedContent.value
         if (notes.isEmpty()) {
             _feedContent.tryEmit(ChannelFeedState.Empty)
         } else if (currentState is ChannelFeedState.Loaded) {
-            currentState.feed.tryEmit(LoadedFeedState<Channel>(notes, localFilter.showHiddenKey()))
+            currentState.feed.tryEmit(LoadedFeedState<EphemeralChatChannel>(notes, localFilter.showHiddenKey()))
         } else {
             _feedContent.tryEmit(
-                ChannelFeedState.Loaded(MutableStateFlow(LoadedFeedState<Channel>(notes, localFilter.showHiddenKey()))),
+                ChannelFeedState.Loaded(MutableStateFlow(LoadedFeedState<EphemeralChatChannel>(notes, localFilter.showHiddenKey()))),
             )
         }
     }
@@ -123,7 +123,7 @@ class ChannelFeedContentState(
             val newList =
                 localFilter
                     .updateListWith(emptyList(), newItems)
-                    .distinctBy { it.idHex }
+                    .distinctBy { it }
                     .toImmutableList()
             if (newList.isNotEmpty()) {
                 updateFeed(newList)

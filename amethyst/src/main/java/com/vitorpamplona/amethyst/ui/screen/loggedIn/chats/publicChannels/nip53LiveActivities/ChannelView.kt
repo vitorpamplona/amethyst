@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,48 +30,29 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.ChannelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ShowVideoStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.EditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.coroutines.launch
 
 @Composable
-fun ChannelView(
-    channelId: String?,
+fun LiveActivityChannelView(
+    channelId: Address?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     if (channelId == null) return
 
-    LoadChannel(channelId, accountViewModel) {
-        PrepareChannelViewModels(
-            baseChannel = it,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    }
-}
-
-@Composable
-fun ChannelView(
-    channelId: RoomId?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (channelId == null) return
-
-    LoadChannel(channelId, accountViewModel) {
+    LoadLiveActivityChannel(channelId, accountViewModel) {
         PrepareChannelViewModels(
             baseChannel = it,
             accountViewModel = accountViewModel,
@@ -82,13 +63,13 @@ fun ChannelView(
 
 @Composable
 fun PrepareChannelViewModels(
-    baseChannel: Channel,
+    baseChannel: LiveActivitiesChannel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val feedViewModel: ChannelFeedViewModel =
         viewModel(
-            key = baseChannel.idHex + "ChannelFeedViewModel",
+            key = baseChannel.address.toValue() + "ChannelFeedViewModel",
             factory =
                 ChannelFeedViewModel.Factory(
                     baseChannel,
@@ -100,7 +81,7 @@ fun PrepareChannelViewModels(
     channelScreenModel.init(accountViewModel)
     channelScreenModel.load(baseChannel)
 
-    ChannelView(
+    LiveActivityChannelView(
         channel = baseChannel,
         feedViewModel = feedViewModel,
         newPostModel = channelScreenModel,
@@ -110,8 +91,8 @@ fun PrepareChannelViewModels(
 }
 
 @Composable
-fun ChannelView(
-    channel: Channel,
+fun LiveActivityChannelView(
+    channel: LiveActivitiesChannel,
     feedViewModel: ChannelFeedViewModel,
     newPostModel: ChannelNewMessageViewModel,
     accountViewModel: AccountViewModel,
@@ -130,14 +111,12 @@ fun ChannelView(
                         .weight(1f, true)
                 },
         ) {
-            if (channel is LiveActivitiesChannel) {
-                ShowVideoStreaming(channel, accountViewModel)
-            }
+            ShowVideoStreaming(channel, accountViewModel)
             RefreshingChatroomFeedView(
                 viewModel = feedViewModel,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = "Channel/${channel.idHex}",
+                routeForLastRead = "Channel/${channel.address.toValue()}",
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,

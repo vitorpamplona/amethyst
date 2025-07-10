@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -57,11 +58,15 @@ class EOSERelayList {
 
 class EOSEFollowList(
     cacheSize: Int = 200,
+) : EOSEByKey<String>(cacheSize)
+
+open class EOSEByKey<U : Any>(
+    cacheSize: Int = 200,
 ) {
-    var followList: LruCache<String, EOSERelayList> = LruCache<String, EOSERelayList>(cacheSize)
+    var followList: LruCache<U, EOSERelayList> = LruCache<U, EOSERelayList>(cacheSize)
 
     fun addOrUpdate(
-        listCode: String,
+        listCode: U,
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
@@ -75,10 +80,10 @@ class EOSEFollowList(
         }
     }
 
-    fun since(listCode: String) = followList[listCode]?.relayList
+    fun since(listCode: U) = followList[listCode]?.relayList
 
     fun newEose(
-        listCode: String,
+        listCode: U,
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) = addOrUpdate(listCode, relayUrl, time)
@@ -86,18 +91,22 @@ class EOSEFollowList(
 
 class EOSEAccount(
     cacheSize: Int = 20,
+) : EOSEAccountKey<String>(cacheSize)
+
+open class EOSEAccountKey<U : Any>(
+    cacheSize: Int = 20,
 ) {
-    var users: LruCache<User, EOSEFollowList> = LruCache<User, EOSEFollowList>(cacheSize)
+    var users: LruCache<User, EOSEByKey<U>> = LruCache<User, EOSEByKey<U>>(cacheSize)
 
     fun addOrUpdate(
         user: User,
-        listCode: String,
+        listCode: U,
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         val followList = users[user]
         if (followList == null) {
-            val newList = EOSEFollowList()
+            val newList = EOSEByKey<U>()
             users.put(user, newList)
             newList.addOrUpdate(listCode, relayUrl, time)
         } else {
@@ -111,12 +120,12 @@ class EOSEAccount(
 
     fun since(
         key: User,
-        listCode: String,
+        listCode: U,
     ) = users[key]?.followList?.get(listCode)?.relayList
 
     fun newEose(
         user: User,
-        listCode: String,
+        listCode: U,
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) = addOrUpdate(user, listCode, relayUrl, time)

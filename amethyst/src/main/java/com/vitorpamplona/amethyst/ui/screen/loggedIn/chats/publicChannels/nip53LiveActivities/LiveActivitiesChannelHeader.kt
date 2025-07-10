@@ -64,9 +64,9 @@ fun LiveActivitiesChannelHeader(
         ) {
             ShortLiveActivityChannelHeader(
                 baseChannel = baseChannel,
+                showFlag = showFlag,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                showFlag = showFlag,
             )
 
             if (expanded.value) {

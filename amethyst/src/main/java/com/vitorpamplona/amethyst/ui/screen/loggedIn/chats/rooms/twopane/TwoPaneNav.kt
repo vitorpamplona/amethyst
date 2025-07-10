@@ -38,18 +38,18 @@ class TwoPaneNav(
     val innerNav = mutableStateOf<Route?>(null)
 
     override fun nav(route: Route) {
-        if (route is Route.Room || route is Route.Channel) {
+        if (route is Route.Room || route is Route.PublicChatChannel) {
             innerNav.value = route
         } else {
             nav.nav(route)
         }
     }
 
-    override fun nav(routeMaker: suspend () -> Route?) {
+    override fun nav(computeRoute: suspend () -> Route?) {
         scope.launch(Dispatchers.Default) {
-            val route = routeMaker()
+            val route = computeRoute()
             if (route != null) {
-                if (route is Route.Room || route is Route.Channel) {
+                if (route is Route.Room || route is Route.PublicChatChannel) {
                     innerNav.value = route
                 } else {
                     nav.nav(route)
@@ -68,9 +68,9 @@ class TwoPaneNav(
 
     override fun <T : Route> popUpTo(
         route: Route,
-        upToClass: KClass<T>,
+        klass: KClass<T>,
     ) {
-        nav.popUpTo<T>(route, upToClass)
+        nav.popUpTo<T>(route, klass)
     }
 
     override fun closeDrawer() {

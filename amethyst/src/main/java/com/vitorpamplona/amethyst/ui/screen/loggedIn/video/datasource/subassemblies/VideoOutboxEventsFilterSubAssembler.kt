@@ -52,7 +52,7 @@ import kotlinx.coroutines.launch
 class VideoOutboxEventsFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<VideoQueryState>,
-) : PerUserAndFollowListEoseManager<VideoQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<VideoQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: VideoQueryState,
         since: SincePerRelayMap?,

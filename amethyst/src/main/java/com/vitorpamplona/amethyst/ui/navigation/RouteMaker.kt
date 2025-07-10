@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -39,6 +41,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
@@ -48,7 +52,7 @@ fun routeFor(
     note: Note,
     loggedIn: User,
 ): Route? {
-    val noteEvent = note.event ?: return Route.Note(note.idHex)
+    val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
 
     return routeFor(noteEvent, loggedIn)
 }
@@ -62,15 +66,15 @@ fun routeFor(
 
         if (innerEvent is IsInPublicChatChannel) {
             innerEvent.channelId()?.let {
-                return Route.Channel(it)
+                return Route.PublicChatChannel(it)
             }
         } else if (innerEvent is LiveActivitiesEvent) {
-            innerEvent.aTag().toTag().let {
-                return Route.Channel(it)
+            innerEvent.address().let {
+                return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
             }
         } else if (innerEvent is LiveActivitiesChatMessageEvent) {
-            innerEvent.activity()?.toTag()?.let {
-                return Route.Channel(it)
+            innerEvent.activityAddress()?.let {
+                return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
             }
         } else if (innerEvent is ChatroomKeyable) {
             val room = innerEvent.chatroomKey(loggedIn.pubkeyHex)
@@ -85,17 +89,17 @@ fun routeFor(
         return Route.ContentDiscovery(noteEvent.id)
     } else if (noteEvent is IsInPublicChatChannel) {
         noteEvent.channelId()?.let {
-            return Route.Channel(it)
+            return Route.PublicChatChannel(it)
         }
     } else if (noteEvent is ChannelCreateEvent) {
-        return Route.Channel(noteEvent.id)
+        return Route.PublicChatChannel(noteEvent.id)
     } else if (noteEvent is LiveActivitiesEvent) {
-        noteEvent.aTag().toTag().let {
-            return Route.Channel(it)
+        noteEvent.address().let {
+            return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
         }
     } else if (noteEvent is LiveActivitiesChatMessageEvent) {
-        noteEvent.activity()?.toTag()?.let {
-            return Route.Channel(it)
+        noteEvent.activityAddress()?.let {
+            return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
         }
     } else if (noteEvent is ChatroomKeyable) {
         val room = noteEvent.chatroomKey(loggedIn.pubkeyHex)
@@ -103,6 +107,14 @@ fun routeFor(
         return Route.Room(room.hashCode())
     } else if (noteEvent is CommunityDefinitionEvent) {
         return Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+    } else if (noteEvent is GiftWrapEvent) {
+        noteEvent.innerEventId?.let {
+            return routeFor(LocalCache.getOrCreateNote(it), loggedIn)
+        }
+    } else if (noteEvent is SealedRumorEvent) {
+        noteEvent.innerEventId?.let {
+            return routeFor(LocalCache.getOrCreateNote(it), loggedIn)
+        }
     } else if (noteEvent is AddressableEvent) {
         return Route.Note(noteEvent.aTag().toTag())
     } else {
@@ -169,12 +181,11 @@ fun routeToMessage(
     accountViewModel: AccountViewModel,
 ): Route = routeToMessage(user.pubkeyHex, draftMessage, replyId, draftId, accountViewModel)
 
-fun routeFor(note: Channel): Route =
-    if (note is EphemeralChatChannel) {
-        Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl.url)
-    } else {
-        Route.Channel(note.idHex)
-    }
+fun routeFor(note: EphemeralChatChannel): Route = Route.EphemeralChat(note.roomId.id, note.roomId.relayUrl.url)
+
+fun routeFor(note: PublicChatChannel): Route = Route.PublicChatChannel(note.idHex)
+
+fun routeFor(note: LiveActivitiesChannel): Route = Route.LiveActivityChannel(note.address.kind, note.address.pubKeyHex, note.address.dTag)
 
 fun routeFor(roomId: RoomId): Route = Route.EphemeralChat(roomId.id, roomId.relayUrl.url)
 

@@ -33,6 +33,16 @@ class StatusTag {
         ;
 
         fun toTagArray() = assemble(this)
+
+        companion object {
+            fun parse(code: String): STATUS? =
+                when (code) {
+                    LIVE.code -> LIVE
+                    PLANNED.code -> PLANNED
+                    ENDED.code -> ENDED
+                    else -> null
+                }
+        }
     }
 
     companion object {
@@ -44,6 +54,14 @@ class StatusTag {
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             return tag[1]
+        }
+
+        @JvmStatic
+        fun parseEnum(tag: Array<String>): STATUS? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return STATUS.parse(tag[1])
         }
 
         @JvmStatic

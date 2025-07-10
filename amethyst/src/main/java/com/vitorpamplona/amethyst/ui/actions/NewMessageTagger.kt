@@ -42,7 +42,6 @@ class NewMessageTagger(
     var message: String,
     var pTags: List<User>? = null,
     var eTags: List<Note>? = null,
-    var channelHex: String? = null,
     var dao: Dao,
 ) {
     val directMentions = mutableSetOf<HexKey>()

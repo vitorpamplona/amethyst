@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -78,7 +78,7 @@ class User(
 
     fun pubkeyNpub() = pubkey().toNpub()
 
-    fun pubkeyDisplayHex() = pubkeyNpub().toShortenHex()
+    fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay()
 
     fun dmInboxRelayList() = (LocalCache.getAddressableNoteIfExists(ChatMessageRelayListEvent.createAddressTag(pubkeyHex))?.event as? ChatMessageRelayListEvent)
 

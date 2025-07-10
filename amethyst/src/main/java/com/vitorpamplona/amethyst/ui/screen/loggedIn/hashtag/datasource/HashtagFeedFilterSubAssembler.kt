@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class HashtagFeedFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<HashtagQueryState>,
-) : PerUniqueIdEoseManager<HashtagQueryState>(client, allKeys) {
+) : PerUniqueIdEoseManager<HashtagQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: HashtagQueryState,
         since: SincePerRelayMap?,

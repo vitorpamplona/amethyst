@@ -85,7 +85,17 @@ sealed class Route {
         val dTag: String,
     ) : Route()
 
-    @Serializable data class Channel(
+    @Serializable data class PublicChatChannel(
+        val id: String,
+    ) : Route()
+
+    @Serializable data class LiveActivityChannel(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route()
+
+    @Serializable data class EphemeralChatChannel(
         val id: String,
     ) : Route()
 
@@ -204,7 +214,8 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
         dest.hasRoute<Route.RelayInfo>() -> entry.toRoute<Route.RelayInfo>()
 
         dest.hasRoute<Route.RoomByAuthor>() -> entry.toRoute<Route.RoomByAuthor>()
-        dest.hasRoute<Route.Channel>() -> entry.toRoute<Route.Channel>()
+        dest.hasRoute<Route.PublicChatChannel>() -> entry.toRoute<Route.PublicChatChannel>()
+        dest.hasRoute<Route.LiveActivityChannel>() -> entry.toRoute<Route.LiveActivityChannel>()
         dest.hasRoute<Route.ChannelMetadataEdit>() -> entry.toRoute<Route.ChannelMetadataEdit>()
         dest.hasRoute<Route.EphemeralChat>() -> entry.toRoute<Route.EphemeralChat>()
         dest.hasRoute<Route.NewEphemeralChat>() -> entry.toRoute<Route.NewEphemeralChat>()

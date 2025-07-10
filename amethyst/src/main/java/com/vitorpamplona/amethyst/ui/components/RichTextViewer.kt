@@ -94,7 +94,7 @@ import com.vitorpamplona.amethyst.ui.navigation.Route
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -727,7 +727,7 @@ fun TagLink(
 ) {
     LoadNote(baseNoteHex = word.hex, accountViewModel) {
         if (it == null) {
-            Text(text = remember { word.segmentText.toShortenHex() })
+            Text(text = remember { word.segmentText.toShortDisplay() })
         } else {
             Row {
                 DisplayNoteFromTag(
@@ -766,7 +766,7 @@ private fun DisplayNoteFromTag(
         )
     } else {
         ClickableTextPrimary(
-            text = "@${baseNote.idNote().toShortenHex()}",
+            text = "@${baseNote.idNote().toShortDisplay()}",
             onClick = { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
         )
     }

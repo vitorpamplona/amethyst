@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -331,3 +332,13 @@ val LargeRelayIconModifier =
     Modifier
         .size(Size55dp)
         .clip(shape = CircleShape)
+
+val FollowSetImageModifier =
+    Modifier
+        .fillMaxWidth()
+        .aspectRatio(ratio = 21f / 9f)
+        .clip(QuoteBorder)
+
+val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
+
+val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)

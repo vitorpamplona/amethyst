@@ -64,7 +64,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
@@ -242,7 +242,7 @@ private fun AccountName(
     }
 
     Text(
-        text = remember(user) { acc.npub.toShortenHex() },
+        text = remember(user) { acc.npub.toShortDisplay() },
     )
 }
 

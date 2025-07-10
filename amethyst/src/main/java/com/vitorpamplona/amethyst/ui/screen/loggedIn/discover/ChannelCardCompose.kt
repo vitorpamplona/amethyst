@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.RenderLongFormThumb
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderChannelThumb
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderPublicChatChannelThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.RenderFollowSetThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.RenderLiveActivityThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.RenderCommunitiesThumb
@@ -203,7 +203,7 @@ private fun RenderNoteRow(
     when (baseNote.event) {
         is LiveActivitiesEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         is CommunityDefinitionEvent -> RenderCommunitiesThumb(baseNote, accountViewModel, nav)
-        is ChannelCreateEvent -> RenderChannelThumb(baseNote, accountViewModel, nav)
+        is ChannelCreateEvent -> RenderPublicChatChannelThumb(baseNote, accountViewModel, nav)
         is AppDefinitionEvent -> RenderContentDVMThumb(baseNote, accountViewModel, nav)
         is FollowListEvent -> RenderFollowSetThumb(baseNote, accountViewModel, nav)
         is LongTextNoteEvent -> RenderLongFormThumb(baseNote, accountViewModel, nav)

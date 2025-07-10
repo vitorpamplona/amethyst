@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats
 
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
@@ -30,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class ChannelMetadataWatcherSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<ChannelFinderQueryState>,
-) : PerUniqueIdEoseManager<ChannelFinderQueryState>(client, allKeys) {
+) : PerUniqueIdEoseManager<ChannelFinderQueryState, Channel>(client, allKeys) {
     override fun updateFilter(
         key: ChannelFinderQueryState,
         since: SincePerRelayMap?,
@@ -46,5 +47,5 @@ class ChannelMetadataWatcherSubAssembler(
     /**
      * Only one key per channel.
      */
-    override fun id(key: ChannelFinderQueryState) = key.channel.idHex
+    override fun id(key: ChannelFinderQueryState) = key.channel
 }

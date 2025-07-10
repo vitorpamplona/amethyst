@@ -59,10 +59,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.EphemeralChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
@@ -138,9 +139,12 @@ fun AppNavigation(
             composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
             composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
             composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+
             composableFromEndArgs<Route.Room> { ChatroomScreen(it.id.toString(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
-            composableFromEndArgs<Route.Channel> { ChannelScreen(it.id, accountViewModel, nav) }
+
+            composableFromEndArgs<Route.PublicChatChannel> { PublicChatChannelScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.LiveActivityChannel> { LiveActivityChannelScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
             composableFromEndArgs<Route.EphemeralChat> {
                 RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
                     EphemeralChatScreen(RoomId(it.id, relay), accountViewModel, nav)
@@ -388,7 +392,7 @@ private fun isSameRoute(
     if (newRoute is Route.EventRedirect) {
         return when (currentRoute) {
             is Route.Note -> newRoute.id == currentRoute.id
-            is Route.Channel -> newRoute.id == currentRoute.id
+            is Route.PublicChatChannel -> newRoute.id == currentRoute.id
             else -> false
         }
     }

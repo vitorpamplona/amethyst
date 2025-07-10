@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -38,7 +37,7 @@ import kotlin.collections.toSet
 
 class HomeLiveFilter(
     val account: Account,
-) : AdditiveComplexFeedFilter<Channel, Note>() {
+) : AdditiveComplexFeedFilter<EphemeralChatChannel, Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
     override fun showHiddenKey(): Boolean = false
@@ -51,7 +50,7 @@ class HomeLiveFilter(
 
     fun limitTime() = TimeUtils.fifteenMinutesAgo()
 
-    override fun feed(): List<Channel> {
+    override fun feed(): List<EphemeralChatChannel> {
         val filterParams = buildFilterParams(account)
         val fiveMinsAgo = limitTime()
 
@@ -74,9 +73,9 @@ class HomeLiveFilter(
             }.isNotEmpty()
 
     override fun updateListWith(
-        oldList: List<Channel>,
+        oldList: List<EphemeralChatChannel>,
         newItems: Set<Note>,
-    ): List<Channel> {
+    ): List<EphemeralChatChannel> {
         val fiveMinsAgo = limitTime()
 
         val revisedOldList =
@@ -91,7 +90,7 @@ class HomeLiveFilter(
                     .mapNotNull {
                         val room = (it.event as? EphemeralChatEvent)?.roomId()
                         if (room != null) {
-                            LocalCache.getChannelIfExists(room)
+                            LocalCache.getEphemeralChatChannelIfExists(room)
                         } else {
                             null
                         }
@@ -124,7 +123,7 @@ class HomeLiveFilter(
             filterParams.match(noteEvent, note.relays)
     }
 
-    fun sort(collection: Set<Channel>): List<Channel> {
+    fun sort(collection: Set<EphemeralChatChannel>): List<EphemeralChatChannel> {
         val topFilter = account.liveDiscoveryFollowLists.value
         val topFilterAuthors =
             when (topFilter) {
@@ -141,18 +140,17 @@ class HomeLiveFilter(
             collection.associate { it to followsThatParticipateOn(it, followingKeySet) }
 
         return collection.sortedWith(
-            compareByDescending<Channel> { followCounts[it] }
-                .thenByDescending<Channel> { it.lastNoteCreatedAt }
-                .thenBy { it.idHex },
+            compareByDescending<EphemeralChatChannel> { followCounts[it] }
+                .thenByDescending<EphemeralChatChannel> { it.lastNoteCreatedAt }
+                .thenBy { it.roomId.id }
+                .thenBy { it.roomId.relayUrl },
         )
     }
 
     fun followsThatParticipateOn(
-        channel: Channel,
+        channel: EphemeralChatChannel,
         followingSet: Set<HexKey>?,
     ): Int {
-        if (channel == null) return 0
-
         var count = 0
 
         channel.notes.forEach { key, value ->

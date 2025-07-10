@@ -72,7 +72,7 @@ class CardFeedContentState(
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    private var lastFeedKey: String? = null
+    private var lastFeedKey: Any? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.service.relays.EOSEFollowList
+import com.vitorpamplona.amethyst.service.relays.EOSEByKey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -37,16 +37,16 @@ import kotlin.collections.distinctBy
  * This class keeps EOSEs for each SubID.id() for as long as possible and
  * shares all EOSEs among all users.
  */
-abstract class PerUniqueIdEoseManager<T>(
+abstract class PerUniqueIdEoseManager<T, U : Any>(
     client: NostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
     // long term EOSE cache
-    private val latestEOSEs = EOSEFollowList()
+    private val latestEOSEs = EOSEByKey<U>()
 
     // map between each query Id and each subscription id
-    private val userSubscriptionMap = mutableMapOf<String, String>()
+    private val userSubscriptionMap = mutableMapOf<U, String>()
 
     fun since(key: T) = latestEOSEs.since(id(key))
 
@@ -67,7 +67,7 @@ abstract class PerUniqueIdEoseManager<T>(
         }
 
     open fun endSub(
-        key: String,
+        key: U,
         subId: String,
     ) {
         dismissSubscription(subId)
@@ -87,7 +87,7 @@ abstract class PerUniqueIdEoseManager<T>(
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { id(it) }
 
-        val updated = mutableSetOf<String>()
+        val updated = mutableSetOf<U>()
 
         uniqueSubscribedAccounts.forEach {
             val mainKey = id(it)
@@ -107,5 +107,5 @@ abstract class PerUniqueIdEoseManager<T>(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>?
 
-    abstract fun id(key: T): String
+    abstract fun id(key: T): U
 }

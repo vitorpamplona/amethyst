@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
@@ -230,7 +231,9 @@ private fun DisplaySearchResults(
 
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
-    val channels by searchBarViewModel.searchResultsChannels.collectAsStateWithLifecycle()
+    val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
+    val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
+    val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -262,8 +265,8 @@ private fun DisplaySearchResults(
         }
 
         itemsIndexed(
-            channels,
-            key = { _, item -> "c" + item.idHex },
+            publicChatChannels,
+            key = { _, item -> "public" + item.idHex },
         ) { _, item ->
             ChannelName(
                 channelIdHex = item.idHex,
@@ -279,7 +282,61 @@ private fun DisplaySearchResults(
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                onClick = { nav.nav(Route.Channel(item.idHex)) },
+                onClick = { nav.nav(routeFor(item)) },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            ephemeralChannels,
+            key = { _, item -> "ephem" + item.roomId.toKey() },
+        ) { _, item ->
+            ChannelName(
+                channelIdHex = item.roomId.toKey(),
+                channelPicture = item.profilePicture(),
+                channelTitle = {
+                    Text(
+                        item.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = item.summary(),
+                hasNewMessages = false,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                onClick = { nav.nav(routeFor(item)) },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            liveActivityChannels,
+            key = { _, item -> "live" + item.address.toValue() },
+        ) { _, item ->
+            ChannelName(
+                channelIdHex = item.address.toValue(),
+                channelPicture = item.profilePicture(),
+                channelTitle = {
+                    Text(
+                        item.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = item.summary(),
+                hasNewMessages = false,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                onClick = { nav.nav(routeFor(item)) },
             )
 
             HorizontalDivider(

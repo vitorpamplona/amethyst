@@ -578,7 +578,7 @@ class ChatNewMessageViewModel :
     fun updateRoomFromUsersInput() {
         viewModelScope.launch(Dispatchers.Default) {
             delay(300)
-            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null, accountViewModel!!)
+            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, accountViewModel!!)
             toUsersTagger.run()
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
@@ -701,7 +701,7 @@ class ChatNewMessageViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

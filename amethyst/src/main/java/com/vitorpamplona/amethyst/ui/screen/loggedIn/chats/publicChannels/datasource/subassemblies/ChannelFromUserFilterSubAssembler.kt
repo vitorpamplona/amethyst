@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.PublicChatChannel
@@ -32,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class ChannelFromUserFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<ChannelQueryState>,
-) : PerUserAndFollowListEoseManager<ChannelQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<ChannelQueryState, Channel>(client, allKeys) {
     override fun updateFilter(
         key: ChannelQueryState,
         since: SincePerRelayMap?,
@@ -48,5 +49,5 @@ class ChannelFromUserFilterSubAssembler(
 
     override fun user(key: ChannelQueryState) = key.account.userProfile()
 
-    override fun list(key: ChannelQueryState) = key.channel.idHex
+    override fun list(key: ChannelQueryState) = key.channel
 }

@@ -74,7 +74,7 @@ open class DiscoverChatFeedFilter(
             // note event here will never be null
             val noteEvent = note.event
             if (noteEvent is ChannelCreateEvent && params.match(noteEvent)) {
-                if ((LocalCache.getChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
+                if ((LocalCache.getPublicChatChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
                     note
                 } else {
                     null
@@ -86,7 +86,7 @@ open class DiscoverChatFeedFilter(
                 if (channel != null &&
                     (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent)))
                 ) {
-                    if ((LocalCache.getChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
+                    if ((LocalCache.getPublicChatChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
                         channel
                     } else {
                         null
@@ -103,7 +103,7 @@ open class DiscoverChatFeedFilter(
     override fun sort(collection: Set<Note>): List<Note> {
         val lastNote =
             collection.associateWith { note ->
-                LocalCache.getChannelIfExists(note.idHex)?.lastNoteCreatedAt ?: 0
+                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNoteCreatedAt ?: 0
             }
 
         return collection

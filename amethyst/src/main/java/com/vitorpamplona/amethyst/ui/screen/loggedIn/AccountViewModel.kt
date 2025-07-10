@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.PublicChatChannel
@@ -1116,20 +1117,24 @@ class AccountViewModel(
         )
     }
 
-    private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? = LocalCache.checkGetOrCreateChannel(key)
+    suspend fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel? = LocalCache.getOrCreatePublicChatChannel(key)
 
-    suspend fun checkGetOrCreateChannel(key: RoomId): Channel? = LocalCache.getOrCreateEphemeralChannel(key)
+    suspend fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel? = LocalCache.getOrCreateLiveChannel(key)
+
+    suspend fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel? = LocalCache.getOrCreateEphemeralChannel(key)
 
     fun checkGetOrCreateChannel(
         key: HexKey,
         onResult: (Channel?) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateChannel(key)) }
+        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreatePublicChatChannel(key)) }
     }
 
-    fun getChannelIfExists(hex: HexKey): Channel? = LocalCache.getChannelIfExists(hex)
+    fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
-    fun getChannelIfExists(key: RoomId): Channel? = LocalCache.getChannelIfExists(key.toKey())
+    fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
+
+    fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
 
     fun <T : PubKeyReferenceTag> loadParticipants(
         participants: List<T>,
@@ -1226,7 +1231,7 @@ class AccountViewModel(
                     route?.let {
                         if (route is Route.Room) {
                             account.markAsRead("Room/${route.id}", date)
-                        } else if (route is Route.Channel) {
+                        } else if (route is Route.PublicChatChannel) {
                             account.markAsRead("Channel/${route.id}", date)
                         }
                     }

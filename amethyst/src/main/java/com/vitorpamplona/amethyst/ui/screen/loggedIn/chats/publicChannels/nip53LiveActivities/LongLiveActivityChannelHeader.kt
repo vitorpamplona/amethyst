@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -43,11 +44,11 @@ import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
-import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -60,8 +61,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -79,44 +80,14 @@ fun LongLiveActivityChannelHeader(
 ) {
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? LiveActivitiesChannel ?: return
+    val activity = channel.info ?: return
+    val callbackUri = remember(channel) { channel.toNostrUri() }
 
-    Row(
-        lineModifier,
-    ) {
-        val summary = remember(channelState) { channel.summary()?.ifBlank { null } }
-
-        Column(
-            Modifier.weight(1f),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val defaultBackground = MaterialTheme.colorScheme.background
-                val background = remember { mutableStateOf(defaultBackground) }
-
-                val tags = remember(channelState) { baseChannel.info?.tags?.toImmutableListOfLists() ?: EmptyTagList }
-
-                TranslatableRichTextViewer(
-                    content = summary ?: stringRes(id = R.string.groups_no_descriptor),
-                    canPreview = false,
-                    quotesLeft = 1,
-                    tags = tags,
-                    backgroundColor = background,
-                    id = baseChannel.idHex,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-
-            if (summary != null) {
-                baseChannel.info?.let {
-                    if (it.hasHashtags()) {
-                        DisplayUncitedHashtags(it, summary, accountViewModel, nav)
-                    }
-                }
-            }
-        }
+    Row(lineModifier) {
+        RenderSummary(activity, callbackUri, accountViewModel, nav)
     }
 
-    LoadNote(baseNoteHex = channel.idHex, accountViewModel) { loadingNote ->
+    LoadAddressableNote(channel.address, accountViewModel) { loadingNote ->
         loadingNote?.let { note ->
             Row(
                 lineModifier,
@@ -194,6 +165,39 @@ fun LongLiveActivityChannelHeader(
             ClickableUserPicture(it.second, Size25dp, accountViewModel)
             Spacer(DoubleHorzSpacer)
             UsernameDisplay(it.second, Modifier.weight(1f), accountViewModel = accountViewModel)
+        }
+    }
+}
+
+@Composable
+private fun RowScope.RenderSummary(
+    activity: LiveActivitiesEvent,
+    callbackUri: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val summary = activity.summary() ?: stringRes(id = R.string.groups_no_descriptor)
+
+    Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val defaultBackground = MaterialTheme.colorScheme.background
+            val background = remember { mutableStateOf(defaultBackground) }
+
+            TranslatableRichTextViewer(
+                content = summary,
+                canPreview = false,
+                quotesLeft = 1,
+                tags = activity.tags.toImmutableListOfLists(),
+                backgroundColor = background,
+                id = activity.id,
+                callbackUri = callbackUri,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        if (activity.hasHashtags()) {
+            DisplayUncitedHashtags(activity, summary, callbackUri, accountViewModel, nav)
         }
     }
 }

@@ -36,7 +36,7 @@ fun filterMessagesToLiveActivities(
             filter =
                 Filter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
-                    tags = mapOf("a" to listOfNotNull(channel.idHex)),
+                    tags = mapOf("a" to listOfNotNull(channel.address.toValue())),
                     limit = 200,
                     since = since?.get(it)?.time,
                 ),

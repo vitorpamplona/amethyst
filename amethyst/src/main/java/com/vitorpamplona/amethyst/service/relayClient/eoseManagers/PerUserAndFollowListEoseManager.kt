@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relays.EOSEAccount
+import com.vitorpamplona.amethyst.service.relays.EOSEAccountKey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -41,12 +41,12 @@ import kotlin.collections.distinctBy
  * does NOT share EOSEs with other users. Changing the list will not make the
  * app reuse the EOSE because it assumes the filter is going to be different
  */
-abstract class PerUserAndFollowListEoseManager<T>(
+abstract class PerUserAndFollowListEoseManager<T, U : Any>(
     client: NostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
-    private val latestEOSEs = EOSEAccount()
+    private val latestEOSEs = EOSEAccountKey<U>()
     private val userSubscriptionMap = mutableMapOf<User, String>()
 
     fun since(key: T) = latestEOSEs.since(user(key), list(key))
@@ -108,5 +108,5 @@ abstract class PerUserAndFollowListEoseManager<T>(
 
     abstract fun user(key: T): User
 
-    abstract fun list(key: T): String
+    abstract fun list(key: T): U
 }

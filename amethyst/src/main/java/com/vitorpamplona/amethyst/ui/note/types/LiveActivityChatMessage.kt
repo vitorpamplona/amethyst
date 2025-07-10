@@ -32,8 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.note.LoadLiveActivityChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivitiesChannelHeader
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -53,21 +54,24 @@ fun RenderLiveActivityChatMessage(
     val showChannelInfo =
         remember(noteEvent) {
             if (noteEvent is LiveActivitiesChatMessageEvent) {
-                noteEvent.activity()?.toTag()
+                noteEvent.activityAddress()
             } else {
                 null
             }
         }
 
     showChannelInfo?.let {
-        ChannelHeader(
-            channelHex = it,
-            showVideo = false,
-            sendToChannel = true,
-            modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        LoadLiveActivityChannel(it, accountViewModel) {
+            LiveActivitiesChannelHeader(
+                baseChannel = it,
+                showVideo = false,
+                showFlag = true,
+                sendToChannel = true,
+                modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
         Spacer(modifier = StdVertSpacer)
     }
 

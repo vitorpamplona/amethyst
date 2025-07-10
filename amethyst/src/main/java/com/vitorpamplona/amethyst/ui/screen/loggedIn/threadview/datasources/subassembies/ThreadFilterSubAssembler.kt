@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadQueryState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
@@ -36,7 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class ThreadFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<ThreadQueryState>,
-) : PerUniqueIdEoseManager<ThreadQueryState>(client, allKeys) {
+) : PerUniqueIdEoseManager<ThreadQueryState, HexKey>(client, allKeys) {
     override fun updateFilter(
         key: ThreadQueryState,
         since: SincePerRelayMap?,

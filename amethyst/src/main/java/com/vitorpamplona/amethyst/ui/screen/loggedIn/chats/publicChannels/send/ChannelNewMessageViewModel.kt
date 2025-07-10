@@ -364,7 +364,6 @@ open class ChannelNewMessageViewModel :
                 message = message.text,
                 pTags = listOfNotNull(replyTo.value?.author),
                 eTags = listOfNotNull(replyTo.value),
-                channelHex = channel.idHex,
                 dao = accountViewModel,
             )
         tagger.run()
@@ -627,7 +626,7 @@ open class ChannelNewMessageViewModel :
 
     fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.items.any { it.key == taggedUser }) {

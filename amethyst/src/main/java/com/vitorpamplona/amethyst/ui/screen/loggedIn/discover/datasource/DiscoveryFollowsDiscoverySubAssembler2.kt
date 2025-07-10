@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 class DiscoveryFollowsDiscoverySubAssembler2(
     client: NostrClient,
     allKeys: () -> Set<DiscoveryQueryState>,
-) : PerUserAndFollowListEoseManager<DiscoveryQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<DiscoveryQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,

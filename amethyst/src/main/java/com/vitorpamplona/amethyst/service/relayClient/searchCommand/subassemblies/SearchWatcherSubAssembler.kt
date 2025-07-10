@@ -46,7 +46,7 @@ class SearchWatcherSubAssembler(
     val cache: LocalCache,
     client: NostrClient,
     allKeys: () -> Set<SearchQueryState>,
-) : PerUniqueIdEoseManager<SearchQueryState>(client, allKeys) {
+) : PerUniqueIdEoseManager<SearchQueryState, Int>(client, allKeys) {
     override fun updateFilter(
         key: SearchQueryState,
         since: SincePerRelayMap?,
@@ -95,5 +95,5 @@ class SearchWatcherSubAssembler(
         return directFilters + searchFilters
     }
 
-    override fun id(key: SearchQueryState) = key.searchQuery.hashCode().toString()
+    override fun id(key: SearchQueryState) = key.searchQuery.hashCode()
 }

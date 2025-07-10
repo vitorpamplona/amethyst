@@ -516,7 +516,6 @@ open class ShortNotePostViewModel :
                 message.text,
                 pTags,
                 eTags,
-                originalNote?.channelHex(),
                 accountViewModel!!,
             )
         tagger.run()
@@ -865,7 +864,7 @@ open class ShortNotePostViewModel :
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
             val tagger =
-                NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

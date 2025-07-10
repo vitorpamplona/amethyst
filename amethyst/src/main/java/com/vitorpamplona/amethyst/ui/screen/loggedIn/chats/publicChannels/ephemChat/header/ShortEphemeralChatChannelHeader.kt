@@ -123,7 +123,7 @@ private fun DrawRelayIcon(
     val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
 
     RobohashFallbackAsyncImage(
-        robot = channel.idHex,
+        robot = channel.roomId.toKey(),
         model = relayInfo?.icon,
         contentDescription = stringRes(R.string.profile_image),
         contentScale = ContentScale.Crop,

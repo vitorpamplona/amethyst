@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.note.toShortenHex
+import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -34,23 +34,17 @@ import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.toNEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
 class EphemeralChatChannel(
     val roomId: RoomId,
-) : Channel(roomId.toKey()) {
-    override fun idNote() = roomId.toDisplayKey()
-
-    override fun idDisplayNote() = idNote().toShortenHex()
-
+) : Channel() {
     override fun relays() = setOf(roomId.relayUrl)
 
     override fun toBestDisplayName() = roomId.toDisplayKey()
@@ -64,8 +58,8 @@ class EphemeralChatChannel(
 
 @Stable
 class PublicChatChannel(
-    idHex: String,
-) : Channel(idHex) {
+    val idHex: String,
+) : Channel() {
     var event: ChannelCreateEvent? = null
     var infoTags = EmptyTagList
     var info = ChannelDataNorm(null, null, null, null)
@@ -110,7 +104,7 @@ class PublicChatChannel(
         super.updateChannelInfo(creator, updatedAt)
     }
 
-    override fun toBestDisplayName(): String = info.name ?: super.toBestDisplayName()
+    override fun toBestDisplayName(): String = info.name ?: toNEvent().toShortDisplay()
 
     override fun summary(): String? = info.about
 
@@ -119,18 +113,17 @@ class PublicChatChannel(
         return info.picture ?: super.profilePicture()
     }
 
-    override fun anyNameStartsWith(prefix: String): Boolean = listOfNotNull(info.name, info.about).any { it.contains(prefix, true) }
+    override fun anyNameStartsWith(prefix: String): Boolean =
+        idHex.startsWith(prefix) ||
+            info.name?.contains(prefix, true) == true ||
+            info.about?.contains(prefix, true) == true
 }
 
 @Stable
 class LiveActivitiesChannel(
     val address: Address,
-) : Channel(address.toValue()) {
+) : Channel() {
     var info: LiveActivitiesEvent? = null
-
-    override fun idNote() = toNAddr()
-
-    override fun idDisplayNote() = idNote().toShortenHex()
 
     fun address() = address
 
@@ -149,7 +142,7 @@ class LiveActivitiesChannel(
         super.updateChannelInfo(creator, updatedAt)
     }
 
-    override fun toBestDisplayName(): String = info?.title() ?: super.toBestDisplayName()
+    override fun toBestDisplayName(): String = info?.title() ?: toNAddr().toShortDisplay()
 
     override fun summary(): String? = info?.summary()
 
@@ -171,9 +164,7 @@ data class Counter(
 )
 
 @Stable
-abstract class Channel(
-    val idHex: String,
-) {
+abstract class Channel {
     var creator: User? = null
     var updatedMetadataAt: Long = 0
     val notes = LargeCache<HexKey, Note>()
@@ -181,11 +172,7 @@ abstract class Channel(
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
-    open fun idNote() = Hex.decode(idHex).toNEvent()
-
-    open fun idDisplayNote() = idNote().toShortenHex()
-
-    open fun toBestDisplayName(): String = idDisplayNote()
+    abstract fun toBestDisplayName(): String
 
     open fun summary(): String? = null
 
@@ -246,10 +233,6 @@ abstract class Channel(
 
     fun removeNote(note: Note) {
         notes.remove(note.idHex)
-    }
-
-    fun removeNote(noteHex: String) {
-        notes.remove(noteHex)
     }
 
     abstract fun anyNameStartsWith(prefix: String): Boolean

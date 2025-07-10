@@ -58,7 +58,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.INav
 import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.note.LoadChannel
+import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -86,7 +86,7 @@ fun ChannelMetadataScreen(
     if (channelId == null) {
         ChannelMetadataScreen(null as PublicChatChannel?, accountViewModel, nav)
     } else {
-        LoadChannel(channelId, accountViewModel) {
+        LoadPublicChatChannel(channelId, accountViewModel) {
             if (it is PublicChatChannel) {
                 ChannelMetadataScreen(it, accountViewModel, nav)
             }

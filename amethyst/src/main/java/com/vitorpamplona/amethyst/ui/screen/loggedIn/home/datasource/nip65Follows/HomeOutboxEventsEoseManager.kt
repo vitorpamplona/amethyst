@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 class HomeOutboxEventsEoseManager(
     client: NostrClient,
     allKeys: () -> Set<HomeQueryState>,
-) : PerUserAndFollowListEoseManager<HomeQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<HomeQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: HomeQueryState,
         since: SincePerRelayMap?,

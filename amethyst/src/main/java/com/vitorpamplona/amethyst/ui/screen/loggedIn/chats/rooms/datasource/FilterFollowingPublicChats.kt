@@ -39,7 +39,7 @@ fun filterFollowingPublicChats(
         mapOfSet {
             followingChannels.forEach { channelId ->
                 val relays =
-                    LocalCache.getChannelIfExists(channelId)?.relays()
+                    LocalCache.getPublicChatChannelIfExists(channelId)?.relays()
                         ?: LocalCache.relayHints.hintsForEvent(channelId).ifEmpty { null }
                         ?: Constants.eventFinderRelays
 
