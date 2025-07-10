@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
@@ -1255,72 +1256,74 @@ object LocalCache : ILocalCache {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        if (deletionIndex.add(event, wasVerified)) {
-            var deletedAtLeastOne = false
+        val note = getOrCreateNote(event.id)
+        val author = getOrCreateUser(event.pubKey)
 
-            event
-                .deleteEvents()
-                .mapNotNull { getNoteIfExists(it) }
-                .forEach { deleteNote ->
-                    val deleteNoteEvent = deleteNote.event
-                    if (deleteNoteEvent is AddressableEvent) {
-                        val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
-                        if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0) <= event.createdAt) {
-                            // Counts the replies
-                            deleteNote(addressableNote)
+        if (relay != null) {
+            author.addRelayBeingUsed(relay, event.createdAt)
+            note.addRelay(relay)
+        }
 
-                            addressables.remove(addressableNote.address)
+        // Already processed this event.
+        if (note.event != null) return false
 
-                            deletedAtLeastOne = true
+        if (wasVerified || justVerify(event)) {
+            note.loadEvent(event, author, emptyList())
+
+            if (deletionIndex.add(event, wasVerified)) {
+                event
+                    .deleteEvents()
+                    .mapNotNull { getNoteIfExists(it) }
+                    .forEach { deleteNote ->
+                        val deleteNoteEvent = deleteNote.event
+                        if (deleteNoteEvent is AddressableEvent) {
+                            val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
+                            if (addressableNote?.author?.pubkeyHex == event.pubKey && (addressableNote.createdAt() ?: 0) <= event.createdAt) {
+                                // Counts the replies
+                                deleteNote(addressableNote)
+
+                                addressables.remove(addressableNote.address)
+                            }
+                        }
+
+                        // must be the same author
+                        if (deleteNote.author?.pubkeyHex == event.pubKey) {
+                            // reverts the add
+                            deleteNote(deleteNote)
                         }
                     }
 
-                    // must be the same author
-                    if (deleteNote.author?.pubkeyHex == event.pubKey) {
-                        // reverts the add
-                        deleteNote(deleteNote)
+                val addressList = event.deleteAddressIds()
+                val addressSet = addressList.toSet()
 
-                        deletedAtLeastOne = true
+                addressList
+                    .mapNotNull { getAddressableNoteIfExists(it) }
+                    .forEach { deleteNote ->
+                        // must be the same author
+                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0) <= event.createdAt) {
+                            // Counts the replies
+                            deleteNote(deleteNote)
+
+                            addressables.remove(deleteNote.address)
+                        }
                     }
-                }
 
-            val addressList = event.deleteAddressIds()
-            val addressSet = addressList.toSet()
-
-            addressList
-                .mapNotNull { getAddressableNoteIfExists(it) }
-                .forEach { deleteNote ->
-                    // must be the same author
-                    if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0) <= event.createdAt) {
-                        // Counts the replies
-                        deleteNote(deleteNote)
-
-                        addressables.remove(deleteNote.address)
-
-                        deletedAtLeastOne = true
-                    }
-                }
-
-            notes.forEach { key, note ->
-                val noteEvent = note.event
-                if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
-                    if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
-                        deleteNote(note)
-                        deletedAtLeastOne = true
+                notes.forEach { key, note ->
+                    val noteEvent = note.event
+                    if (noteEvent is AddressableEvent && noteEvent.addressTag() in addressSet) {
+                        if (noteEvent.pubKey == event.pubKey && noteEvent.createdAt <= event.createdAt) {
+                            deleteNote(note)
+                        }
                     }
                 }
             }
 
-            if (deletedAtLeastOne) {
-                val note = Note(event.id)
-                note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
-                refreshObservers(note)
-            }
+            refreshObservers(note)
 
             return true
+        } else {
+            return false
         }
-
-        return false
     }
 
     @Suppress("DEPRECATION")
@@ -2978,9 +2981,16 @@ object LocalCache : ILocalCache {
         if (deletionIndex.hasBeenDeleted(event)) {
             // update relay with deletion event from another.
             if (relay != null) {
-                deletionIndex.hasBeenDeletedBy(event)?.let {
-                    Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${it.toJson()} because of ${event.toJson()}")
-                    relay.send(it)
+                deletionIndex.hasBeenDeletedBy(event)?.let { deletionEvent ->
+                    getNoteIfExists(deletionEvent.id)?.let { note ->
+                        if (!note.hasRelay(relay.url)) {
+                            if (isDebug) {
+                                Log.d("LocalCache", "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}")
+                            }
+                            relay.send(deletionEvent)
+                            note.addRelay(relay.url)
+                        }
+                    }
                 }
             }
             return false
@@ -2990,13 +3000,14 @@ object LocalCache : ILocalCache {
             // updates relay with a new event.
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
-                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url)) {
-                        Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
-
-                        // only send once.
-                        note.addRelay(relay.url)
+                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event)) {
+                        if (isDebug) {
+                            Log.d("LocalCache", "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}")
+                        }
 
                         relay.send(existingEvent)
+                        // only send once.
+                        note.addRelay(relay.url)
                     }
                 }
             }
