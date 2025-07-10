@@ -35,17 +35,21 @@ fun filterReportsToKeysFromTrusted(
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter> {
     if (targets.isEmpty() || trustedAccounts.isEmpty()) return emptyList()
-    val sortedTargets = targets.sorted()
-    return trustedAccounts.map {
-        RelayBasedFilter(
-            relay = it.key,
-            filter =
-                Filter(
-                    kinds = ReportKindList,
-                    authors = it.value.sorted(),
-                    tags = mapOf("p" to sortedTargets),
-                    since = since?.get(it.key)?.time,
-                ),
-        )
+    val sortedTargets = mapOf("p" to targets.sorted())
+    return trustedAccounts.mapNotNull {
+        if (it.value.isNotEmpty()) {
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds = ReportKindList,
+                        authors = it.value.sorted(),
+                        tags = sortedTargets,
+                        since = since?.get(it.key)?.time,
+                    ),
+            )
+        } else {
+            null
+        }
     }
 }

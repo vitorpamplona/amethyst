@@ -29,9 +29,10 @@ import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlin.collections.flatten
 
-class UserWatcherSubAssembler(
+class UserReportsSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys) {
@@ -59,19 +60,25 @@ class UserWatcherSubAssembler(
     ): List<RelayBasedFilter>? {
         if (keys.isEmpty()) return null
 
-        lastUsersOnFilter =
-            keys.mapNotNullTo(mutableSetOf()) {
-                if (it.user.latestMetadata != null) it.user else null
-            }
+        lastUsersOnFilter = keys.mapTo(mutableSetOf()) { it.user }
 
         if (lastUsersOnFilter.isEmpty()) return null
 
-        return groupByRelayPresence(lastUsersOnFilter, latestEOSEs)
+        val accounts = keys.mapTo(mutableSetOf()) { it.account }
+
+        val trustedAccounts =
+            mapOfSet {
+                accounts.map { it.followsPerRelay.value }.forEach {
+                    add(it)
+                }
+            }
+
+        return groupByRelayPresence(lastUsersOnFilter, latestEOSEs, trustedAccounts.keys)
             .map { group ->
                 val groupIds = group.map { it.pubkeyHex }.toSet()
                 if (groupIds.isNotEmpty()) {
                     val minEOSEs = findMinimumEOSEsForUsers(group, latestEOSEs)
-                    filterUserMetadataForKey(groupIds, minEOSEs)
+                    filterReportsToKeysFromTrusted(groupIds, trustedAccounts, minEOSEs)
                 } else {
                     emptyList()
                 }
@@ -81,10 +88,16 @@ class UserWatcherSubAssembler(
     fun groupByRelayPresence(
         users: Iterable<User>,
         eoseCache: EOSEAccountFast<User>,
+        inRelays: Set<NormalizedRelayUrl>,
     ): Collection<List<User>> =
         users
-            .groupBy { eoseCache.since(it)?.keys?.hashCode() }
-            .values
+            .groupBy {
+                eoseCache
+                    .since(it)
+                    ?.keys
+                    ?.intersect(inRelays)
+                    ?.hashCode()
+            }.values
             .map {
                 // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
                 it.sortedBy { it.pubkeyHex }
