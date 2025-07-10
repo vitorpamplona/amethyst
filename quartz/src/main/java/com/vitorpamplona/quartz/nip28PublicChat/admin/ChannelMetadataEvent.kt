@@ -25,6 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.core.JsonParseException
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
@@ -48,6 +49,9 @@ class ChannelMetadataEvent(
     sig: HexKey,
 ) : BasePublicChatEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider {
+    @Transient
+    var cache: ChannelDataNorm? = null
+
     override fun eventHints() =
         channelInfo().relays?.mapNotNull { relay ->
             channelId()?.let { EventIdHint(it, relay) }
@@ -55,13 +59,26 @@ class ChannelMetadataEvent(
 
     override fun linkedEventIds() = channelId()?.let { listOf(it) } ?: emptyList()
 
-    fun channelInfo(): ChannelDataNorm =
-        try {
-            ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
-        } catch (e: JsonParseException) {
-            Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
-            ChannelDataNorm()
-        }
+    fun isEncrypted() = tags.any { it.has(1) && it[0] == "encrypted" && it[1] == "true" }
+
+    fun channelInfo(): ChannelDataNorm {
+        cache?.let { return it }
+
+        val newInfo =
+            try {
+                if (isEncrypted()) {
+                    ChannelDataNorm()
+                } else {
+                    ChannelData.parse(content)?.normalize() ?: ChannelDataNorm()
+                }
+            } catch (e: JsonParseException) {
+                Log.w("ChannelCreateEvent", "Failure to parse ${this.toJson()}", e)
+                ChannelDataNorm()
+            }
+
+        cache = newInfo
+        return newInfo
+    }
 
     companion object {
         const val KIND = 41
