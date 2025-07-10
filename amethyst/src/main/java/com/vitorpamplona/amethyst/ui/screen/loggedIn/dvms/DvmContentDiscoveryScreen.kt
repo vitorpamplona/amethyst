@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,8 +45,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -56,7 +57,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -66,17 +66,18 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.LoadNote
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
+import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.note.elements.customZapClick
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
@@ -87,10 +88,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal.NIP90ContentDiscov
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.SimpleImage75Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
-import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -324,16 +324,33 @@ fun FeedDVM(
         val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
         card.cover?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(Size75dp)
-                        .clip(QuoteBorder),
-            )
-        } ?: run { NoteAuthorPicture(appDefinitionNote, Size75dp, accountViewModel = accountViewModel, nav = nav) }
+            Box(contentAlignment = BottomStart) {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = card.name,
+                    contentScale = ContentScale.Crop,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = SimpleImage75Modifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                    onError = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                )
+            }
+        } ?: run {
+            appDefinitionNote.author?.let { author ->
+                Box(contentAlignment = BottomStart) {
+                    BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                }
+            }
+        }
 
         Spacer(modifier = DoubleVertSpacer)
 
@@ -592,16 +609,33 @@ fun FeedEmptyWithStatus(
         val card = observeAppDefinition(appDefinitionNote, accountViewModel)
 
         card.cover?.let {
-            AsyncImage(
-                model = it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(Size75dp)
-                        .clip(QuoteBorder),
-            )
-        } ?: run { NoteAuthorPicture(appDefinitionNote, Size75dp, accountViewModel = accountViewModel, nav = nav) }
+            Box(contentAlignment = BottomStart) {
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription = card.name,
+                    contentScale = ContentScale.Crop,
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = SimpleImage75Modifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                    onError = {
+                        appDefinitionNote.author?.let { author ->
+                            BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                        }
+                    },
+                )
+            }
+        } ?: run {
+            appDefinitionNote.author?.let { author ->
+                Box(contentAlignment = BottomStart) {
+                    BannerImage(author, SimpleImage75Modifier, accountViewModel)
+                }
+            }
+        }
 
         Spacer(modifier = DoubleVertSpacer)
 

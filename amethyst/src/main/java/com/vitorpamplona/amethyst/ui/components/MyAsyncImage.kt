@@ -82,8 +82,10 @@ fun MyAsyncImage(
                                 Box(contentAlignment = Alignment.Center) {
                                     if (onLoadingBackground != null) {
                                         onLoadingBackground()
+                                        LoadingAnimation(Size40dp, Size6dp)
+                                    } else {
+                                        DisplayUrlWithLoadingSymbol(imageUrl)
                                     }
-                                    DisplayUrlWithLoadingSymbol(imageUrl)
                                 }
                             }
                         }
@@ -96,12 +98,11 @@ fun MyAsyncImage(
                                 }
                             } else {
                                 Box(loadedImageModifier, contentAlignment = Alignment.Center) {
-                                    if (onLoadingBackground != null) {
-                                        onLoadingBackground()
-                                    }
-                                    DisplayUrlWithLoadingSymbol(imageUrl)
+                                    onError()
                                 }
                             }
+                        } else {
+                            ClickableUrl(urlText = imageUrl, url = imageUrl)
                         }
                     }
                     is AsyncImagePainter.State.Success -> {

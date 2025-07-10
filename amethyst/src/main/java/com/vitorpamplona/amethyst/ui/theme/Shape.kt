@@ -340,6 +340,9 @@ val FollowSetImageModifier =
         .clip(QuoteBorder)
         .aspectRatio(ratio = 21f / 9f)
 
+val SimpleImage75Modifier = Modifier.size(Size75dp).clip(QuoteBorder)
+val SimpleImage35Modifier = Modifier.size(Size34dp).clip(shape = CircleShape)
+
 val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
 
 val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
