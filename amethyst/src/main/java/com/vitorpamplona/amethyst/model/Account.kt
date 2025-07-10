@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -145,9 +144,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
@@ -163,8 +159,6 @@ import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
 import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -815,33 +809,7 @@ class Account(
                 ?: cache.relayHints.hintsForKey(pubkey).toSet()
         }
 
-    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> {
-        val isInChannel =
-            if (
-                event is ChannelMessageEvent ||
-                event is ChannelMetadataEvent ||
-                event is ChannelCreateEvent ||
-                event is LiveActivitiesChatMessageEvent ||
-                event is LiveActivitiesEvent ||
-                event is EphemeralChatEvent
-            ) {
-                (event as? ChannelMessageEvent)?.channelId()
-                    ?: (event as? ChannelMetadataEvent)?.channelId()
-                    ?: (event as? ChannelCreateEvent)?.id
-                    ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
-                    ?: (event as? LiveActivitiesEvent)?.aTag()?.toTag()
-                    ?: (event as? EphemeralChatEvent)?.roomId()?.toKey()
-            } else {
-                null
-            }
-
-        return if (isInChannel != null) {
-            val channel = LocalCache.checkGetOrCreateChannel(isInChannel)
-            channel?.relays() ?: emptySet()
-        } else {
-            emptySet()
-        }
-    }
+    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = LocalCache.getAnyChannel(event)?.relays() ?: emptySet()
 
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
         if (event is MetadataEvent || event is AdvertisedRelayListEvent) {

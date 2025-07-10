@@ -149,7 +149,6 @@ open class BasicRelayClient(
 
         override fun onMessage(text: String) {
             // Log.d(logTag, "Receiving: $text")
-
             stats.addBytesReceived(text.bytesUsedInMemory())
 
             try {

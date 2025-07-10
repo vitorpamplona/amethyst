@@ -124,7 +124,7 @@ class HomeLiveFilter(
     }
 
     fun sort(collection: Set<EphemeralChatChannel>): List<EphemeralChatChannel> {
-        val topFilter = account.liveDiscoveryFollowLists.value
+        val topFilter = account.liveHomeFollowLists.value
         val topFilterAuthors =
             when (topFilter) {
                 is AuthorsByOutboxTopNavFilter -> topFilter.authors
@@ -137,7 +137,7 @@ class HomeLiveFilter(
         val followingKeySet = topFilterAuthors ?: account.kind3FollowList.flow.value.authors
 
         val followCounts =
-            collection.associate { it to followsThatParticipateOn(it, followingKeySet) }
+            collection.associateWith { followsThatParticipateOn(it, followingKeySet) }
 
         return collection.sortedWith(
             compareByDescending<EphemeralChatChannel> { followCounts[it] }

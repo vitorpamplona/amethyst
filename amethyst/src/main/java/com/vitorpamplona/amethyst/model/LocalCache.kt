@@ -61,7 +61,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -416,33 +415,16 @@ object LocalCache : ILocalCache {
             EphemeralChatChannel(key)
         }
 
-    fun checkGetOrCreateChannel(key: String): Channel? {
-        checkNotInMainThread()
-
-        if (key.contains("@")) {
-            val idParts = key.split("@")
-            val relay = RelayUrlNormalizer.normalizeOrNull(idParts[1])
-
-            if (relay == null) {
-                return null
-            } else {
-                getOrCreateEphemeralChannel(RoomId(idParts[0], relay))
-            }
-        }
-
+    fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
             return getOrCreatePublicChatChannel(key)
-        }
-
-        val address = Address.parse(key)
-        if (address != null) {
-            return getOrCreateLiveChannel(address)
         }
         return null
     }
 
     private fun isValidHex(key: String): Boolean {
         if (key.isBlank()) return false
+        if (key.length != 64) return false
         if (key.contains(":")) return false
 
         return Hex.isHex(key)
@@ -1622,12 +1604,12 @@ object LocalCache : ILocalCache {
         if (channelId.isNullOrBlank()) return false
 
         // new event
-        val oldChannel = checkGetOrCreateChannel(channelId) ?: return false
+        val oldChannel = checkGetOrCreatePublicChatChannel(channelId) ?: return false
 
         val author = getOrCreateUser(event.pubKey)
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
-                if (oldChannel is PublicChatChannel && (wasVerified || justVerify(event))) {
+                if (wasVerified || justVerify(event)) {
                     oldChannel.updateChannelInfo(author, event)
                     true
                 } else {
@@ -1653,44 +1635,18 @@ object LocalCache : ILocalCache {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        val channelId = event.channelId()
+        val channelId = event.channelId() ?: return false
 
-        if (channelId.isNullOrBlank()) return false
-
-        val channel = checkGetOrCreateChannel(channelId) ?: return false
+        val channel = checkGetOrCreatePublicChatChannel(channelId)
+        if (channel == null) {
+            Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
+            return false
+        }
 
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
 
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (antiSpam.isSpam(event, relay)) {
-            return false
-        }
-
-        if (wasVerified || justVerify(event)) {
-            val replyTo = computeReplyTo(event)
-
-            note.loadEvent(event, author, replyTo)
-
-            // Log.d("CM", "New Chat Note (${note.author?.toBestDisplayName()} ${note.event?.content}
-            // ${formattedDateTime(event.createdAt)}")
-
-            // Counts the replies
-            replyTo.forEach { it.addReply(note) }
-
-            refreshObservers(note)
-        }
-
-        return true
+        return consumeRegularEvent(event, relay, wasVerified)
     }
 
     fun consume(
@@ -1698,45 +1654,14 @@ object LocalCache : ILocalCache {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        val roomId = event.roomId()
-        if (roomId == null) return false
-
-        val channelId = roomId
-        val channel = getOrCreateEphemeralChannel(channelId) ?: return false
+        val roomId = event.roomId() ?: return false
 
         val note = getOrCreateNote(event.id)
+        val channel = getOrCreateEphemeralChannel(roomId)
         channel.addNote(note, relay)
 
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (antiSpam.isSpam(event, relay)) {
-            return false
-        }
-
-        if (wasVerified || justVerify(event)) {
-            note.loadEvent(event, author, emptyList())
-
-            refreshObservers(note)
-
-            return true
-        }
-
-        return false
+        return consumeRegularEvent(event, relay, wasVerified)
     }
-
-    fun consume(
-        event: CommentEvent,
-        relay: NormalizedRelayUrl?,
-        wasVerified: Boolean,
-    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: LiveActivitiesChatMessageEvent,
@@ -1750,35 +1675,14 @@ object LocalCache : ILocalCache {
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
 
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (antiSpam.isSpam(event, relay)) {
-            return false
-        }
-
-        if (wasVerified || justVerify(event)) {
-            val replyTo = computeReplyTo(event)
-
-            note.loadEvent(event, author, replyTo)
-
-            // Counts the replies
-            replyTo.forEach { it.addReply(note) }
-
-            refreshObservers(note)
-
-            return true
-        }
-
-        return false
+        return consumeRegularEvent(event, relay, wasVerified)
     }
+
+    fun consume(
+        event: CommentEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     @Suppress("UNUSED_PARAMETER")
     fun consume(
@@ -2859,18 +2763,18 @@ object LocalCache : ILocalCache {
                 }
             }
             is EphemeralChatEvent -> {
-                draft.roomId()?.toKey()?.let {
-                    checkGetOrCreateChannel(it)?.addNote(note, null)
+                draft.roomId()?.let {
+                    getOrCreateEphemeralChannel(it).addNote(note, null)
                 }
             }
             is ChannelMessageEvent -> {
                 draft.channelId()?.let { channelId ->
-                    checkGetOrCreateChannel(channelId)?.addNote(note, null)
+                    checkGetOrCreatePublicChatChannel(channelId)?.addNote(note, null)
                 }
             }
             is LiveActivitiesChatMessageEvent -> {
                 draft.activityAddress()?.let { channelId ->
-                    checkGetOrCreateChannel(channelId.toValue())?.addNote(note, null)
+                    getOrCreateLiveChannel(channelId).addNote(note, null)
                 }
             }
             is TextNoteEvent -> {
@@ -2937,12 +2841,17 @@ object LocalCache : ILocalCache {
             }
             is ChannelMessageEvent -> {
                 draft.channelId()?.let { channelId ->
-                    checkGetOrCreateChannel(channelId)?.removeNote(draftWrap)
+                    getPublicChatChannelIfExists(channelId)?.removeNote(draftWrap)
                 }
             }
             is EphemeralChatEvent -> {
                 draft.roomId()?.let {
-                    getOrCreateEphemeralChannel(it).removeNote(draftWrap)
+                    getEphemeralChatChannelIfExists(it)?.removeNote(draftWrap)
+                }
+            }
+            is LiveActivitiesChatMessageEvent -> {
+                draft.activityAddress()?.let { channelId ->
+                    getLiveActivityChannelIfExists(channelId)?.removeNote(draftWrap)
                 }
             }
             is TextNoteEvent -> {

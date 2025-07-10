@@ -26,8 +26,17 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 data class RoomId(
     val id: String,
     val relayUrl: NormalizedRelayUrl,
-) {
+) : Comparable<RoomId> {
     fun toKey() = "$id@$relayUrl"
 
     fun toDisplayKey() = id + "@" + relayUrl.displayUrl()
+
+    override fun compareTo(other: RoomId): Int {
+        val result = id.compareTo(other.id)
+        return if (result == 0) {
+            relayUrl.url.compareTo(other.relayUrl.url)
+        } else {
+            result
+        }
+    }
 }
