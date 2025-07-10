@@ -2784,6 +2784,12 @@ object LocalCache : ILocalCache {
             if (consumeBaseReplaceable(event, relay, wasVerified)) {
                 return true
             }
+        } else {
+            // passes to the AccountViewModel for further delete.
+            val note = Note(event.id)
+            note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
+            relay?.let { note.addRelay(it) }
+            refreshObservers(note)
         }
 
         return false

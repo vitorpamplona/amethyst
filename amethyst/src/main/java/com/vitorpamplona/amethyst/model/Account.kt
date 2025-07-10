@@ -675,10 +675,25 @@ class Account(
                         myRelayList.addAll(it.relays)
                     }
 
-                    client.send(deletionEvent, outboxRelays.flow.value + myRelayList)
+                    client.send(deletionEvent, myRelayList)
                     cache.justConsumeMyOwnEvent(deletionEvent)
                 }
             }
+        }
+    }
+
+    fun delete(
+        event: Event,
+        additionalRelays: Set<NormalizedRelayUrl>,
+    ) {
+        if (!isWriteable()) return
+        if (event.pubKey != signer.pubKey) return
+
+        signer.sign(
+            DeletionEvent.build(listOf(event)),
+        ) { deletionEvent ->
+            client.send(deletionEvent, outboxRelays.flow.value + additionalRelays)
+            cache.justConsumeMyOwnEvent(deletionEvent)
         }
     }
 
@@ -1438,9 +1453,10 @@ class Account(
                 noteEvent.createDeletedEvent(signer) {
                     client.send(it, outboxRelays.flow.value + note.relays)
                     cache.justConsumeMyOwnEvent(it)
+
+                    delete(it, note.relays.toSet())
                 }
             }
-            delete(note)
         }
     }
 

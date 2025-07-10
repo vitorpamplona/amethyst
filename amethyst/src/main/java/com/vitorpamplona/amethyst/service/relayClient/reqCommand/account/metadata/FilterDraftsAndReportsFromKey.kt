@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
-val DraftsAndReportsFromKeyKinds =
+val ReportsAndBookmarksFromKeyKinds =
     listOf(
         DraftEvent.KIND,
         ReportEvent.KIND,
@@ -47,7 +47,7 @@ fun filterDraftsAndReportsFromKey(
             relay = relay,
             filter =
                 Filter(
-                    kinds = DraftsAndReportsFromKeyKinds,
+                    kinds = ReportsAndBookmarksFromKeyKinds,
                     authors = listOf(pubkey),
                     since = since,
                 ),

@@ -68,9 +68,13 @@ class PrecacheNewNotesProcessor(
 
             is DraftEvent -> {
                 // Avoid decrypting over and over again if the event already exist.
-                if (!event.isDeleted() && event.preCachedDraft(account.signer) == null && event.pubKey == account.signer.pubKey) {
-                    event.cachedDraft(account.signer) {
-                        cache.indexDraftAsRealEvent(event, it)
+                if (event.pubKey == account.signer.pubKey) {
+                    if (!event.isDeleted()) {
+                        if (event.preCachedDraft(account.signer) == null) {
+                            event.cachedDraft(account.signer) {
+                                cache.indexDraftAsRealEvent(event, it)
+                            }
+                        }
                     }
                 }
             }
@@ -134,6 +138,21 @@ class PrecacheNewNotesProcessor(
         try {
             newNotes.forEach {
                 consume(it)
+            }
+
+            val toDelete =
+                newNotes.mapNotNull {
+                    val noteEvent = it.event
+                    if (noteEvent is DraftEvent && noteEvent.isDeleted()) {
+                        it
+                    } else {
+                        null
+                    }
+                }
+
+            if (toDelete.isNotEmpty()) {
+                Log.w("PrecacheNewNotesProcessor", "Deleting ${toDelete.size} draft notes that should have been deleted already")
+                account.delete(toDelete)
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
