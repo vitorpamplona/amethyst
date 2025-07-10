@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import android.util.Log
+import android.util.Log.e
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -55,9 +56,16 @@ class AppDefinitionEvent(
             cachedMetadata
         } else {
             try {
-                val newMetadata = AppMetadata.parse(content)
-                cachedMetadata = newMetadata
-                newMetadata
+                if (content.startsWith("{")) {
+                    val newMetadata = AppMetadata.parse(content)
+                    cachedMetadata = newMetadata
+                    newMetadata
+                } else {
+                    val newMetadata = AppMetadata()
+                    newMetadata.name = content
+                    cachedMetadata = newMetadata
+                    newMetadata
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 Log.w("AppDefinitionEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}")
