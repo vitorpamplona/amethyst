@@ -24,7 +24,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilte
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfFeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
@@ -281,8 +281,7 @@ private fun RenderVideoOrPictureNote(
             val noteEvent = remember { note.event }
             if (noteEvent is PictureEvent) {
                 val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-
-                PictureDisplay(note, false, ContentScale.Fit, PaddingValues(5.dp), backgroundColor, accountViewModel, nav)
+                PictureDisplay(note, false, ContentScale.Fit, HalfFeedPadding, backgroundColor, accountViewModel, nav)
             } else if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {

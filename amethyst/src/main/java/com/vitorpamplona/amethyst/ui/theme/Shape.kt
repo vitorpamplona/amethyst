@@ -219,6 +219,7 @@ val EditFieldModifier =
 val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)
 
 val ZeroPadding = PaddingValues(0.dp)
+val HalfFeedPadding = PaddingValues(5.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
