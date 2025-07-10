@@ -139,7 +139,7 @@ fun RenderLiveActivityEventInner(
     val subject = remember(eventUpdates) { noteEvent.title() }
     val content = remember(eventUpdates) { noteEvent.summary() }
     val participants = remember(eventUpdates) { noteEvent.participants() }
-    val status = remember(eventUpdates) { noteEvent.statusEnum() }
+    val status = remember(eventUpdates) { noteEvent.status() }
     val starts = remember(eventUpdates) { noteEvent.starts() }
 
     Row(

@@ -105,7 +105,7 @@ fun RenderLiveActivityThumb(
             subject = noteEvent?.title()?.ifBlank { null },
             content = noteEvent?.summary(),
             participants = noteEvent?.participants()?.toImmutableList() ?: persistentListOf(),
-            status = noteEvent?.statusEnum(),
+            status = noteEvent?.status(),
             starts = noteEvent?.starts(),
         )
     }

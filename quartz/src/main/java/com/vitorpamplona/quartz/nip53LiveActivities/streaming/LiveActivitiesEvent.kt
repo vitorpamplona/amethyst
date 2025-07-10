@@ -29,14 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseKey
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -88,11 +82,9 @@ class LiveActivitiesEvent(
 
     fun ends() = tags.firstNotNullOfOrNull(EndsTag::parse)
 
-    fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parse))
+    fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
 
-    fun statusEnum() = checkStatusEnum(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
-
-    fun isLive() = statusEnum() == StatusTag.STATUS.LIVE
+    fun isLive() = status() == StatusTag.STATUS.LIVE
 
     fun currentParticipants() = tags.firstNotNullOfOrNull(CurrentParticipantsTag::parse)
 
@@ -110,16 +102,19 @@ class LiveActivitiesEvent(
 
     fun hosts() = tags.mapNotNull(ParticipantTag::parseHost)
 
-    fun checkStatus(eventStatus: String?): String? =
-        if (eventStatus == StatusTag.STATUS.LIVE.code && createdAt < TimeUtils.eightHoursAgo()) {
-            StatusTag.STATUS.ENDED.code
-        } else {
-            eventStatus
-        }
-
-    fun checkStatusEnum(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
+    fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
         if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {
             StatusTag.STATUS.ENDED
+        } else if (eventStatus == StatusTag.STATUS.PLANNED) {
+            val starts = starts()
+            val ends = ends()
+            if (starts != null && starts < TimeUtils.oneHourAgo()) {
+                StatusTag.STATUS.ENDED
+            } else if (ends != null && ends < TimeUtils.oneHourAgo()) {
+                StatusTag.STATUS.ENDED
+            } else {
+                eventStatus
+            }
         } else {
             eventStatus
         }

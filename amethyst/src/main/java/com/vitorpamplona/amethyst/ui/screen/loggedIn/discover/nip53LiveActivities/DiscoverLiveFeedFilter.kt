@@ -94,7 +94,7 @@ open class DiscoverLiveFeedFilter(
         return collection
             .sortedWith(
                 compareBy(
-                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.statusEnum()) },
+                    { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.status()) },
                     { participantCounts[it] },
                     { allParticipants[it] },
                     { (it.event as? LiveActivitiesEvent)?.starts() ?: it.createdAt() },
