@@ -521,16 +521,22 @@ private fun FullBleedNoteCompose(
                     .padding(horizontal = 12.dp),
         ) {
             Column {
-                if (
-                    (noteEvent is ChannelCreateEvent || noteEvent is ChannelMetadataEvent) &&
-                    baseNote.channelHex() != null
-                ) {
+                if (noteEvent is ChannelCreateEvent) {
                     PublicChatChannelHeader(
-                        channelHex = baseNote.channelHex()!!,
+                        channelHex = noteEvent.id,
                         sendToChannel = true,
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                } else if (noteEvent is ChannelMetadataEvent) {
+                    noteEvent.channelId()?.let {
+                        PublicChatChannelHeader(
+                            channelHex = it,
+                            sendToChannel = true,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 } else if (noteEvent is VideoEvent) {
                     VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is PictureEvent) {

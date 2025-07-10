@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -44,7 +45,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
@@ -66,7 +66,7 @@ fun RenderTextEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? Event ?: return
+    val noteEvent = note.event ?: return
 
     val showReply by
         remember(note) {
@@ -82,7 +82,7 @@ fun RenderTextEvent(
                     val replyingTo = noteEvent.replyingToAddressOrEvent()
                     if (replyingTo != null) {
                         val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && newNote.channelHex() == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
+                        if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
                             newNote
                         } else {
                             note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }

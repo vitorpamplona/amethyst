@@ -272,16 +272,24 @@ fun AcceptableNote(
     nav: INav,
 ) {
     if (isQuotedNote || isBoostedNote) {
-        when (baseNote.event) {
-            is ChannelCreateEvent,
-            is ChannelMetadataEvent,
-            ->
+        val noteEvent = baseNote.event
+        when (noteEvent) {
+            is ChannelCreateEvent ->
                 RenderPublicChatChannelHeader(
-                    channelNote = baseNote,
+                    channelId = noteEvent.id,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            is ChannelMetadataEvent ->
+                noteEvent.channelId()?.let {
+                    RenderPublicChatChannelHeader(
+                        channelId = it,
+                        sendToChannel = true,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             is CommunityDefinitionEvent ->
                 (baseNote as? AddressableNote)?.let {
                     RenderCommunity(
@@ -311,16 +319,23 @@ fun AcceptableNote(
                 }
         }
     } else {
-        when (baseNote.event) {
-            is ChannelCreateEvent,
-            is ChannelMetadataEvent,
-            ->
+        when (val noteEvent = baseNote.event) {
+            is ChannelCreateEvent ->
                 RenderPublicChatChannelHeader(
-                    channelNote = baseNote,
+                    channelId = noteEvent.id,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            is ChannelMetadataEvent ->
+                noteEvent.channelId()?.let {
+                    RenderPublicChatChannelHeader(
+                        channelId = it,
+                        sendToChannel = true,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             is CommunityDefinitionEvent ->
                 (baseNote as? AddressableNote)?.let {
                     RenderCommunity(
@@ -1170,7 +1185,8 @@ private fun RenderAuthorImages(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+    val noteEvent = baseNote.event
+    if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
@@ -1181,8 +1197,8 @@ private fun RenderAuthorImages(
         NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
     }
 
-    if (baseNote.event is ChannelMessageEvent) {
-        val baseChannelHex = remember(baseNote) { baseNote.channelHex() }
+    if (noteEvent is ChannelMessageEvent) {
+        val baseChannelHex = noteEvent.channelId()
         if (baseChannelHex != null) {
             LoadPublicChatChannel(baseChannelHex, accountViewModel) { channel ->
                 ChannelNotePicture(

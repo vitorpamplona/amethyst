@@ -760,14 +760,7 @@ class Account(
                 }
             }
 
-        val isInChannel = note.channelHex()
-        val channelRelays =
-            if (isInChannel != null) {
-                val channel = LocalCache.checkGetOrCreateChannel(isInChannel)
-                channel?.relays() ?: emptySet()
-            } else {
-                emptySet()
-            }
+        val channelRelays = LocalCache.getAnyChannel(note)?.relays() ?: emptySet()
 
         val replyRelays =
             note.replyTo?.flatMapTo(mutableSetOf()) {

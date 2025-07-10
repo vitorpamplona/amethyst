@@ -1326,6 +1326,19 @@ object LocalCache : ILocalCache {
         }
     }
 
+    fun getAnyChannel(note: Note): Channel? = note.event?.let { getAnyChannel(it) }
+
+    fun getAnyChannel(noteEvent: Event): Channel? =
+        when (noteEvent) {
+            is ChannelCreateEvent -> getPublicChatChannelIfExists(noteEvent.id)
+            is ChannelMetadataEvent -> noteEvent.channelId()?.let { getPublicChatChannelIfExists(it) }
+            is ChannelMessageEvent -> noteEvent.channelId()?.let { getPublicChatChannelIfExists(it) }
+            is LiveActivitiesChatMessageEvent -> noteEvent.activityAddress()?.let { getLiveActivityChannelIfExists(it) }
+            is LiveActivitiesEvent -> getLiveActivityChannelIfExists(noteEvent.address())
+            is EphemeralChatEvent -> noteEvent.roomId()?.let { getEphemeralChatChannelIfExists(it) }
+            else -> null
+        }
+
     @Suppress("DEPRECATION")
     private fun deleteNote(deleteNote: Note) {
         val deletedEvent = deleteNote.event
@@ -1349,11 +1362,7 @@ object LocalCache : ILocalCache {
             masterNote.removeReport(deleteNote)
         }
 
-        deleteNote.channelHex()?.let { getPublicChatChannelIfExists(it)?.removeNote(deleteNote) }
-
-        (deletedEvent as? LiveActivitiesChatMessageEvent)?.activity()?.let {
-            getPublicChatChannelIfExists(it.toTag())?.removeNote(deleteNote)
-        }
+        getAnyChannel(deleteNote)?.removeNote(deleteNote)
 
         (deletedEvent as? TorrentCommentEvent)?.torrentIds()?.let {
             getNoteIfExists(it)?.removeReply(deleteNote)

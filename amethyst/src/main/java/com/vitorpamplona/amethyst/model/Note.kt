@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -51,8 +50,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
@@ -60,7 +57,6 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -213,25 +209,6 @@ open class Note(
     fun toNostrUri(): String = "nostr:${toNEvent()}"
 
     open fun idDisplayNote() = idNote().toShortDisplay()
-
-    fun channelHex(): HexKey? =
-        if (
-            event is ChannelMessageEvent ||
-            event is ChannelMetadataEvent ||
-            event is ChannelCreateEvent ||
-            event is LiveActivitiesChatMessageEvent ||
-            event is LiveActivitiesEvent ||
-            event is EphemeralChatEvent
-        ) {
-            (event as? ChannelMessageEvent)?.channelId()
-                ?: (event as? ChannelMetadataEvent)?.channelId()
-                ?: (event as? ChannelCreateEvent)?.id
-                ?: (event as? LiveActivitiesChatMessageEvent)?.activity()?.toTag()
-                ?: (event as? LiveActivitiesEvent)?.aTag()?.toTag()
-                ?: (event as? EphemeralChatEvent)?.roomId()?.toKey()
-        } else {
-            null
-        }
 
     open fun address(): Address? = null
 

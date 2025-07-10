@@ -34,21 +34,12 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
 
     set.addAll(LocalCache.relayHints.hintsForEvent(note.idHex))
 
-    val isInChannel = note.channelHex()
-    if (isInChannel != null) {
-        LocalCache.checkGetOrCreateChannel(isInChannel)?.relays()?.forEach {
-            set.add(it)
-        }
-    }
+    LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.map { parentNote ->
         set.addAll(parentNote.relays)
 
-        parentNote
-            .channelHex()
-            ?.let { LocalCache.checkGetOrCreateChannel(it) }
-            ?.relays()
-            ?.forEach { set.add(it) }
+        LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
 
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
@@ -56,11 +47,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     note.replies.map { childNote ->
         set.addAll(childNote.relays)
 
-        childNote
-            .channelHex()
-            ?.let { LocalCache.checkGetOrCreateChannel(it) }
-            ?.relays()
-            ?.forEach { set.add(it) }
+        LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
 
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
