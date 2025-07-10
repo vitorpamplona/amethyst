@@ -1913,12 +1913,12 @@ class Account(
                 dvmPublicKey
                     .inboxRelays()
                     .ifEmpty {
-                        LocalCache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex)
+                        LocalCache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex) + dvmPublicKey.relaysBeingUsed.keys
                     }.toSet()
 
-            client.send(it, relayList)
             cache.justConsumeMyOwnEvent(it)
             onReady(it)
+            client.send(it, relayList)
         }
     }
 
