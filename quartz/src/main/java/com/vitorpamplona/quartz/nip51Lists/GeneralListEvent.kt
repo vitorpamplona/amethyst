@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isTagged
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -176,7 +176,7 @@ abstract class GeneralListEvent(
             signer: NostrSigner,
             onReady: (String) -> Unit,
         ) {
-            val msg = EventMapper.mapper.writeValueAsString(privateTags)
+            val msg = JsonMapper.mapper.writeValueAsString(privateTags)
 
             signer.nip04Encrypt(
                 msg,

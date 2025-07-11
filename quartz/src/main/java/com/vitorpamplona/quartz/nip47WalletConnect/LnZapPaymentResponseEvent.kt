@@ -24,7 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
@@ -71,7 +71,7 @@ class LnZapPaymentResponseEvent(
         try {
             if (content.isNotEmpty()) {
                 plainContent(signer) {
-                    EventMapper.mapper.readValue(it, Response::class.java)?.let {
+                    JsonMapper.mapper.readValue(it, Response::class.java)?.let {
                         response = it
                         onReady(it)
                     }

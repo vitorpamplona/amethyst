@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
 class ToRelayParser {
     fun parse(newMessage: String): Command? {
-        val msgArray = EventMapper.mapper.readTree(newMessage)
+        val msgArray = JsonMapper.mapper.readTree(newMessage)
         val type = msgArray.get(0).asText()
         return when (type) {
             AuthCmd.LABEL -> AuthCmd.parse(msgArray)

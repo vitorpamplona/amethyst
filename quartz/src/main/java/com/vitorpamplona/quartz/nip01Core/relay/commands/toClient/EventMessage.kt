@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
 class EventMessage(
     val subId: String,
@@ -35,7 +35,7 @@ class EventMessage(
         fun parse(msgArray: JsonNode): EventMessage =
             EventMessage(
                 msgArray.get(1).asText(),
-                EventMapper.fromJson(msgArray.get(2)),
+                JsonMapper.fromJson(msgArray.get(2)),
             )
     }
 }

@@ -25,7 +25,7 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.generateId
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.verifyId
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
@@ -45,7 +45,7 @@ class EventCmdHasherBenchmark {
 
     @Test
     fun checkIDHashKind1WihtoutTags() {
-        val event = EventMapper.fromJson(EventMapper.mapper.readTree(reqResponseEvent))
+        val event = JsonMapper.fromJson(JsonMapper.mapper.readTree(reqResponseEvent))
 
         benchmarkRule.measureRepeated {
             // Should pass

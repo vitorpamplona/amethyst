@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
@@ -63,7 +63,7 @@ class MetadataEvent(
 
     fun contactMetaData() =
         try {
-            EventMapper.mapper.readValue(content, UserMetadata::class.java)
+            JsonMapper.mapper.readValue(content, UserMetadata::class.java)
         } catch (e: Exception) {
             Log.w("MetadataEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}")
             null

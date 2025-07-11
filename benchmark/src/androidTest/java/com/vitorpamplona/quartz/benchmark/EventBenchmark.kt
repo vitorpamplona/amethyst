@@ -24,7 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.EventFactory
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip01Core.verifyId
 import com.vitorpamplona.quartz.nip01Core.verifySignature
@@ -47,28 +47,28 @@ class EventBenchmark {
     @Test
     fun parseComplete() {
         benchmarkRule.measureRepeated {
-            val tree = EventMapper.mapper.readTree(reqResponseEvent)
-            val event = EventMapper.fromJson(tree[2])
+            val tree = JsonMapper.mapper.readTree(reqResponseEvent)
+            val event = JsonMapper.fromJson(tree[2])
             assertTrue(event.verify())
         }
     }
 
     @Test
     fun parseREQString() {
-        benchmarkRule.measureRepeated { EventMapper.mapper.readTree(reqResponseEvent) }
+        benchmarkRule.measureRepeated { JsonMapper.mapper.readTree(reqResponseEvent) }
     }
 
     @Test
     fun parseEvent() {
-        val msg = EventMapper.mapper.readTree(reqResponseEvent)
+        val msg = JsonMapper.mapper.readTree(reqResponseEvent)
 
-        benchmarkRule.measureRepeated { EventMapper.fromJson(msg[2]) }
+        benchmarkRule.measureRepeated { JsonMapper.fromJson(msg[2]) }
     }
 
     @Test
     fun checkId() {
-        val msg = EventMapper.mapper.readTree(reqResponseEvent)
-        val event = EventMapper.fromJson(msg[2])
+        val msg = JsonMapper.mapper.readTree(reqResponseEvent)
+        val event = JsonMapper.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
             assertTrue(event.verifyId())
@@ -77,8 +77,8 @@ class EventBenchmark {
 
     @Test
     fun checkSignature() {
-        val msg = EventMapper.mapper.readTree(reqResponseEvent)
-        val event = EventMapper.fromJson(msg[2])
+        val msg = JsonMapper.mapper.readTree(reqResponseEvent)
+        val event = JsonMapper.fromJson(msg[2])
         benchmarkRule.measureRepeated {
             // Should pass
             assertTrue(event.verifySignature())

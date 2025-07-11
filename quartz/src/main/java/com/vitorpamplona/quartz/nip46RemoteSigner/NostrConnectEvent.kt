@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.Hex
@@ -73,7 +73,7 @@ class NostrConnectEvent(
 
         // decrypts using NIP-04 or NIP-44
         signer.decrypt(content, talkingWith(signer.pubKey)) { retVal ->
-            val content = EventMapper.mapper.readValue(retVal, BunkerMessage::class.java)
+            val content = JsonMapper.mapper.readValue(retVal, BunkerMessage::class.java)
 
             decryptedContent = decryptedContent + Pair(signer.pubKey, content)
 
@@ -98,7 +98,7 @@ class NostrConnectEvent(
                     arrayOf("p", remoteKey),
                 )
 
-            val encrypted = EventMapper.mapper.writeValueAsString(message)
+            val encrypted = JsonMapper.mapper.writeValueAsString(message)
 
             signer.nip44Encrypt(encrypted, remoteKey) { content ->
                 signer.sign(createdAt, KIND, tags, content, onReady)

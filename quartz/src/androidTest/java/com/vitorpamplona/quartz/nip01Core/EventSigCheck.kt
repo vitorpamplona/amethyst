@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -52,8 +52,8 @@ class EventSigCheck {
 
     @Test
     fun testUnicode2028and2029ShouldNotBeEscaped() {
-        val msg = EventMapper.mapper.readTree(payload1)
-        val event = EventMapper.fromJson(msg[2])
+        val msg = JsonMapper.mapper.readTree(payload1)
+        val event = JsonMapper.fromJson(msg[2])
 
         // Should pass
         event.checkSignature()

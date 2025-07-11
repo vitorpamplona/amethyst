@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import java.util.Base64
@@ -66,7 +66,7 @@ object Nip44 {
         // Ignores if it is not a valid json
         val info =
             try {
-                EventMapper.mapper.readValue(json, EncryptedInfoString::class.java)
+                JsonMapper.mapper.readValue(json, EncryptedInfoString::class.java)
             } catch (e: Exception) {
                 Log.e("NIP44", "Unable to parse json $json")
                 return null

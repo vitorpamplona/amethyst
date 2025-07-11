@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.verify
 import junit.framework.TestCase
@@ -121,7 +121,7 @@ class ThreadDualAxisChartAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                EventMapper.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
+                JsonMapper.mapper.readValue<ArrayList<Event>>(db) as List<Event> + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {

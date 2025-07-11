@@ -21,9 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -32,8 +31,8 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 @Immutable
 open class Event(
     val id: HexKey,
-    @JsonProperty("pubkey") val pubKey: HexKey,
-    @JsonProperty("created_at") val createdAt: Long,
+    val pubKey: HexKey,
+    val createdAt: Long,
     val kind: Int,
     val tags: TagArray,
     val content: String,
@@ -57,7 +56,7 @@ open class Event(
     fun toJson(): String = EventManualSerializer.toJson(id, pubKey, createdAt, kind, tags, content, sig)
 
     companion object {
-        fun fromJson(json: String): Event = EventMapper.fromJson(json)
+        fun fromJson(json: String): Event = JsonMapper.fromJson(json)
 
         fun build(
             kind: Int,

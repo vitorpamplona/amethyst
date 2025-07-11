@@ -21,14 +21,14 @@
 package com.vitorpamplona.quartz.nip51Lists.encryption
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 
 class PrivateTagsInContent {
     companion object {
-        fun decode(content: String) = EventMapper.mapper.readValue<Array<Array<String>>>(content)
+        fun decode(content: String) = JsonMapper.mapper.readValue<Array<Array<String>>>(content)
 
-        fun encode(privateTags: Array<Array<String>>) = EventMapper.mapper.writeValueAsString(privateTags)
+        fun encode(privateTags: Array<Array<String>>) = JsonMapper.mapper.writeValueAsString(privateTags)
 
         fun decrypt(
             content: String,

@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.service.ots.OkHttpBitcoinExplorer
 import com.vitorpamplona.amethyst.service.ots.OkHttpCalendarBuilder
 import com.vitorpamplona.amethyst.service.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -58,21 +58,21 @@ class OkHttpOtsTest {
 
     @Test
     fun verifyNostrEvent() {
-        val ots = EventMapper.fromJson(otsEvent) as OtsEvent
+        val ots = JsonMapper.fromJson(otsEvent) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(1707688818L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrEvent2() {
-        val ots = EventMapper.fromJson(otsEvent2) as OtsEvent
+        val ots = JsonMapper.fromJson(otsEvent2) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(1706322179L, ots.verify(resolver))
     }
 
     @Test
     fun verifyNostrPendingEvent() {
-        val ots = EventMapper.fromJson(otsPendingEvent) as OtsEvent
+        val ots = JsonMapper.fromJson(otsPendingEvent) as OtsEvent
         println(resolver.info(ots.otsByteArray()))
         assertEquals(null, ots.verify(resolver))
     }

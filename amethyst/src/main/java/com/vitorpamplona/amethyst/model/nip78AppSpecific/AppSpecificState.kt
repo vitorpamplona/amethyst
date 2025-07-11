@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import kotlinx.coroutines.CoroutineScope
@@ -55,7 +55,7 @@ class AppSpecificState(
 
     fun saveNewAppSpecificData(onDone: (AppSpecificDataEvent) -> Unit) {
         val toInternal = settings.syncedSettings.toInternal()
-        signer.nip44Encrypt(EventMapper.mapper.writeValueAsString(toInternal), signer.pubKey) { encrypted ->
+        signer.nip44Encrypt(JsonMapper.mapper.writeValueAsString(toInternal), signer.pubKey) { encrypted ->
             AppSpecificDataEvent.create(
                 dTag = APP_SPECIFIC_DATA_D_TAG,
                 description = encrypted,
@@ -74,7 +74,7 @@ class AppSpecificState(
                 LocalCache.justConsumeMyOwnEvent(event)
                 signer.decrypt(event.content, event.pubKey) { decrypted ->
                     try {
-                        val syncedSettings = EventMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                        val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
                         settings.syncedSettings.updateFrom(syncedSettings)
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e
@@ -94,7 +94,7 @@ class AppSpecificState(
                     signer.decrypt(it.content, it.pubKey) { decrypted ->
                         val syncedSettings =
                             try {
-                                EventMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                                JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
                             } catch (e: Throwable) {
                                 if (e is CancellationException) throw e
                                 Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)

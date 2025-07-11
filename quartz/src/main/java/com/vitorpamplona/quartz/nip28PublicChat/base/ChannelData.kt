@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip28PublicChat.base
 
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
@@ -38,9 +38,9 @@ data class ChannelData(
     fun normalize() = ChannelDataNorm(name, about, picture, relays?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
 
     companion object {
-        fun parse(content: String): ChannelData? = EventMapper.mapper.readValue(content)
+        fun parse(content: String): ChannelData? = JsonMapper.mapper.readValue(content)
 
-        fun assemble(data: ChannelData) = EventMapper.mapper.writeValueAsString(data)
+        fun assemble(data: ChannelData) = JsonMapper.mapper.writeValueAsString(data)
     }
 }
 

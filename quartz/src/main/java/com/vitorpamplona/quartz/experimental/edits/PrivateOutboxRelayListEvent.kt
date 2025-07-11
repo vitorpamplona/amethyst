@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.experimental.edits.tags.RelayTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
@@ -81,7 +81,7 @@ class PrivateOutboxRelayListEvent(
         try {
             signer.nip44Decrypt(content, pubKey) {
                 try {
-                    privateTagsCache = EventMapper.mapper.readValue<TagArray>(it)
+                    privateTagsCache = JsonMapper.mapper.readValue<TagArray>(it)
                     privateTagsCache?.let { onReady(it) }
                 } catch (e: Throwable) {
                     Log.w("PrivateOutboxRelayListEvent", "Error parsing the JSON: ${e.message}. Json `$it` from event `${toNostrUri()}`")
@@ -107,7 +107,7 @@ class PrivateOutboxRelayListEvent(
             signer: NostrSigner,
             onReady: (String) -> Unit,
         ) {
-            val msg = EventMapper.mapper.writeValueAsString(privateTags)
+            val msg = JsonMapper.mapper.writeValueAsString(privateTags)
 
             signer.nip44Encrypt(
                 msg,

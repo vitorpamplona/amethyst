@@ -25,7 +25,7 @@ import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
@@ -59,7 +59,7 @@ class NIP90ContentDiscoveryResponseEvent(
 
         try {
             events =
-                EventMapper.mapper.readValue<Array<Array<String>>>(content).mapNotNull {
+                JsonMapper.mapper.readValue<Array<Array<String>>>(content).mapNotNull {
                     if (it.size > 1 && it[0] == "e") {
                         it[1]
                     } else {

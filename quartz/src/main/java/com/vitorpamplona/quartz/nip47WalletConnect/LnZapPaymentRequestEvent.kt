@@ -24,7 +24,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -62,7 +62,7 @@ class LnZapPaymentRequestEvent(
 
         try {
             signer.decrypt(content, talkingWith(signer.pubKey)) { jsonText ->
-                val payInvoiceMethod = EventMapper.mapper.readValue(jsonText, Request::class.java)
+                val payInvoiceMethod = JsonMapper.mapper.readValue(jsonText, Request::class.java)
 
                 lnInvoice = (payInvoiceMethod as? PayInvoiceMethod)?.params?.invoice
 
@@ -84,7 +84,7 @@ class LnZapPaymentRequestEvent(
             createdAt: Long = TimeUtils.now(),
             onReady: (LnZapPaymentRequestEvent) -> Unit,
         ) {
-            val serializedRequest = EventMapper.mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
+            val serializedRequest = JsonMapper.mapper.writeValueAsString(PayInvoiceMethod.create(lnInvoice))
 
             val tags = arrayOf(arrayOf("p", walletServicePubkey), AltTag.assemble(ALT))
 
