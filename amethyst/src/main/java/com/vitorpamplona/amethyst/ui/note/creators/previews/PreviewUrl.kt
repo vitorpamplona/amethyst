@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlin.text.startsWith

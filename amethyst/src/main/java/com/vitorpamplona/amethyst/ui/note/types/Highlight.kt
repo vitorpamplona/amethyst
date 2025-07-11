@@ -49,8 +49,8 @@ import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address

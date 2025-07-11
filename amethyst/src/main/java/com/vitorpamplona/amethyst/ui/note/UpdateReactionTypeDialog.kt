@@ -51,7 +51,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -82,15 +81,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
@@ -190,28 +187,15 @@ fun UpdateReactionTypeDialog(
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    actions = {
-                        SaveButton(
-                            onPost = {
-                                postViewModel.sendPost()
-                                onClose()
-                            },
-                            isActive = postViewModel.hasChanged(),
-                        )
-                        Spacer(modifier = StdHorzSpacer)
+                SavingTopBar(
+                    isActive = postViewModel::hasChanged,
+                    onCancel = {
+                        postViewModel.cancel()
+                        onClose()
                     },
-                    title = {},
-                    navigationIcon = {
-                        Row {
-                            Spacer(modifier = StdHorzSpacer)
-                            CloseButton(
-                                onPress = {
-                                    postViewModel.cancel()
-                                    onClose()
-                                },
-                            )
-                        }
+                    onPost = {
+                        postViewModel.sendPost()
+                        onClose()
                     },
                 )
             },

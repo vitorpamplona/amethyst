@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.topbars
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -31,7 +31,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,8 +68,7 @@ fun MyExtensibleTopAppBar(
     Column(
         Modifier.clickable { expanded.value = !expanded.value },
     ) {
-        TopAppBar(
-            scrollBehavior = rememberHeightDecreaser(),
+        ShorterTopAppBar(
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

@@ -70,8 +70,8 @@ import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

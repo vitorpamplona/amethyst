@@ -22,16 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
 class TwoPaneNav(
     val nav: INav,
-    val scope: CoroutineScope,
+    override val scope: CoroutineScope,
 ) : INav {
     override val drawerState: DrawerState = nav.drawerState
 
@@ -46,7 +45,7 @@ class TwoPaneNav(
     }
 
     override fun nav(computeRoute: suspend () -> Route?) {
-        scope.launch(Dispatchers.Default) {
+        scope.launch {
             val route = computeRoute()
             if (route != null) {
                 if (route is Route.Room || route is Route.PublicChatChannel) {

@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.topbars
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,17 +33,18 @@ fun TopBarWithBackButton(
     caption: String,
     popBack: () -> Unit,
 ) {
-    TopAppBar(
-        scrollBehavior = rememberHeightDecreaser(),
-        title = { Text(caption) },
+    ShorterTopAppBar(
+        title = {
+            Text(
+                text = caption,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+            )
+        },
         navigationIcon = {
-            IconButton(
-                onClick = popBack,
-                modifier = Modifier,
-            ) {
+            IconButton(popBack) {
                 ArrowBackIcon()
             }
         },
-        actions = {},
     )
 }

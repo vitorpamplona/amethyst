@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,8 +38,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -56,11 +53,10 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.navigation.Nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -85,7 +81,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import kotlinx.collections.immutable.persistentListOf
@@ -144,47 +139,25 @@ fun GenericCommentPostScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = CenterVertically,
-                    ) {
-                        Spacer(modifier = StdHorzSpacer)
-                        PostButton(
-                            onPost = {
-                                // uses the accountViewModel scope to avoid cancelling this
-                                // function when the postViewModel is released
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPostSync()
-                                    nav.popBack()
-                                }
-                            },
-                            isActive = postViewModel.canPost(),
-                        )
+            PostingTopBar(
+                isActive = postViewModel::canPost,
+                onCancel = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        postViewModel.sendDraftSync()
+                        nav.popBack()
+                        postViewModel.cancel()
                     }
                 },
-                navigationIcon = {
-                    Row {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                // uses the accountViewModel scope to avoid cancelling this
-                                // function when the postViewModel is released
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    postViewModel.sendDraftSync()
-                                    nav.popBack()
-                                    postViewModel.cancel()
-                                }
-                            },
-                        )
+                onPost = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        postViewModel.sendPostSync()
+                        nav.popBack()
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->

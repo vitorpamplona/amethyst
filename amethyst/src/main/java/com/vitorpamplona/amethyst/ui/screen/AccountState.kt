@@ -27,7 +27,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 
 sealed class AccountState {
     object Loading : AccountState()

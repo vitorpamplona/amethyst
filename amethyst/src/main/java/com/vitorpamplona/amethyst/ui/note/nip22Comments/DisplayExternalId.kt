@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId

@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.model.DefaultNIP65List
 import com.vitorpamplona.amethyst.model.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

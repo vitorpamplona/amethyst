@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.drawer
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

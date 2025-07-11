@@ -46,8 +46,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserAboutMe
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton

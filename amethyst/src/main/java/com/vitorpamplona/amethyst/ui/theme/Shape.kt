@@ -86,8 +86,6 @@ val Height100Modifier = Modifier.height(100.dp)
 
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
 
-val TopBarSize = 50.dp - 64.dp
-
 val Size0dp = 0.dp
 val Size5dp = 5.dp
 val Size6dp = 6.dp

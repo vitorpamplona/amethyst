@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplies
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton

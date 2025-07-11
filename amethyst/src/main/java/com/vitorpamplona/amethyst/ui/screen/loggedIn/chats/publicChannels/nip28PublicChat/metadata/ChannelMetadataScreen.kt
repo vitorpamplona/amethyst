@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,17 +35,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,12 +48,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectSingleFromGallery
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
@@ -69,10 +62,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayUrlEditF
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -87,9 +78,7 @@ fun ChannelMetadataScreen(
         ChannelMetadataScreen(null as PublicChatChannel?, accountViewModel, nav)
     } else {
         LoadPublicChatChannel(channelId, accountViewModel) {
-            if (it is PublicChatChannel) {
-                ChannelMetadataScreen(it, accountViewModel, nav)
-            }
+            ChannelMetadataScreen(it, accountViewModel, nav)
         }
     }
 }
@@ -135,61 +124,35 @@ private fun ChannelMetadataScaffold(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Spacer(modifier = MinHorzSpacer)
-
-                        Text(
-                            text = stringRes(R.string.public_chat),
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                        )
-
-                        if (postViewModel.isNewChannel()) {
-                            CreateButton(
-                                onPost = {
-                                    postViewModel.createOrUpdate {
-                                        nav.nav(routeFor(it))
-                                    }
-                                    nav.popBack()
-                                },
-                                postViewModel.canPost,
-                            )
-                        } else {
-                            SaveButton(
-                                onPost = {
-                                    postViewModel.createOrUpdate { }
-                                    nav.popBack()
-                                },
-                                postViewModel.canPost,
-                            )
+            if (postViewModel.isNewChannel()) {
+                CreatingTopBar(
+                    titleRes = R.string.public_chat,
+                    isActive = postViewModel::canPost,
+                    onCancel = {
+                        postViewModel.clear()
+                        nav.popBack()
+                    },
+                    onPost = {
+                        postViewModel.createOrUpdate {
+                            nav.nav(routeFor(it))
                         }
-                    }
-                },
-                navigationIcon = {
-                    Row {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                postViewModel.clear()
-                                nav.popBack()
-                            },
-                        )
-                    }
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-            )
+                        nav.popBack()
+                    },
+                )
+            } else {
+                SavingTopBar(
+                    titleRes = R.string.public_chat,
+                    isActive = postViewModel::canPost,
+                    onCancel = {
+                        postViewModel.clear()
+                        nav.popBack()
+                    },
+                    onPost = {
+                        postViewModel.createOrUpdate { }
+                        nav.popBack()
+                    },
+                )
+            }
         },
     ) { pad ->
         val feedState by postViewModel.channelRelays.collectAsStateWithLifecycle()

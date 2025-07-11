@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,13 +30,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -45,15 +40,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayListViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
@@ -79,40 +72,16 @@ fun AddSearchRelayListDialog(
         SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
-                TopAppBar(
-                    navigationIcon = {
-                        CloseButton(
-                            modifier = HalfHorzPadding,
-                            onPress = {
-                                postViewModel.clear()
-                                onClose()
-                            },
-                        )
+                SavingTopBar(
+                    titleRes = R.string.search_relays_title,
+                    onCancel = {
+                        postViewModel.clear()
+                        onClose()
                     },
-                    title = {
-                        Text(
-                            text = stringRes(R.string.search_relays_title),
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                        )
+                    onPost = {
+                        postViewModel.create()
+                        onClose()
                     },
-                    actions = {
-                        SaveButton(
-                            modifier = HalfHorzPadding,
-                            isActive = true,
-                            onPost = {
-                                postViewModel.create()
-                                onClose()
-                            },
-                        )
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
                 )
             },
         ) { pad ->

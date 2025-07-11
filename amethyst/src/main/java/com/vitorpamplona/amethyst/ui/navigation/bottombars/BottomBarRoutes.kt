@@ -18,12 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size23dp
+import com.vitorpamplona.amethyst.ui.theme.Size24dp
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import kotlinx.collections.immutable.persistentListOf
 
 class BottomBarRoute(
     val route: Route,
@@ -32,3 +37,12 @@ class BottomBarRoute(
     val notifSize: Modifier = Modifier.size(Size23dp),
     val iconSize: Modifier = Modifier.size(Size20dp),
 )
+
+val bottomNavigationItems =
+    persistentListOf(
+        BottomBarRoute(Route.Home, R.drawable.ic_home, R.string.route_home, Modifier.size(Size25dp), Modifier.size(Size24dp)),
+        BottomBarRoute(Route.Message, R.drawable.ic_dm, R.string.route_messages),
+        BottomBarRoute(Route.Video, R.drawable.ic_video, R.string.route_video),
+        BottomBarRoute(Route.Discover, R.drawable.ic_sensors, R.string.route_discover),
+        BottomBarRoute(Route.Notification, R.drawable.ic_notifications, R.string.route_notifications),
+    )

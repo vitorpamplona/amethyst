@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.topbars
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,43 +26,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
-import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
-import com.vitorpamplona.amethyst.ui.screen.FollowListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 
-@Composable
-fun MainTopBar(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    GenericMainTopBar(accountViewModel, nav) { AmethystClickableIcon() }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GenericMainTopBar(
+fun UserDrawerSearchTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
     content: @Composable () -> Unit,
 ) {
-    TopAppBar(
-        scrollBehavior = rememberHeightDecreaser(),
+    ShorterTopAppBar(
         title = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -101,40 +90,4 @@ private fun LoggedInUserPictureDrawer(
             loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
         )
     }
-}
-
-@Composable
-fun FollowListWithRoutes(
-    followListsModel: FollowListState,
-    listName: String,
-    accountViewModel: AccountViewModel,
-    onChange: (FeedDefinition) -> Unit,
-) {
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
-
-    FeedFilterSpinner(
-        placeholderCode = listName,
-        explainer = stringRes(R.string.select_list_to_filter),
-        options = allLists,
-        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
-        accountViewModel = accountViewModel,
-    )
-}
-
-@Composable
-fun FollowListWithoutRoutes(
-    followListsModel: FollowListState,
-    listName: String,
-    accountViewModel: AccountViewModel,
-    onChange: (FeedDefinition) -> Unit,
-) {
-    val allLists by followListsModel.kind3GlobalPeople.collectAsStateWithLifecycle()
-
-    FeedFilterSpinner(
-        placeholderCode = listName,
-        explainer = stringRes(R.string.select_list_to_filter),
-        options = allLists,
-        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
-        accountViewModel = accountViewModel,
-    )
 }

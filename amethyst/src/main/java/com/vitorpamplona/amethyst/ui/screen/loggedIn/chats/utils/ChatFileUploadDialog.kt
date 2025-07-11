@@ -41,7 +41,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -59,9 +58,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TitleIconModifier
-import com.vitorpamplona.amethyst.ui.navigation.rememberHeightDecreaser
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -97,9 +96,7 @@ fun ChatFileUploadDialog(
         SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
-                TopAppBar(
-                    scrollBehavior = rememberHeightDecreaser(),
-                    modifier = Modifier,
+                ShorterTopAppBar(
                     title = title,
                     navigationIcon = {
                         IconButton(

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,23 +32,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
@@ -71,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
@@ -151,52 +144,28 @@ fun MappedAllRelayListView(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringRes(R.string.relay_settings),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleLarge,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                    )
+            SavingTopBar(
+                titleRes = R.string.relay_settings,
+                onCancel = {
+                    dmViewModel.clear()
+                    nip65ViewModel.clear()
+                    searchViewModel.clear()
+                    localViewModel.clear()
+                    privateOutboxViewModel.clear()
+                    trustedViewModel.clear()
+                    blockedViewModel.clear()
+                    newNav.popBack()
                 },
-                navigationIcon = {
-                    CloseButton(
-                        modifier = HalfHorzPadding,
-                        onPress = {
-                            dmViewModel.clear()
-                            nip65ViewModel.clear()
-                            searchViewModel.clear()
-                            localViewModel.clear()
-                            privateOutboxViewModel.clear()
-                            trustedViewModel.clear()
-                            blockedViewModel.clear()
-                            newNav.popBack()
-                        },
-                    )
+                onPost = {
+                    dmViewModel.create()
+                    nip65ViewModel.create()
+                    searchViewModel.create()
+                    localViewModel.create()
+                    privateOutboxViewModel.create()
+                    trustedViewModel.create()
+                    blockedViewModel.create()
+                    newNav.popBack()
                 },
-                actions = {
-                    SaveButton(
-                        modifier = HalfHorzPadding,
-                        isActive = true,
-                        onPost = {
-                            dmViewModel.create()
-                            nip65ViewModel.create()
-                            searchViewModel.create()
-                            localViewModel.create()
-                            privateOutboxViewModel.create()
-                            trustedViewModel.create()
-                            blockedViewModel.create()
-                            newNav.popBack()
-                        },
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->

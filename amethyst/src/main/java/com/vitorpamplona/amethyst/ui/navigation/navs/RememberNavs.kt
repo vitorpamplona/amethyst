@@ -18,22 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.navs
 
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.debugState
-import com.vitorpamplona.amethyst.ui.note.AmethystIcon
-import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.navigation.compose.rememberNavController
 
 @Composable
-fun AmethystClickableIcon() {
-    val context = LocalContext.current
+fun rememberNav(): Nav {
+    val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
 
-    IconButton(
-        onClick = { debugState(context) },
-    ) {
-        AmethystIcon(Size40dp)
+    return remember(navController, scope) {
+        Nav(navController, scope)
+    }
+}
+
+@Composable
+fun rememberExtendedNav(
+    nav: INav,
+    onBeforeNavigate: () -> Unit,
+): INav {
+    val scope = rememberCoroutineScope()
+    return remember(nav, scope) {
+        ObservableNav(nav, scope, onBeforeNavigate)
     }
 }

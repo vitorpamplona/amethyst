@@ -22,18 +22,14 @@ package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -42,12 +38,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -77,44 +71,18 @@ fun MediaServersScaffold(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringRes(id = R.string.media_servers),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
+            SavingTopBar(
+                titleRes = R.string.media_servers,
+                onCancel = {
+                    nip96ServersViewModel.refresh()
+                    blossomServersViewModel.refresh()
+                    onClose()
                 },
-                navigationIcon = {
-                    CloseButton(
-                        modifier = HalfHorzPadding,
-                        onPress = {
-                            nip96ServersViewModel.refresh()
-                            blossomServersViewModel.refresh()
-                            onClose()
-                        },
-                    )
+                onPost = {
+                    nip96ServersViewModel.saveFileServers()
+                    blossomServersViewModel.saveFileServers()
+                    onClose()
                 },
-                actions = {
-                    SaveButton(
-                        modifier = HalfHorzPadding,
-                        isActive = true,
-                        onPost = {
-                            nip96ServersViewModel.saveFileServers()
-                            blossomServersViewModel.saveFileServers()
-                            onClose()
-                        },
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { padding ->
@@ -133,8 +101,9 @@ fun MediaServersScaffold(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                stringRes(id = R.string.set_preferred_media_servers),
+                text = stringRes(id = R.string.set_preferred_media_servers),
                 textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 10.dp),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.grayText,
             )

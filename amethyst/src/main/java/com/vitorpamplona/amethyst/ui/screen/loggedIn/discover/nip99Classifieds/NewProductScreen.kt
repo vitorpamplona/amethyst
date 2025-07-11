@@ -22,10 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds
 
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,8 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -56,11 +52,10 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -84,7 +79,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -143,45 +137,23 @@ fun NewProductScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = CenterVertically,
-                    ) {
-                        Spacer(modifier = StdHorzSpacer)
-
-                        PostButton(
-                            onPost = {
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPostSync()
-                                    nav.popBack()
-                                    postViewModel.cancel()
-                                }
-                            },
-                            isActive = postViewModel.canPost(),
-                        )
+            PostingTopBar(
+                titleRes = R.string.new_product,
+                isActive = postViewModel::canPost,
+                onCancel = {
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        postViewModel.sendDraftSync()
+                        nav.popBack()
+                        postViewModel.cancel()
                     }
                 },
-                navigationIcon = {
-                    Row {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    postViewModel.sendDraftSync()
-                                    nav.popBack()
-                                    postViewModel.cancel()
-                                }
-                            },
-                        )
+                onPost = {
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        postViewModel.sendPostSync()
+                        nav.popBack()
+                        postViewModel.cancel()
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->

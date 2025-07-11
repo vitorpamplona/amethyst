@@ -47,8 +47,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient

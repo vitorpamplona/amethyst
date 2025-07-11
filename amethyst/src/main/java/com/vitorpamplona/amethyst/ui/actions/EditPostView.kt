@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,8 +49,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -84,10 +81,9 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.AddLnInvoiceButton
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.uploads.ImageVideoDescription
@@ -98,7 +94,6 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -138,45 +133,22 @@ fun EditPostView(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = StdHorzSpacer)
-
-                            PostButton(
-                                onPost = {
-                                    postViewModel.sendPost()
-                                    scope.launch {
-                                        delay(100)
-                                        onClose()
-                                    }
-                                },
-                                isActive = postViewModel.canPost(),
-                            )
+                PostingTopBar(
+                    isActive = postViewModel::canPost,
+                    onPost = {
+                        postViewModel.sendPost()
+                        scope.launch {
+                            delay(100)
+                            onClose()
                         }
                     },
-                    navigationIcon = {
-                        Row {
-                            Spacer(modifier = StdHorzSpacer)
-                            CloseButton(
-                                onPress = {
-                                    postViewModel.cancel()
-                                    scope.launch {
-                                        delay(100)
-                                        onClose()
-                                    }
-                                },
-                            )
+                    onCancel = {
+                        postViewModel.cancel()
+                        scope.launch {
+                            delay(100)
+                            onClose()
                         }
                     },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
                 )
             },
         ) { pad ->

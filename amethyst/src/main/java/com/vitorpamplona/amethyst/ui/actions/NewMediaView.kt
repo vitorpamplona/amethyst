@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.actions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,14 +39,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,9 +58,8 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
@@ -73,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -108,43 +101,20 @@ fun NewMediaView(
         SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = StdHorzSpacer)
-
-                            PostButton(
-                                onPost = {
-                                    postViewModel.upload(context, onClose, accountViewModel.toastManager::toast)
-                                    postViewModel.selectedServer?.let {
-                                        if (it.type != ServerType.NIP95) {
-                                            account.settings.changeDefaultFileServer(it)
-                                        }
-                                    }
-                                },
-                                isActive = postViewModel.canPost(),
-                            )
+                PostingTopBar(
+                    isActive = postViewModel::canPost,
+                    onCancel = {
+                        postViewModel.cancelModel()
+                        onClose()
+                    },
+                    onPost = {
+                        postViewModel.upload(context, onClose, accountViewModel.toastManager::toast)
+                        postViewModel.selectedServer?.let {
+                            if (it.type != ServerType.NIP95) {
+                                account.settings.changeDefaultFileServer(it)
+                            }
                         }
                     },
-                    navigationIcon = {
-                        Row {
-                            Spacer(modifier = StdHorzSpacer)
-                            CloseButton(
-                                onPress = {
-                                    postViewModel.cancelModel()
-                                    onClose()
-                                },
-                            )
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
                 )
             },
         ) { pad ->
@@ -155,8 +125,16 @@ fun NewMediaView(
                         .consumeWindowInsets(pad)
                         .imePadding(),
             ) {
-                Column(Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, bottom = 10.dp)) {
-                    Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                ) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                    ) {
                         ImageVideoPost(postViewModel, accountViewModel)
                     }
                 }
@@ -196,7 +174,11 @@ fun ImageVideoPost(
 
     OutlinedTextField(
         label = { Text(text = stringRes(R.string.add_caption)) },
-        modifier = Modifier.fillMaxWidth().padding(top = 3.dp).height(150.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 3.dp)
+                .height(150.dp),
         maxLines = 10,
         value = postViewModel.caption,
         onValueChange = { postViewModel.caption = it },
@@ -215,7 +197,10 @@ fun ImageVideoPost(
     SettingSwitchItem(
         title = R.string.add_sensitive_content_label,
         description = R.string.add_sensitive_content_description,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
         checked = postViewModel.sensitiveContent,
         onCheckedChange = { postViewModel.sensitiveContent = it },
     )
@@ -234,7 +219,10 @@ fun ImageVideoPost(
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(Size5dp),
     ) {
         Text(

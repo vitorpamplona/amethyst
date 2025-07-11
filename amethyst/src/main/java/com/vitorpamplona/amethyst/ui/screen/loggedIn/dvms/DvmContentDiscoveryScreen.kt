@@ -70,7 +70,7 @@ import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ObserveZapIcon
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentDialog
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent

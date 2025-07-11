@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.routes
 
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -236,4 +236,25 @@ fun getRouteWithArguments(navController: NavHostController): Route? {
             null
         }
     }
+}
+
+fun isSameRoute(
+    currentRoute: Route?,
+    newRoute: Route,
+): Boolean {
+    if (currentRoute == null) return false
+
+    if (currentRoute == newRoute) {
+        return true
+    }
+
+    if (newRoute is Route.EventRedirect) {
+        return when (currentRoute) {
+            is Route.Note -> newRoute.id == currentRoute.id
+            is Route.PublicChatChannel -> newRoute.id == currentRoute.id
+            else -> false
+        }
+    }
+
+    return false
 }

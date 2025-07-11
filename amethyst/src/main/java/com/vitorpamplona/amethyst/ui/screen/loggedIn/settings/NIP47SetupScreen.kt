@@ -23,22 +23,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.rememberHeightDecreaser
-import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountContent
 import com.vitorpamplona.amethyst.ui.note.UpdateZapAmountViewModel
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun NIP47SetupScreen(
@@ -61,28 +55,16 @@ fun NIP47SetupScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                scrollBehavior = rememberHeightDecreaser(),
-                title = { Text(stringRes(id = R.string.wallet_connect)) },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            postViewModel.cancel()
-                            nav.popBack()
-                        },
-                        modifier = Modifier,
-                    ) {
-                        ArrowBackIcon()
-                    }
+            SavingTopBar(
+                titleRes = R.string.wallet_connect,
+                isActive = postViewModel::hasChanged,
+                onCancel = {
+                    postViewModel.cancel()
+                    nav.popBack()
                 },
-                actions = {
-                    SaveButton(
-                        onPost = {
-                            postViewModel.sendPost()
-                            nav.popBack()
-                        },
-                        isActive = postViewModel.hasChanged(),
-                    )
+                onPost = {
+                    postViewModel.sendPost()
+                    nav.popBack()
                 },
             )
         },

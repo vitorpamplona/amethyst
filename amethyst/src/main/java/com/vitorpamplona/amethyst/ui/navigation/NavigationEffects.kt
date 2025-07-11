@@ -21,6 +21,13 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
@@ -64,3 +71,12 @@ inline fun <reified T : Any> NavGraphBuilder.composableArgs(noinline content: @C
         content(it.toRoute())
     }
 }
+
+val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })
+val slideOutVerticallyToBottom = slideOutVertically(animationSpec = tween(), targetOffsetY = { it })
+
+val slideInHorizontallyFromEnd = slideInHorizontally(animationSpec = tween(), initialOffsetX = { it })
+val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), targetOffsetX = { it })
+
+val scaleIn = scaleIn(animationSpec = tween(), initialScale = 0.9f)
+val scaleOut = scaleOut(animationSpec = tween(), targetScale = 0.9f)

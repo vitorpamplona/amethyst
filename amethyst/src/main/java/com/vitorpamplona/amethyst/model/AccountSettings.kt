@@ -25,6 +25,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
@@ -223,11 +224,19 @@ class AccountSettings(
     // list names
     // ---
 
+    fun changeDefaultHomeFollowList(name: FeedDefinition) {
+        changeDefaultHomeFollowList(name.code)
+    }
+
     fun changeDefaultHomeFollowList(name: String) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
             saveAccountSettings()
         }
+    }
+
+    fun changeDefaultStoriesFollowList(name: FeedDefinition) {
+        changeDefaultStoriesFollowList(name.code)
     }
 
     fun changeDefaultStoriesFollowList(name: String) {
@@ -237,11 +246,19 @@ class AccountSettings(
         }
     }
 
+    fun changeDefaultNotificationFollowList(name: FeedDefinition) {
+        changeDefaultNotificationFollowList(name.code)
+    }
+
     fun changeDefaultNotificationFollowList(name: String) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
             saveAccountSettings()
         }
+    }
+
+    fun changeDefaultDiscoveryFollowList(name: FeedDefinition) {
+        changeDefaultDiscoveryFollowList(name.code)
     }
 
     fun changeDefaultDiscoveryFollowList(name: String) {

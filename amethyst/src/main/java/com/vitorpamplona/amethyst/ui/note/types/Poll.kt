@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.PollNote
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags

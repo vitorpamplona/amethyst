@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable

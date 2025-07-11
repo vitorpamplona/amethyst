@@ -18,24 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation
+package com.vitorpamplona.amethyst.ui.navigation.topbars
 
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import com.vitorpamplona.amethyst.debugState
+import com.vitorpamplona.amethyst.ui.note.AmethystIcon
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 
-object NormalizedRelayUrlSerializer : KSerializer<NormalizedRelayUrl> {
-    override val descriptor = PrimitiveSerialDescriptor("NormalizedRelayUrl", PrimitiveKind.STRING)
+@Composable
+fun AmethystClickableIcon() {
+    val context = LocalContext.current
 
-    override fun deserialize(decoder: Decoder): NormalizedRelayUrl = NormalizedRelayUrl(decoder.decodeString())
-
-    override fun serialize(
-        encoder: Encoder,
-        value: NormalizedRelayUrl,
+    IconButton(
+        onClick = { debugState(context) },
     ) {
-        encoder.encodeString(value.url)
+        AmethystIcon(Size40dp)
     }
 }

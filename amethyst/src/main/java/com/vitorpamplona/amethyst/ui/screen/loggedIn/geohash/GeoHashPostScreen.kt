@@ -28,7 +28,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.ui.navigation.Nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.CommentPostViewModel
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.GenericCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

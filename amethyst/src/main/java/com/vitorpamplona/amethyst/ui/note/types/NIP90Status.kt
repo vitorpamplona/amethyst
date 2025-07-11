@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 

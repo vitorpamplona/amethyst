@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.ui.components.HashTag
 import com.vitorpamplona.amethyst.ui.components.RenderRegular
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
