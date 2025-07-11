@@ -171,6 +171,17 @@ android {
     }
 }
 
+// TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
+configurations.all {
+    def tink = "com.google.crypto.tink:tink-android:1.17.0"
+    resolutionStrategy {
+        force(tink)
+        dependencySubstitution {
+            substitute module('com.google.crypto.tink:tink') using module(tink)
+        }
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
