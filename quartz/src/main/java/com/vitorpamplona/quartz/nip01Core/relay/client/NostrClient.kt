@@ -46,7 +46,29 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * The Nostr Client manages a relay pool, keeps active subscriptions and manages re-sending of events.
+ * The NostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
+ * - A RelayPool for managing connections to a collection of Nostr relays
+ * - Active subscriptions tracking through PoolSubscriptionRepository
+ * - An event outbox for managing unsent events and retry logic
+ * - Automatic relay pool reconciliation based on subscription and event needs
+ *
+ * Core responsibilities include:
+ * - Initializing and managing relay connections using WebSocket builders
+ * - Coordinating subscription state across multiple relays
+ * - Handling event and filter resending when relays disconnect and reconnect
+ * - Aggregating relay status from the pool's state flow
+ * - Maintaining listeners for propagating relay events and state changes
+ *
+ * Features:
+ * - Reactive updating of relay sets based on subscription and outbox activity
+ * - Relayer reconnection strategy that processes pending requests
+ * - Filter comparison logic to detect significant subscription changes and avoid redundant requests
+ * - Integration with RelayStats for tracking relay performance
+ * - Thread-safe reconnection methods using coroutine flows
+ *
+ * The class combines flows from active subscriptions and the event outbox to ensure relays
+ * are connected to all necessary endpoints. It also listens to relay state changes to update
+ * subscriptions and message retries when connections are re-established.
  */
 class NostrClient(
     private val websocketBuilder: WebsocketBuilder,

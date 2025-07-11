@@ -18,41 +18,42 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.datasources
+package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import android.util.Log
-import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 
-class SubscriptionStats {
-    data class Counter(
-        val subscriptionId: String,
-        val eventKind: Int,
-    ) {
-        var counter: Int = 0
+/**
+ * Listens to NostrClient's onNotify messages from the relay
+ */
+class RelayNotifier(
+    val client: NostrClient,
+    val notify: (message: String, relay: IRelayClient) -> Unit,
+) {
+    companion object {
+        val TAG = RelayNotifier::class.java.simpleName
     }
 
-    private var eventCounter = LargeCache<Int, Counter>()
-
-    private fun eventCounterIndex(
-        str1: String,
-        str2: Int,
-    ): Int = 31 * str1.hashCode() + str2.hashCode()
-
-    fun add(
-        subscriptionId: String,
-        eventKind: Int,
-    ) {
-        val key = eventCounterIndex(subscriptionId, eventKind)
-        val stats = eventCounter.getOrCreate(key) { Counter(subscriptionId, eventKind) }
-        stats.counter++
-    }
-
-    fun printCounter(tag: String) {
-        eventCounter.forEach { _, stats ->
-            Log.d(
-                tag,
-                "Received Events ${stats.subscriptionId} ${stats.eventKind}: ${stats.counter}",
-            )
+    private val clientListener =
+        object : IRelayClientListener {
+            override fun onNotify(
+                relay: IRelayClient,
+                message: String,
+            ) {
+                notify(message, relay)
+            }
         }
+
+    init {
+        Log.d(TAG, "Init, Subscribe")
+        client.subscribe(clientListener)
+    }
+
+    fun destroy() {
+        // makes sure to run
+        Log.d(TAG, "Destroy, Unsubscribe")
+        client.unsubscribe(clientListener)
     }
 }

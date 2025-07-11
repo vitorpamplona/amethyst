@@ -41,7 +41,25 @@ val UnsupportedRelayCreation: (url: NormalizedRelayUrl) -> IRelayClient = {
 }
 
 /**
- * RelayPool manages the connection to multiple Relays and lets consumers deal with simple events.
+ * RelayPool manages a collection of Nostr relays, abstracting individual connections and providing
+ * unified methods for sending events, managing subscriptions, and tracking relay states.
+ *
+ * Key features:
+ * - Maintains a cache of relays using LargeCache for efficient relay management
+ * - Propagates event notifications to a shared listener across all relays
+ * - Provides state tracking through RelayPoolStatus (connected/available relays)
+ * - Supports relay lifecycle operations like connect/disconnect/reconnect
+ * - Maintains an immutable createNewRelay function for custom relay creation
+ *
+ * Listens to relay events and:
+ * 1. Forwards callbacks to parent listener
+ * 2. Updates statusFlow when relay connectivity or events change
+ * 3. Automatically reconnects relays that need reconnection
+ *
+ * Common use cases:
+ * - Sending events to multiple relays simultaneously (send method)
+ * - Managing subscriptions across the relay pool (sendRequest/closed methods)
+ * - Maintaining optimal relay connections (updatePool/addRelay/removeRelay methods)
  */
 class RelayPool(
     val listener: IRelayClientListener = EmptyClientListener,

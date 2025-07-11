@@ -18,35 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.acessories
+package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
 import android.util.Log
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.utils.LargeCache
 
-class RelayAuthenticator(
-    val client: NostrClient,
-    val authenticate: (challenge: String, relay: IRelayClient) -> Unit,
-) {
-    private val clientListener =
-        object : IRelayClientListener {
-            override fun onAuth(
-                relay: IRelayClient,
-                challenge: String,
-            ) {
-                authenticate(challenge, relay)
-            }
-        }
-
-    init {
-        Log.d("${this.javaClass.simpleName}", "Init, Subscribe")
-        client.subscribe(clientListener)
+class SubscriptionStats {
+    data class Counter(
+        val subscriptionId: String,
+        val eventKind: Int,
+    ) {
+        var counter: Int = 0
     }
 
-    fun destroy() {
-        // makes sure to run
-        Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
-        client.unsubscribe(clientListener)
+    private var eventCounter = LargeCache<Int, Counter>()
+
+    private fun eventCounterIndex(
+        str1: String,
+        str2: Int,
+    ): Int = 31 * str1.hashCode() + str2.hashCode()
+
+    fun add(
+        subscriptionId: String,
+        eventKind: Int,
+    ) {
+        val key = eventCounterIndex(subscriptionId, eventKind)
+        val stats = eventCounter.getOrCreate(key) { Counter(subscriptionId, eventKind) }
+        stats.counter++
+    }
+
+    fun printCounter(tag: String) {
+        eventCounter.forEach { _, stats ->
+            Log.d(
+                tag,
+                "Received Events ${stats.subscriptionId} ${stats.eventKind}: ${stats.counter}",
+            )
+        }
     }
 }

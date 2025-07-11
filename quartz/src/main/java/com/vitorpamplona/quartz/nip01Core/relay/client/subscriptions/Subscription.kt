@@ -18,49 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.acessories
+package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-fun NostrClient.downloadFirstEvent(
-    subscriptionId: String = newSubId(),
-    filters: Map<NormalizedRelayUrl, List<Filter>>,
-    onResponse: (Event) -> Unit,
+data class Subscription(
+    val id: String = newSubId(),
+    val onEose: ((time: Long, relayUrl: NormalizedRelayUrl) -> Unit)? = null,
 ) {
-    val listener =
-        object : IRelayClientListener {
-            override fun onEvent(
-                relay: IRelayClient,
-                subId: String,
-                event: Event,
-                arrivalTime: Long,
-                afterEOSE: Boolean,
-            ) {
-                if (subId == subscriptionId) {
-                    unsubscribe(this)
-                    close(subscriptionId)
+    private var filters: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
 
-                    onResponse(event)
-                }
-            }
-        }
+    fun reset() {
+        filters = null
+    }
 
-    subscribe(listener)
+    fun updateFilters(newFilters: Map<NormalizedRelayUrl, List<Filter>>?) {
+        filters = newFilters
+    }
 
-    sendRequest(subscriptionId, filters)
+    fun filters() = filters
 
-    GlobalScope.launch(Dispatchers.IO) {
-        delay(30000)
-        unsubscribe(listener)
+    fun callEose(
+        time: Long,
+        relay: NormalizedRelayUrl,
+    ) {
+        onEose?.let { it(time, relay) }
     }
 }

@@ -25,9 +25,9 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFol
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.makePublicChatsFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.makeCommunitiesFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job

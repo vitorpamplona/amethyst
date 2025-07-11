@@ -24,7 +24,7 @@ import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.acessories.RelayAuthenticator
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayAuthenticator
 
 class ScreenAuthAccount(
     val account: Account,

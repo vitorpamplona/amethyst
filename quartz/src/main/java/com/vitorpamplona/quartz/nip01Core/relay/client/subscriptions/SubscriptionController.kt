@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.datasources
+package com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -29,8 +29,22 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
 
 /**
- * Semantically groups Nostr filters and subscriptions in data source objects that
- * maintain the desired active filter with the relay.
+ * Manages Nostr subscriptions using a [NostrClient], allowing subscriptions to be created, modified,
+ * and synchronized with relay filters. Subscriptions are stored in a cache and processed through
+ * [updateRelays] to update relay filters dynamically. Also tracks event statistics and EOSE (End of
+ * Stored Events) events, and provides utility methods to interact with subscriptions like dismissal.
+ *
+ * Key responsibilities:
+ * 1. Maintain a cache of active [Subscription] instances.
+ * 2. Handle client events (onEvent, onEOSE) using [clientListener].
+ * 3. Synchronize relay filters via [updateRelays] when subscriptions change.
+ * 4. Provide methods to create, dismiss, and inspect subscriptions.
+ *
+ * Usage:
+ * - Use [requestNewSubscription] to create subscriptions.
+ * - Modify filters on [Subscription] at will and call [updateRelays] to apply changes.
+ * - Update filters based on EOSE callbacks on each subscription
+ * - Dismiss subscriptions with [dismissSubscription].
  */
 class SubscriptionController(
     val client: NostrClient,

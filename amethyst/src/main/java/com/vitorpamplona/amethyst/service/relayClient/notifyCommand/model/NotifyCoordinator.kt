@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.acessories.RelayNotifier
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayNotifier
 
 class NotifyCoordinator(
     client: NostrClient,

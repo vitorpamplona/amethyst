@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.collection.LruCache
-import com.vitorpamplona.amethyst.model.LocalCache.users
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -56,10 +55,6 @@ class EOSERelayList {
     ) = addOrUpdate(relay, time)
 }
 
-class EOSEFollowList(
-    cacheSize: Int = 200,
-) : EOSEByKey<String>(cacheSize)
-
 open class EOSEByKey<U : Any>(
     cacheSize: Int = 200,
 ) {
@@ -88,10 +83,6 @@ open class EOSEByKey<U : Any>(
         time: Long,
     ) = addOrUpdate(listCode, relayUrl, time)
 }
-
-class EOSEAccount(
-    cacheSize: Int = 20,
-) : EOSEAccountKey<String>(cacheSize)
 
 open class EOSEAccountKey<U : Any>(
     cacheSize: Int = 20,

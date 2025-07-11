@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.ammolite.relays.BundledUpdate
-import com.vitorpamplona.ammolite.relays.datasources.SubscriptionController
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 

@@ -18,36 +18,49 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.ammolite.relays.datasources
+package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlin.contracts.ExperimentalContracts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-data class Subscription(
-    val id: String = newSubId(),
-    val onEose: ((time: Long, relayUrl: NormalizedRelayUrl) -> Unit)? = null,
+fun NostrClient.downloadFirstEvent(
+    subscriptionId: String = newSubId(),
+    filters: Map<NormalizedRelayUrl, List<Filter>>,
+    onResponse: (Event) -> Unit,
 ) {
-    private var filters: Map<NormalizedRelayUrl, List<Filter>>? = null // Inactive when null
+    val listener =
+        object : IRelayClientListener {
+            override fun onEvent(
+                relay: IRelayClient,
+                subId: String,
+                event: Event,
+                arrivalTime: Long,
+                afterEOSE: Boolean,
+            ) {
+                if (subId == subscriptionId) {
+                    unsubscribe(this)
+                    close(subscriptionId)
 
-    fun reset() {
-        filters = null
-    }
+                    onResponse(event)
+                }
+            }
+        }
 
-    fun updateFilters(newFilters: Map<NormalizedRelayUrl, List<Filter>>?) {
-        filters = newFilters
-    }
+    subscribe(listener)
 
-    fun filters() = filters
+    sendRequest(subscriptionId, filters)
 
-    @OptIn(ExperimentalContracts::class)
-    fun isActive() = filters != null
-
-    fun callEose(
-        time: Long,
-        relay: NormalizedRelayUrl,
-    ) {
-        onEose?.let { it(time, relay) }
+    GlobalScope.launch(Dispatchers.IO) {
+        delay(30000)
+        unsubscribe(listener)
     }
 }

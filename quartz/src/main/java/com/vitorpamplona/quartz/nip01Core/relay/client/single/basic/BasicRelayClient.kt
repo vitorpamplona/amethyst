@@ -52,6 +52,24 @@ import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 
+/**
+ * A base implementation for a relay client that establishes and manages a WebSocket connection to a Nostr relay.
+ * This class provides fundamental connection handling, message parsing, reconnection logic, and event dispatching.
+ *
+ * @property url The relay's normalized URL.
+ * @property socketBuilder Provides the WebSocket instance for connection.
+ * @property listener Interface to notify the application of relay events and errors.
+ * @property stats Tracks operational statistics of the relay connection.
+ * @property defaultOnConnect Callback executed after a successful connection, allowing subclasses to add initialization logic.
+ *
+ * Reconnection Strategy:
+ * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_MSECS] (500ms).
+ * - Doubles the delay between reconnection attempts in case of failure.
+ *
+ * Message Handling:
+ * - Processes relay messages (e.g., `EVENT`, `EOSE`, `OK`, `AUTH`) and delegates to appropriate callbacks.
+ * - Dispatches received events, notices, and subscription closures via the [listener].
+ */
 open class BasicRelayClient(
     override val url: NormalizedRelayUrl,
     val socketBuilder: WebsocketBuilder,
