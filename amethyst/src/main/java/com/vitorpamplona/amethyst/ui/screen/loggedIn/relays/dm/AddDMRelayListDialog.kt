@@ -64,7 +64,11 @@ fun AddDMRelayListDialog(
 ) {
     val postViewModel: DMRelayListViewModel = viewModel()
 
-    LaunchedEffect(Unit) { postViewModel.load(accountViewModel.account) }
+    postViewModel.init(accountViewModel.account)
+
+    LaunchedEffect(accountViewModel.account) {
+        postViewModel.load()
+    }
 
     Dialog(
         onDismissRequest = onClose,

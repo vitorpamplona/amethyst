@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.tryAndWait
@@ -49,14 +48,14 @@ class BlossomServerListState(
 ) {
     fun getBlossomServersAddress() = BlossomServersEvent.createAddress(signer.pubKey)
 
-    fun getBlossomServersNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getBlossomServersAddress())
+    fun getBlossomServersNote(): AddressableNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
 
     fun getBlossomServersListFlow(): StateFlow<NoteState> = getBlossomServersNote().flow().metadata.stateFlow
 
     fun getBlossomServersList(): BlossomServersEvent? = getBlossomServersNote().event as? BlossomServersEvent
 
     fun normalizeServers(note: Note): List<String> {
-        val event = note.event as? FileServersEvent
+        val event = note.event as? BlossomServersEvent
         return event?.servers() ?: emptyList()
     }
 

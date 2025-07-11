@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.search
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,8 +35,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInf
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayList
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.search.SearchRelayListViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
@@ -66,7 +66,11 @@ fun AddSearchRelayListDialog(
 ) {
     val postViewModel: SearchRelayListViewModel = viewModel()
 
-    LaunchedEffect(Unit) { postViewModel.load(accountViewModel.account) }
+    postViewModel.init(accountViewModel.account)
+
+    LaunchedEffect(accountViewModel.account) {
+        postViewModel.load()
+    }
 
     Dialog(
         onDismissRequest = onClose,
@@ -76,30 +80,31 @@ fun AddSearchRelayListDialog(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = StdHorzSpacer)
-
-                            Text(stringRes(R.string.search_relays_title))
-
-                            SaveButton(
-                                onPost = {
-                                    postViewModel.create()
-                                    onClose()
-                                },
-                                true,
-                            )
-                        }
-                    },
                     navigationIcon = {
-                        Spacer(modifier = StdHorzSpacer)
                         CloseButton(
+                            modifier = HalfHorzPadding,
                             onPress = {
                                 postViewModel.clear()
+                                onClose()
+                            },
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = stringRes(R.string.search_relays_title),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleLarge,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                        )
+                    },
+                    actions = {
+                        SaveButton(
+                            modifier = HalfHorzPadding,
+                            isActive = true,
+                            onPost = {
+                                postViewModel.create()
                                 onClose()
                             },
                         )

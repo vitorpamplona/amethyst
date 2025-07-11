@@ -41,8 +41,11 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     var hasModified = false
 
-    fun load(account: Account) {
+    fun init(account: Account) {
         this.account = account
+    }
+
+    fun load() {
         clear()
         loadRelayDocuments()
     }

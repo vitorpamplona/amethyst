@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,7 +38,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,11 +71,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.TrustedRelay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.trusted.renderTrustedItems
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.MinHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
@@ -86,102 +82,116 @@ fun AllRelayListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    MappedAllRelayListView(accountViewModel, nav)
+    val dmViewModel: DMRelayListViewModel = viewModel()
+    val nip65ViewModel: Nip65RelayListViewModel = viewModel()
+    val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
+    val searchViewModel: SearchRelayListViewModel = viewModel()
+    val blockedViewModel: BlockedRelayListViewModel = viewModel()
+    val trustedViewModel: TrustedRelayListViewModel = viewModel()
+    val localViewModel: LocalRelayListViewModel = viewModel()
+    val connectedViewModel: ConnectedRelayListViewModel = viewModel()
+
+    dmViewModel.init(accountViewModel.account)
+    nip65ViewModel.init(accountViewModel.account)
+    searchViewModel.init(accountViewModel.account)
+    localViewModel.init(accountViewModel.account)
+    privateOutboxViewModel.init(accountViewModel.account)
+    connectedViewModel.init(accountViewModel.account)
+    blockedViewModel.init(accountViewModel.account)
+    trustedViewModel.init(accountViewModel.account)
+
+    LaunchedEffect(accountViewModel.account) {
+        dmViewModel.load()
+        nip65ViewModel.load()
+        searchViewModel.load()
+        localViewModel.load()
+        privateOutboxViewModel.load()
+        connectedViewModel.load()
+        blockedViewModel.load()
+        trustedViewModel.load()
+    }
+
+    MappedAllRelayListView(
+        dmViewModel,
+        nip65ViewModel,
+        searchViewModel,
+        localViewModel,
+        privateOutboxViewModel,
+        connectedViewModel,
+        blockedViewModel,
+        trustedViewModel,
+        accountViewModel,
+        nav,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MappedAllRelayListView(
+    dmViewModel: DMRelayListViewModel,
+    nip65ViewModel: Nip65RelayListViewModel,
+    searchViewModel: SearchRelayListViewModel,
+    localViewModel: LocalRelayListViewModel,
+    privateOutboxViewModel: PrivateOutboxRelayListViewModel,
+    connectedViewModel: ConnectedRelayListViewModel,
+    blockedViewModel: BlockedRelayListViewModel,
+    trustedViewModel: TrustedRelayListViewModel,
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
-    val dmViewModel: DMRelayListViewModel = viewModel()
     val dmFeedState by dmViewModel.relays.collectAsStateWithLifecycle()
-
-    val nip65ViewModel: Nip65RelayListViewModel = viewModel()
     val homeFeedState by nip65ViewModel.homeRelays.collectAsStateWithLifecycle()
     val notifFeedState by nip65ViewModel.notificationRelays.collectAsStateWithLifecycle()
-
-    val privateOutboxViewModel: PrivateOutboxRelayListViewModel = viewModel()
     val privateOutboxFeedState by privateOutboxViewModel.relays.collectAsStateWithLifecycle()
-
-    val searchViewModel: SearchRelayListViewModel = viewModel()
     val searchFeedState by searchViewModel.relays.collectAsStateWithLifecycle()
-
-    val blockedViewModel: BlockedRelayListViewModel = viewModel()
     val blockedFeedState by blockedViewModel.relays.collectAsStateWithLifecycle()
-
-    val trustedViewModel: TrustedRelayListViewModel = viewModel()
     val trustedFeedState by trustedViewModel.relays.collectAsStateWithLifecycle()
-
-    val localViewModel: LocalRelayListViewModel = viewModel()
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
-
-    val connectedViewModel: ConnectedRelayListViewModel = viewModel()
     val connectedRelays by connectedViewModel.relays.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        dmViewModel.load(accountViewModel.account)
-        nip65ViewModel.load(accountViewModel.account)
-        searchViewModel.load(accountViewModel.account)
-        localViewModel.load(accountViewModel.account)
-        privateOutboxViewModel.load(accountViewModel.account)
-        connectedViewModel.load(accountViewModel.account)
-        blockedViewModel.load(accountViewModel.account)
-        trustedViewModel.load(accountViewModel.account)
-    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
+                    Text(
+                        text = stringRes(R.string.relay_settings),
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Spacer(modifier = MinHorzSpacer)
-
-                        Text(
-                            text = stringRes(R.string.relay_settings),
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleLarge,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                        )
-
-                        SaveButton(
-                            onPost = {
-                                dmViewModel.create()
-                                nip65ViewModel.create()
-                                searchViewModel.create()
-                                localViewModel.create()
-                                privateOutboxViewModel.create()
-                                trustedViewModel.create()
-                                blockedViewModel.create()
-                                newNav.popBack()
-                            },
-                            true,
-                        )
-                    }
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleLarge,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                    )
                 },
                 navigationIcon = {
-                    Row {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                dmViewModel.clear()
-                                nip65ViewModel.clear()
-                                searchViewModel.clear()
-                                localViewModel.clear()
-                                privateOutboxViewModel.clear()
-                                trustedViewModel.clear()
-                                blockedViewModel.clear()
-                                newNav.popBack()
-                            },
-                        )
-                    }
+                    CloseButton(
+                        modifier = HalfHorzPadding,
+                        onPress = {
+                            dmViewModel.clear()
+                            nip65ViewModel.clear()
+                            searchViewModel.clear()
+                            localViewModel.clear()
+                            privateOutboxViewModel.clear()
+                            trustedViewModel.clear()
+                            blockedViewModel.clear()
+                            newNav.popBack()
+                        },
+                    )
+                },
+                actions = {
+                    SaveButton(
+                        modifier = HalfHorzPadding,
+                        isActive = true,
+                        onPost = {
+                            dmViewModel.create()
+                            nip65ViewModel.create()
+                            searchViewModel.create()
+                            localViewModel.create()
+                            privateOutboxViewModel.create()
+                            trustedViewModel.create()
+                            blockedViewModel.create()
+                            newNav.popBack()
+                        },
+                    )
                 },
                 colors =
                     TopAppBarDefaults.topAppBarColors(

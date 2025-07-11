@@ -96,7 +96,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserFollowerCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.MediaServersListView
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.note.LoadStatuses
@@ -422,8 +421,6 @@ fun ListContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var editMediaServers by remember { mutableStateOf(false) }
-
     var backupDialogOpen by remember { mutableStateOf(false) }
 
     Column(modifier) {
@@ -465,7 +462,7 @@ fun ListContent(
             tint = MaterialTheme.colorScheme.onBackground,
             onClick = {
                 nav.closeDrawer()
-                editMediaServers = true
+                nav.nav(Route.EditMediaServers)
             },
         )
 
@@ -524,9 +521,6 @@ fun ListContent(
         )
     }
 
-    if (editMediaServers) {
-        MediaServersListView({ editMediaServers = false }, accountViewModel = accountViewModel, nav = nav)
-    }
     if (backupDialogOpen) {
         AccountBackupDialog(accountViewModel, onClose = { backupDialogOpen = false })
     }
