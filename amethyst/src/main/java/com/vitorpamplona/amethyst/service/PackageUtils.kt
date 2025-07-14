@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.service
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
-import androidx.core.net.toUri
 
 object PackageUtils {
     @SuppressLint("QueryPermissionsNeeded")
@@ -36,14 +34,4 @@ object PackageUtils {
         } != null
 
     fun isOrbotInstalled(context: Context): Boolean = isPackageInstalled(context, "org.torproject.android")
-
-    fun isExternalSignerInstalled(context: Context): Boolean {
-        val intent =
-            Intent().apply {
-                action = Intent.ACTION_VIEW
-                data = "nostrsigner:".toUri()
-            }
-        val infos = context.packageManager.queryIntentActivities(intent, 0)
-        return infos.size > 0
-    }
 }

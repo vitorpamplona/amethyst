@@ -29,7 +29,6 @@ import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.Dispatchers
@@ -63,16 +62,7 @@ class RegisterAccounts(
 
         return mapNotNullAsync(remainingTos) { info ->
             tryAndWait { continuation ->
-                val signer = info.accountSettings.createSigner()
-                // TODO: Modify the external launcher to launch as different users.
-                // Right now it only registers if Amber has already approved this signature
-                if (signer is NostrSignerExternal) {
-                    signer.launcher.registerLauncher(
-                        launcher = { },
-                        contentResolver = Amethyst.instance::contentResolverFn,
-                    )
-                }
-
+                val signer = info.accountSettings.createSigner(Amethyst.instance.contentResolver)
                 RelayAuthEvent.create(info.relays, notificationToken, signer) { result ->
                     continuation.resume(result)
                 }

@@ -35,9 +35,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.RequestDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.ResponseDeserializer
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.PermissionDeserializer
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.PermissionSerializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorSerializer
+import kotlin.jvm.java
 
 class JsonMapper {
     companion object Companion {
@@ -60,7 +64,9 @@ class JsonMapper {
                         .addSerializer(BunkerRequest::class.java, BunkerRequest.BunkerRequestSerializer())
                         .addDeserializer(BunkerRequest::class.java, BunkerRequest.BunkerRequestDeserializer())
                         .addSerializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseSerializer())
-                        .addDeserializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseDeserializer()),
+                        .addDeserializer(BunkerResponse::class.java, BunkerResponse.BunkerResponseDeserializer())
+                        .addDeserializer(Permission::class.java, PermissionDeserializer())
+                        .addSerializer(Permission::class.java, PermissionSerializer()),
                 )
 
         fun fromJson(json: String): Event = mapper.readValue(json, Event::class.java)

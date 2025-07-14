@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
@@ -55,9 +56,12 @@ import kotlin.random.Random
 @RunWith(AndroidJUnit4::class)
 class ImageUploadTesting {
     companion object {
+        val accountSettings = AccountSettings(KeyPair())
+
         val account =
             Account(
-                AccountSettings(KeyPair()),
+                settings = accountSettings,
+                signer = NostrSignerInternal(accountSettings.keyPair),
                 scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             )
     }

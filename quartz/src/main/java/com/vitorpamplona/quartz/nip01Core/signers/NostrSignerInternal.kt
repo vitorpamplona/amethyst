@@ -45,35 +45,35 @@ class NostrSignerInternal(
     }
 
     override fun nip04Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        signerSync.nip04Encrypt(decryptedContent, toPublicKey)?.let { onReady(it) }
+        signerSync.nip04Encrypt(plaintext, toPublicKey)?.let { onReady(it) }
     }
 
     override fun nip04Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        signerSync.nip04Decrypt(encryptedContent, fromPublicKey)?.let { onReady(it) }
+        signerSync.nip04Decrypt(ciphertext, fromPublicKey)?.let { onReady(it) }
     }
 
     override fun nip44Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        signerSync.nip44Encrypt(decryptedContent, toPublicKey)?.let { onReady(it) }
+        signerSync.nip44Encrypt(plaintext, toPublicKey)?.let { onReady(it) }
     }
 
     override fun nip44Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        signerSync.nip44Decrypt(encryptedContent, fromPublicKey)?.let { onReady(it) }
+        signerSync.nip44Decrypt(ciphertext, fromPublicKey)?.let { onReady(it) }
     }
 
     override fun decryptZapEvent(

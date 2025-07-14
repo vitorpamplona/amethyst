@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff
+package com.vitorpamplona.amethyst.ui.screen.loggedOff.signup
 
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -32,19 +32,14 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,7 +48,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,19 +55,20 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import kotlinx.coroutines.launch
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
 @Composable
-fun SignUpPage() {
+fun SignUpPagePreview() {
     val accountViewModel: AccountStateViewModel = viewModel()
 
     ThemeComparisonRow(
@@ -88,13 +83,18 @@ fun SignUpPage(
     accountStateViewModel: AccountStateViewModel,
     onWantsToLogin: () -> Unit,
 ) {
-    val displayName = remember { mutableStateOf(TextFieldValue("")) }
-    var errorMessage by remember { mutableStateOf("") }
-    val acceptedTerms = remember { mutableStateOf(false) }
-    var termsAcceptanceIsRequired by remember { mutableStateOf("") }
+    val signUpViewModel: SignUpViewModel = viewModel()
+    signUpViewModel.init(accountStateViewModel)
 
+    SignUpPage(signUpViewModel, onWantsToLogin)
+}
+
+@Composable
+fun SignUpPage(
+    signUpViewModel: SignUpViewModel,
+    onWantsToLogin: () -> Unit,
+) {
     val context = LocalContext.current
-    val torSettings = remember { mutableStateOf(TorSettings()) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -125,8 +125,8 @@ fun SignUpPage(
         Spacer(modifier = Modifier.height(Size20dp))
 
         OutlinedTextField(
-            value = displayName.value,
-            onValueChange = { displayName.value = it },
+            value = signUpViewModel.displayName,
+            onValueChange = signUpViewModel::updateDisplayName,
             keyboardOptions =
                 KeyboardOptions(
                     autoCorrectEnabled = false,
@@ -142,49 +142,47 @@ fun SignUpPage(
             keyboardActions =
                 KeyboardActions(
                     onGo = {
-                        if (!acceptedTerms.value) {
-                            termsAcceptanceIsRequired =
-                                stringRes(context, R.string.acceptance_of_terms_is_required)
-                        }
-
-                        if (displayName.value.text.isBlank()) {
-                            errorMessage = stringRes(context, R.string.name_is_required)
-                        }
-
-                        if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                            accountStateViewModel.newKey(torSettings.value, displayName.value.text)
-                        }
+                        signUpViewModel.signup()
                     },
                 ),
         )
-        if (errorMessage.isNotBlank()) {
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
+
+        signUpViewModel.errorManager.error?.let { error ->
+            when (error) {
+                is LoginErrorManager.SingleErrorMsg ->
+                    Text(
+                        text = stringRes(error.errorResId),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                is LoginErrorManager.ParamsErrorMsg ->
+                    Text(
+                        text = stringRes(error.errorResId, *error.params),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                else -> {}
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
         AcceptTerms(
-            checked = acceptedTerms.value,
-            onCheckedChange = { acceptedTerms.value = it },
+            checked = signUpViewModel.acceptedTerms,
+            onCheckedChange = signUpViewModel::updateAcceptedTerms,
         )
 
-        if (termsAcceptanceIsRequired.isNotBlank()) {
+        if (signUpViewModel.termsAcceptanceIsRequiredError) {
             Text(
-                text = termsAcceptanceIsRequired,
+                text = stringRes(R.string.acceptance_of_terms_is_required),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
 
         TorSettingsSetup(
-            torSettings = torSettings.value,
-            onCheckedChange = {
-                torSettings.value = it
-            },
+            torSettings = signUpViewModel.torSettings,
+            onCheckedChange = signUpViewModel::updateTorSettings,
             onError = {
                 scope.launch {
                     Toast
@@ -201,20 +199,8 @@ fun SignUpPage(
 
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
             SignUpButton(
-                enabled = acceptedTerms.value,
-                onClick = {
-                    if (!acceptedTerms.value) {
-                        termsAcceptanceIsRequired = stringRes(context, R.string.acceptance_of_terms_is_required)
-                    }
-
-                    if (displayName.value.text.isBlank()) {
-                        errorMessage = stringRes(context, R.string.name_is_required)
-                    }
-
-                    if (acceptedTerms.value && displayName.value.text.isNotBlank()) {
-                        accountStateViewModel.newKey(torSettings.value, displayName.value.text)
-                    }
-                },
+                enabled = signUpViewModel.acceptedTerms,
+                onClick = signUpViewModel::signup,
             )
         }
 
@@ -227,37 +213,5 @@ fun SignUpPage(
         Box(modifier = Modifier.padding(Size40dp, 0.dp, Size40dp, 0.dp)) {
             LoginButton(onWantsToLogin)
         }
-    }
-}
-
-@Composable
-fun LoginButton(onWantsToLogin: () -> Unit) {
-    OutlinedButton(
-        onClick = onWantsToLogin,
-        shape = RoundedCornerShape(Size35dp),
-        modifier = Modifier.height(50.dp),
-    ) {
-        Text(
-            text = stringRes(R.string.login),
-            modifier = Modifier.padding(horizontal = Size40dp),
-        )
-    }
-}
-
-@Composable
-fun SignUpButton(
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Button(
-        enabled = enabled,
-        onClick = onClick,
-        shape = RoundedCornerShape(Size35dp),
-        modifier = Modifier.height(50.dp),
-    ) {
-        Text(
-            text = stringRes(R.string.create_account),
-            modifier = Modifier.padding(horizontal = Size40dp),
-        )
     }
 }

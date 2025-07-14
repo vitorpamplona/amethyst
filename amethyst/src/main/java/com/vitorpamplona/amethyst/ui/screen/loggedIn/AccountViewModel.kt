@@ -160,7 +160,15 @@ class AccountViewModel(
     val app: Amethyst,
 ) : ViewModel(),
     Dao {
-    val account = Account(accountSettings, accountSettings.createSigner(), app.locationManager.geohashStateFlow, LocalCache, app.client, viewModelScope)
+    val account =
+        Account(
+            accountSettings,
+            accountSettings.createSigner(app.contentResolver),
+            app.locationManager.geohashStateFlow,
+            LocalCache,
+            app.client,
+            viewModelScope,
+        )
 
     val newNotesPreProcessor = PrecacheNewNotesProcessor(account, LocalCache)
 

@@ -222,7 +222,7 @@ import kotlin.coroutines.resume
 @Stable
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
-    val signer: NostrSigner = settings.createSigner(),
+    val signer: NostrSigner,
     geolocationFlow: StateFlow<LocationState.LocationResult>,
     val cache: LocalCache,
     val client: NostrClient,

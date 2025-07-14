@@ -18,22 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner
+package com.vitorpamplona.quartz.nip55AndroidSigner.client
 
-import android.util.Log
-import com.vitorpamplona.quartz.EventFactory
+import android.content.ContentResolver
+import android.content.Intent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.BackgroundRequestHandler
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.ForegroundRequestHandler
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
 class NostrSignerExternal(
     pubKey: HexKey,
-    val launcher: ExternalSignerLauncher,
-) : NostrSigner(pubKey) {
+    packageName: String,
+    contentResolver: ContentResolver,
+) : NostrSigner(pubKey),
+    IActivityLauncher {
     override fun isWriteable(): Boolean = true
+
+    val backgroundQuery = BackgroundRequestHandler(pubKey, packageName, contentResolver)
+    val foregroundQuery = ForegroundRequestHandler(pubKey, packageName)
+
+    override fun registerForegroundLauncher(launcher: ((Intent) -> Unit)) {
+        this.foregroundQuery.launcher.registerForegroundLauncher(launcher)
+    }
+
+    override fun unregisterForegroundLauncher(launcher: ((Intent) -> Unit)) {
+        this.foregroundQuery.launcher.unregisterForegroundLauncher(launcher)
+    }
+
+    override fun newResponse(data: Intent) {
+        this.foregroundQuery.launcher.newResponse(data)
+    }
 
     override fun <T : Event> sign(
         createdAt: Long,
@@ -42,7 +61,7 @@ class NostrSignerExternal(
         content: String,
         onReady: (T) -> Unit,
     ) {
-        val event =
+        val unsignedEvent =
             Event(
                 id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
                 pubKey = pubKey,
@@ -53,109 +72,70 @@ class NostrSignerExternal(
                 sig = "",
             )
 
-        launcher.openSigner(event) { signature ->
-            if (signature.startsWith("{")) {
-                val localEvent = Event.fromJson(signature)
-                (
-                    EventFactory.create(
-                        localEvent.id,
-                        localEvent.pubKey,
-                        localEvent.createdAt,
-                        localEvent.kind,
-                        localEvent.tags,
-                        localEvent.content,
-                        localEvent.sig,
-                    ) as? T?
-                )?.let { onReady(it) }
-            } else {
-                (
-                    EventFactory.create(
-                        event.id,
-                        event.pubKey,
-                        event.createdAt,
-                        event.kind,
-                        event.tags,
-                        event.content,
-                        signature.split("-")[0],
-                    ) as? T?
-                )?.let { onReady(it) }
-            }
+        val newOnReady: (Event) -> Unit = { result ->
+            (result as? T)?.let(onReady)
+        }
+
+        if (!backgroundQuery.sign(unsignedEvent, newOnReady)) {
+            foregroundQuery.sign(unsignedEvent, newOnReady)
         }
     }
 
     override fun nip04Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        launcher.encrypt(
-            decryptedContent,
-            toPublicKey,
-            SignerType.NIP04_ENCRYPT,
-            onReady,
-        )
+        if (!backgroundQuery.nip04Encrypt(plaintext, toPublicKey, onReady)) {
+            foregroundQuery.nip04Encrypt(plaintext, toPublicKey, onReady)
+        }
     }
 
     override fun nip04Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        launcher.decrypt(
-            encryptedContent,
-            fromPublicKey,
-            SignerType.NIP04_DECRYPT,
-            onReady,
-        )
+        if (!backgroundQuery.nip04Decrypt(ciphertext, fromPublicKey, onReady)) {
+            foregroundQuery.nip04Decrypt(ciphertext, fromPublicKey, onReady)
+        }
     }
 
     override fun nip44Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        launcher.encrypt(
-            decryptedContent,
-            toPublicKey,
-            SignerType.NIP44_ENCRYPT,
-            onReady,
-        )
+        if (!backgroundQuery.nip44Encrypt(plaintext, toPublicKey, onReady)) {
+            foregroundQuery.nip44Encrypt(plaintext, toPublicKey, onReady)
+        }
     }
 
     override fun nip44Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     ) {
-        launcher.decrypt(
-            encryptedContent,
-            fromPublicKey,
-            SignerType.NIP44_DECRYPT,
-            onReady,
-        )
+        if (!backgroundQuery.nip44Decrypt(ciphertext, fromPublicKey, onReady)) {
+            foregroundQuery.nip44Decrypt(ciphertext, fromPublicKey, onReady)
+        }
     }
 
     override fun deriveKey(
         nonce: HexKey,
         onReady: (HexKey) -> Unit,
     ) {
-        launcher.deriveKey(
-            nonce,
-            SignerType.DERIVE_KEY,
-            onReady,
-        )
+        if (!backgroundQuery.deriveKey(nonce, onReady)) {
+            foregroundQuery.deriveKey(nonce, onReady)
+        }
     }
 
     override fun decryptZapEvent(
         event: LnZapRequestEvent,
         onReady: (LnZapPrivateEvent) -> Unit,
     ) {
-        launcher.decryptZapEvent(event) { jsonEvent ->
-            try {
-                (Event.fromJson(jsonEvent) as? LnZapPrivateEvent)?.let { onReady(it) }
-            } catch (e: Exception) {
-                Log.e("NostrExternalSigner", "Unable to parse returned decrypted Zap: $jsonEvent")
-            }
+        if (!backgroundQuery.decryptZapEvent(event, onReady)) {
+            foregroundQuery.decryptZapEvent(event, onReady)
         }
     }
 }

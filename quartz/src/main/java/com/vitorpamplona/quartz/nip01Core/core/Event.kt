@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
@@ -57,6 +58,14 @@ open class Event(
 
     companion object {
         fun fromJson(json: String): Event = JsonMapper.fromJson(json)
+
+        fun fromJsonOrNull(json: String) =
+            try {
+                fromJson(json)
+            } catch (e: Exception) {
+                Log.e("Event", "Unable to parse event JSON: $json", e)
+                null
+            }
 
         fun build(
             kind: Int,

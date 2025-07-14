@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.ThreadFeedFi
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.verify
 import junit.framework.TestCase
@@ -138,7 +139,13 @@ class ThreadDualAxisChartAssemblerTest {
                     null,
                 )
 
-            val account = Account(AccountSettings(KeyPair()), scope = CoroutineScope(Dispatchers.IO + SupervisorJob()))
+            val keyPair = KeyPair()
+            val account =
+                Account(
+                    settings = AccountSettings(keyPair = keyPair),
+                    signer = NostrSignerInternal(keyPair),
+                    scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                )
             withContext(Dispatchers.Main) {
                 val user = account.userProfile().flow()
             }

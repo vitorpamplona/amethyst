@@ -836,6 +836,7 @@
     <string name="wallet_number">Wallet %1$s</string>
     <string name="error_opening_external_signer">Error opening signer app</string>
     <string name="error_opening_external_signer_description">The signer app could not be found. Check if the app hasn\'t been uninstalled</string>
+    <string name="sign_request_rejected2">Sign request rejected</string>
     <string name="sign_request_rejected">Signer Application Rejected</string>
     <string name="sign_request_rejected_description">Make sure the signer application has authorized this transaction</string>
 

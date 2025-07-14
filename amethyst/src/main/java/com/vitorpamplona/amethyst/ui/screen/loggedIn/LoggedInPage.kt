@@ -31,10 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
@@ -44,8 +41,6 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.AppNavigation
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
@@ -54,7 +49,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.Chat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
-import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -156,7 +151,10 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
         job?.cancel()
         job =
             scope.launch {
-                PushNotificationUtils.checkAndInit(LocalPreferences.allSavedAccounts(), accountViewModel::okHttpClientForTrustedRelays)
+                PushNotificationUtils.checkAndInit(
+                    LocalPreferences.allSavedAccounts(),
+                    accountViewModel::okHttpClientForTrustedRelays,
+                )
             }
 
         onPauseOrDispose {
@@ -167,55 +165,25 @@ fun NotificationRegistration(accountViewModel: AccountViewModel) {
 
 @Composable
 private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
-    if (accountViewModel.account.signer is NostrSignerExternal) {
-        val activity = getActivity() as MainActivity
-
-        val lifeCycleOwner = LocalLifecycleOwner.current
+    if (accountViewModel.account.signer is IActivityLauncher) {
         val launcher =
             rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult(),
                 onResult = { result ->
-                    if (result.resultCode != Activity.RESULT_OK) {
-                        accountViewModel.toastManager.toast(
-                            R.string.sign_request_rejected,
-                            R.string.sign_request_rejected_description,
-                        )
-                    } else {
+                    if (result.resultCode == Activity.RESULT_OK) {
                         result.data?.let {
                             accountViewModel.runOnIO {
-                                accountViewModel.account.signer.launcher
-                                    .newResult(it)
+                                accountViewModel.account.signer.newResponse(it)
                             }
                         }
                     }
                 },
             )
 
-        DisposableEffect(accountViewModel, accountViewModel.account, launcher, activity, lifeCycleOwner) {
-            val observer =
-                LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        accountViewModel.account.signer.launcher.registerLauncher(
-                            launcher = {
-                                try {
-                                    launcher.launch(it)
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    Log.e("Signer", "Error opening Signer app", e)
-                                    accountViewModel.toastManager.toast(
-                                        R.string.error_opening_external_signer,
-                                        R.string.error_opening_external_signer_description,
-                                    )
-                                }
-                            },
-                            contentResolver = Amethyst.instance::contentResolverFn,
-                        )
-                    }
-                }
-
-            val launcher: (Intent) -> Unit = {
+        DisposableEffect(accountViewModel, accountViewModel.account, launcher) {
+            val launcher: (Intent) -> Unit = { intent ->
                 try {
-                    launcher.launch(it)
+                    launcher.launch(intent)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.e("Signer", "Error opening Signer app", e)
@@ -226,15 +194,9 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
                 }
             }
 
-            lifeCycleOwner.lifecycle.addObserver(observer)
-            accountViewModel.account.signer.launcher.registerLauncher(
-                launcher = launcher,
-                contentResolver = Amethyst.instance::contentResolverFn,
-            )
+            accountViewModel.account.signer.registerForegroundLauncher(launcher)
             onDispose {
-                accountViewModel.account.signer.launcher
-                    .clearLauncherIf(launcher)
-                lifeCycleOwner.lifecycle.removeObserver(observer)
+                accountViewModel.account.signer.unregisterForegroundLauncher(launcher)
             }
         }
     }

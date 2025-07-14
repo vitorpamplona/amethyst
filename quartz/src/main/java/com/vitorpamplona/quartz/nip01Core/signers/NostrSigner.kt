@@ -47,25 +47,25 @@ abstract class NostrSigner(
     )
 
     abstract fun nip04Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
         onReady: (String) -> Unit,
     )
 
     abstract fun nip04Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     )
 
     abstract fun nip44Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
         onReady: (String) -> Unit,
     )
 
     abstract fun nip44Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
         onReady: (String) -> Unit,
     )

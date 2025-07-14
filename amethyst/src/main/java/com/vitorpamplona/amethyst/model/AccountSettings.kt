@@ -20,9 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model
 
-import android.util.Log
+import android.content.ContentResolver
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -39,6 +38,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
@@ -46,8 +47,9 @@ import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.ExternalSignerLauncher
-import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
+import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -60,14 +62,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.util.Locale
-
-val DefaultChannelSet =
-    setOf(
-        // Anigma's Nostr
-        "25e5c82273a271cb1a840d0060391a0bf4965cafeb029d5ab55350b418953fbb",
-        // Amethyst's Group
-        "42224859763652914db53052103f0b744df79dfc4efef7e950fc0802fc3df3c5",
-    )
 
 val DefaultChannels =
     listOf(
@@ -89,6 +83,17 @@ val DefaultNIP65List =
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
 val DefaultSearchRelayList = setOf(Constants.band, Constants.wine, Constants.where, Constants.nostoday)
+
+val DefaultSignerPermissions =
+    listOf(
+        Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
+        Permission(CommandType.SIGN_EVENT, DraftEvent.KIND),
+        Permission(CommandType.NIP04_ENCRYPT),
+        Permission(CommandType.NIP04_DECRYPT),
+        Permission(CommandType.NIP44_DECRYPT),
+        Permission(CommandType.NIP44_DECRYPT),
+        Permission(CommandType.DECRYPT_ZAP_EVENT),
+    )
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val GLOBAL_FOLLOWS = " Global "
@@ -147,25 +152,18 @@ class AccountSettings(
 
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null
 
-    fun createSigner() =
+    fun createSigner(contentResolver: ContentResolver) =
         if (keyPair.privKey != null) {
             NostrSignerInternal(keyPair)
         } else {
             when (val packageName = externalSignerPackageName) {
                 null -> NostrSignerInternal(keyPair)
-                else -> {
-                    val externalSignerLauncher = ExternalSignerLauncher(keyPair.pubKey.toHexKey(), packageName)
-                    // TODO: How to handle the launcher here?
-                    try {
-                        externalSignerLauncher.registerLauncher(
-                            launcher = { },
-                            contentResolver = Amethyst.instance::contentResolverFn,
-                        )
-                    } catch (e: Exception) {
-                        Log.d("AccountSettings", "Failed to initialize external signer", e)
-                    }
-                    NostrSignerExternal(keyPair.pubKey.toHexKey(), externalSignerLauncher)
-                }
+                else ->
+                    NostrSignerExternal(
+                        pubKey = keyPair.pubKey.toHexKey(),
+                        packageName = packageName,
+                        contentResolver = contentResolver,
+                    )
             }
         }
 

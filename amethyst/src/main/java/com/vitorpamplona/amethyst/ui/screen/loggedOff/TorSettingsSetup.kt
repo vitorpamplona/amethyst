@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.ui.components.appendLink
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.ConnectTorDialog
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.amethyst.ui.tor.TorType
 
 @Composable
 fun TorSettingsSetup(
@@ -45,8 +44,6 @@ fun TorSettingsSetup(
     onError: (String) -> Unit,
 ) {
     var connectOrbotDialogOpen by remember { mutableStateOf(false) }
-    var activeTor by remember { mutableStateOf(false) }
-
     val primary = MaterialTheme.colorScheme.primary
 
     Text(
@@ -63,7 +60,6 @@ fun TorSettingsSetup(
             torSettings = torSettings,
             onClose = { connectOrbotDialogOpen = false },
             onPost = { torSettings ->
-                activeTor = torSettings.torType != TorType.OFF
                 connectOrbotDialogOpen = false
                 onCheckedChange(torSettings)
             },

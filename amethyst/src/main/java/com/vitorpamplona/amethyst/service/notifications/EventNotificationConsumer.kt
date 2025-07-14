@@ -24,7 +24,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -44,7 +43,6 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.NostrSignerExternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
@@ -86,15 +84,7 @@ class EventNotificationConsumer(
         pushWrappedEvent: GiftWrapEvent,
         account: AccountSettings,
     ) {
-        // TODO: Modify the external launcher to launch as different users.
-        // Right now it only registers if Amber has already approved this signature
-        val signer = account.createSigner()
-        if (signer is NostrSignerExternal) {
-            signer.launcher.registerLauncher(
-                launcher = { },
-                contentResolver = Amethyst.instance::contentResolverFn,
-            )
-        }
+        val signer = account.createSigner(applicationContext.contentResolver)
 
         pushWrappedEvent.unwrapThrowing(signer) { notificationEvent ->
             consumeNotificationEvent(notificationEvent, signer, account)
@@ -144,16 +134,7 @@ class EventNotificationConsumer(
                 LocalPreferences.loadCurrentAccountFromEncryptedStorage(it.npub)?.let { acc ->
                     Log.d(TAG, "New Notification Testing if for ${it.npub}")
                     try {
-                        // TODO: Modify the external launcher to launch as different users.
-                        // Right now it only registers if Amber has already approved this signature
-                        val signer = acc.createSigner()
-                        if (signer is NostrSignerExternal) {
-                            signer.launcher.registerLauncher(
-                                launcher = { },
-                                contentResolver = Amethyst.instance::contentResolverFn,
-                            )
-                        }
-
+                        val signer = acc.createSigner(applicationContext.contentResolver)
                         consumeNotificationEvent(event, signer, acc)
                         matchAccount = true
                     } catch (e: Exception) {
