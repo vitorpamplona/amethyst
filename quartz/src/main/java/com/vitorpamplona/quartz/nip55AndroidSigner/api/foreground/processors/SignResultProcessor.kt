@@ -31,7 +31,7 @@ class SignResultProcessor(
     val unsignedEvent: Event,
     val onReady: (Event) -> Unit,
 ) : NewResultProcessor {
-    override fun process(intent: Intent) {
+    override fun consume(intent: Intent) {
         val foregroundResult = SignResponse.parse(intent, unsignedEvent)
 
         if (foregroundResult is SignerResult.Successful<SignResult>) {

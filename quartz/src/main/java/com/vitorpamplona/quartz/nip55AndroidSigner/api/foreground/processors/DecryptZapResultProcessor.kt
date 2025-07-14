@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 class DecryptZapResultProcessor(
     val onReady: (LnZapPrivateEvent) -> Unit,
 ) : NewResultProcessor {
-    override fun process(intent: Intent) {
+    override fun consume(intent: Intent) {
         val foregroundResult = DecryptZapResponse.parse(intent)
 
         if (foregroundResult is SignerResult.Successful<ZapEventDecryptionResult>) {

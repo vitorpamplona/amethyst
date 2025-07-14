@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.respon
 class LoginResultProcessor(
     val onReady: (HexKey, String) -> Unit,
 ) : NewResultProcessor {
-    override fun process(intent: Intent) {
+    override fun consume(intent: Intent) {
         val foregroundResult = LoginResponse.parse(intent)
 
         if (foregroundResult is SignerResult.Successful<PubKeyResult>) {

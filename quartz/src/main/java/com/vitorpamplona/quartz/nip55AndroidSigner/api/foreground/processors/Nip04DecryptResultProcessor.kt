@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.respon
 class Nip04DecryptResultProcessor(
     val onReady: (String) -> Unit,
 ) : NewResultProcessor {
-    override fun process(intent: Intent) {
+    override fun consume(intent: Intent) {
         val foregroundResult = Nip04DecryptResponse.parse(intent)
 
         if (foregroundResult is SignerResult.Successful<DecryptionResult>) {

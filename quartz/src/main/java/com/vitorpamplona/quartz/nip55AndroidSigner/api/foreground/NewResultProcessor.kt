@@ -23,5 +23,5 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground
 import android.content.Intent
 
 interface NewResultProcessor {
-    fun process(intent: Intent)
+    fun consume(intent: Intent)
 }

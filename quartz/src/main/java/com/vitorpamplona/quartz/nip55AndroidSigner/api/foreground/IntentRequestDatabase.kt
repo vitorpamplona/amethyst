@@ -43,7 +43,7 @@ class IntentRequestDatabase {
     fun newResponse(data: Intent) {
         val callId = data.getStringExtra("id")
         if (callId != null) {
-            awaitingRequests[callId]?.process(data)
+            awaitingRequests[callId]?.consume(data)
             awaitingRequests.remove(callId)
         }
     }
