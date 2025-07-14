@@ -25,9 +25,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.Continuation
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
 /**
@@ -153,3 +155,63 @@ suspend fun <T, K> mapNotNullAsync(
         }
     }
 }
+
+/**
+ * Executes a mapping function asynchronously on each input in the list.
+ * Returns true as soon as the first mapping returns true, cancelling all other ongoing operations.
+ *
+ * @param inputs A list of input objects to process.
+ * @param mappingFunction A suspend function that takes an input object and returns a Boolean.
+ * @return True if any mapping function returns true, false otherwise.
+ */
+suspend fun <T> anyAsync(
+    inputs: List<T>,
+    timeoutMillis: Long = 30000,
+    mappingFunction: suspend (T) -> Boolean,
+): Boolean =
+    coroutineScope {
+        // Create a list to hold all our deferred results
+        val deferredResults =
+            inputs.map { input ->
+                async {
+                    // Each async block will execute the mapping function.
+                    // If this coroutine gets cancelled, CancellationException will be thrown,
+                    // and we'll catch it to ensure it doesn't propagate further.
+                    try {
+                        mappingFunction(input)
+                    } catch (e: CancellationException) {
+                        // When cancelled, we treat it as if it didn't return true
+                        false
+                    }
+                }
+            }
+
+        // Use select to wait for the first deferred to complete with 'true'
+        val foundTrue =
+            withTimeoutOrNull(timeoutMillis) {
+                select {
+                    deferredResults.forEach { deferred ->
+                        // For each deferred, if it completes and its result is 'true',
+                        // this branch of the select expression will be chosen.
+                        deferred.onAwait { result ->
+                            if (result) {
+                                true // Return true from the select expression
+                            } else {
+                                // If a deferred completes with false, we don't want to
+                                // immediately end the select, so we return false, which
+                                // lets select continue waiting for other branches.
+                                false
+                            }
+                        }
+                    }
+                }
+            }
+
+        // Once select returns (either with true or after all deferreds complete/are cancelled),
+        // cancel any remaining ongoing operations.
+        // If foundTrue is true, all other deferreds are implicitly cancelled by the select winning.
+        // If foundTrue is false, it means all completed with false or were cancelled.
+        deferredResults.forEach { it.cancel() } // Ensure all are cancelled.
+
+        return@coroutineScope foundTrue == true
+    }

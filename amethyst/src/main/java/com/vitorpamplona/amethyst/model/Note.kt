@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import coil3.util.CoilUtils.result
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
@@ -68,6 +69,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprov
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
 import com.vitorpamplona.quartz.utils.tryAndWait
@@ -496,6 +498,8 @@ open class Note(
             return
         }
 
+        val parallelDecrypt = mutableListOf<Pair<LnZapRequestEvent, LnZapEvent?>>()
+
         zapEvents.forEach { next ->
             val zapRequest = next.key.event as LnZapRequestEvent
             val zapEvent = next.value?.event as? LnZapEvent
@@ -518,20 +522,26 @@ open class Note(
                     }
                 } else {
                     if (account.isWriteable()) {
-                        val result =
-                            tryAndWait { continuation ->
-                                zapRequest.decryptPrivateZap(account.signer) {
-                                    continuation.resume(it)
-                                }
-                            }
-
-                        if (result?.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
-                            onWasZappedByAuthor()
-                            return
-                        }
+                        parallelDecrypt.add(Pair(zapRequest, zapEvent))
                     }
                 }
             }
+        }
+
+        val result =
+            anyAsync(parallelDecrypt) { pair ->
+                val result =
+                    tryAndWait { continuation ->
+                        pair.first.decryptPrivateZap(account.signer) {
+                            continuation.resume(it)
+                        }
+                    }
+
+                result?.pubKey == user.pubkeyHex && (option == null || option == pair.second?.zappedPollOption())
+            }
+
+        if (result) {
+            onWasZappedByAuthor()
         }
     }
 

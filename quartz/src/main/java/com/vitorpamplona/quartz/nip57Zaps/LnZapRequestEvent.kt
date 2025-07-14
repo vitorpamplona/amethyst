@@ -64,7 +64,9 @@ class LnZapRequestEvent(
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
-    @Transient private var privateZapEvent: LnZapPrivateEvent? = null
+    // TODO: Create a per key map with resulting options to account for rejections and avoiding reasking.
+    @Transient
+    private var privateZapEvent: LnZapPrivateEvent? = null
 
     override fun countMemory(): Long = super.countMemory() + pointerSizeInBytes + (privateZapEvent?.countMemory() ?: 0)
 
