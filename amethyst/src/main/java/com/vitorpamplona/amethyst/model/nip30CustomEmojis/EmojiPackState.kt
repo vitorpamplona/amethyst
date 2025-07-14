@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
@@ -68,17 +69,18 @@ class EmojiPackState(
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<List<StateFlow<NoteState>>?> by lazy {
+    val flow: StateFlow<List<StateFlow<NoteState>>?> =
         getEmojiPackSelectionFlow()
             .transformLatest {
                 emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
+            }.onStart {
+                emit(convertEmojiSelectionPack(getEmojiPackSelection()))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                convertEmojiSelectionPack(getEmojiPackSelection()),
+                emptyList(),
             )
-    }
 
     fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> =
         pack.taggedEmojis().map {
@@ -98,7 +100,7 @@ class EmojiPackState(
             .distinctBy { it.link }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val myEmojis by lazy {
+    val myEmojis =
         flow
             .transformLatest { emojiList ->
                 if (emojiList != null) {
@@ -110,13 +112,20 @@ class EmojiPackState(
                 } else {
                     emit(emptyList())
                 }
+            }.onStart {
+                emit(
+                    mergePack(
+                        convertEmojiSelectionPack(
+                            getEmojiPackSelection(),
+                        )?.map { it.value }?.toTypedArray() ?: emptyArray(),
+                    ),
+                )
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
+                emptyList(),
             )
-    }
 
     fun addEmojiPack(
         emojiPack: Note,

@@ -237,8 +237,14 @@ class FollowListState(
             )
         }
 
-    val kind3GlobalPeopleRoutes = _kind3GlobalPeopleRoutes.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
-    val kind3GlobalPeople = _kind3GlobalPeople.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+    val kind3GlobalPeopleRoutes =
+        _kind3GlobalPeopleRoutes
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
+    val kind3GlobalPeople =
+        _kind3GlobalPeople
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, defaultLists)
 
     suspend fun initializeSuspend() {
         checkNotInMainThread()

@@ -70,7 +70,7 @@ class HashtagListState(
         } ?: emptySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<String>> by lazy {
+    val flow: StateFlow<Set<String>> =
         getHashtagListFlow()
             .transformLatest { noteState ->
                 emit(hashtagListWithBackup(noteState.note))
@@ -82,7 +82,6 @@ class HashtagListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     fun follow(
         hashtags: List<String>,

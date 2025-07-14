@@ -73,7 +73,7 @@ class CommunityListState(
         } ?: emptySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<AddressHint>> by lazy {
+    val flow: StateFlow<Set<AddressHint>> =
         getCommunityListFlow()
             .transformLatest { noteState ->
                 emit(communityListWithBackup(noteState.note))
@@ -85,20 +85,20 @@ class CommunityListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flowSet: StateFlow<Set<String>> by lazy {
+    val flowSet: StateFlow<Set<String>> =
         flow
-            .map {
-                it.mapTo(mutableSetOf()) { it.addressId }
+            .map { hint ->
+                hint.mapTo(mutableSetOf()) { it.addressId }
+            }.onStart {
+                emit(flow.value.mapTo(mutableSetOf()) { it.addressId })
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     fun follow(
         communities: List<AddressableNote>,

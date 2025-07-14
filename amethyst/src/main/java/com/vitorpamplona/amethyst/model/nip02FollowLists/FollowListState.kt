@@ -71,6 +71,7 @@ class FollowListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
+                // this has priority.
                 buildKind3Follows(getFollowListEvent() ?: settings.backupContactList),
             )
 

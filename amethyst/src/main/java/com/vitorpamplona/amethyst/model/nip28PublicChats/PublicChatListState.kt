@@ -74,7 +74,7 @@ class PublicChatListState(
         } ?: emptySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<EventIdHint>> by lazy {
+    val flow: StateFlow<Set<EventIdHint>> =
         getChannelListFlow()
             .transformLatest { noteState ->
                 emit(publicChatListWithBackup(noteState.note))
@@ -86,20 +86,20 @@ class PublicChatListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flowSet: StateFlow<Set<HexKey>> by lazy {
+    val flowSet: StateFlow<Set<HexKey>> =
         flow
             .map {
                 it.mapTo(mutableSetOf()) { it.eventId }
+            }.onStart {
+                emit(flow.value.mapTo(mutableSetOf()) { it.eventId })
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     fun follow(
         channel: PublicChatChannel,

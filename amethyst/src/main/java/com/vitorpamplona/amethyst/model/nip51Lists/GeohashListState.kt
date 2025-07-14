@@ -70,7 +70,7 @@ class GeohashListState(
         } ?: emptySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<String>> by lazy {
+    val flow: StateFlow<Set<String>> =
         getGeohashListFlow()
             .transformLatest { noteState ->
                 emit(geohashListWithBackup(noteState.note))
@@ -82,7 +82,6 @@ class GeohashListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     fun follow(
         geohashs: List<String>,

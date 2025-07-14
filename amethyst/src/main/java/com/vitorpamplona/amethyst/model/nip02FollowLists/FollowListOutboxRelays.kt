@@ -81,11 +81,14 @@ class FollowListOutboxRelays(
             emitAll(relayListFlows)
         }.onStart {
             val blocked = blockedRelayList.flow.value.toSet()
-            kind3Follows.flow.value.authors
-                .mapNotNull {
-                    getNIP65RelayList(it)?.writeRelaysNorm()?.minus(blocked)
-                }.flatten()
-                .toSet()
+            val authors = kind3Follows.flow.value.authors
+            val perRelay =
+                authors
+                    .mapNotNull {
+                        getNIP65RelayList(it)?.writeRelaysNorm()?.minus(blocked)
+                    }.flatten()
+                    .toSet()
+            emit(perRelay)
         }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -99,11 +102,13 @@ class FollowListOutboxRelays(
             .map { relayList ->
                 relayList.map { it.url }.toSet()
             }.onStart {
-                kind3Follows.flow.value.authors
-                    .mapNotNull {
-                        getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
-                    }.flatten()
-                    .toSet()
+                emit(
+                    kind3Follows.flow.value.authors
+                        .mapNotNull {
+                            getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
+                        }.flatten()
+                        .toSet(),
+                )
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

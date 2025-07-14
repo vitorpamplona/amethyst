@@ -194,7 +194,10 @@ class AccountViewModel(
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
         }
 
-    val notificationHasNewItemsFlow = notificationHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val notificationHasNewItemsFlow =
+        notificationHasNewItems
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val messagesHasNewItems =
@@ -225,7 +228,10 @@ class AccountViewModel(
                 }
             }
 
-    val messagesHasNewItemsFlow = messagesHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val messagesHasNewItemsFlow =
+        messagesHasNewItems
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val homeHasNewItems =
@@ -245,7 +251,10 @@ class AccountViewModel(
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
         }
 
-    val homeHasNewItemsFlow = homeHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val homeHasNewItemsFlow =
+        homeHasNewItems
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val hasNewItems =
         mapOf(
@@ -359,6 +368,14 @@ class AccountViewModel(
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, autor, metadata, reports ->
                 emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.authors))
+            }.onStart {
+                emit(
+                    isNoteAcceptable(
+                        note,
+                        account.hiddenUsers.flow.value,
+                        account.kind3FollowList.flow.value.authors,
+                    ),
+                )
             }.flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,

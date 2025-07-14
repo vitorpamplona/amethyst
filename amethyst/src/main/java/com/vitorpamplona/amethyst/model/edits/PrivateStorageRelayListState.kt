@@ -63,8 +63,9 @@ class PrivateStorageRelayListState(
     val flow =
         getPrivateOutboxRelayListFlow()
             .map { normalizePrivateOutboxRelayListWithBackup(it.note) }
-            .onStart { emit(normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote())) }
-            .flowOn(Dispatchers.Default)
+            .onStart {
+                emit(normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()))
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

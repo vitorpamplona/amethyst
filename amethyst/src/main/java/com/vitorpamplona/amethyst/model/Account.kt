@@ -2266,7 +2266,7 @@ class Account(
             val oldHashtags = contactList?.hashtags()?.toSet()
 
             if (oldHashtags != null && oldHashtags.isNotEmpty()) {
-                Log.d("DB UPGRADE", "Migrating List with ${oldHashtags.size} old communities ")
+                Log.d("DB UPGRADE", "Migrating List with ${oldHashtags.size} old hashtags ")
                 val existingHashtags = hashtagList.flow.value
 
                 val needsToUpgrade = oldHashtags.filter { it !in existingHashtags }

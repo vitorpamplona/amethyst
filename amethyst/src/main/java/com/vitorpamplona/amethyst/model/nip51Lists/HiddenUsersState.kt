@@ -33,9 +33,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.runBlocking
 
 class HiddenUsersState(
     val muteList: StateFlow<PeopleListEvent.UsersAndWords>,
@@ -73,7 +73,7 @@ class HiddenUsersState(
             showSensitiveContent = showSensitiveContent,
         )
 
-    val flow: StateFlow<LiveHiddenUsers> by lazy {
+    val flow: StateFlow<LiveHiddenUsers> =
         combineTransform(
             blockList,
             muteList,
@@ -82,20 +82,21 @@ class HiddenUsersState(
         ) { blockList, muteList, transientHiddenUsers, showSensitiveContent ->
             checkNotInMainThread()
             emit(assembleLiveHiddenUsers(blockList, muteList, transientHiddenUsers, showSensitiveContent))
+        }.onStart {
+            emit(
+                assembleLiveHiddenUsers(
+                    blockList.value,
+                    muteList.value,
+                    transientHiddenUsers.value,
+                    settings.syncedSettings.security.showSensitiveContent.value,
+                ),
+            )
         }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                runBlocking {
-                    assembleLiveHiddenUsers(
-                        blockList.value,
-                        muteList.value,
-                        transientHiddenUsers.value,
-                        settings.syncedSettings.security.showSensitiveContent.value,
-                    )
-                },
+                LiveHiddenUsers(emptySet(), emptySet(), emptySet(), null),
             )
-    }
 
     fun resetTransientUsers() {
         transientHiddenUsers.update {

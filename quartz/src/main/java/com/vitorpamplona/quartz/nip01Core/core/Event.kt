@@ -63,7 +63,7 @@ open class Event(
             try {
                 fromJson(json)
             } catch (e: Exception) {
-                Log.e("Event", "Unable to parse event JSON: $json", e)
+                Log.w("Event", "Unable to parse event JSON: $json", e)
                 null
             }
 

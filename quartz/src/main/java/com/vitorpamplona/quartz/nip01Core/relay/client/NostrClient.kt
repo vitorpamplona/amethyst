@@ -41,7 +41,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 
@@ -93,8 +92,6 @@ class NostrClient(
             eventOutbox.relays,
         ) { reqs, counts, outbox ->
             reqs + counts + outbox
-        }.onStart {
-            activeRequests.relays.value + activeCounts.relays.value + eventOutbox.relays.value
         }.sample(300)
             .onEach {
                 relayPool.updatePool(it)

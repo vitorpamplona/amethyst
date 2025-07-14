@@ -72,7 +72,7 @@ class EphemeralChatListState(
         } ?: emptySet()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveEphemeralChatList: StateFlow<Set<RoomId>> by lazy {
+    val liveEphemeralChatList: StateFlow<Set<RoomId>> =
         getEphemeralChatListFlow()
             .transformLatest { noteState ->
                 emit(ephemeralChatListWithBackup(noteState.note))
@@ -84,7 +84,6 @@ class EphemeralChatListState(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
-    }
 
     fun follow(
         channel: EphemeralChatChannel,
