@@ -28,8 +28,6 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlin.collections.forEach
-import kotlin.collections.ifEmpty
 
 class CommunityRelayLoader {
     companion object {

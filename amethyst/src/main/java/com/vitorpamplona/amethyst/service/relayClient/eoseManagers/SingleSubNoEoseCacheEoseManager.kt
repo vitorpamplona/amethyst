@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
-import kotlin.collections.distinctBy
 
 /**
  * This query type creates only ONE relay subscription and does not

@@ -31,21 +31,14 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseAddressAsHint
-import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag.Companion.parseEventAsHint
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag.Companion.parseAsHint
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag.Companion.parseKey
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 

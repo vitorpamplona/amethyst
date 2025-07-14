@@ -30,8 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlin.collections.flatten
-import kotlin.collections.mapNotNull
 
 fun filterPictureAndVideoAuthors(
     relay: NormalizedRelayUrl,

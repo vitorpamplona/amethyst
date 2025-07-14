@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service
 
 import android.util.Log
 import android.util.LruCache
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp

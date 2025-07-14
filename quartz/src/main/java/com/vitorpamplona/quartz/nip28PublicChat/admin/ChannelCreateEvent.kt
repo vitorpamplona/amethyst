@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip28PublicChat.admin
 
-import android.R.attr.data
 import android.util.Log
-import android.util.Log.e
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.core.JsonParseException
 import com.vitorpamplona.quartz.nip01Core.core.Event

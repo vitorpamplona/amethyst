@@ -29,7 +29,6 @@ import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlin.collections.flatten
 
 class UserWatcherSubAssembler(
     client: NostrClient,

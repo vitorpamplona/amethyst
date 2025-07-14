@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import android.R.attr.value
-
 class MapOfSetBuilder<K, V> {
     val data = mutableMapOf<K, MutableSet<V>>()
 

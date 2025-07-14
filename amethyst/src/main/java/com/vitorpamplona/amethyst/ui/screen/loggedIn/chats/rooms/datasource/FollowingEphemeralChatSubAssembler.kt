@@ -32,7 +32,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-import kotlin.collections.forEach
 
 class FollowingEphemeralChatSubAssembler(
     client: NostrClient,

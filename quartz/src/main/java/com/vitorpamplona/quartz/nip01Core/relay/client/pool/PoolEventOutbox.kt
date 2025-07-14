@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.any
 
 class PoolEventOutbox(
     val event: Event,

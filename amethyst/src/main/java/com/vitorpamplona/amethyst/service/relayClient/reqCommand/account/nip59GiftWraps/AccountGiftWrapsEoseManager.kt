@@ -32,7 +32,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.collections.forEach
 
 class AccountGiftWrapsEoseManager(
     client: NostrClient,

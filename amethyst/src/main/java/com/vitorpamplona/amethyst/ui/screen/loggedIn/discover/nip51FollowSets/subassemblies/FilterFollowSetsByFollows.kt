@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.s
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import kotlin.collections.flatMap
 
 fun filterFollowSetsByFollows(
     followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,

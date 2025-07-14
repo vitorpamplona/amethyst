@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassembl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip01Core.filterPictureAndVideoHashtag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip72Communities.filterPictureAndVideoAllCommunities
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import kotlin.collections.flatten
 
 fun filterPictureAndVideoByFollows(
     followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,

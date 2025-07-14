@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import coil3.util.CoilUtils.result
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji

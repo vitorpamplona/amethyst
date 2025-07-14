@@ -27,8 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.forEach
-import kotlin.collections.ifEmpty
 
 fun filterByAddress(
     address: NAddress,

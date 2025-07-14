@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import kotlin.collections.flatten
 
 fun filterContentDVMsAllCommunities(
     relay: NormalizedRelayUrl,

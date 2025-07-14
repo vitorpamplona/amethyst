@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlin.collections.ifEmpty
 
 class OutboxRelayLoader {
     companion object {

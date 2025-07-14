@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
-import kotlin.collections.plus
 
 @Immutable
 open class BaseThreadedEvent(

@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.f
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Communities.filterHomePostsFromAllCommunities
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import kotlin.collections.flatten
 
 fun filterHomePostsByAllFollows(
     followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,

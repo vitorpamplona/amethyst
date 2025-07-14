@@ -32,9 +32,6 @@ import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.collections.forEach
-import kotlin.collections.isNotEmpty
-import kotlin.collections.isNullOrEmpty
 
 val UnsupportedRelayCreation: (url: NormalizedRelayUrl) -> IRelayClient = {
     throw UnsupportedOperationException("Cannot create new relays")

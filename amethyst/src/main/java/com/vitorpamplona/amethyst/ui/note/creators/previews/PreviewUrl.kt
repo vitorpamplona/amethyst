@@ -53,7 +53,6 @@ import com.vitorpamplona.amethyst.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import kotlin.text.startsWith
 
 @Composable
 fun PreviewUrl(

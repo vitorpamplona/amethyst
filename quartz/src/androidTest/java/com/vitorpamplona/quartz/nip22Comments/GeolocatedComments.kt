@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.location.geohashedScope
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue

@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.utils.ensure
-import kotlin.text.isBlank
 
 class AdvertisedRelayInfo(
     val relayUrl: NormalizedRelayUrl,

@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.normalizer
 
 import android.util.Log
-import android.util.Log.e
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
 import org.czeal.rfc3986.URIReference

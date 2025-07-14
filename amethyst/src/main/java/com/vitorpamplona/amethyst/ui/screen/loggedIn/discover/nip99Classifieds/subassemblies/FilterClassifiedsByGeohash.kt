@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import kotlin.collections.mapNotNull
 
 fun filterClassifiedsByGeohash(
     relay: NormalizedRelayUrl,

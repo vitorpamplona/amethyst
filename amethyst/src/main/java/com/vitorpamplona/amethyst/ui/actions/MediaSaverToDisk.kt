@@ -32,9 +32,7 @@ import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
-import coil3.util.MimeTypeMap.getMimeTypeFromExtension
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.PICTURES_SUBDIRECTORY
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

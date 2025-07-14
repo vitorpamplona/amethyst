@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
-import kotlin.collections.flatten
 
 fun filterPictureAndVideoAllCommunities(
     relay: NormalizedRelayUrl,

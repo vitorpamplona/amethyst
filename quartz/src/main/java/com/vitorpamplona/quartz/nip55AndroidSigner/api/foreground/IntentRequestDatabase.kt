@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground
 
 import android.content.Intent
 import androidx.collection.LruCache
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.NewResultProcessor
 import com.vitorpamplona.quartz.utils.RandomInstance
 
 class IntentRequestDatabase {

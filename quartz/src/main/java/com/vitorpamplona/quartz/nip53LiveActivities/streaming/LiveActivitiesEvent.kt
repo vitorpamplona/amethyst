@@ -44,7 +44,6 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StreamingTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.TotalParticipantsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.flatten
 
 @Immutable
 class LiveActivitiesEvent(

@@ -33,8 +33,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
-import org.apache.commons.lang3.text.translate.CharSequenceTranslator.hex
-import kotlin.collections.mapNotNull
 
 fun NEvent.toEventHint() = relay.map { EventIdHint(hex, it) }
 

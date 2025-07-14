@@ -40,10 +40,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlin.collections.flatten
-import kotlin.collections.map
-import kotlin.collections.minus
-import kotlin.collections.toSet
 
 class FollowListOutboxRelays(
     kind3Follows: FollowListState,

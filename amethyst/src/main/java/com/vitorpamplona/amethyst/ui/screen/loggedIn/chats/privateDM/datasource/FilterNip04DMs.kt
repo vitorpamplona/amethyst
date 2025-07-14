@@ -29,8 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import kotlin.collections.ifEmpty
-import kotlin.collections.toList
 
 fun filterNip04DMs(
     group: Set<HexKey>?,

@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.map
 
 @Immutable
 class ChannelListEvent(

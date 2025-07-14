@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.system.Os.socket
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener

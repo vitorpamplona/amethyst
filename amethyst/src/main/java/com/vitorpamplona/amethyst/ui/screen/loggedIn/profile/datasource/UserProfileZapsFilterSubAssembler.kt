@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseMa
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import kotlin.collections.flatten
 
 class UserProfileZapsFilterSubAssembler(
     client: NostrClient,

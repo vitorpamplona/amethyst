@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip89AppHandlers.definition
 
 import android.util.Log
-import android.util.Log.e
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

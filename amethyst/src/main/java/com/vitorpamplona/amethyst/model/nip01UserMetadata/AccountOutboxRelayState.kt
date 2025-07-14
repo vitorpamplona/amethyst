@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlin.collections.plus
 
 class AccountOutboxRelayState(
     nip65: Nip65RelayListState,

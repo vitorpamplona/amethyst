@@ -38,7 +38,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds

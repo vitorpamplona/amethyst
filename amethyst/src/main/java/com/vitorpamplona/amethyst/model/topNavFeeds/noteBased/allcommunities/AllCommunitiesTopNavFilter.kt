@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableN
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlin.collections.minus
 
 @Immutable
 class AllCommunitiesTopNavFilter(

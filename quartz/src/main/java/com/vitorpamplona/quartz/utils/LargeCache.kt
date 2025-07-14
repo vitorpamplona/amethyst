@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import android.R.attr.value
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
-import kotlin.collections.LinkedHashMap
 
 class LargeCache<K, V> {
     private val cache = ConcurrentSkipListMap<K, V>()

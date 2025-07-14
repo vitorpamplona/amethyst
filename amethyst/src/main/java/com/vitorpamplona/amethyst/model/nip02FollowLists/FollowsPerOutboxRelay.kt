@@ -40,7 +40,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlin.collections.map
 
 class FollowsPerOutboxRelay(
     kind3Follows: FollowListState,

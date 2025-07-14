@@ -24,7 +24,6 @@ import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.ammolite.relays.filters.MutableTime
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlin.collections.plus
 
 typealias SincePerRelayMap = Map<NormalizedRelayUrl, MutableTime>
 

@@ -41,7 +41,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.PermissionSeri
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorSerializer
-import kotlin.jvm.java
 
 class JsonMapper {
     companion object Companion {

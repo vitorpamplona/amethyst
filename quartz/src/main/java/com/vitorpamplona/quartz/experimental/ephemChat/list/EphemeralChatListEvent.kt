@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.plus
 
 @Immutable
 class EphemeralChatListEvent(

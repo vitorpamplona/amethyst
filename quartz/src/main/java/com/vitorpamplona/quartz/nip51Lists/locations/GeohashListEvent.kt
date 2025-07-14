@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag.Companion.parse
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent

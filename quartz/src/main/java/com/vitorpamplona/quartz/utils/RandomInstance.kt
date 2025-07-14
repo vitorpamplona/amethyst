@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.utils.RandomInstance.charPool
 import java.security.SecureRandom
 
 object RandomInstance {

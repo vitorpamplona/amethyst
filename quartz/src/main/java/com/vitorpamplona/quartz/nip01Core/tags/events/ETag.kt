@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.tags.events
 
-import android.R.attr.tag
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has

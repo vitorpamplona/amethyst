@@ -30,8 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import kotlin.collections.flatten
-import kotlin.collections.mapNotNull
 
 fun filterPublicChatsAuthors(
     relay: NormalizedRelayUrl,

@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import kotlin.collections.mapNotNull
 
 fun filterLongFormByHashtag(
     relay: NormalizedRelayUrl,

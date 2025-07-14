@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.toSet
 
 class HomeLiveFilter(
     val account: Account,

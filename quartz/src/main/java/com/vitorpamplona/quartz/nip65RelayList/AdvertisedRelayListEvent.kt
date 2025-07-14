@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.map
 
 @Immutable
 class AdvertisedRelayListEvent(

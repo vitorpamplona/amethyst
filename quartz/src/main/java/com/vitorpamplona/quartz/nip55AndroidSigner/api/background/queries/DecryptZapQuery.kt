@@ -31,7 +31,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
-import kotlin.text.isNullOrBlank
 
 class DecryptZapQuery(
     val loggedInUser: HexKey,

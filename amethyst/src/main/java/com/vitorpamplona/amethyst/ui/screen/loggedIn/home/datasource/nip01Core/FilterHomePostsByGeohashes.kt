@@ -35,9 +35,6 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import kotlin.collections.flatten
-import kotlin.collections.mapNotNull
-import kotlin.collections.sorted
 
 val HomePostsByGeohashKinds =
     listOf(

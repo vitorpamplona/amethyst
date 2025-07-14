@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
-import kotlin.collections.flatten
 
 fun filterHomePostsFromAllCommunities(
     relay: NormalizedRelayUrl,

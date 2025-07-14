@@ -29,8 +29,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.p
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.forEach
-import kotlin.collections.ifEmpty
 
 fun filterMissingEventsForThread(
     threadInfo: ThreadAssembler.ThreadInfo,

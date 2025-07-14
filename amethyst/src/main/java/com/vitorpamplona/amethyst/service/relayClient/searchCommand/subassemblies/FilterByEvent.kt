@@ -28,8 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
-import kotlin.collections.forEach
-import kotlin.collections.ifEmpty
 
 fun filterByEvent(
     eventId: HexKey,
