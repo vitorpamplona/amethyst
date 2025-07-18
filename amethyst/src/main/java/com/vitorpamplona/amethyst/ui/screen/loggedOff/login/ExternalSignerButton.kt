@@ -74,7 +74,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                         launcher.launch(ExternalSignerLogin.createIntent(DefaultSignerPermissions))
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.e("Signer", "Error opening Signer app", e)
+                        Log.e("ExternalSigner", "Error opening Signer app", e)
                         loginViewModel.errorManager.error(R.string.error_opening_external_signer)
                     }
                 }

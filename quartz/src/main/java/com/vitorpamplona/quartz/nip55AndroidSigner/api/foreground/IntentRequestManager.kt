@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.util.Log
+import android.util.Log.e
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.IResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
@@ -119,10 +121,12 @@ class IntentRequestManager(
 
                     try {
                         launcher.invoke(requestIntent)
-                    } catch (_: ActivityNotFoundException) {
+                    } catch (e: ActivityNotFoundException) {
+                        Log.e("ExternalSigner", "Error launching intent", e)
                         awaitingRequests.remove(callId)
                         continuation.resume(activityNotFoundIntent)
                     } catch (e: Exception) {
+                        Log.e("ExternalSigner", "Error launching intent", e)
                         awaitingRequests.remove(callId)
                         continuation.resume(null)
                         if (e is CancellationException) throw e
