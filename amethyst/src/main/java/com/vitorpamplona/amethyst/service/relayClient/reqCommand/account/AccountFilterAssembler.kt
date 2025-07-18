@@ -23,7 +23,8 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromRandomRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -44,7 +45,8 @@ class AccountFilterAssembler(
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
             AccountGiftWrapsEoseManager(client, ::allKeys),
-            AccountNotificationsEoseManager(client, ::allKeys),
+            AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
+            AccountNotificationsEoseFromRandomRelaysManager(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

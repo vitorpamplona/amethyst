@@ -100,7 +100,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 400,
+                    limit = 50,
                     since = since,
                 ),
         ),
@@ -111,6 +111,47 @@ fun filterNotificationsToPubkey(
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 100,
+                    since = since,
+                ),
+        ),
+    )
+}
+
+fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 10,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds2,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 10,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds3,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 10,
                     since = since,
                 ),
         ),

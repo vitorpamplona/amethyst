@@ -33,18 +33,23 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-class AccountNotificationsEoseManager(
+class AccountNotificationsEoseFromRandomRelaysManager(
     client: NostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(query: AccountQueryState) = query.account.userProfile()
 
+    /**
+     * Downloads most notifications from the user's own inbox relays.
+     * But also connects to all the follows relays to check for new notifications that are not in the user's
+     * own inbox.
+     */
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
-        key.account.notificationRelays.flow.value.flatMap {
-            filterNotificationsToPubkey(it, user(key).pubkeyHex, since?.get(it)?.time)
+        (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
+            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since?.get(it)?.time)
         }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
@@ -56,7 +61,7 @@ class AccountNotificationsEoseManager(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.notificationRelays.flow.collectLatest {
+                    key.account.followsPerRelay.collectLatest {
                         invalidateFilters()
                     }
                 },
