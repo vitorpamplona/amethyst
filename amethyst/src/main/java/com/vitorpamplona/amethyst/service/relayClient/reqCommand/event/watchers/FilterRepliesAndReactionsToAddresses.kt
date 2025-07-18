@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
-val RepliesAndReactiionsToAddressesKinds1 =
+val RepliesAndReactionsToAddressesKinds1 =
     listOf(
         TextNoteEvent.KIND,
         ReactionEvent.KIND,
@@ -45,6 +45,10 @@ val RepliesAndReactiionsToAddressesKinds1 =
         ReportEvent.KIND,
         LnZapEvent.KIND,
         PollNoteEvent.KIND,
+    )
+
+val PostsAndChatMessagesToAddresses =
+    listOf(
         CommunityPostApprovalEvent.KIND,
         LiveActivitiesChatMessageEvent.KIND,
     )
@@ -80,11 +84,22 @@ fun filterRepliesAndReactionsToAddresses(
                 relay = relay,
                 filter =
                     Filter(
-                        kinds = RepliesAndReactiionsToAddressesKinds1,
+                        kinds = RepliesAndReactionsToAddressesKinds1,
                         tags = mapOf("a" to sortedList),
                         since = since,
                         // Max amount of "replies" to download on a specific event.
                         limit = 1000,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    Filter(
+                        kinds = PostsAndChatMessagesToAddresses,
+                        tags = mapOf("a" to sortedList),
+                        since = since,
+                        // Max amount of "replies" to download on a specific event.
+                        limit = 100,
                     ),
             ),
             RelayBasedFilter(
