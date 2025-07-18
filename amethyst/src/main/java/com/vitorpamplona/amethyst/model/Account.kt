@@ -1288,7 +1288,6 @@ class Account(
                 cache.justConsumeMyOwnEvent(deletedDraftEvent)
 
                 delete(deletedDraftEvent, note.relays.toSet())
-                draftsDecryptionCache.delete(noteEvent)
             }
         }
     }
