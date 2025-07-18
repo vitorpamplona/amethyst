@@ -39,7 +39,7 @@ fun filterFollowSetsGlobal(
             filter =
                 Filter(
                     kinds = listOf(FollowListEvent.KIND),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         )

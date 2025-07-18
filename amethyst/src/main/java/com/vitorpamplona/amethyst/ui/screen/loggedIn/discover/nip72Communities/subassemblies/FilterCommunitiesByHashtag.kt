@@ -45,7 +45,7 @@ fun filterCommunitiesByHashtag(
                 Filter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags = mapOf("t" to hashtags),
-                    limit = 300,
+                    limit = 100,
                     since = since,
                 ),
         ),

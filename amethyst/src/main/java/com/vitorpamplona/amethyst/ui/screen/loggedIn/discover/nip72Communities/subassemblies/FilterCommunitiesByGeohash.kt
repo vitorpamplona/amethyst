@@ -44,7 +44,7 @@ fun filterCommunitiesByGeohash(
                 Filter(
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags = mapOf("g" to geoHashes),
-                    limit = 300,
+                    limit = 100,
                     since = since,
                 ),
         ),

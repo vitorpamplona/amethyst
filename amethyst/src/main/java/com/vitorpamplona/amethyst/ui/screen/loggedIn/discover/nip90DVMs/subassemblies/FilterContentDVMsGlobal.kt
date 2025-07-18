@@ -41,7 +41,7 @@ fun filterContentDVMsGlobal(
                     Filter(
                         kinds = listOf(AppDefinitionEvent.KIND),
                         tags = mapOf("k" to listOf("5300")),
-                        limit = 300,
+                        limit = 30,
                         since = since,
                     ),
             ),

@@ -44,7 +44,7 @@ fun filterLongFormByHashtag(
                 Filter(
                     kinds = listOf(LongTextNoteEvent.KIND),
                     tags = mapOf("t" to hashtags),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         ),

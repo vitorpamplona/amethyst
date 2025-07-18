@@ -44,7 +44,7 @@ fun filterLongFormByGeohash(
                 Filter(
                     kinds = listOf(LongTextNoteEvent.KIND),
                     tags = mapOf("g" to geoHashes),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         ),

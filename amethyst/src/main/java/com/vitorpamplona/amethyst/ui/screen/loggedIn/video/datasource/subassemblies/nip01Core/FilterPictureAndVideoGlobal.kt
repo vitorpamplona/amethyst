@@ -42,7 +42,7 @@ fun filterPictureAndVideoGlobal(
                 filter =
                     Filter(
                         kinds = PictureAndVideoKinds,
-                        limit = 200,
+                        limit = 100,
                         since = since,
                     ),
             ),
@@ -52,7 +52,7 @@ fun filterPictureAndVideoGlobal(
                     Filter(
                         kinds = PictureAndVideoLegacyKinds,
                         tags = LegacyMimeTypeMap,
-                        limit = 200,
+                        limit = 100,
                         since = since,
                     ),
             ),

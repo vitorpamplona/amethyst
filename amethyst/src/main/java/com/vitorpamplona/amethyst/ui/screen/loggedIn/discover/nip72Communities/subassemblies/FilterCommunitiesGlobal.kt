@@ -41,7 +41,7 @@ fun filterCommunitiesGlobal(
                 filter =
                     Filter(
                         kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
-                        limit = 300,
+                        limit = 30,
                         since = since,
                     ),
             ),

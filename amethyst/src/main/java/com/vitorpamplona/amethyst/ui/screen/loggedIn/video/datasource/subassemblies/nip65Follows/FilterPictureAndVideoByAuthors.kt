@@ -44,7 +44,7 @@ fun filterPictureAndVideoAuthors(
                 Filter(
                     authors = authorList,
                     kinds = PictureAndVideoKinds,
-                    limit = 400,
+                    limit = 100,
                     since = since,
                 ),
         ),
@@ -55,7 +55,7 @@ fun filterPictureAndVideoAuthors(
                     authors = authorList,
                     kinds = PictureAndVideoLegacyKinds,
                     tags = LegacyMimeTypeMap,
-                    limit = 200,
+                    limit = 100,
                     since = since,
                 ),
         ),

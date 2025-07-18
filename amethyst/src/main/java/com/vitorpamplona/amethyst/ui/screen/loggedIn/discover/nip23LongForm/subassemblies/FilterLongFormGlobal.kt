@@ -39,7 +39,7 @@ fun filterLongFormGlobal(
             filter =
                 Filter(
                     kinds = listOf(LongTextNoteEvent.KIND),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         )

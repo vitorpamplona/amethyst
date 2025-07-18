@@ -40,7 +40,7 @@ fun filterLiveActivitiesGlobal(
             filter =
                 Filter(
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         )

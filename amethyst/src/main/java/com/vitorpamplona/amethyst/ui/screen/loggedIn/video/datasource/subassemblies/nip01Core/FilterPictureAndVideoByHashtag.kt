@@ -44,7 +44,7 @@ fun filterPictureAndVideoHashtag(
                 Filter(
                     kinds = PictureAndVideoKinds,
                     tags = mapOf("t" to hashtags),
-                    limit = 400,
+                    limit = 50,
                     since = since,
                 ),
         ),
@@ -58,7 +58,7 @@ fun filterPictureAndVideoHashtag(
                             "t" to hashtags,
                             "m" to LegacyMimeTypes,
                         ),
-                    limit = 200,
+                    limit = 50,
                     since = since,
                 ),
         ),

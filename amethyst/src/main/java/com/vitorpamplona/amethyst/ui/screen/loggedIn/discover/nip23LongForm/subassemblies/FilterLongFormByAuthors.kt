@@ -42,7 +42,7 @@ fun filterLongFormAuthors(
                 Filter(
                     authors = authorList,
                     kinds = listOf(LongTextNoteEvent.KIND),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         ),

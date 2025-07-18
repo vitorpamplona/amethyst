@@ -47,7 +47,7 @@ fun filterLongFormAllCommunities(
                             "a" to communityList,
                             "k" to listOf(LongTextNoteEvent.KIND.toString()),
                         ),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         ),
@@ -58,7 +58,7 @@ fun filterLongFormAllCommunities(
                 Filter(
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
                     kinds = listOf(LongTextNoteEvent.KIND),
-                    limit = 300,
+                    limit = 30,
                     since = since,
                 ),
         ),
