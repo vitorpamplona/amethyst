@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.model.serverList
 
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
-import com.vitorpamplona.amethyst.model.nip51Lists.GeohashListState
-import com.vitorpamplona.amethyst.model.nip51Lists.HashtagListState
+import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
+import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlin.collections.map
 
 class MergedFollowListsState(
     val kind3List: FollowListState,
@@ -45,14 +46,14 @@ class MergedFollowListsState(
         kind3: FollowListState.Kind3Follows,
         hashtages: Set<String>,
         geohashes: Set<String>,
-        community: Set<AddressHint>,
+        community: Set<CommunityTag>,
     ): FollowListState.Kind3Follows =
         FollowListState.Kind3Follows(
             kind3.authors,
             kind3.authorsPlusMe,
             kind3.hashtags + hashtages,
             kind3.geotags + geohashes,
-            kind3.communities + community.map { it.addressId },
+            kind3.communities + community.map { it.address.toValue() },
         )
 
     val flow: StateFlow<FollowListState.Kind3Follows> =

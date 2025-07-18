@@ -66,11 +66,7 @@ class FileStorageServerListState(
                 emptyList(),
             )
 
-    fun saveFileServersList(
-        servers: List<String>,
-        onDone: (FileServersEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun saveFileServersList(servers: List<String>): FileServersEvent {
         val serverList = getFileServersList()
 
         val template =
@@ -80,6 +76,6 @@ class FileStorageServerListState(
                 FileServersEvent.build(servers)
             }
 
-        signer.sign(template, onDone)
+        return signer.sign(template)
     }
 }

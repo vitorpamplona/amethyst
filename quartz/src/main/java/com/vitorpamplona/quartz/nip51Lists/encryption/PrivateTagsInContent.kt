@@ -20,44 +20,76 @@
  */
 package com.vitorpamplona.quartz.nip51Lists.encryption
 
+import android.util.Log
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 
 class PrivateTagsInContent {
     companion object {
         fun decode(content: String) = JsonMapper.mapper.readValue<Array<Array<String>>>(content)
 
-        fun encode(privateTags: Array<Array<String>>) = JsonMapper.mapper.writeValueAsString(privateTags)
+        fun encode(privateTags: Array<Array<String>>): String = JsonMapper.mapper.writeValueAsString(privateTags)
 
-        fun decrypt(
+        suspend fun decrypt(
             content: String,
             signer: NostrSigner,
-            onReady: (Array<Array<String>>) -> Unit,
-        ) {
-            signer.decrypt(content, signer.pubKey) {
-                onReady(decode(it))
+        ): TagArray {
+            if (content.isBlank()) return emptyArray()
+            val json = signer.decrypt(content, signer.pubKey)
+            return try {
+                decode(json)
+            } catch (e: JsonParseException) {
+                Log.w("DraftEvent", "Unable to parse inner event of a draft: $json")
+                throw e
             }
+        }
+
+        suspend fun encryptNip04(
+            privateTags: Array<Array<String>>? = null,
+            signer: NostrSigner,
+        ): String =
+            signer.nip04Encrypt(
+                if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
+                signer.pubKey,
+            )
+
+        suspend fun encryptNip44(
+            privateTags: Array<Array<String>>? = null,
+            signer: NostrSigner,
+        ): String =
+            signer.nip44Encrypt(
+                if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
+                signer.pubKey,
+            )
+
+        suspend fun decrypt(
+            content: String,
+            signer: NostrSignerSync,
+        ): TagArray {
+            val json = signer.decrypt(content, signer.pubKey)
+            return decode(json)
         }
 
         fun encryptNip04(
             privateTags: Array<Array<String>>? = null,
-            signer: NostrSigner,
-            onReady: (String) -> Unit,
-        ) = signer.nip04Encrypt(
-            if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
-            signer.pubKey,
-            onReady,
-        )
+            signer: NostrSignerSync,
+        ): String =
+            signer.nip04Encrypt(
+                if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
+                signer.pubKey,
+            )
 
         fun encryptNip44(
             privateTags: Array<Array<String>>? = null,
-            signer: NostrSigner,
-            onReady: (String) -> Unit,
-        ) = signer.nip44Encrypt(
-            if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
-            signer.pubKey,
-            onReady,
-        )
+            signer: NostrSignerSync,
+        ): String =
+            signer.nip44Encrypt(
+                if (privateTags.isNullOrEmpty()) "" else encode(privateTags),
+                signer.pubKey,
+            )
     }
 }

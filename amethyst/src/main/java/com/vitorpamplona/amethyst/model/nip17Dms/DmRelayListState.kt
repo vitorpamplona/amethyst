@@ -71,25 +71,18 @@ class DmRelayListState(
                 emptySet(),
             )
 
-    fun saveRelayList(
-        dmRelays: List<NormalizedRelayUrl>,
-        onDone: (ChatMessageRelayListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
-
+    suspend fun saveRelayList(dmRelays: List<NormalizedRelayUrl>): ChatMessageRelayListEvent {
         val relayListForDMs = getDMRelayList()
-        if (relayListForDMs != null && relayListForDMs.tags.isNotEmpty()) {
+        return if (relayListForDMs != null && relayListForDMs.tags.isNotEmpty()) {
             ChatMessageRelayListEvent.updateRelayList(
                 earlierVersion = relayListForDMs,
                 relays = dmRelays,
                 signer = signer,
-                onReady = onDone,
             )
         } else {
-            ChatMessageRelayListEvent.createFromScratch(
+            ChatMessageRelayListEvent.create(
                 relays = dmRelays,
                 signer = signer,
-                onReady = onDone,
             )
         }
     }

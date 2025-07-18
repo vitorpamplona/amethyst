@@ -56,7 +56,6 @@ data class NAddress(
                 }
             } catch (e: Throwable) {
                 Log.w("NAddress", "Issue trying to Decode NIP19 $this: ${e.message}")
-                // e.printStackTrace()
             }
 
             return null

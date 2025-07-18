@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -28,7 +29,6 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
@@ -66,7 +66,7 @@ suspend fun <T> launchAndWaitAll(
  */
 suspend inline fun <T> tryAndWait(
     timeoutMillis: Long = 10000,
-    crossinline asyncFunc: (Continuation<T>) -> Unit,
+    crossinline asyncFunc: (CancellableContinuation<T?>) -> Unit,
 ): T? =
     withTimeoutOrNull(timeoutMillis) {
         suspendCancellableCoroutine { continuation ->
@@ -145,6 +145,36 @@ suspend fun <T, K> mapNotNullAsync(
                 it.cancel("Timeout")
             }
         }
+
+        jobs.mapNotNull {
+            if (it.isCompleted) {
+                it.getCompleted()
+            } else {
+                null
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
+suspend fun <T, K> mapNotNullAsyncSimple(
+    items: List<T>,
+    runRequestFor: suspend (T) -> K?,
+): List<K> {
+    if (items.isEmpty()) {
+        return emptyList()
+    }
+
+    return coroutineScope {
+        // Launch all tasks asynchronously and get their Deferred handles.
+        val jobs =
+            items.map { item ->
+                async {
+                    runRequestFor(item)
+                }
+            }
+
+        jobs.joinAll()
 
         jobs.mapNotNull {
             if (it.isCompleted) {

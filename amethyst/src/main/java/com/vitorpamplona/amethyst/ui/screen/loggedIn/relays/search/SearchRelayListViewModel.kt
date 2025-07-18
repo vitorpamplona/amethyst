@@ -24,9 +24,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class SearchRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl>? = account.searchRelayList.getSearchRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? =
+        account.searchRelayList.flow.value
+            .toList()
 
-    override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveSearchRelayList(urlList)
     }
 }

@@ -21,16 +21,27 @@
 package com.vitorpamplona.quartz.nip50Search
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip50Search.tags.RelayTag
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.searchRelays
+import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.collections.plus
+import kotlin.collections.toTypedArray
 
 @Immutable
 class SearchRelayListEvent(
@@ -40,66 +51,72 @@ class SearchRelayListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag::parse)
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun publicRelays() = tags.relays()
+
+    suspend fun privateRelays(signer: NostrSigner) = privateTags(signer)?.relays()
+
+    suspend fun relays(signer: NostrSigner): List<NormalizedRelayUrl> = publicRelays() + (privateRelays(signer) ?: emptyList())
 
     companion object {
         const val KIND = 10007
+        val ALT = "Relay list to use for Search"
+        val ALT_TAG = arrayOf(AltTag.assemble(ALT))
 
-        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey)
 
-        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
+        fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey)
 
-        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
+        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey)
 
-        fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
-            relays
-                .map {
-                    RelayTag.assemble(it)
-                }.plusElement(AltTag.assemble("Relay list to use for Search"))
-                .toTypedArray()
-
-        fun updateRelayList(
+        suspend fun updateRelayList(
             earlierVersion: SearchRelayListEvent,
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (SearchRelayListEvent) -> Unit,
-        ) {
-            val tags =
-                earlierVersion.tags
-                    .filter(RelayTag::notMatch)
-                    .plus(
-                        relays.map {
-                            RelayTag.assemble(it)
-                        },
-                    ).toTypedArray()
+        ): SearchRelayListEvent {
+            val newRelayList = relays.map { RelayTag.assemble(it) }
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
 
-            signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
+            val publicTags = earlierVersion.tags.remove(RelayTag::match)
+            val newPrivateTags = privateTags.remove(RelayTag::notMatch).plus(newRelayList)
+
+            return signer.signNip51List(createdAt, KIND, publicTags, newPrivateTags)
         }
 
-        fun createFromScratch(
+        suspend fun create(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (SearchRelayListEvent) -> Unit,
-        ) {
-            create(relays, signer, createdAt, onReady)
-        }
-
-        fun create(
-            relays: List<NormalizedRelayUrl>,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (SearchRelayListEvent) -> Unit,
-        ) {
-            signer.sign(createdAt, KIND, createTagArray(relays), "", onReady)
+        ): SearchRelayListEvent {
+            val publicTagArray = relays.map { RelayTag.assemble(it) }.plus(ALT_TAG).toTypedArray()
+            return signer.signNip51List(createdAt, KIND, publicTagArray, emptyArray())
         }
 
         fun create(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): SearchRelayListEvent? = signer.sign(createdAt, KIND, createTagArray(relays), "")
+        ): SearchRelayListEvent {
+            val publicTagArray = relays.map { RelayTag.assemble(it) }.plus(ALT_TAG).toTypedArray()
+            return signer.signNip51List(createdAt, KIND, publicTagArray, emptyArray())
+        }
+
+        suspend fun build(
+            publicRelays: List<NormalizedRelayUrl> = emptyList(),
+            privateRelays: List<NormalizedRelayUrl> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<SearchRelayListEvent>.() -> Unit = {},
+        ) = eventTemplate<SearchRelayListEvent>(
+            kind = KIND,
+            description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
+            createdAt = createdAt,
+        ) {
+            alt(ALT)
+            searchRelays(publicRelays)
+
+            initializer()
+        }
     }
 }

@@ -53,7 +53,7 @@ class ServerInfoRetriever {
                         val body = response.body.string()
                         parser.parse(baseUrl, body)
                     } else {
-                        throw RuntimeException(
+                        throw Exception(
                             "Resulting Message from $baseUrl is an error: ${response.code} ${response.message}",
                         )
                     }

@@ -105,26 +105,19 @@ class Nip65RelayListState(
                 emptySet(),
             )
 
-    fun saveRelayList(
-        relays: List<AdvertisedRelayInfo>,
-        onDone: (AdvertisedRelayListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
-
+    suspend fun saveRelayList(relays: List<AdvertisedRelayInfo>): AdvertisedRelayListEvent {
         val nip65RelayList = getNIP65RelayList()
 
-        if (nip65RelayList != null) {
+        return if (nip65RelayList != null) {
             AdvertisedRelayListEvent.replaceRelayListWith(
                 earlierVersion = nip65RelayList,
                 newRelays = relays,
                 signer = signer,
-                onReady = onDone,
             )
         } else {
             AdvertisedRelayListEvent.createFromScratch(
                 relays = relays,
                 signer = signer,
-                onReady = onDone,
             )
         }
     }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased
 
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavFilter
@@ -32,11 +33,11 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
-import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
-import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,30 +50,31 @@ class NoteFeedFlow(
     val signer: NostrSigner,
     val allFollowRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val caches: FeedDecryptionCaches,
 ) : IFeedFlowsType {
     fun process(noteEvent: Event): IFeedTopNavFilter =
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
-                    MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays)
+                    MutedAuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
                 } else {
-                    AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays)
+                    AuthorsByOutboxTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), blockedRelays)
                 }
             }
             is MuteListEvent -> {
-                MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users, blockedRelays)
+                MutedAuthorsByOutboxTopNavFilter(caches.muteListCache.cachedUserIdSet(noteEvent), blockedRelays)
             }
             is FollowListEvent -> {
-                AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet(), blockedRelays)
+                AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays)
             }
             is CommunityListEvent -> {
-                AllCommunitiesTopNavFilter(noteEvent.publicAndCachedPrivateCommunityIds().toSet(), blockedRelays)
+                AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
             is HashtagListEvent -> {
-                HashtagTopNavFilter(noteEvent.publicAndCachedPrivateHashtags(), allFollowRelays)
+                HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), allFollowRelays)
             }
             is GeohashListEvent -> {
-                LocationTopNavFilter(noteEvent.publicAndCachedPrivateGeohash(), allFollowRelays)
+                LocationTopNavFilter(caches.geohashCache.cachedGeohashes(noteEvent), allFollowRelays)
             }
             is CommunityDefinitionEvent -> {
                 SingleCommunityTopNavFilter(
@@ -89,50 +91,25 @@ class NoteFeedFlow(
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
-                    emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays))
-
-                    noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
-                        emit(MutedAuthorsByOutboxTopNavFilter(it.users, blockedRelays))
-                    }
+                    emit(MutedAuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
                 } else {
-                    emit(AuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedPrivateUsersAndWords().users, blockedRelays))
-
-                    noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
-                        emit(AuthorsByOutboxTopNavFilter(it.users, blockedRelays))
-                    }
+                    emit(AuthorsByOutboxTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), blockedRelays))
                 }
             }
             is MuteListEvent -> {
-                emit(MutedAuthorsByOutboxTopNavFilter(noteEvent.publicAndCachedUsersAndWords().users, blockedRelays))
-
-                noteEvent.publicAndPrivateUsersAndWords(signer)?.let {
-                    emit(MutedAuthorsByOutboxTopNavFilter(it.users, blockedRelays))
-                }
+                emit(MutedAuthorsByOutboxTopNavFilter(caches.muteListCache.mutedUserIdSet(noteEvent), blockedRelays))
             }
             is FollowListEvent -> {
-                emit(AuthorsByOutboxTopNavFilter(noteEvent.pubKeys().toSet(), blockedRelays))
+                emit(AuthorsByOutboxTopNavFilter(noteEvent.followIdSet(), blockedRelays))
             }
             is CommunityListEvent -> {
-                emit(AllCommunitiesTopNavFilter(noteEvent.publicCommunityIds().toSet(), blockedRelays))
-
-                noteEvent.publicAndPrivateCommunities(signer)?.let {
-                    val communities = it.map { it.addressId }.toSet()
-                    emit(AllCommunitiesTopNavFilter(communities, blockedRelays))
-                }
+                emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
             }
             is HashtagListEvent -> {
-                emit(HashtagTopNavFilter(noteEvent.publicHashtags().toSet(), allFollowRelays))
-
-                noteEvent.publicAndPrivateHashtag(signer)?.let {
-                    emit(HashtagTopNavFilter(it, allFollowRelays))
-                }
+                emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), allFollowRelays))
             }
             is GeohashListEvent -> {
-                emit(LocationTopNavFilter(noteEvent.publicGeohashes().toSet(), allFollowRelays))
-
-                noteEvent.publicAndPrivateGeohash(signer)?.let {
-                    emit(LocationTopNavFilter(it, allFollowRelays))
-                }
+                emit(LocationTopNavFilter(caches.geohashCache.geohashes(noteEvent), allFollowRelays))
             }
             is CommunityDefinitionEvent -> {
                 emit(

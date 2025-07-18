@@ -110,12 +110,11 @@ class GenericRepostEvent(
             initializer()
         }
 
-        fun create(
+        suspend fun create(
             boostedPost: Event,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (GenericRepostEvent) -> Unit,
-        ) {
+        ): GenericRepostEvent {
             val content = boostedPost.toJson()
 
             val tags =
@@ -131,7 +130,7 @@ class GenericRepostEvent(
             tags.add(arrayOf("k", "${boostedPost.kind}"))
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
     }
 }

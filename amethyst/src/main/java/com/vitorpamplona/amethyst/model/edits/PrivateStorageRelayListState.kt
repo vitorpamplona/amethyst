@@ -26,9 +26,9 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 class PrivateStorageRelayListState(
     val signer: NostrSigner,
     val cache: LocalCache,
+    val decryptionCache: PrivateStorageRelayListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -55,9 +56,9 @@ class PrivateStorageRelayListState(
 
     fun getPrivateOutboxRelayList(): PrivateOutboxRelayListEvent? = getPrivateOutboxRelayListNote().event as? PrivateOutboxRelayListEvent
 
-    fun normalizePrivateOutboxRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
+    suspend fun normalizePrivateOutboxRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
         val event = note.event as? PrivateOutboxRelayListEvent ?: settings.backupPrivateHomeRelayList
-        return event?.relays()?.toSet() ?: emptySet()
+        return event?.let { decryptionCache.relays(it) } ?: emptySet()
     }
 
     val flow =
@@ -69,28 +70,22 @@ class PrivateStorageRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                normalizePrivateOutboxRelayListWithBackup(getPrivateOutboxRelayListNote()),
+                emptySet(),
             )
 
-    fun saveRelayList(
-        relays: List<NormalizedRelayUrl>,
-        onDone: (PrivateOutboxRelayListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun saveRelayList(relays: List<NormalizedRelayUrl>): PrivateOutboxRelayListEvent {
         val relayListForPrivateOutbox = getPrivateOutboxRelayList()
 
-        if (relayListForPrivateOutbox != null && !relayListForPrivateOutbox.cachedPrivateTags().isNullOrEmpty()) {
+        return if (relayListForPrivateOutbox != null) {
             PrivateOutboxRelayListEvent.updateRelayList(
                 earlierVersion = relayListForPrivateOutbox,
                 relays = relays,
                 signer = signer,
-                onReady = onDone,
             )
         } else {
-            PrivateOutboxRelayListEvent.createFromScratch(
+            PrivateOutboxRelayListEvent.create(
                 relays = relays,
                 signer = signer,
-                onReady = onDone,
             )
         }
     }
@@ -100,17 +95,15 @@ class PrivateStorageRelayListState(
             Log.d("AccountRegisterObservers", "Loading saved private home relay list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                event.privateTags(signer) {
-                    LocalCache.justConsumeMyOwnEvent(event)
-                }
+                LocalCache.justConsumeMyOwnEvent(event)
             }
         }
 
         scope.launch(Dispatchers.Default) {
             Log.d("AccountRegisterObservers", "Private Home Relay List Collector Start")
-            getPrivateOutboxRelayListFlow().collect {
+            getPrivateOutboxRelayListFlow().collect { noteState ->
                 Log.d("AccountRegisterObservers", "Updating Private Home Relay List for ${signer.pubKey}")
-                (it.note.event as? PrivateOutboxRelayListEvent)?.let {
+                (noteState.note.event as? PrivateOutboxRelayListEvent)?.let {
                     settings.updatePrivateHomeRelayList(it)
                 }
             }

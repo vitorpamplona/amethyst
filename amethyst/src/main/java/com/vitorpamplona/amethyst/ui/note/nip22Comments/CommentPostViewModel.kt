@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -98,13 +99,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
 
 @Stable
 open class CommentPostViewModel :
@@ -207,14 +206,12 @@ open class CommentPostViewModel :
 
         if (noteEvent is DraftEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel.createTempDraftNote(noteEvent) { innerNote ->
-                    if (innerNote != null) {
-                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                        if (oldTag != null) {
-                            draftTag.set(oldTag)
-                        }
-                        loadFromDraft(innerNote)
+                accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
                     }
+                    loadFromDraft(innerNote)
                 }
             }
         }
@@ -319,11 +316,7 @@ open class CommentPostViewModel :
             }
         }
 
-        tryAndWait { continuation ->
-            accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast) {
-                continuation.resume(it)
-            }
-        }
+        accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast)
 
         accountViewModel?.deleteDraft(draftTag.current)
 
@@ -372,7 +365,7 @@ open class CommentPostViewModel :
             if (replyingTo != null) {
                 val eventHint = replyingTo.toEventHint<Event>() ?: return null
 
-                CommentEvent.Companion.replyBuilder(
+                CommentEvent.replyBuilder(
                     msg = tagger.message,
                     replyingTo = eventHint,
                 ) {
@@ -392,7 +385,7 @@ open class CommentPostViewModel :
                 }
             } else {
                 val externalIdentity = externalIdentity ?: return null
-                CommentEvent.Companion.replyExternalIdentity(
+                CommentEvent.replyExternalIdentity(
                     msg = tagger.message,
                     extId = externalIdentity,
                 ) {
@@ -420,7 +413,7 @@ open class CommentPostViewModel :
         myEmojiSet: List<EmojiPackState.EmojiMedia>?,
     ): List<EmojiUrlTag> {
         if (myEmojiSet == null) return emptyList()
-        return CustomEmoji.Companion.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
+        return CustomEmoji.findAllEmojiCodes(message).mapNotNull { possibleEmoji ->
             myEmojiSet.firstOrNull { it.code == possibleEmoji }?.let {
                 EmojiUrlTag(
                     it.code,
@@ -437,6 +430,22 @@ open class CommentPostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+    ) = try {
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        alt: String?,
+        contentWarningReason: String?,
+        mediaQuality: Int,
+        server: ServerName,
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val myAccount = account ?: return@launch
@@ -446,7 +455,6 @@ open class CommentPostViewModel :
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     alt,
                     contentWarningReason,
                     MediaCompressor.Companion.intToCompressorQuality(mediaQuality),
@@ -458,14 +466,13 @@ open class CommentPostViewModel :
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason) { nip95 ->
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val nip95 = myAccount.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                                urlPreviews.update(message)
-                            }
+                        note?.let {
+                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            urlPreviews.update(message)
                         }
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =

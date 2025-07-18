@@ -228,7 +228,7 @@ fun ShortTorrentHeader(
     ShortTorrentHeader(
         title = noteEvent?.title() ?: TorrentEvent.ALT_DESCRIPTION,
         size = noteEvent?.totalSizeBytes()?.let { countToHumanReadableBytes(it) } ?: "--",
-        modifier.clickable { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
+        modifier.clickable { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } },
         accountViewModel,
         nav,
     )

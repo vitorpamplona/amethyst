@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -100,7 +101,7 @@ fun RenderCommunity(
         Row(
             MaterialTheme.colorScheme.innerPostModifier
                 .clickable {
-                    routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) }
+                    routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) }
                 }.padding(Size10dp),
         ) {
             ShortCommunityHeader(
@@ -373,11 +374,13 @@ fun JoinCommunityButton(
     note: AddressableNote,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
-
     Button(
         modifier = Modifier.padding(horizontal = 3.dp),
-        onClick = { scope.launch(Dispatchers.IO) { accountViewModel.account.follow(note) } },
+        onClick = {
+            scope.launch(Dispatchers.IO) {
+                accountViewModel.follow(note)
+            }
+        },
         shape = ButtonBorder,
         colors =
             ButtonDefaults.buttonColors(

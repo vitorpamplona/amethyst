@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -141,17 +142,28 @@ fun NewProductScreen(
                 titleRes = R.string.new_product,
                 isActive = postViewModel::canPost,
                 onCancel = {
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.sendDraftSync()
-                        nav.popBack()
-                        postViewModel.cancel()
+                    try {
+                        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            postViewModel.sendDraftSync()
+                            nav.popBack()
+                            postViewModel.cancel()
+                        }
+                    } catch (e: SignerExceptions.ReadOnlyException) {
+                        // do nothing.
                     }
                 },
                 onPost = {
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                        postViewModel.sendPostSync()
-                        nav.popBack()
-                        postViewModel.cancel()
+                    try {
+                        accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                            postViewModel.sendPostSync()
+                            nav.popBack()
+                            postViewModel.cancel()
+                        }
+                    } catch (e: SignerExceptions.ReadOnlyException) {
+                        accountViewModel.toastManager.toast(
+                            R.string.read_only_user,
+                            R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                        )
                     }
                 },
             )

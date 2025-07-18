@@ -55,7 +55,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,6 +126,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -152,10 +152,8 @@ fun NewGroupDMScreen(
 
     val context = LocalContext.current
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             message?.ifBlank { null }?.let {
                 postViewModel.updateMessage(TextFieldValue(it))
             }

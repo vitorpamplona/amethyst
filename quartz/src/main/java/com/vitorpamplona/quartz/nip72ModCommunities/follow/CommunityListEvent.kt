@@ -22,19 +22,23 @@ package com.vitorpamplona.quartz.nip72ModCommunities.follow
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.removeAny
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.tryAndWait
-import kotlin.coroutines.resume
+import kotlin.collections.plus
 
 @Immutable
 class CommunityListEvent(
@@ -44,40 +48,15 @@ class CommunityListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : GeneralListEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateAddressCache: Set<AddressHint>? = null
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    AddressHintProvider {
+    override fun addressHints() = tags.mapNotNull(CommunityTag::parseAsHint)
 
-    fun publicCommunities() = tags.mapNotNull(ATag::parseAsHint)
+    override fun linkedAddressIds() = tags.mapNotNull(CommunityTag::parseAddressId)
 
-    fun publicCommunityIds() = tags.mapNotNull(ATag::parseAddressId)
+    fun publicCommunities() = tags.communities()
 
-    fun publicAndCachedPrivateCommunityIds() = publicCommunityIds() + (publicAndPrivateAddressCache?.map { it.addressId } ?: emptyList())
-
-    fun publicAndPrivateCommunities(
-        signer: NostrSigner,
-        onReady: (Set<AddressHint>) -> Unit,
-    ) {
-        publicAndPrivateAddressCache?.let { eventList ->
-            onReady(eventList)
-            return
-        }
-
-        mergeTagList(signer) {
-            val set = it.mapNotNull(ATag::parseAsHint).toSet()
-            publicAndPrivateAddressCache = set
-            onReady(set)
-        }
-    }
-
-    suspend fun publicAndPrivateCommunities(signer: NostrSigner): Set<AddressHint>? {
-        publicAndPrivateAddressCache?.let { return it }
-
-        return tryAndWait { continuation ->
-            publicAndPrivateCommunities(signer) { privateTagList ->
-                continuation.resume(privateTagList)
-            }
-        }
-    }
+    fun publicCommunityIds() = tags.communityIds()
 
     companion object {
         const val KIND = 10004
@@ -86,186 +65,166 @@ class CommunityListEvent(
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
-        private fun createCommunityBase(
-            tags: Array<Array<String>>,
+        suspend fun create(
+            communities: List<CommunityTag>,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.create(
-                tags,
-                isPrivate,
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
+        ): CommunityListEvent =
+            if (isPrivate) {
+                create(
+                    publicCommunities = emptyList(),
+                    privateCommunities = communities,
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                create(
+                    publicCommunities = communities,
+                    privateCommunities = emptyList(),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
             }
+
+        suspend fun create(
+            community: CommunityTag,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): CommunityListEvent =
+            if (isPrivate) {
+                create(
+                    publicCommunities = emptyList(),
+                    privateCommunities = listOf(community),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                create(
+                    publicCommunities = listOf(community),
+                    privateCommunities = emptyList(),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+
+        suspend fun add(
+            earlierVersion: CommunityListEvent,
+            communities: List<CommunityTag>,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): CommunityListEvent =
+            if (isPrivate) {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                resign(
+                    tags = earlierVersion.tags,
+                    privateTags = privateTags.removeAny(communities.map { it.toTagIdOnly() }) + communities.map { it.toTagArray() },
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                resign(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.removeAny(communities.map { it.toTagIdOnly() }) + communities.map { it.toTagArray() },
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+
+        suspend fun add(
+            earlierVersion: CommunityListEvent,
+            community: CommunityTag,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): CommunityListEvent =
+            if (isPrivate) {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                resign(
+                    tags = earlierVersion.tags,
+                    privateTags = privateTags.plus(community.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                resign(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(community.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+
+        suspend fun remove(
+            earlierVersion: CommunityListEvent,
+            community: CommunityTag,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): CommunityListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            return resign(
+                privateTags = privateTags.remove(community.toTagIdOnly()),
+                tags = earlierVersion.tags.remove(community.toTagIdOnly()),
+                signer = signer,
+                createdAt = createdAt,
+            )
         }
 
-        fun createCommunity(
-            community: EventHintBundle<CommunityDefinitionEvent>,
-            isPrivate: Boolean,
+        suspend fun resign(
+            tags: TagArray,
+            privateTags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = createCommunityBase(
-            tags = arrayOf(ATag.assemble(community.event.address(), community.relay)),
-            isPrivate = isPrivate,
+        ) = resign(
+            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            tags = tags,
             signer = signer,
             createdAt = createdAt,
-            onReady = onReady,
         )
 
-        fun createCommunity(
-            community: ATag,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = createCommunityBase(
-            tags = arrayOf(community.toATagArray()),
-            isPrivate = isPrivate,
-            signer = signer,
-            createdAt = createdAt,
-            onReady = onReady,
-        )
-
-        fun createCommunities(
-            communities: List<EventHintBundle<CommunityDefinitionEvent>>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = createCommunityBase(
-            tags = communities.map { ATag.assemble(it.event.address().toValue(), it.relay) }.toTypedArray(),
-            isPrivate = isPrivate,
-            signer = signer,
-            createdAt = createdAt,
-            onReady = onReady,
-        )
-
-        fun removeCommunity(
-            earlierVersion: CommunityListEvent,
-            community: String,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.removeAll(
-                earlierVersion,
-                ATag.assemble(community, null),
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
-            }
-        }
-
-        private fun addCommunityBase(
-            earlierVersion: CommunityListEvent,
-            newTags: Array<Array<String>>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.addAll(
-                earlierVersion,
-                newTags,
-                isPrivate,
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
-            }
-        }
-
-        fun addCommunity(
-            earlierVersion: CommunityListEvent,
-            community: ATag,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = addCommunityBase(
-            earlierVersion,
-            arrayOf(community.toATagArray()),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        fun addCommunity(
-            earlierVersion: CommunityListEvent,
-            community: EventHintBundle<CommunityDefinitionEvent>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = addCommunityBase(
-            earlierVersion,
-            arrayOf(community.toATag().toATagArray()),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        fun addCommunity(
-            earlierVersion: CommunityListEvent,
-            community: AddressHint,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = addCommunityBase(
-            earlierVersion,
-            arrayOf(ATag.assemble(community.addressId, community.relay)),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        fun addCommunities(
-            earlierVersion: CommunityListEvent,
-            communities: List<EventHintBundle<CommunityDefinitionEvent>>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) = addCommunityBase(
-            earlierVersion,
-            communities.map { it.toATag().toATagArray() }.toTypedArray(),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        private fun create(
+        suspend fun resign(
             content: String,
-            tags: Array<Array<String>>,
+            tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (CommunityListEvent) -> Unit,
-        ) {
+        ): CommunityListEvent {
             val newTags =
-                if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                if (tags.fastAny(AltTag::match)) {
                     tags
                 } else {
                     tags + AltTag.assemble(ALT)
                 }
 
-            signer.sign(createdAt, KIND, newTags, content, onReady)
+            return signer.sign(createdAt, KIND, newTags, content)
         }
 
-        fun create(
-            list: List<AddressHint>,
-            signer: NostrSignerSync,
+        suspend fun create(
+            publicCommunities: List<CommunityTag> = emptyList(),
+            privateCommunities: List<CommunityTag> = emptyList(),
+            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): CommunityListEvent? {
-            val tags = list.map { ATag.assemble(it.addressId, it.relay) }.toTypedArray()
-            return signer.sign(createdAt, KIND, tags, "")
+        ): CommunityListEvent {
+            val template = build(publicCommunities, privateCommunities, signer, createdAt)
+            return signer.sign(template)
+        }
+
+        suspend fun build(
+            publicCommunities: List<CommunityTag> = emptyList(),
+            privateCommunities: List<CommunityTag> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<CommunityListEvent>.() -> Unit = {},
+        ) = eventTemplate<CommunityListEvent>(
+            kind = KIND,
+            description = PrivateTagsInContent.encryptNip04(privateCommunities.map { it.toTagArray() }.toTypedArray(), signer),
+            createdAt = createdAt,
+        ) {
+            alt(ALT)
+            communities(publicCommunities)
+
+            initializer()
         }
     }
 }

@@ -38,16 +38,13 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.utils.collectSuccessfulOperationsReturning
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
-import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import kotlin.coroutines.resume
 import kotlin.math.round
 
 class ZapPaymentHandler(
@@ -194,7 +191,7 @@ class ZapPaymentHandler(
             onProgress(0.75f)
         }
 
-        if (account.hasWalletConnectSetup()) {
+        if (account.nip47SignerState.hasWalletConnectSetup()) {
             payViaNWC(payables, note, onError = onError, onProgress = {
                 onProgress(it * 0.25f + 0.75f) // keeps within range.
             }, context)
@@ -234,7 +231,14 @@ class ZapPaymentHandler(
             // makes sure the zap split user receives the zap event
             val userRelayList = next.user?.inboxRelays()?.toSet() ?: emptySet()
 
-            val zapRequest = prepareZapRequestIfNeeded(note, pollOption, message, zapType, next.user, userRelayList + authorRelayList)
+            val noteEvent = note.event
+
+            val zapRequest =
+                if (zapType != LnZapEvent.ZapType.NONZAP && noteEvent != null) {
+                    account.createZapRequestFor(noteEvent, pollOption, message, zapType, next.user, userRelayList + authorRelayList)
+                } else {
+                    null
+                }
 
             ZapRequestReady(next, zapRequest)
         }
@@ -302,17 +306,12 @@ class ZapPaymentHandler(
     ): List<Paid> {
         var progressAllPayments = 0.00f
 
-        return collectSuccessfulOperationsReturning(
+        return mapNotNullAsync(
             items = payables,
-            runRequestFor = { payable: Payable, onReady ->
+            runRequestFor = { payable: Payable ->
                 account.sendZapPaymentRequestFor(
                     bolt11 = payable.invoice,
                     zappedNote = note,
-                    onSent = {
-                        progressAllPayments += 0.5f / payables.size
-                        onProgress(progressAllPayments)
-                        onReady(Paid(payable, true))
-                    },
                     onResponse = { response ->
                         if (response is PayInvoiceErrorResponse) {
                             progressAllPayments += 0.5f / payables.size
@@ -333,6 +332,11 @@ class ZapPaymentHandler(
                         }
                     },
                 )
+
+                progressAllPayments += 0.5f / payables.size
+                onProgress(progressAllPayments)
+
+                Paid(payable, true)
             },
         )
     }
@@ -372,22 +376,4 @@ class ZapPaymentHandler(
             invoice = invoice,
         )
     }
-
-    private suspend fun prepareZapRequestIfNeeded(
-        note: Note,
-        pollOption: Int?,
-        message: String,
-        zapType: LnZapEvent.ZapType,
-        overrideUser: User? = null,
-        additionalRelays: Set<NormalizedRelayUrl>? = null,
-    ): LnZapRequestEvent? =
-        if (zapType != LnZapEvent.ZapType.NONZAP) {
-            tryAndWait { continuation ->
-                account.createZapRequestFor(note, pollOption, message, zapType, overrideUser, additionalRelays) { zapRequest ->
-                    continuation.resume(zapRequest)
-                }
-            }
-        } else {
-            null
-        }
 }

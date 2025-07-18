@@ -45,9 +45,9 @@ class LoginQuery(
         ) { cursor ->
             val pubkeyHex = cursor.getStringByName("result")
             if (!pubkeyHex.isNullOrBlank()) {
-                SignerResult.Successful(PubKeyResult(pubkeyHex, packageName))
+                SignerResult.RequestAddressed.Successful(PubKeyResult(pubkeyHex, packageName))
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
 }

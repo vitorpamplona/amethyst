@@ -275,7 +275,7 @@ private fun UserRoomCompose(
                 NewItemsBubble()
             }
         },
-        onClick = { nav.nav(Route.Room(room.hashCode())) },
+        onClick = { nav.nav(Route.Room(room)) },
     )
 }
 

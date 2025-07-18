@@ -38,47 +38,42 @@ class BlossomAuthorizationEvent(
     companion object {
         const val KIND = 24242
 
-        fun createGetAuth(
+        suspend fun createGetAuth(
             hash: HexKey,
             alt: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("get", hash, null, alt, signer, createdAt, onReady)
+        ) = createAuth("get", hash, null, alt, signer, createdAt)
 
-        fun createListAuth(
+        suspend fun createListAuth(
             signer: NostrSigner,
             alt: String,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("list", null, null, alt, signer, createdAt, onReady)
+        ) = createAuth("list", null, null, alt, signer, createdAt)
 
-        fun createDeleteAuth(
+        suspend fun createDeleteAuth(
             hash: HexKey,
             alt: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("delete", hash, null, alt, signer, createdAt, onReady)
+        ) = createAuth("delete", hash, null, alt, signer, createdAt)
 
-        fun createUploadAuth(
+        suspend fun createUploadAuth(
             hash: HexKey,
             size: Long,
             alt: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) = createAuth("upload", hash, size, alt, signer, createdAt, onReady)
+        ) = createAuth("upload", hash, size, alt, signer, createdAt)
 
-        private fun createAuth(
+        private suspend fun createAuth(
             type: String,
             hash: HexKey?,
             fileSize: Long?,
             alt: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomAuthorizationEvent) -> Unit,
-        ) {
+        ): BlossomAuthorizationEvent {
             val tags =
                 listOfNotNull(
                     arrayOf("t", type),
@@ -87,7 +82,7 @@ class BlossomAuthorizationEvent(
                     hash?.let { arrayOf("x", it) },
                 )
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), alt, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), alt)
         }
     }
 }

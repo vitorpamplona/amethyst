@@ -28,44 +28,35 @@ import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 
 class UserStatusAction {
     companion object {
-        fun create(
+        suspend fun create(
             newStatus: String,
             signer: NostrSigner,
-            onDone: (StatusEvent) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
+        ): StatusEvent = StatusEvent.create(newStatus, "general", expiration = null, signer)
 
-            StatusEvent.create(newStatus, "general", expiration = null, signer, onReady = onDone)
-        }
-
-        fun update(
+        suspend fun update(
             oldStatus: AddressableNote,
             newStatus: String,
             signer: NostrSigner,
-            onDone: (StatusEvent) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
-            val oldEvent = oldStatus.event as? StatusEvent ?: return
+        ): StatusEvent {
+            val oldEvent = oldStatus.event as? StatusEvent ?: throw IllegalStateException("Tried to update a non-status event")
 
-            StatusEvent.update(oldEvent, newStatus, signer, onReady = onDone)
+            return StatusEvent.update(oldEvent, newStatus, signer)
         }
 
-        fun delete(
+        suspend fun delete(
             oldStatus: AddressableNote,
             signer: NostrSigner,
-            onDone: (Event) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
-            val oldEvent = oldStatus.event as? StatusEvent ?: return
+        ): List<Event> {
+            val oldEvent = oldStatus.event as? StatusEvent ?: throw IllegalStateException("Tried to update a non-status event")
 
-            StatusEvent.clear(oldEvent, signer) { event ->
-                onDone(event)
+            val event = StatusEvent.clear(oldEvent, signer)
 
+            val deletion =
                 signer.sign(
                     DeletionEvent.buildForVersionOnly(listOf(event)),
-                    onReady = onDone,
                 )
-            }
+
+            return listOf(event, deletion)
         }
     }
 }

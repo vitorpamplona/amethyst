@@ -50,13 +50,12 @@ class CalendarDateSlotEvent(
         const val KIND = 31922
         const val ALT = "Full-day calendar event"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (CalendarDateSlotEvent) -> Unit,
-        ) {
+        ): CalendarDateSlotEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

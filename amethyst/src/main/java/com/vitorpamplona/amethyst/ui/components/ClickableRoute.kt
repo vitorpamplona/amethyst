@@ -183,7 +183,7 @@ private fun DisplayNoteLink(
     val noteState by observeNote(it, accountViewModel)
     val noteIdDisplayNote = remember(noteState) { "@${noteState.note.idDisplayNote()}" }
 
-    val route = routeFor(it, accountViewModel.userProfile()) ?: Route.EventRedirect(hex)
+    val route = routeFor(it, accountViewModel.account) ?: Route.EventRedirect(hex)
 
     CreateClickableText(
         clickablePart = noteIdDisplayNote,

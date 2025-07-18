@@ -71,8 +71,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -263,7 +263,7 @@ fun RenderOption(
                     if (noteEvent is PeopleListEvent) {
                         noteEvent.nameOrTitle() ?: option.note.dTag()
                     } else if (noteEvent is FollowListEvent) {
-                        noteEvent.nameOrTitle() ?: option.note.dTag()
+                        noteEvent.title() ?: option.note.dTag()
                     } else {
                         option.note.dTag()
                     }

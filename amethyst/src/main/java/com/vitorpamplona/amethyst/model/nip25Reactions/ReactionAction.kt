@@ -38,7 +38,7 @@ class ReactionAction {
             by: User,
             signer: NostrSigner,
             onPublic: (ReactionEvent) -> Unit,
-            onPrivate: (NIP17Factory.Result) -> Unit,
+            onPrivate: suspend (NIP17Factory.Result) -> Unit,
         ) {
             if (!signer.isWriteable()) return
 
@@ -55,14 +55,14 @@ class ReactionAction {
                     val emojiUrl = EmojiUrlTag.decode(reaction)
                     if (emojiUrl != null) {
                         note.toEventHint<Event>()?.let {
-                            NIP17Factory().createReactionWithinGroup(
-                                emojiUrl = emojiUrl,
-                                originalNote = it,
-                                to = users,
-                                signer = signer,
-                            ) {
-                                onPrivate(it)
-                            }
+                            onPrivate(
+                                NIP17Factory().createReactionWithinGroup(
+                                    emojiUrl = emojiUrl,
+                                    originalNote = it,
+                                    to = users,
+                                    signer = signer,
+                                ),
+                            )
                         }
 
                         return
@@ -70,14 +70,14 @@ class ReactionAction {
                 }
 
                 note.toEventHint<Event>()?.let {
-                    NIP17Factory().createReactionWithinGroup(
-                        content = reaction,
-                        originalNote = it,
-                        to = users,
-                        signer = signer,
-                    ) {
-                        onPrivate(it)
-                    }
+                    onPrivate(
+                        NIP17Factory().createReactionWithinGroup(
+                            content = reaction,
+                            originalNote = it,
+                            to = users,
+                            signer = signer,
+                        ),
+                    )
                 }
                 return
             } else {
@@ -87,10 +87,7 @@ class ReactionAction {
                         note.event?.let {
                             val template = ReactionEvent.build(emojiUrl, EventHintBundle(it, note.relayHintUrl()))
 
-                            signer.sign(
-                                template,
-                                onReady = onPublic,
-                            )
+                            onPublic(signer.sign(template))
                         }
 
                         return
@@ -98,10 +95,7 @@ class ReactionAction {
                 }
 
                 note.toEventHint<Event>()?.let {
-                    signer.sign(
-                        ReactionEvent.build(reaction, it),
-                        onReady = onPublic,
-                    )
+                    onPublic(signer.sign(ReactionEvent.build(reaction, it)))
                 }
             }
         }

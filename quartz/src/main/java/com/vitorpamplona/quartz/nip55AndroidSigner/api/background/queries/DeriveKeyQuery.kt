@@ -43,9 +43,9 @@ class DeriveKeyQuery(
         ) { cursor ->
             val newPrivateKey = cursor.getStringByName("result")
             if (!newPrivateKey.isNullOrBlank()) {
-                SignerResult.Successful(DerivationResult(newPrivateKey))
+                SignerResult.RequestAddressed.Successful(DerivationResult(newPrivateKey))
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
 }

@@ -46,9 +46,9 @@ class Nip44EncryptQuery(
         ) { cursor ->
             val ciphertext = cursor.getStringByName("result")
             if (!ciphertext.isNullOrBlank()) {
-                SignerResult.Successful(EncryptionResult(ciphertext))
+                SignerResult.RequestAddressed.Successful(EncryptionResult(ciphertext))
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
 }

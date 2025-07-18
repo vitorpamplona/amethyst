@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.fail
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
@@ -74,17 +75,13 @@ class OtsTest {
 
         val signer = NostrSignerInternal(KeyPair())
 
-        var newOts: OtsEvent? = null
         val countDownLatch = CountDownLatch(1)
 
-        signer.sign(OtsEvent.build(eventId, upgraded!!)) {
-            newOts = it
-            countDownLatch.countDown()
-        }
+        val newOts = runBlocking { signer.sign(OtsEvent.build(eventId, upgraded!!)) }
 
         Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
-        println(newOts!!.toJson())
+        println(newOts.toJson())
         println(resolver.info(newOts.otsByteArray()))
 
         assertEquals(1708879025L, newOts.verify(resolver))
@@ -93,18 +90,17 @@ class OtsTest {
     @Test
     fun createOTSEventAndVerify() {
         val signer = NostrSignerInternal(KeyPair())
-        var ots: OtsEvent? = null
 
         val countDownLatch = CountDownLatch(1)
 
-        signer.sign(OtsEvent.build(otsEvent2Digest, OtsEvent.stamp(otsEvent2Digest, resolver))) {
-            ots = it
-            countDownLatch.countDown()
-        }
+        val ots =
+            runBlocking {
+                signer.sign(OtsEvent.build(otsEvent2Digest, OtsEvent.stamp(otsEvent2Digest, resolver)))
+            }
 
         Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
-        println(ots!!.toJson())
+        println(ots.toJson())
         println(resolver.info(ots.otsByteArray()))
 
         assertEquals(null, ots.verify(resolver))

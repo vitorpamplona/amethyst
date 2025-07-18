@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -77,16 +76,15 @@ class NIP90ContentDiscoveryResponseEvent(
         const val KIND = 6300
         const val ALT = "NIP90 Content Discovery reply"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AppRecommendationEvent) -> Unit,
-        ) {
+        ): NIP90ContentDiscoveryResponseEvent {
             val tags =
                 arrayOf(
                     AltTag.assemble(ALT),
                 )
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

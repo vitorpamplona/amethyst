@@ -39,28 +39,27 @@ class ChatroomListKnownFeedFilter(
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
-        val me = account.userProfile()
+        val chatList = account.chatroomList
         val followingKeySet = account.followingKeySet()
 
-        val knownChatrooms =
-            me.privateChatrooms.filter {
-                (it.value.senderIntersects(followingKeySet) || me.hasSentMessagesTo(it.key)) &&
-                    !account.isAllHidden(it.key.users)
-            }
-
         val privateMessages =
-            knownChatrooms.mapNotNull { it ->
-                it.value.roomMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).lastOrNull {
-                    it.event != null
+            chatList.chatrooms.mapNotNull { key, chatroom ->
+                if ((chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
+                    !account.isAllHidden(key.users)
+                ) {
+                    chatroom.lastMessage
+                } else {
+                    null
                 }
             }
 
         val publicChannels =
             account
                 .publicChatList.flow.value
-                .mapNotNull { LocalCache.getPublicChatChannelIfExists(it.eventId) }
                 .mapNotNull { it ->
-                    it.notes
+                    LocalCache
+                        .getOrCreatePublicChatChannel(it.eventId)
+                        .notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
@@ -69,9 +68,10 @@ class ChatroomListKnownFeedFilter(
         val ephemeralChats =
             account
                 .ephemeralChatList.liveEphemeralChatList.value
-                .mapNotNull { LocalCache.getEphemeralChatChannelIfExists(it) }
                 .mapNotNull { it ->
-                    it.notes
+                    LocalCache
+                        .getOrCreateEphemeralChannel(it)
+                        .notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
@@ -229,13 +229,13 @@ class ChatroomListKnownFeedFilter(
             .forEach { newNote ->
                 val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
                 if (roomKey != null) {
-                    val room = account.userProfile().privateChatrooms[roomKey]
+                    val room = account.chatroomList.chatrooms.get(roomKey)
                     if (room != null) {
                         if (
                             (
                                 newNote.author?.pubkeyHex == me.pubkeyHex ||
                                     room.senderIntersects(followingKeySet) ||
-                                    me.hasSentMessagesTo(roomKey)
+                                    account.chatroomList.hasSentMessagesTo(roomKey)
                             ) &&
                             !account.isAllHidden(roomKey.users)
                         ) {

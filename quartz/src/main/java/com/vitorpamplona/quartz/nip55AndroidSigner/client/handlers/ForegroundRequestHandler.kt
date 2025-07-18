@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.IntentRequestDatabase
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.IntentRequestManager
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.DecryptZapRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.DeriveKeyRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.Nip04DecryptRequest
@@ -30,79 +30,69 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.reques
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.Nip44DecryptRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.Nip44EncryptRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.SignRequest
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.DecryptZapResultProcessor
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.DeriveKeyResultProcessor
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.Nip04DecryptResultProcessor
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.Nip04EncryptResultProcessor
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.Nip44DecryptResultProcessor
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.Nip44EncryptResultProcessor
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.processors.SignResultProcessor
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.DecryptZapResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.DeriveKeyResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip04DecryptResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip04EncryptResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip44DecryptResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip44EncryptResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.SignResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
 class ForegroundRequestHandler(
     val loggedInUser: HexKey,
     val packageName: String,
+    foregroundApprovalTimeout: Long = 30000,
 ) {
-    val launcher = IntentRequestDatabase()
+    val launcher = IntentRequestManager(foregroundApprovalTimeout)
 
-    fun sign(
-        unsignedEvent: Event,
-        onReady: (Event) -> Unit,
-    ) = launcher.launch(
-        SignRequest.assemble(unsignedEvent, loggedInUser, packageName),
-        SignResultProcessor(unsignedEvent, onReady),
-    )
+    suspend fun sign(unsignedEvent: Event) =
+        launcher.launchWaitAndParse(
+            requestIntentBuilder = { SignRequest.assemble(unsignedEvent, loggedInUser, packageName) },
+            parser = { intent -> SignResponse.parse(intent, unsignedEvent) },
+        )
 
-    fun nip04Encrypt(
+    suspend fun nip04Encrypt(
         plaintext: String,
         toPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ) = launcher.launch(
-        Nip04EncryptRequest.assemble(plaintext, toPubKey, loggedInUser, packageName),
-        Nip04EncryptResultProcessor(onReady),
+    ) = launcher.launchWaitAndParse(
+        requestIntentBuilder = { Nip04EncryptRequest.assemble(plaintext, toPubKey, loggedInUser, packageName) },
+        parser = Nip04EncryptResponse::parse,
     )
 
-    fun nip04Decrypt(
+    suspend fun nip04Decrypt(
         ciphertext: String,
         fromPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ) = launcher.launch(
-        Nip04DecryptRequest.assemble(ciphertext, fromPubKey, loggedInUser, packageName),
-        Nip04DecryptResultProcessor(onReady),
+    ) = launcher.launchWaitAndParse(
+        requestIntentBuilder = { Nip04DecryptRequest.assemble(ciphertext, fromPubKey, loggedInUser, packageName) },
+        parser = Nip04DecryptResponse::parse,
     )
 
-    fun nip44Encrypt(
+    suspend fun nip44Encrypt(
         plaintext: String,
         toPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ) = launcher.launch(
-        Nip44EncryptRequest.assemble(plaintext, toPubKey, loggedInUser, packageName),
-        Nip44EncryptResultProcessor(onReady),
+    ) = launcher.launchWaitAndParse(
+        requestIntentBuilder = { Nip44EncryptRequest.assemble(plaintext, toPubKey, loggedInUser, packageName) },
+        parser = Nip44EncryptResponse::parse,
     )
 
-    fun nip44Decrypt(
+    suspend fun nip44Decrypt(
         ciphertext: String,
         fromPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ) = launcher.launch(
-        Nip44DecryptRequest.assemble(ciphertext, fromPubKey, loggedInUser, packageName),
-        Nip44DecryptResultProcessor(onReady),
+    ) = launcher.launchWaitAndParse(
+        requestIntentBuilder = { Nip44DecryptRequest.assemble(ciphertext, fromPubKey, loggedInUser, packageName) },
+        parser = Nip44DecryptResponse::parse,
     )
 
-    fun decryptZapEvent(
-        event: LnZapRequestEvent,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    ) = launcher.launch(
-        DecryptZapRequest.assemble(event, loggedInUser, packageName),
-        DecryptZapResultProcessor(onReady),
-    )
+    suspend fun decryptZapEvent(event: LnZapRequestEvent) =
+        launcher.launchWaitAndParse(
+            requestIntentBuilder = { DecryptZapRequest.assemble(event, loggedInUser, packageName) },
+            parser = DecryptZapResponse::parse,
+        )
 
-    fun deriveKey(
-        nonce: HexKey,
-        onReady: (HexKey) -> Unit,
-    ) = launcher.launch(
-        DeriveKeyRequest.assemble(nonce, loggedInUser, packageName),
-        DeriveKeyResultProcessor(onReady),
-    )
+    suspend fun deriveKey(nonce: HexKey) =
+        launcher.launchWaitAndParse(
+            requestIntentBuilder = { DeriveKeyRequest.assemble(nonce, loggedInUser, packageName) },
+            parser = DeriveKeyResponse::parse,
+        )
 }

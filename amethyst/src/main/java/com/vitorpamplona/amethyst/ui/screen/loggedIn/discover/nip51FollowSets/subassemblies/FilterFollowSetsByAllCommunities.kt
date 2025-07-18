@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassem
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
 fun filterFollowSetsAllCommunities(

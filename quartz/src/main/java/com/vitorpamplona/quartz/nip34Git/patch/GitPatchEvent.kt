@@ -107,12 +107,11 @@ class GitPatchEvent(
         const val KIND = 1617
         const val ALT = "A Git Patch"
 
-        fun create(
+        suspend fun create(
             patch: String,
             createdAt: Long = TimeUtils.now(),
             signer: NostrSigner,
-            onReady: (GitPatchEvent) -> Unit,
-        ) {
+        ): GitPatchEvent {
             val content = patch
             val tags =
                 mutableListOf(
@@ -121,7 +120,7 @@ class GitPatchEvent(
 
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
     }
 }

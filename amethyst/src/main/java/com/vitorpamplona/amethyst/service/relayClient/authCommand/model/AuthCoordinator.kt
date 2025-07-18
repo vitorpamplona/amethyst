@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayAuthenticator
+import kotlinx.coroutines.CoroutineScope
 
 class ScreenAuthAccount(
     val account: Account,
@@ -32,11 +33,12 @@ class ScreenAuthAccount(
 
 class AuthCoordinator(
     client: NostrClient,
+    scope: CoroutineScope,
 ) {
     private val authWithAccounts = ListWithUniqueSetCache<ScreenAuthAccount, Account> { it.account }
 
     val receiver =
-        RelayAuthenticator(client) { challenge, relay ->
+        RelayAuthenticator(client, scope) { challenge, relay ->
             authWithAccounts.distinct().forEach {
                 it.sendAuthEvent(relay, challenge)
             }

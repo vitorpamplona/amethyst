@@ -134,7 +134,7 @@ fun MultiSetCompose(
                 .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
-                        scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } }
+                        scope.launch { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } }
                     },
                     onLongClick = { popupExpanded.value = true },
                 ).padding(

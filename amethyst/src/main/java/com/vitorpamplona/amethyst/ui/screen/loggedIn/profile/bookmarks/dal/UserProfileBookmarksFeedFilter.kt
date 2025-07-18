@@ -22,12 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.notes
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 
 class UserProfileBookmarksFeedFilter(
     val user: User,
@@ -36,22 +37,19 @@ class UserProfileBookmarksFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + user.pubkeyHex
 
     override fun feed(): List<Note> {
+        val note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
+        val noteEvent = note.event as? BookmarkListEvent
+
+        if (noteEvent == null) return emptyList()
+
         val notes =
-            user.latestBookmarkList
-                ?.taggedEvents()
-                ?.mapNotNull { LocalCache.checkGetOrCreateNote(it) }
-                ?.toSet()
-                ?: emptySet()
+            noteEvent.publicBookmarks().mapNotNull {
+                when (it) {
+                    is AddressBookmark -> LocalCache.getOrCreateAddressableNote(it.address)
+                    is EventBookmark -> LocalCache.checkGetOrCreateNote(it.eventId)
+                }
+            }
 
-        val addresses =
-            user.latestBookmarkList
-                ?.taggedAddresses()
-                ?.map { LocalCache.getOrCreateAddressableNote(it) }
-                ?.toSet()
-                ?: emptySet()
-
-        return (notes + addresses)
-            .filter { account.isAcceptable(it) }
-            .sortedWith(DefaultFeedOrder)
+        return notes.reversed()
     }
 }

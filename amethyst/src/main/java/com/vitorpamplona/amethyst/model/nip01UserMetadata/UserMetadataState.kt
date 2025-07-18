@@ -48,7 +48,7 @@ class UserMetadataState(
 
     fun getUserMetadataEvent(): MetadataEvent? = getUserMetadataUser().latestMetadata
 
-    fun sendNewUserMetadata(
+    suspend fun sendNewUserMetadata(
         name: String? = null,
         picture: String? = null,
         banner: String? = null,
@@ -61,8 +61,7 @@ class UserMetadataState(
         twitter: String? = null,
         mastodon: String? = null,
         github: String? = null,
-        onDone: (MetadataEvent) -> Unit,
-    ) {
+    ): MetadataEvent {
         val latest = getUserMetadataEvent()
 
         val template =
@@ -101,7 +100,7 @@ class UserMetadataState(
                 )
             }
 
-        signer.sign(template, onDone)
+        return signer.sign(template)
     }
 
     init {

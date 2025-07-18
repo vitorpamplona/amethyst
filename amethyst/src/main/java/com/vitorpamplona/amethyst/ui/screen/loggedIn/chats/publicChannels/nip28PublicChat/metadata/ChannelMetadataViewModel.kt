@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -105,16 +106,15 @@ class ChannelMetadataViewModel : ViewModel() {
                             channelRelays.value.map { it.relay },
                         )
 
-                    account.signAndSendPrivatelyOrBroadcast(
-                        template,
-                        relayList = { it.channelInfo().relays },
-                        onDone = {
-                            val channel = LocalCache.getOrCreatePublicChatChannel(it.id)
-                            // follows the channel
-                            account.follow(channel)
-                            onDone(channel)
-                        },
-                    )
+                    val signedResult =
+                        account.signAndSendPrivatelyOrBroadcast(
+                            template,
+                            relayList = { it.channelInfo().relays },
+                        )
+                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                    // follows the channel
+                    account.follow(channel)
+                    onDone(channel)
                 } else {
                     val event = channel.event
 
@@ -141,14 +141,13 @@ class ChannelMetadataViewModel : ViewModel() {
                             )
                         }
 
-                    account.signAndSendPrivatelyOrBroadcast(
-                        template,
-                        relayList = { it.channelInfo().relays },
-                        onDone = {
-                            val channel = LocalCache.getOrCreatePublicChatChannel(it.id)
-                            onDone(channel)
-                        },
-                    )
+                    val signedResult =
+                        account.signAndSendPrivatelyOrBroadcast(
+                            template,
+                            relayList = { it.channelInfo().relays },
+                        )
+                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                    onDone(channel)
                 }
             }
 
@@ -237,6 +236,9 @@ class ChannelMetadataViewModel : ViewModel() {
                 onUploading(false)
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))
             }
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            onUploading(false)
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.login_with_a_private_key_to_be_able_to_upload))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             onUploading(false)

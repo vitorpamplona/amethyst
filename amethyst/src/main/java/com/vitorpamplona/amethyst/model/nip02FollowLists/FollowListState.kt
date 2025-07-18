@@ -113,39 +113,31 @@ class FollowListState(
         )
     }
 
-    fun follow(
-        user: User,
-        onDone: (ContactListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun follow(user: User): ContactListEvent {
         val contactList = getFollowListEvent()
 
-        if (contactList != null) {
-            ContactListEvent.followUser(contactList, user.pubkeyHex, signer, onReady = onDone)
+        return if (contactList != null) {
+            ContactListEvent.followUser(contactList, user.pubkeyHex, signer)
         } else {
             ContactListEvent.createFromScratch(
                 followUsers = listOf(ContactTag(user.pubkeyHex, user.bestRelayHint(), null)),
                 relayUse = emptyMap(),
                 signer = signer,
-                onReady = onDone,
             )
         }
     }
 
-    fun unfollow(
-        user: User,
-        onDone: (ContactListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun unfollow(user: User): ContactListEvent? {
         val contactList = getFollowListEvent()
 
-        if (contactList != null && contactList.tags.isNotEmpty()) {
+        return if (contactList != null && contactList.tags.isNotEmpty()) {
             ContactListEvent.unfollowUser(
                 contactList,
                 user.pubkeyHex,
                 signer,
-                onReady = onDone,
             )
+        } else {
+            null
         }
     }
 

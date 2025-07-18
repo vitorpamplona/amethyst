@@ -264,7 +264,7 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
                 placeholder = selectedItens[parseWarningType(sensitive).screenCode].title,
                 options = selectedItens,
                 onSelect = {
-                    accountViewModel.updateContentWarnings(parseWarningType(it))
+                    accountViewModel.updateShowSensitiveContent(parseWarningType(it).prefCode)
                 },
             )
         }

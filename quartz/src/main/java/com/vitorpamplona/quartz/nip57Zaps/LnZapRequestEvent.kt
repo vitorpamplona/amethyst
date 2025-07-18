@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -38,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class LnZapRequestEvent(
@@ -64,55 +62,23 @@ class LnZapRequestEvent(
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
-    // TODO: Create a per key map with resulting options to account for rejections and avoiding reasking.
-    @Transient
-    private var privateZapEvent: LnZapPrivateEvent? = null
-
-    override fun countMemory(): Long = super.countMemory() + pointerSizeInBytes + (privateZapEvent?.countMemory() ?: 0)
-
     fun zappedPost() = tags.mapNotNull(ETag::parseId)
 
     fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 
-    fun getPrivateZapEvent(
-        loggedInUserPrivKey: ByteArray,
-        pubKey: HexKey,
-    ): LnZapPrivateEvent? {
+    fun getAnonTag(): String {
         val anonTag = tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
         if (anonTag != null) {
-            val encnote = anonTag[1]
-            if (encnote.isNotBlank()) {
-                try {
-                    val note = PrivateZapEncryption.decryptPrivateZapMessage(encnote, loggedInUserPrivKey, pubKey.hexToByteArray())
-                    val decryptedEvent = fromJson(note)
-                    if (decryptedEvent.kind == 9733) {
-                        return decryptedEvent as LnZapPrivateEvent
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+            val encNote = anonTag[1]
+            if (encNote.isNotBlank()) {
+                return encNote
+            } else {
+                throw IllegalStateException("Anon tag is empty.")
             }
-        }
-        return null
-    }
-
-    fun cachedPrivateZap(): LnZapPrivateEvent? = privateZapEvent
-
-    fun decryptPrivateZap(
-        signer: NostrSigner,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    ) {
-        privateZapEvent?.let {
-            onReady(it)
-            return
-        }
-
-        signer.decryptZapEvent(this) {
-            // caches it
-            privateZapEvent = it
-            onReady(it)
+        } else {
+            throw IllegalStateException("This is not a private zap.")
         }
     }
 
@@ -120,7 +86,7 @@ class LnZapRequestEvent(
         const val KIND = 9734
         const val ALT = "Zap request"
 
-        fun create(
+        suspend fun create(
             originalNote: Event,
             relays: Set<String>,
             signer: NostrSigner,
@@ -129,10 +95,7 @@ class LnZapRequestEvent(
             zapType: LnZapEvent.ZapType,
             toUserPubHex: String?,
             createdAt: Long = TimeUtils.now(),
-            onReady: (LnZapRequestEvent) -> Unit,
-        ) {
-            if (zapType == LnZapEvent.ZapType.NONZAP) return
-
+        ): LnZapRequestEvent {
             var tags =
                 listOf(
                     arrayOf("e", originalNote.id),
@@ -147,42 +110,45 @@ class LnZapRequestEvent(
                 tags = tags + listOf(arrayOf(PollOptionTag.TAG_NAME, pollOption.toString()))
             }
 
-            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                tags = tags + listOf(arrayOf("anon"))
-                NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags.toTypedArray(), message, onReady)
-            } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                tags = tags + listOf(arrayOf("anon", ""))
-                signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags.toTypedArray(), message, onReady)
+            return when (zapType) {
+                LnZapEvent.ZapType.PUBLIC -> signer.sign(createdAt, KIND, tags.toTypedArray(), message)
+                LnZapEvent.ZapType.ANONYMOUS -> {
+                    tags = tags + listOf(arrayOf("anon"))
+                    NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags.toTypedArray(), message)
+                }
+                LnZapEvent.ZapType.PRIVATE -> {
+                    tags = tags + listOf(arrayOf("anon", ""))
+                    signer.sign(createdAt, KIND, tags.toTypedArray(), message)
+                }
+                LnZapEvent.ZapType.NONZAP -> throw IllegalArgumentException("Invalid zap type")
             }
         }
 
-        fun create(
+        suspend fun create(
             userHex: String,
             relays: Set<NormalizedRelayUrl>,
             signer: NostrSigner,
             message: String,
             zapType: LnZapEvent.ZapType,
             createdAt: Long = TimeUtils.now(),
-            onReady: (LnZapRequestEvent) -> Unit,
-        ) {
-            if (zapType == LnZapEvent.ZapType.NONZAP) return
-
+        ): LnZapRequestEvent {
             var tags =
                 arrayOf(
                     arrayOf("p", userHex),
                     arrayOf("relays") + relays.map { it.url },
                 )
 
-            if (zapType == LnZapEvent.ZapType.ANONYMOUS) {
-                tags += arrayOf(arrayOf("anon", ""))
-                NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags, message, onReady)
-            } else if (zapType == LnZapEvent.ZapType.PRIVATE) {
-                tags += arrayOf(arrayOf("anon", ""))
-                signer.sign(createdAt, KIND, tags, message, onReady)
-            } else {
-                signer.sign(createdAt, KIND, tags, message, onReady)
+            return when (zapType) {
+                LnZapEvent.ZapType.PUBLIC -> signer.sign(createdAt, KIND, tags, message)
+                LnZapEvent.ZapType.ANONYMOUS -> {
+                    tags += arrayOf(arrayOf("anon", ""))
+                    NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags, message)
+                }
+                LnZapEvent.ZapType.PRIVATE -> {
+                    tags += arrayOf(arrayOf("anon", ""))
+                    signer.sign(createdAt, KIND, tags, message)
+                }
+                LnZapEvent.ZapType.NONZAP -> throw IllegalArgumentException("Invalid zap type")
             }
         }
     }

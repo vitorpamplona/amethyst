@@ -40,6 +40,8 @@ fun Array<String>.startsWith(startsWith: Array<String>): Boolean {
     return true
 }
 
+fun Array<String>.startsWithAny(startsWithList: List<Array<String>>): Boolean = startsWithList.any { startsWith(it) }
+
 public inline fun <T, R> Array<out T>.lastNotNullOfOrNull(transform: (T) -> R?): R? {
     for (index in this.indices.reversed()) {
         val result = transform(this[index])

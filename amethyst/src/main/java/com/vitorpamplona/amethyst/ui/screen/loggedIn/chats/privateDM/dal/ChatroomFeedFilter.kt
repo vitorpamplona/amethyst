@@ -34,7 +34,7 @@ class ChatroomFeedFilter(
     override fun feedKey(): String = withUser.hashCode().toString()
 
     override fun feed(): List<Note> {
-        val messages = account.userProfile().privateChatrooms[withUser] ?: return emptyList()
+        val messages = account.chatroomList.getOrCreatePrivateChatroom(withUser)
 
         return messages.roomMessages
             .filter { account.isAcceptable(it) }
@@ -43,7 +43,7 @@ class ChatroomFeedFilter(
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        val messages = account.userProfile().privateChatrooms[withUser] ?: return emptySet()
+        val messages = account.chatroomList.getOrCreatePrivateChatroom(withUser)
 
         return collection.filter { it in messages.roomMessages && account.isAcceptable(it) }.toSet()
     }

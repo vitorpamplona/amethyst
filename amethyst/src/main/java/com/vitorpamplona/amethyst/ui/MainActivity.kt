@@ -163,14 +163,14 @@ fun uriToRoute(
                 is NEvent -> {
                     routeFor(
                         note = LocalCache.getOrCreateNote(nip19.hex),
-                        loggedIn = account.userProfile(),
+                        loggedIn = account,
                     ) ?: Route.EventRedirect(nip19.hex)
                 }
 
                 is NAddress -> {
                     routeFor(
                         note = LocalCache.getOrCreateAddressableNote(nip19.address()),
-                        loggedIn = account.userProfile(),
+                        loggedIn = account,
                     ) ?: Route.EventRedirect(nip19.aTag())
                 }
 
@@ -179,12 +179,12 @@ fun uriToRoute(
                     if (noteEvent is AddressableEvent) {
                         routeFor(
                             note = LocalCache.getOrCreateAddressableNote(noteEvent.address()),
-                            loggedIn = account.userProfile(),
+                            loggedIn = account,
                         ) ?: Route.EventRedirect(noteEvent.addressTag())
                     } else {
                         routeFor(
                             note = LocalCache.getOrCreateNote(nip19.event.id),
-                            loggedIn = account.userProfile(),
+                            loggedIn = account,
                         ) ?: Route.EventRedirect(nip19.event.id)
                     }
                 }

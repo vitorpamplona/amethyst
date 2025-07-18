@@ -66,65 +66,59 @@ class SealedRumorEvent(
 
     override fun isContentEncoded() = true
 
-    fun unseal(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) {
-        try {
-            plainContent(signer) {
-                try {
-                    val rumor = Rumor.fromJson(it)
-                    val event = rumor.mergeWith(this)
-                    if (event is WrappedEvent) {
-                        event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
-                    }
-                    innerEventId = event.id
+    suspend fun unsealThrowing(signer: NostrSigner): Event {
+        val rumor = Rumor.fromJson(plainContent(signer))
 
-                    onReady(event)
-                } catch (e: Exception) {
-                    Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
-                }
-            }
+        val event = rumor.mergeWith(this)
+        if (event is WrappedEvent) {
+            event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
+        }
+        innerEventId = event.id
+
+        return event
+    }
+
+    suspend fun unsealOrNull(signer: NostrSigner): Event? {
+        return try {
+            return unsealThrowing(signer)
         } catch (e: Exception) {
             Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
+            null
         }
     }
 
-    private fun plainContent(
-        signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
-        if (content.isEmpty()) return
+    private suspend fun plainContent(signer: NostrSigner): String {
+        if (content.isEmpty()) return ""
 
-        signer.nip44Decrypt(content, pubKey, onReady)
+        return signer.nip44Decrypt(content, pubKey)
     }
 
     companion object {
         const val KIND = 13
 
-        fun create(
+        suspend fun create(
             event: Event,
             encryptTo: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (SealedRumorEvent) -> Unit,
-        ) {
+        ): SealedRumorEvent {
             val rumor = Rumor.create(event)
-            create(rumor, encryptTo, signer, createdAt, onReady)
+            return create(rumor, encryptTo, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             rumor: Rumor,
             encryptTo: HexKey,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
-            onReady: (SealedRumorEvent) -> Unit,
-        ) {
+        ): SealedRumorEvent {
             val msg = Rumor.toJson(rumor)
-
-            signer.nip44Encrypt(msg, encryptTo) { content ->
-                signer.sign(createdAt, KIND, emptyArray(), content, onReady)
-            }
+            return signer.sign(
+                createdAt = createdAt,
+                kind = KIND,
+                tags = emptyArray(),
+                content = signer.nip44Encrypt(msg, encryptTo),
+            )
         }
     }
 }

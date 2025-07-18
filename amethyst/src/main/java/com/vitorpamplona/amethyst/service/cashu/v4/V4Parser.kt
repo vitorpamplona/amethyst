@@ -65,7 +65,6 @@ class V4Parser {
 
                 return GenericLoadable.Loaded(converted.toImmutableList())
             } catch (e: Exception) {
-                e.printStackTrace()
                 if (e is CancellationException) throw e
                 return GenericLoadable.Error("Could not parse this cashu token")
             }

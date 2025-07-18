@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -50,7 +51,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.Discove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.IActivityLauncher
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -184,13 +184,12 @@ private fun ListenToExternalSignerIfNeeded(accountViewModel: AccountViewModel) {
             val launcher: (Intent) -> Unit = { intent ->
                 try {
                     launcher.launch(intent)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.e("Signer", "Error opening Signer app", e)
+                } catch (e: ActivityNotFoundException) {
                     accountViewModel.toastManager.toast(
                         R.string.error_opening_external_signer,
                         R.string.error_opening_external_signer_description,
                     )
+                    throw e
                 }
             }
 

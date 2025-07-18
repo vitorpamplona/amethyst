@@ -53,17 +53,14 @@ class AppSpecificState(
 
     fun getAppSpecificDataFlow(): StateFlow<NoteState> = getAppSpecificDataNote().flow().metadata.stateFlow
 
-    fun saveNewAppSpecificData(onDone: (AppSpecificDataEvent) -> Unit) {
+    suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
         val toInternal = settings.syncedSettings.toInternal()
-        signer.nip44Encrypt(JsonMapper.mapper.writeValueAsString(toInternal), signer.pubKey) { encrypted ->
-            AppSpecificDataEvent.create(
-                dTag = APP_SPECIFIC_DATA_D_TAG,
-                description = encrypted,
-                otherTags = emptyArray(),
-                signer = signer,
-                onReady = onDone,
-            )
-        }
+        return AppSpecificDataEvent.create(
+            dTag = APP_SPECIFIC_DATA_D_TAG,
+            description = signer.nip44Encrypt(JsonMapper.mapper.writeValueAsString(toInternal), signer.pubKey),
+            otherTags = emptyArray(),
+            signer = signer,
+        )
     }
 
     init {
@@ -72,16 +69,13 @@ class AppSpecificState(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
                 LocalCache.justConsumeMyOwnEvent(event)
-                signer.decrypt(event.content, event.pubKey) { decrypted ->
-                    try {
-                        val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
-                        settings.syncedSettings.updateFrom(syncedSettings)
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
-                        e.printStackTrace()
-                        AccountSyncedSettingsInternal()
-                    }
+                try {
+                    val decrypted = signer.decrypt(event.content, event.pubKey)
+                    val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
+                    settings.syncedSettings.updateFrom(syncedSettings)
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value", e)
                 }
             }
         }
@@ -91,18 +85,13 @@ class AppSpecificState(
             getAppSpecificDataFlow().collect {
                 Log.d("AccountRegisterObservers", "Updating AppSpecificData for ${signer.pubKey}")
                 (it.note.event as? AppSpecificDataEvent)?.let {
-                    signer.decrypt(it.content, it.pubKey) { decrypted ->
-                        val syncedSettings =
-                            try {
-                                JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
-                            } catch (e: Throwable) {
-                                if (e is CancellationException) throw e
-                                Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
-                                e.printStackTrace()
-                                AccountSyncedSettingsInternal()
-                            }
-
+                    val decrypted = signer.decrypt(it.content, it.pubKey)
+                    try {
+                        val syncedSettings = JsonMapper.mapper.readValue<AccountSyncedSettingsInternal>(decrypted)
                         settings.updateAppSpecificData(it, syncedSettings)
+                    } catch (e: Throwable) {
+                        if (e is CancellationException) throw e
+                        Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences with value $decrypted", e)
                     }
                 }
             }

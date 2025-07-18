@@ -24,10 +24,13 @@ import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.IRelayClientListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 class RelayAuthenticator(
     val client: NostrClient,
-    val authenticate: (challenge: String, relay: IRelayClient) -> Unit,
+    val scope: CoroutineScope,
+    val authenticate: suspend (challenge: String, relay: IRelayClient) -> Unit,
 ) {
     private val clientListener =
         object : IRelayClientListener {
@@ -35,7 +38,9 @@ class RelayAuthenticator(
                 relay: IRelayClient,
                 challenge: String,
             ) {
-                authenticate(challenge, relay)
+                scope.launch {
+                    authenticate(challenge, relay)
+                }
             }
         }
 

@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -58,8 +57,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.Locale as JavaLocale
 
 @Preview(device = "spec:width=2160px,height=2340px,dpi=440")
@@ -129,11 +126,7 @@ fun DontTranslateFromSetting(accountViewModel: AccountViewModel) {
                         DropdownMenuItem(
                             text = { Text(text = JavaLocale.forLanguageTag(languageCode).displayName) },
                             onClick = {
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    accountViewModel.toggleDontTranslateFrom(
-                                        languageCode,
-                                    )
-                                }
+                                accountViewModel.toggleDontTranslateFrom(languageCode)
                                 selectedLanguages.remove(languageCode)
                                 expanded = false
                             },

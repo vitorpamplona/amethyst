@@ -28,17 +28,15 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 
 class RepostAction {
     companion object {
-        fun repost(
+        suspend fun repost(
             note: Note,
             signer: NostrSigner,
-            onDone: (Event) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
-            val noteEvent = note.event ?: return
+        ): Event? {
+            val noteEvent = note.event ?: return null
 
             if (note.hasBoostedInTheLast5Minutes(signer.pubKey)) {
                 // has already bosted in the past 5mins
-                return
+                return null
             }
 
             val noteHint = note.relayHintUrl()
@@ -51,7 +49,7 @@ class RepostAction {
                     GenericRepostEvent.build(noteEvent, noteHint, authorHint)
                 }
 
-            signer.sign(template, onDone)
+            return signer.sign(template)
         }
     }
 }

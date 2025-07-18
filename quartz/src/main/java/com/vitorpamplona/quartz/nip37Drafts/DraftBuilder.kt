@@ -30,30 +30,25 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class DraftBuilder {
     companion object {
-        fun <T : Event> encryptAndSign(
+        suspend fun <T : Event> encryptAndSign(
             dTag: String,
             draft: T,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
-            signer.nip44Encrypt(draft.toJson(), signer.pubKey) { encryptedContent ->
-                val template =
-                    eventTemplate<DraftEvent>(DraftEvent.KIND, encryptedContent, createdAt) {
-                        alt(DraftEvent.ALT_DESCRIPTION)
-                        dTag(dTag)
-                        kind(draft.kind)
+        ): DraftEvent {
+            val encryptedContent = signer.nip44Encrypt(draft.toJson(), signer.pubKey)
+            val template =
+                eventTemplate<DraftEvent>(DraftEvent.KIND, encryptedContent, createdAt) {
+                    alt(DraftEvent.ALT_DESCRIPTION)
+                    dTag(dTag)
+                    kind(draft.kind)
 
-                        if (draft is ExposeInDraft) {
-                            addAll(draft.exposeInDraft())
-                        }
+                    if (draft is ExposeInDraft) {
+                        addAll(draft.exposeInDraft())
                     }
-
-                signer.sign(template) {
-                    it.addToCache(signer.pubKey, draft)
-                    onReady(it)
                 }
-            }
+
+            return signer.sign(template)
         }
     }
 }

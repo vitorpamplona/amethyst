@@ -40,13 +40,12 @@ class CalendarEvent(
         const val KIND = 31924
         const val ALT = "Calendar"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (CalendarEvent) -> Unit,
-        ) {
+        ): CalendarEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

@@ -67,9 +67,10 @@ fun BookmarkListScreen(
             factory = BookmarkPrivateFeedViewModel.Factory(accountViewModel.account),
         )
 
-    val userState by accountViewModel.account.decryptBookmarks.collectAsStateWithLifecycle(null)
+    val bookmarkState by accountViewModel.account.bookmarkState.bookmarks
+        .collectAsStateWithLifecycle(null)
 
-    LaunchedEffect(userState) {
+    LaunchedEffect(bookmarkState) {
         publicFeedViewModel.invalidateData()
         privateFeedViewModel.invalidateData()
     }

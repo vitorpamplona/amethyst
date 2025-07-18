@@ -52,14 +52,13 @@ class AppSpecificDataEvent(
             dTag: String,
         ): ATag = ATag(KIND, pubkey, dTag, null)
 
-        fun create(
+        suspend fun create(
             dTag: String,
             description: String,
             otherTags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AppSpecificDataEvent) -> Unit,
-        ) {
+        ): AppSpecificDataEvent {
             val withD =
                 if (otherTags.any { it.size > 1 && it[0] == "d" && it[1] == dTag }) {
                     otherTags
@@ -74,7 +73,7 @@ class AppSpecificDataEvent(
                     withD
                 }
 
-            signer.sign(createdAt, KIND, newTags, description, onReady)
+            return signer.sign(createdAt, KIND, newTags, description)
         }
     }
 }

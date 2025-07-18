@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayF
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 
 fun filterFollowSetsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,

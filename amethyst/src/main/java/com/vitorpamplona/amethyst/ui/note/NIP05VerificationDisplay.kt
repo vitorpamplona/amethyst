@@ -327,7 +327,7 @@ fun DisplayStatusInner(
                     onClick = {
                         routeFor(
                             note,
-                            accountViewModel.userProfile(),
+                            accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
                 ) {
@@ -349,7 +349,7 @@ fun DisplayStatusInner(
                     onClick = {
                         routeFor(
                             it,
-                            accountViewModel.userProfile(),
+                            accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
                 ) {

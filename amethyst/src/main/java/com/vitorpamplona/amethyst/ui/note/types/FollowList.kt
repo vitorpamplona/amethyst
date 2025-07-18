@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -108,7 +108,7 @@ fun DisplayFollowList(
     }
 
     Text(
-        text = noteEvent.nameOrTitle() ?: noteEvent.dTag(),
+        text = noteEvent.title() ?: noteEvent.dTag(),
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

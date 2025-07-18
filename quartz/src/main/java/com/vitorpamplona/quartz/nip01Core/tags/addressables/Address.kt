@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class Address(
     val kind: Int,
     val pubKeyHex: HexKey,
-    val dTag: String,
+    val dTag: String = "",
 ) : Comparable<Address> {
     fun toValue() = assemble(kind, pubKeyHex, dTag)
 
@@ -59,7 +59,7 @@ data class Address(
         fun assemble(
             kind: Int,
             pubKeyHex: HexKey,
-            dTag: String,
+            dTag: String = "",
         ) = "$kind:$pubKeyHex:$dTag"
 
         @JvmStatic

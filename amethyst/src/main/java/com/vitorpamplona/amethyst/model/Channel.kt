@@ -168,7 +168,7 @@ abstract class Channel {
     var creator: User? = null
     var updatedMetadataAt: Long = 0
     val notes = LargeCache<HexKey, Note>()
-    var lastNoteCreatedAt: Long = 0
+    var lastNote: Note? = null
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
@@ -220,8 +220,8 @@ abstract class Channel {
     ) {
         notes.put(note.idHex, note)
 
-        if ((note.createdAt() ?: 0) > lastNoteCreatedAt) {
-            lastNoteCreatedAt = note.createdAt() ?: 0
+        if ((note.createdAt() ?: 0) > (lastNote?.createdAt() ?: 0)) {
+            lastNote = note
         }
 
         if (relay != null) {

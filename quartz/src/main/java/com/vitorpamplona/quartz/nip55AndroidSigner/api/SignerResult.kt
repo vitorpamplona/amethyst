@@ -24,38 +24,43 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 
-interface RequestAddressed
+sealed interface SignerResult<T : IResult> {
+    sealed interface RequestAddressed<T : IResult> : SignerResult<T> {
+        class Successful<T : IResult>(
+            val result: T,
+        ) : RequestAddressed<T>
 
-sealed class SignerResult<T : IResult> {
-    class Successful<T : IResult>(
-        val result: T,
-    ) : SignerResult<T>(),
-        RequestAddressed
+        class ManuallyRejected<T : IResult> : RequestAddressed<T>
 
-    class Rejected<T : IResult> :
-        SignerResult<T>(),
-        RequestAddressed
+        class AutomaticallyRejected<T : IResult> : RequestAddressed<T>
 
-    class ReceivedButCouldNotPerform<T : IResult>(
-        message: String? = null,
-    ) : SignerResult<T>(),
-        RequestAddressed
+        class TimedOut<T : IResult> : RequestAddressed<T>
 
-    class ReceivedButCouldNotParseEventFromResult<T : IResult>(
-        val eventJson: String,
-    ) : SignerResult<T>(),
-        RequestAddressed
+        class NoActivityToLaunchFrom<T : IResult> : RequestAddressed<T>
 
-    class ReceivedButCouldNotVerifyResultingEvent<T : IResult>(
-        val invalidEvent: Event,
-    ) : SignerResult<T>(),
-        RequestAddressed
+        class SignerNotFound<T : IResult> : RequestAddressed<T>
 
-    class ErrorExceptionCallingContentResolver<T : IResult>(
-        val e: Exception? = null,
-    ) : SignerResult<T>()
+        class ReceivedButCouldNotPerform<T : IResult>(
+            val message: String? = null,
+        ) : RequestAddressed<T>
 
-    class RequiresManualApproval<T : IResult> : SignerResult<T>()
+        class ReceivedButCouldNotParseEventFromResult<T : IResult>(
+            val eventJson: String,
+        ) : RequestAddressed<T>
+
+        class ReceivedButCouldNotVerifyResultingEvent<T : IResult>(
+            val invalidEvent: Event,
+        ) : RequestAddressed<T>
+    }
+
+    sealed interface RequestIncomplete<T : IResult> : SignerResult<T> {
+        class RequiresManualApproval<T : IResult> : RequestIncomplete<T>
+
+        class ErrorExceptionCallingContentResolver<T : IResult>(
+            val e: Exception? = null,
+        ) : SignerResult<T>,
+            RequestIncomplete<T>
+    }
 }
 
 interface IResult

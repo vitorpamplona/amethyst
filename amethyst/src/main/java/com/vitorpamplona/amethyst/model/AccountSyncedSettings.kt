@@ -138,11 +138,12 @@ class AccountLanguagePreferences(
     // language services
     // ---
     fun toggleDontTranslateFrom(languageCode: String) {
-        if (!dontTranslateFrom.contains(languageCode)) {
-            dontTranslateFrom = dontTranslateFrom.plus(languageCode)
-        } else {
-            dontTranslateFrom = dontTranslateFrom.minus(languageCode)
-        }
+        dontTranslateFrom =
+            if (!dontTranslateFrom.contains(languageCode)) {
+                dontTranslateFrom.plus(languageCode)
+            } else {
+                dontTranslateFrom.minus(languageCode)
+            }
     }
 
     fun translateToContains(languageCode: Locale) = translateTo.contains(languageCode.language)

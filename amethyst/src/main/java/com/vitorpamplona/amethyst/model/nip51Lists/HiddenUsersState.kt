@@ -24,7 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,8 +40,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 class HiddenUsersState(
-    val muteList: StateFlow<PeopleListEvent.UsersAndWords>,
-    val blockList: StateFlow<PeopleListEvent.UsersAndWords>,
+    val muteList: StateFlow<List<MuteTag>>,
+    val blockList: StateFlow<List<MuteTag>>,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -61,14 +63,14 @@ class HiddenUsersState(
     }
 
     suspend fun assembleLiveHiddenUsers(
-        blockList: PeopleListEvent.UsersAndWords,
-        muteList: PeopleListEvent.UsersAndWords,
+        blockList: List<MuteTag>,
+        muteList: List<MuteTag>,
         transientHiddenUsers: Set<String>,
         showSensitiveContent: Boolean?,
     ): LiveHiddenUsers =
         LiveHiddenUsers(
-            hiddenUsers = blockList.users + muteList.users,
-            hiddenWords = blockList.words + muteList.words,
+            hiddenUsers = blockList.mapNotNullTo(mutableSetOf()) { if (it is UserTag) it.pubKey else null } + muteList.mapNotNull { if (it is UserTag) it.pubKey else null },
+            hiddenWords = blockList.mapNotNullTo(mutableSetOf()) { if (it is WordTag) it.word else null } + muteList.mapNotNull { if (it is WordTag) it.word else null },
             spammers = transientHiddenUsers,
             showSensitiveContent = showSensitiveContent,
         )

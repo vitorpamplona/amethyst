@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -49,13 +48,14 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
-import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -324,7 +324,7 @@ object LocalPreferences {
                     )
                     putString(
                         PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
-                        JsonMapper.mapper.writeValueAsString(settings.zapPaymentRequest?.denormalize()),
+                        JsonMapper.mapper.writeValueAsString(settings.zapPaymentRequest.value?.denormalize()),
                     )
                     if (settings.backupContactList != null) {
                         putString(
@@ -522,7 +522,6 @@ object LocalPreferences {
                     "Unable to decode shared preferences: ${getString(PrefKeys.SHARED_SETTINGS, null)}",
                     e,
                 )
-                e.printStackTrace()
                 null
             }
         }
@@ -619,7 +618,7 @@ object LocalPreferences {
                         defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
                         defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
                         defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
-                        zapPaymentRequest = zapPaymentRequestServer?.normalize(),
+                        zapPaymentRequest = MutableStateFlow(zapPaymentRequestServer?.normalize()),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
@@ -663,7 +662,6 @@ object LocalPreferences {
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
-            e.printStackTrace()
             null
         }
     }
@@ -678,7 +676,6 @@ object LocalPreferences {
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
-            e.printStackTrace()
             null
         }
     }

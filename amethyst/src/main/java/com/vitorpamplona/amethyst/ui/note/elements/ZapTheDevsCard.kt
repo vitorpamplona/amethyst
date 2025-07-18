@@ -236,7 +236,7 @@ fun ZapTheDevsCard(
                 if (noteEvent != null) {
                     val route =
                         remember(releaseNote) {
-                            routeFor(releaseNote, accountViewModel.userProfile())
+                            routeFor(releaseNote, accountViewModel.account)
                         }
 
                     if (route != null) {

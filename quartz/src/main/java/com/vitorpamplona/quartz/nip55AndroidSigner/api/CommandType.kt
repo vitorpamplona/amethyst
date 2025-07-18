@@ -33,7 +33,7 @@ enum class CommandType(
     DERIVE_KEY("derive_key"),
     ;
 
-    companion object Companion {
+    companion object {
         fun parse(code: String): CommandType? =
             when (code) {
                 SIGN_EVENT.code -> SIGN_EVENT

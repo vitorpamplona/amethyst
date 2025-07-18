@@ -37,11 +37,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -50,8 +49,6 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 
 @Preview
 @Composable
@@ -69,46 +66,14 @@ fun ObserveRelayListForSearchAndDisplayIfNotFound(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ObserveRelayListForSearch(
-        accountViewModel = accountViewModel,
-    ) { relayListEvent ->
-        if (relayListEvent == null || relayListEvent.relays().isEmpty()) {
-            AddInboxRelayForSearchCard(
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-    }
-}
+    val searchRelayList by accountViewModel.account.searchRelayList.flow
+        .collectAsStateWithLifecycle()
 
-@Composable
-fun ObserveRelayListForSearch(
-    accountViewModel: AccountViewModel,
-    inner: @Composable (relayListEvent: SearchRelayListEvent?) -> Unit,
-) {
-    ObserveRelayListForSearch(
-        pubkey = accountViewModel.account.userProfile().pubkeyHex,
-        accountViewModel = accountViewModel,
-    ) { relayListEvent ->
-        inner(relayListEvent)
-    }
-}
-
-@Composable
-fun ObserveRelayListForSearch(
-    pubkey: HexKey,
-    accountViewModel: AccountViewModel,
-    inner: @Composable (relayListEvent: SearchRelayListEvent?) -> Unit,
-) {
-    LoadAddressableNote(
-        SearchRelayListEvent.createAddress(pubkey),
-        accountViewModel,
-    ) { relayList ->
-        if (relayList != null) {
-            val relayListEvent by observeNoteEvent<SearchRelayListEvent>(relayList, accountViewModel)
-
-            inner(relayListEvent)
-        }
+    if (searchRelayList.isEmpty()) {
+        AddInboxRelayForSearchCard(
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
     }
 }
 

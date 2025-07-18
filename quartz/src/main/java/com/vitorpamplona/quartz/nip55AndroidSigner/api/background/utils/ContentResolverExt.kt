@@ -42,15 +42,15 @@ fun <T : IResult> ContentResolver.query(
         ).use {
             if (it != null && it.moveToFirst()) {
                 if (it.getColumnIndex("rejected") > -1) {
-                    SignerResult.Rejected()
+                    SignerResult.RequestAddressed.AutomaticallyRejected()
                 } else {
                     map(it)
                 }
             } else {
-                SignerResult.RequiresManualApproval()
+                SignerResult.RequestIncomplete.RequiresManualApproval()
             }
         }
     } catch (e: Exception) {
         Log.e("ExternalSignerLauncher", "Failed to query the Signer app in the background", e)
-        SignerResult.ErrorExceptionCallingContentResolver(e)
+        SignerResult.RequestIncomplete.ErrorExceptionCallingContentResolver(e)
     }

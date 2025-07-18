@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps
 
-import android.util.Log
+import com.vitorpamplona.quartz.nip01Core.core.Event.Companion.fromJson
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 
 class PrivateZapRequestBuilder {
     fun <T> signPrivateZapRequest(
@@ -34,11 +36,13 @@ class PrivateZapRequestBuilder {
         tags: Array<Array<String>>,
         content: String,
         signer: NostrSignerSync,
-    ): T? {
-        if (signer.keyPair.privKey == null) return null
+    ): T {
+        if (signer.keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         val zappedEvent = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.let { it[1] }
-        val userHex = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.let { it[1] } ?: return null
+        val userHex = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.let { it[1] }
+
+        require(userHex != null) { "A user is required when creating private zaps" }
 
         // if it is a Zap for an Event, use event.id if not, use the user's pubkey
         val idToGeneratePrivateKey = zappedEvent ?: userHex
@@ -52,7 +56,7 @@ class PrivateZapRequestBuilder {
 
         val fullTagsNoAnon = tags.filter { t -> t.getOrNull(0) != "anon" }.toTypedArray()
 
-        val privateEvent = LnZapPrivateEvent.create(signer, fullTagsNoAnon, content) ?: return null
+        val privateEvent = LnZapPrivateEvent.create(signer, fullTagsNoAnon, content)
 
         val noteJson = privateEvent.toJson()
         val encryptedContent =
@@ -71,22 +75,19 @@ class PrivateZapRequestBuilder {
     fun decryptZapEvent(
         event: LnZapRequestEvent,
         signer: NostrSignerSync,
-    ): LnZapPrivateEvent? {
-        if (signer.keyPair.privKey == null) return null
+    ): LnZapPrivateEvent {
+        if (signer.keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         val recipientPK = event.zappedAuthor().firstOrNull()
         val recipientPost = event.zappedPost().firstOrNull()
         val privateEvent =
             if (recipientPK == signer.pubKey) {
                 // if the receiver is logged in, these are the params.
-                val privateKeyToUse = signer.keyPair.privKey
-                val pubkeyToUse = event.pubKey
-
-                event.getPrivateZapEvent(privateKeyToUse, pubkeyToUse)
+                decryptAnonTag(event.getAnonTag(), signer.keyPair.privKey, event.pubKey)
             } else {
                 // if the sender is logged in, these are the params
                 val altPubkeyToUse = recipientPK
-                val altPrivateKeyToUse =
+                val myPrivateKeyForThisEvent =
                     if (recipientPost != null) {
                         PrivateZapEncryption.createEncryptionPrivateKey(
                             signer.keyPair.privKey.toHexKey(),
@@ -100,35 +101,44 @@ class PrivateZapRequestBuilder {
                             event.createdAt,
                         )
                     } else {
-                        null
+                        throw IllegalArgumentException("Couldn't find a secret to use. The private zap is neither a post nor an author zap")
                     }
 
                 try {
-                    if (altPrivateKeyToUse != null && altPubkeyToUse != null) {
-                        val altPubKeyFromPrivate = Nip01.pubKeyCreate(altPrivateKeyToUse).toHexKey()
+                    if (altPubkeyToUse != null) {
+                        val altPubKeyFromPrivate = Nip01.pubKeyCreate(myPrivateKeyForThisEvent).toHexKey()
 
                         if (altPubKeyFromPrivate == event.pubKey) {
-                            val result = event.getPrivateZapEvent(altPrivateKeyToUse, altPubkeyToUse)
-
-                            if (result == null) {
-                                Log.w(
-                                    "Private ZAP Decrypt",
-                                    "Fail to decrypt Zap from ${event.id}",
-                                )
-                            }
-                            result
+                            // the sender is logged in.
+                            decryptAnonTag(event.getAnonTag(), myPrivateKeyForThisEvent, altPubkeyToUse)
                         } else {
-                            null
+                            throw IllegalArgumentException("This private zap cannot be decrypted by this key.")
                         }
                     } else {
-                        null
+                        throw IllegalArgumentException("Recipient pubkey not found.")
                     }
                 } catch (e: Exception) {
-                    Log.e("Account", "Failed to create pubkey for ZapRequest ${event.id}", e)
-                    null
+                    throw IllegalArgumentException("Failed to create pubkey for ZapRequest ${event.id}. ${e.message}")
                 }
             }
 
         return privateEvent
     }
+
+    fun decryptAnonTag(
+        encNote: String,
+        privateKey: ByteArray,
+        pubKey: HexKey,
+    ): LnZapPrivateEvent =
+        try {
+            val note = PrivateZapEncryption.decryptPrivateZapMessage(encNote, privateKey, pubKey.hexToByteArray())
+            val decryptedEvent = fromJson(note)
+            if (decryptedEvent.kind == 9733) {
+                decryptedEvent as LnZapPrivateEvent
+            } else {
+                throw IllegalStateException("The decrypted event is not a private zap.")
+            }
+        } catch (e: Exception) {
+            throw IllegalStateException("Could not decrypt private zap. ${e.message}")
+        }
 }

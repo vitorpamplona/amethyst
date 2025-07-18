@@ -351,10 +351,9 @@ fun RenderZapRaiser(
 
     LaunchedEffect(key1 = zapsState) {
         zapsState?.note?.let {
-            accountViewModel.calculateZapraiser(baseNote) { newStatus ->
-                if (zapraiserStatus != newStatus) {
-                    zapraiserStatus = newStatus
-                }
+            val newStatus = accountViewModel.calculateZapraiser(baseNote)
+            if (zapraiserStatus != newStatus) {
+                zapraiserStatus = newStatus
             }
         }
     }
@@ -580,7 +579,7 @@ private fun ReplyReactionWithDialog(
     nav: INav,
 ) {
     ReplyReaction(baseNote, grayTint, accountViewModel) {
-        nav.nav { routeReplyTo(baseNote, accountViewModel.userProfile()) }
+        nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
     }
 }
 
@@ -1196,10 +1195,9 @@ fun ObserveZapAmountText(
         val zapAmountTxt by
             produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
                 zapsState?.note?.let {
-                    accountViewModel.calculateZapAmount(it) { newZapAmount ->
-                        if (value != newZapAmount) {
-                            value = newZapAmount
-                        }
+                    val newZapAmount = accountViewModel.calculateZapAmount(it)
+                    if (value != newZapAmount) {
+                        value = newZapAmount
                     }
                 }
             }

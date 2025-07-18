@@ -28,23 +28,20 @@ import com.vitorpamplona.quartz.nip56Reports.ReportType
 
 class ReportAction {
     companion object {
-        fun report(
+        suspend fun report(
             user: User,
             type: ReportType,
             by: User,
             signer: NostrSigner,
-            onDone: (ReportEvent) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
-
+        ): ReportEvent? {
             if (user.hasReport(by, type)) {
                 // has already reported this note
-                return
+                return null
             }
 
             val template = ReportEvent.build(user.pubkeyHex, type)
 
-            signer.sign(template, onDone)
+            return signer.sign(template)
         }
 
         suspend fun report(
@@ -53,17 +50,14 @@ class ReportAction {
             content: String = "",
             by: User,
             signer: NostrSigner,
-            onDone: (ReportEvent) -> Unit,
-        ) {
-            if (!signer.isWriteable()) return
-
+        ): ReportEvent? {
             if (note.hasReport(by, type)) {
                 // has already reported this note
-                return
+                return null
             }
 
-            note.event?.let {
-                signer.sign(ReportEvent.build(it, type), onDone)
+            return note.event?.let {
+                signer.sign(ReportEvent.build(it, type))
             }
         }
     }

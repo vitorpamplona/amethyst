@@ -30,6 +30,6 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
             .value.available
             .sorted()
 
-    override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
     }
 }

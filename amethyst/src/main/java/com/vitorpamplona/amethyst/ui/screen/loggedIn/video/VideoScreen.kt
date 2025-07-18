@@ -421,7 +421,7 @@ fun ReactionsColumn(
         ) {
             routeFor(
                 baseNote,
-                accountViewModel.userProfile(),
+                accountViewModel.account,
             )?.let { nav.nav(it) }
         }
         BoostReaction(

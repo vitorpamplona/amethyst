@@ -84,6 +84,7 @@ class ReverseGeolocation {
                     1,
                 )
             } catch (e: IOException) {
+                Log.w("ReverseGeolocation", "IO Error", e)
                 e.printStackTrace()
                 return null
             }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
@@ -35,7 +36,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -71,14 +72,11 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
-import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import java.math.BigDecimal
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
 
 @Stable
 class AddressableNote(
@@ -466,21 +464,13 @@ open class Note(
             val zapResponseEvent = next.second?.event as? LnZapPaymentResponseEvent
 
             if (zapResponseEvent != null) {
-                val result =
-                    tryAndWait { continuation ->
-                        account.decryptZapPaymentResponseEvent(zapResponseEvent) { response ->
-                            if (
-                                response is PayInvoiceSuccessResponse &&
-                                account.isNIP47Author(zapResponseEvent.requestAuthor())
-                            ) {
-                                continuation.resume(true)
-                            }
-                        }
-                    }
+                account.nip47SignerState.decryptResponse(zapResponseEvent)?.let { response ->
+                    val result = response is PayInvoiceSuccessResponse && account.nip47SignerState.isNIP47Author(zapResponseEvent.requestAuthor())
 
-                if (!hasSentOne && result == true) {
-                    hasSentOne = true
-                    onWasZappedByAuthor()
+                    if (!hasSentOne && result == true) {
+                        hasSentOne = true
+                        onWasZappedByAuthor()
+                    }
                 }
             }
         }
@@ -513,7 +503,7 @@ open class Note(
                 // private events
 
                 // if has already decrypted
-                val privateZap = zapRequest.cachedPrivateZap()
+                val privateZap = account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)
                 if (privateZap != null) {
                     if (privateZap.pubKey == user.pubkeyHex && (option == null || option == zapEvent?.zappedPollOption())) {
                         onWasZappedByAuthor()
@@ -529,12 +519,7 @@ open class Note(
 
         val result =
             anyAsync(parallelDecrypt) { pair ->
-                val result =
-                    tryAndWait { continuation ->
-                        pair.first.decryptPrivateZap(account.signer) {
-                            continuation.resume(it)
-                        }
-                    }
+                val result = account.privateZapsDecryptionCache.decryptPrivateZap(pair.first)
 
                 result?.pubKey == user.pubkeyHex && (option == null || option == pair.second?.zappedPollOption())
             }
@@ -607,26 +592,21 @@ open class Note(
         startAmount: BigDecimal,
         paidInvoiceSet: LinkedHashSet<String>,
         zapPayments: List<Pair<Note, Note?>>,
-        signer: NostrSigner,
-        onReady: (BigDecimal) -> Unit,
-    ) {
+        signerState: NwcSignerState,
+    ): BigDecimal {
         if (zapPayments.isEmpty()) {
-            onReady(startAmount)
-            return
+            return startAmount
         }
 
         var output: BigDecimal = startAmount
 
         launchAndWaitAll(zapPayments) { next ->
             val result =
-                tryAndWait { continuation ->
-                    processZapAmountFromResponse(
-                        next.first,
-                        next.second,
-                        continuation,
-                        signer,
-                    )
-                }
+                processZapAmountFromResponse(
+                    next.first,
+                    next.second,
+                    signerState,
+                )
 
             if (result != null && !paidInvoiceSet.contains(result.invoice)) {
                 paidInvoiceSet.add(result.invoice)
@@ -634,27 +614,25 @@ open class Note(
             }
         }
 
-        onReady(output)
+        return output
     }
 
-    private fun processZapAmountFromResponse(
+    private suspend fun processZapAmountFromResponse(
         paymentRequest: Note,
         paymentResponse: Note?,
-        continuation: Continuation<InvoiceAmount?>,
-        signer: NostrSigner,
-    ) {
+        signerState: NwcSignerState,
+    ): InvoiceAmount? {
         val nwcRequest = paymentRequest.event as? LnZapPaymentRequestEvent
         val nwcResponse = paymentResponse?.event as? LnZapPaymentResponseEvent
 
-        if (nwcRequest != null && nwcResponse != null) {
+        return if (nwcRequest != null && nwcResponse != null) {
             processZapAmountFromResponse(
                 nwcRequest,
                 nwcResponse,
-                continuation,
-                signer,
+                signerState,
             )
         } else {
-            continuation.resume(null)
+            null
         }
     }
 
@@ -663,18 +641,19 @@ open class Note(
         val amount: BigDecimal,
     )
 
-    private fun processZapAmountFromResponse(
+    private suspend fun processZapAmountFromResponse(
         nwcRequest: LnZapPaymentRequestEvent,
         nwcResponse: LnZapPaymentResponseEvent,
-        continuation: Continuation<InvoiceAmount?>,
-        signer: NostrSigner,
-    ) {
+        signerState: NwcSignerState,
+    ): InvoiceAmount? {
         // if we can decrypt the reply
-        nwcResponse.response(signer) { noteEvent ->
+        return signerState.decryptResponse(nwcResponse)?.let { noteEvent ->
             // if it is a sucess
             if (noteEvent is PayInvoiceSuccessResponse) {
                 // if we can decrypt the invoice
-                nwcRequest.lnInvoice(signer) { invoice ->
+                val request = signerState.decryptRequest(nwcRequest)
+                val invoice = (request as? PayInvoiceMethod)?.params?.invoice
+                if (invoice != null) {
                     // if we can parse the amount
                     val amount =
                         try {
@@ -686,34 +665,32 @@ open class Note(
 
                     // avoid double counting
                     if (amount != null) {
-                        continuation.resume(InvoiceAmount(invoice, amount))
+                        InvoiceAmount(invoice, amount)
                     } else {
-                        continuation.resume(null)
+                        null
                     }
+                } else {
+                    null
                 }
             } else {
-                continuation.resume(null)
+                null
             }
         }
     }
 
-    suspend fun zappedAmountWithNWCPayments(
-        signer: NostrSigner,
-        onReady: (BigDecimal) -> Unit,
-    ) {
+    suspend fun zappedAmountWithNWCPayments(signerState: NwcSignerState): BigDecimal {
         if (zapPayments.isEmpty()) {
-            onReady(zapsAmount)
+            return zapsAmount
         }
 
         val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
         zaps.forEach { (it.value?.event as? LnZapEvent)?.lnInvoice()?.let { invoiceSet.add(it) } }
 
-        zappedAmountCalculation(
+        return zappedAmountCalculation(
             zapsAmount,
             invoiceSet,
             zapPayments.toList(),
-            signer,
-            onReady,
+            signerState,
         )
     }
 

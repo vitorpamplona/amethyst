@@ -177,7 +177,7 @@ fun RenderTextModificationEvent(
                                     .clickable {
                                         routeFor(
                                             baseNote,
-                                            accountViewModel.userProfile(),
+                                            accountViewModel.account,
                                         )?.let { nav.nav(it) }
                                     },
                         ) {

@@ -22,17 +22,23 @@ package com.vitorpamplona.quartz.nip28PublicChat.list
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHintOptional
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
+import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.removeAny
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -43,24 +49,11 @@ class ChannelListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateEventCache: Set<EventIdHint>? = null
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    override fun eventHints() = tags.mapNotNull(ChannelTag::parseAsHint)
 
-    fun publicAndPrivateChannels(
-        signer: NostrSigner,
-        onReady: (Set<EventIdHint>) -> Unit,
-    ) {
-        publicAndPrivateEventCache?.let { eventList ->
-            onReady(eventList)
-            return
-        }
-
-        mergeTagList(signer) {
-            val set = it.mapNotNull(ETag::parseAsHint).toSet()
-            publicAndPrivateEventCache = set
-            onReady(set)
-        }
-    }
+    override fun linkedEventIds() = tags.mapNotNull(ChannelTag::parseId)
 
     companion object {
         const val KIND = 10005
@@ -69,170 +62,157 @@ class ChannelListEvent(
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
-        private fun createChannelBase(
-            tags: Array<Array<String>>,
+        suspend fun create(
+            channel: ChannelTag,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.create(
-                tags,
-                isPrivate,
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
-            }
-        }
-
-        fun createChannel(
-            channel: EventHintBundle<ChannelCreateEvent>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) = createChannelBase(
-            tags = arrayOf(ETag.assemble(channel.event.id, channel.relay, channel.event.pubKey)),
+        ) = create(
+            channels = listOf(channel),
             isPrivate = isPrivate,
             signer = signer,
             createdAt = createdAt,
-            onReady = onReady,
         )
 
-        fun createChannel(
-            channel: EventIdHintOptional,
+        suspend fun create(
+            channels: List<ChannelTag>,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) = createChannelBase(
-            tags = arrayOf(ETag.assemble(channel.eventId, channel.relay, null)),
+        ): ChannelListEvent =
+            if (isPrivate) {
+                create(
+                    publicChannels = emptyList(),
+                    privateChannels = channels,
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                create(
+                    publicChannels = channels,
+                    privateChannels = emptyList(),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+
+        suspend fun add(
+            earlierVersion: ChannelListEvent,
+            channel: ChannelTag,
+            isPrivate: Boolean,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ) = add(
+            earlierVersion = earlierVersion,
+            channels = listOf(channel),
             isPrivate = isPrivate,
             signer = signer,
             createdAt = createdAt,
-            onReady = onReady,
         )
 
-        fun createChannels(
-            channels: List<EventIdHintOptional>,
+        suspend fun add(
+            earlierVersion: ChannelListEvent,
+            channels: List<ChannelTag>,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) = createChannelBase(
-            tags = channels.map { ETag.assemble(it.eventId, it.relay, null) }.toTypedArray(),
-            isPrivate = isPrivate,
+        ): ChannelListEvent =
+            if (isPrivate) {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                resign(
+                    tags = earlierVersion.tags,
+                    privateTags = privateTags.removeAny(channels.map { it.toTagIdOnly() }) + channels.map { it.toTagArray() },
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                resign(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.removeAny(channels.map { it.toTagIdOnly() }) + channels.map { it.toTagArray() },
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            }
+
+        suspend fun remove(
+            earlierVersion: ChannelListEvent,
+            channel: ChannelTag,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): ChannelListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            return resign(
+                privateTags = privateTags.remove(channel.toTagArray()),
+                tags = earlierVersion.tags.remove(channel.toTagArray()),
+                signer = signer,
+                createdAt = createdAt,
+            )
+        }
+
+        suspend fun resign(
+            tags: TagArray,
+            privateTags: TagArray,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ) = resign(
+            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            tags = tags,
             signer = signer,
             createdAt = createdAt,
-            onReady = onReady,
         )
 
-        fun removeChannel(
-            earlierVersion: ChannelListEvent,
-            channel: HexKey,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.removeAll(
-                earlierVersion,
-                ETag.assemble(channel, null, null),
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
-            }
-        }
-
-        private fun addChannelBase(
-            earlierVersion: ChannelListEvent,
-            newTags: Array<Array<String>>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.addAll(
-                earlierVersion,
-                newTags,
-                isPrivate,
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
-            }
-        }
-
-        fun addChannel(
-            earlierVersion: ChannelListEvent,
-            channel: EventHintBundle<ChannelCreateEvent>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) = addChannelBase(
-            earlierVersion,
-            arrayOf(ETag.assemble(channel.event.id, channel.relay, channel.event.pubKey)),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        fun addChannel(
-            earlierVersion: ChannelListEvent,
-            channel: EventIdHintOptional,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) = addChannelBase(
-            earlierVersion,
-            arrayOf(ETag.assemble(channel.eventId, channel.relay, null)),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        fun addChannels(
-            earlierVersion: ChannelListEvent,
-            channels: List<EventIdHintOptional>,
-            isPrivate: Boolean,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) = addChannelBase(
-            earlierVersion,
-            channels.map { ETag.assemble(it.eventId, it.relay, null) }.toTypedArray(),
-            isPrivate,
-            signer,
-            createdAt,
-            onReady,
-        )
-
-        private fun create(
+        suspend fun resign(
             content: String,
-            tags: Array<Array<String>>,
+            tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ChannelListEvent) -> Unit,
-        ) {
+        ): ChannelListEvent {
             val newTags =
-                if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                if (tags.fastAny(AltTag::match)) {
                     tags
                 } else {
-                    tags + AltTag.Companion.assemble(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
-            signer.sign(createdAt, KIND, newTags, content, onReady)
+            return signer.sign(createdAt, KIND, newTags, content)
+        }
+
+        suspend fun create(
+            publicChannels: List<ChannelTag> = emptyList(),
+            privateChannels: List<ChannelTag> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): ChannelListEvent {
+            val template = build(publicChannels, privateChannels, signer, createdAt)
+            return signer.sign(template)
         }
 
         fun create(
-            list: List<EventIdHint>,
+            publicChannels: List<ChannelTag> = emptyList(),
+            privateChannels: List<ChannelTag> = emptyList(),
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): ChannelListEvent? {
-            val tags = list.map { ETag.assemble(it.eventId, it.relay, null) }.toTypedArray()
-            return signer.sign(createdAt, KIND, tags, "")
+        ): ChannelListEvent {
+            val privateTagArray = privateChannels.map { it.toTagArray() }.toTypedArray()
+            val publicTagArray = publicChannels.map { it.toTagArray() }.toTypedArray() + AltTag.assemble(ALT)
+            return signer.signNip51List(createdAt, KIND, publicTagArray, privateTagArray)
+        }
+
+        suspend fun build(
+            publicChannels: List<ChannelTag> = emptyList(),
+            privateChannels: List<ChannelTag> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ChannelListEvent>.() -> Unit = {},
+        ) = eventTemplate<ChannelListEvent>(
+            kind = KIND,
+            description = PrivateTagsInContent.encryptNip04(privateChannels.map { it.toTagArray() }.toTypedArray(), signer),
+            createdAt = createdAt,
+        ) {
+            alt(ALT)
+            channels(publicChannels)
+
+            initializer()
         }
     }
 }

@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -114,13 +115,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
 
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
@@ -246,14 +245,12 @@ open class ShortNotePostViewModel :
 
         if (draft != null && noteEvent is DraftEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel.createTempDraftNote(noteEvent) { innerNote ->
-                    if (innerNote != null) {
-                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                        if (oldTag != null) {
-                            draftTag.set(oldTag)
-                        }
-                        loadFromDraft(innerNote)
+                accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
                     }
+                    loadFromDraft(innerNote)
                 }
             }
         } else {
@@ -478,11 +475,7 @@ open class ShortNotePostViewModel :
             }
         }
 
-        tryAndWait { continuation ->
-            accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast) {
-                continuation.resume(it)
-            }
-        }
+        accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast)
 
         accountViewModel?.deleteDraft(draftTag.current)
 
@@ -596,6 +589,22 @@ open class ShortNotePostViewModel :
         server: ServerName,
         onError: (title: String, message: String) -> Unit,
         context: Context,
+    ) = try {
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        alt: String?,
+        contentWarningReason: String?,
+        mediaQuality: Int,
+        server: ServerName,
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val myAccount = account ?: return@launch
@@ -606,7 +615,6 @@ open class ShortNotePostViewModel :
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     alt,
                     contentWarningReason,
                     MediaCompressor.intToCompressorQuality(mediaQuality),
@@ -618,14 +626,13 @@ open class ShortNotePostViewModel :
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason) { nip95 ->
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val nip95 = myAccount.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                                urlPreviews.update(message)
-                            }
+                        note?.let {
+                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
+                            urlPreviews.update(message)
                         }
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
@@ -656,7 +663,6 @@ open class ShortNotePostViewModel :
                 multiOrchestrator = null
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
-
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
             }
 

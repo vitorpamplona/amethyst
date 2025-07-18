@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata
 
+import android.graphics.Picture
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
@@ -67,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 
 @Composable
 fun ChannelMetadataScreen(
@@ -133,10 +136,17 @@ private fun ChannelMetadataScaffold(
                         nav.popBack()
                     },
                     onPost = {
-                        postViewModel.createOrUpdate {
-                            nav.nav(routeFor(it))
+                        try {
+                            postViewModel.createOrUpdate {
+                                nav.nav(routeFor(it))
+                            }
+                            nav.popBack()
+                        } catch (e: SignerExceptions.ReadOnlyException) {
+                            accountViewModel.toastManager.toast(
+                                R.string.read_only_user,
+                                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                            )
                         }
-                        nav.popBack()
                     },
                 )
             } else {
@@ -148,8 +158,15 @@ private fun ChannelMetadataScaffold(
                         nav.popBack()
                     },
                     onPost = {
-                        postViewModel.createOrUpdate { }
-                        nav.popBack()
+                        try {
+                            postViewModel.createOrUpdate { }
+                            nav.popBack()
+                        } catch (e: SignerExceptions.ReadOnlyException) {
+                            accountViewModel.toastManager.toast(
+                                R.string.read_only_user,
+                                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                            )
+                        }
                     },
                 )
             }

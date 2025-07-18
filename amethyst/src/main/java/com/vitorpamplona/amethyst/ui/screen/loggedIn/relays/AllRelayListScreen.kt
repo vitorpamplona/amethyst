@@ -84,16 +84,16 @@ fun AllRelayListScreen(
     val localViewModel: LocalRelayListViewModel = viewModel()
     val connectedViewModel: ConnectedRelayListViewModel = viewModel()
 
-    dmViewModel.init(accountViewModel.account)
-    nip65ViewModel.init(accountViewModel.account)
-    searchViewModel.init(accountViewModel.account)
-    localViewModel.init(accountViewModel.account)
-    privateOutboxViewModel.init(accountViewModel.account)
-    connectedViewModel.init(accountViewModel.account)
-    blockedViewModel.init(accountViewModel.account)
-    trustedViewModel.init(accountViewModel.account)
+    dmViewModel.init(accountViewModel)
+    nip65ViewModel.init(accountViewModel)
+    searchViewModel.init(accountViewModel)
+    localViewModel.init(accountViewModel)
+    privateOutboxViewModel.init(accountViewModel)
+    connectedViewModel.init(accountViewModel)
+    blockedViewModel.init(accountViewModel)
+    trustedViewModel.init(accountViewModel)
 
-    LaunchedEffect(accountViewModel.account) {
+    LaunchedEffect(accountViewModel) {
         dmViewModel.load()
         nip65ViewModel.load()
         searchViewModel.load()

@@ -26,19 +26,19 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 
 class LoginResponse {
     companion object {
-        fun parse(intent: Intent): SignerResult<PubKeyResult> {
+        fun parse(intent: Intent): SignerResult.RequestAddressed<PubKeyResult> {
             val pubkey = intent.getStringExtra("result")
             val packageName = intent.getStringExtra("package")
 
             return if (pubkey != null && packageName != null) {
-                SignerResult.Successful(
+                SignerResult.RequestAddressed.Successful(
                     PubKeyResult(
                         pubkey = pubkey,
                         packageName = packageName,
                     ),
                 )
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
     }

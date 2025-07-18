@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.mapNotNullAsync
 
 class NIP17Factory {
     data class Result(
@@ -38,122 +39,82 @@ class NIP17Factory {
         val wraps: List<GiftWrapEvent>,
     )
 
-    private fun recursiveGiftWrapCreation(
-        event: Event,
-        remainingTos: List<HexKey>,
-        signer: NostrSigner,
-        output: MutableList<GiftWrapEvent>,
-        onReady: (List<GiftWrapEvent>) -> Unit,
-    ) {
-        if (remainingTos.isEmpty()) {
-            onReady(output)
-            return
-        }
-
-        val next = remainingTos.first()
-
-        SealedRumorEvent.create(
-            event = event,
-            encryptTo = next,
-            signer = signer,
-        ) { seal ->
-            GiftWrapEvent.create(
-                event = seal,
-                recipientPubKey = next,
-            ) { giftWrap ->
-                output.add(giftWrap)
-                recursiveGiftWrapCreation(event, remainingTos.minus(next), signer, output, onReady)
-            }
-        }
-    }
-
-    private fun createWraps(
+    private suspend fun createWraps(
         event: Event,
         to: Set<HexKey>,
         signer: NostrSigner,
-        onReady: (List<GiftWrapEvent>) -> Unit,
-    ) {
-        val wraps = mutableListOf<GiftWrapEvent>()
-        recursiveGiftWrapCreation(event, to.toList(), signer, wraps, onReady)
-    }
+    ): List<GiftWrapEvent> =
+        mapNotNullAsync(
+            to.toList(),
+        ) { next ->
+            GiftWrapEvent.create(
+                event =
+                    SealedRumorEvent.create(
+                        event = event,
+                        encryptTo = next,
+                        signer = signer,
+                    ),
+                recipientPubKey = next,
+            )
+        }
 
-    fun createMessageNIP17(
+    suspend fun createMessageNIP17(
         template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
-        onReady: (Result) -> Unit,
-    ) {
-        signer.sign(template) { senderMessage ->
-            createWraps(senderMessage, senderMessage.groupMembers(), signer) { wraps ->
-                onReady(
-                    Result(
-                        msg = senderMessage,
-                        wraps = wraps,
-                    ),
-                )
-            }
-        }
+    ): Result {
+        val senderMessage = signer.sign(template)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
+        return Result(
+            msg = senderMessage,
+            wraps = wraps,
+        )
     }
 
-    fun createEncryptedFileNIP17(
+    suspend fun createEncryptedFileNIP17(
         template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
-        onReady: (Result) -> Unit,
-    ) {
-        signer.sign(template) { senderMessage ->
-            createWraps(senderMessage, senderMessage.groupMembers(), signer) { wraps ->
-                onReady(
-                    Result(
-                        msg = senderMessage,
-                        wraps = wraps,
-                    ),
-                )
-            }
-        }
+    ): Result {
+        val senderMessage = signer.sign(template)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
+
+        return Result(
+            msg = senderMessage,
+            wraps = wraps,
+        )
     }
 
-    fun createReactionWithinGroup(
+    suspend fun createReactionWithinGroup(
         content: String,
         originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
-        onReady: (Result) -> Unit,
-    ) {
+    ): Result {
         val senderPublicKey = signer.pubKey
+        val template = ReactionEvent.build(content, originalNote)
 
-        signer.sign(
-            ReactionEvent.build(content, originalNote),
-        ) { senderReaction ->
-            createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer) { wraps ->
-                onReady(
-                    Result(
-                        msg = senderReaction,
-                        wraps = wraps,
-                    ),
-                )
-            }
-        }
+        val senderReaction = signer.sign(template)
+        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
+        return Result(
+            msg = senderReaction,
+            wraps = wraps,
+        )
     }
 
-    fun createReactionWithinGroup(
+    suspend fun createReactionWithinGroup(
         emojiUrl: EmojiUrlTag,
         originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
-        onReady: (Result) -> Unit,
-    ) {
+    ): Result {
         val senderPublicKey = signer.pubKey
+        val template = ReactionEvent.build(emojiUrl, originalNote)
 
-        signer.sign(
-            ReactionEvent.build(emojiUrl, originalNote),
-        ) { senderReaction ->
-            createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer) { wraps ->
-                onReady(
-                    Result(
-                        msg = senderReaction,
-                        wraps = wraps,
-                    ),
-                )
-            }
-        }
+        val senderReaction = signer.sign(template)
+        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
+
+        return Result(
+            msg = senderReaction,
+            wraps = wraps,
+        )
     }
 }

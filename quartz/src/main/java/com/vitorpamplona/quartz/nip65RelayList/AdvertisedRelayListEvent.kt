@@ -59,47 +59,42 @@ class AdvertisedRelayListEvent(
 
         fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
-        fun replaceRelayListWith(
+        suspend fun replaceRelayListWith(
             earlierVersion: AdvertisedRelayListEvent,
             newRelays: List<AdvertisedRelayInfo>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AdvertisedRelayListEvent) -> Unit,
-        ) {
+        ): AdvertisedRelayListEvent {
             val tags = earlierVersion.tags.filter(AdvertisedRelayInfo::notMatch)
             val relayTags = newRelays.map { it.toTagArray() }
 
-            signer.sign(createdAt, KIND, (tags + relayTags).toTypedArray(), earlierVersion.content, onReady)
+            return signer.sign(createdAt, KIND, (tags + relayTags).toTypedArray(), earlierVersion.content)
         }
 
-        fun createFromScratch(
+        suspend fun createFromScratch(
             relays: List<AdvertisedRelayInfo>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AdvertisedRelayListEvent) -> Unit,
-        ) = create(relays, signer, createdAt, onReady)
+        ) = create(relays, signer, createdAt)
 
-        fun create(
+        suspend fun create(
             list: List<AdvertisedRelayInfo>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AdvertisedRelayListEvent) -> Unit,
-        ) {
+        ): AdvertisedRelayListEvent {
             val tags = list.map { it.toTagArray() }.toTypedArray()
-            val msg = ""
 
-            signer.sign(createdAt, KIND, tags, msg, onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
 
         fun create(
             list: List<AdvertisedRelayInfo>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): AdvertisedRelayListEvent? {
+        ): AdvertisedRelayListEvent {
             val tags = list.map { it.toTagArray() }.toTypedArray()
-            val msg = ""
 
-            return signer.sign(createdAt, KIND, tags, msg)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

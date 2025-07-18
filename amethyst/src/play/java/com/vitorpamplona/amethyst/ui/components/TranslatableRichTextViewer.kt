@@ -244,10 +244,8 @@ private fun TranslationMessage(
                     }
                 },
                 onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.prefer(source, target, source)
-                        langSettingsPopupExpanded = false
-                    }
+                    accountViewModel.prefer(source, target, source)
+                    langSettingsPopupExpanded = false
                 },
             )
             DropdownMenuItem(
@@ -277,7 +275,7 @@ private fun TranslationMessage(
                 },
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        accountViewModel.account.prefer(source, target, target)
+                        accountViewModel.prefer(source, target, target)
                         langSettingsPopupExpanded = false
                     }
                 },
@@ -311,10 +309,8 @@ private fun TranslationMessage(
                             }
                         },
                         onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                accountViewModel.account.updateTranslateTo(lang)
-                                langSettingsPopupExpanded = false
-                            }
+                            langSettingsPopupExpanded = false
+                            accountViewModel.updateTranslateTo(lang)
                         },
                     )
                 }

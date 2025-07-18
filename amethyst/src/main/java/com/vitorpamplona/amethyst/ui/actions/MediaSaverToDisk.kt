@@ -171,7 +171,7 @@ object MediaSaverToDisk {
             onSuccess()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            e.printStackTrace()
+            Log.w("MediaSaverToDisk", "Unable to save", e)
             onError(e)
         }
     }

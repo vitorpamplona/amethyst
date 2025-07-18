@@ -35,7 +35,7 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class ATag(
     val kind: Int,
     val pubKeyHex: HexKey,
-    val dTag: String,
+    val dTag: String = "",
     val relay: NormalizedRelayUrl? = null,
 ) {
     constructor(address: Address, relayHint: NormalizedRelayUrl? = null) : this(address.kind, address.pubKeyHex, address.dTag, relayHint)

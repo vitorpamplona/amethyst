@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.model.serverList
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
-import com.vitorpamplona.amethyst.model.nip50Search.SearchRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.TrustedRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope

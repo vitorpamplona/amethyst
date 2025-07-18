@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
-import android.util.Log
 import com.vitorpamplona.quartz.experimental.decoupling.EncryptionKeyDerivation
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -28,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventAssembler
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
@@ -45,8 +45,8 @@ class NostrSignerSync(
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): T? {
-        if (keyPair.privKey == null) return null
+    ): T {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         return if (isUnsignedPrivateZapEvent(kind, tags)) {
             // this is a private zap
@@ -68,71 +68,78 @@ class NostrSignerSync(
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): T? {
-        if (keyPair.privKey == null) return null
+    ): T {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         return EventAssembler.hashAndSign<T>(pubKey, createdAt, kind, tags, content, keyPair.privKey)
     }
 
     fun nip04Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
-    ): String? {
-        if (keyPair.privKey == null) return null
+    ): String {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         return Nip04.encrypt(
-            decryptedContent,
+            plaintext,
             keyPair.privKey,
             toPublicKey.hexToByteArray(),
         )
     }
 
     fun nip04Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
-    ): String? {
-        if (keyPair.privKey == null) return null
+    ): String {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
+        if (ciphertext.isBlank()) throw SignerExceptions.NothingToDecrypt()
 
-        return try {
-            Nip04.decrypt(encryptedContent, keyPair.privKey, fromPublicKey.hexToByteArray())
-        } catch (e: Exception) {
-            Log.w("NIP04Decrypt", "Error decrypting the message ${e.message} on $encryptedContent")
-            null
-        }
+        return Nip04.decrypt(ciphertext, keyPair.privKey, fromPublicKey.hexToByteArray())
     }
 
     fun nip44Encrypt(
-        decryptedContent: String,
+        plaintext: String,
         toPublicKey: HexKey,
-    ): String? {
-        if (keyPair.privKey == null) return null
+    ): String {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         return Nip44
             .encrypt(
-                decryptedContent,
+                plaintext,
                 keyPair.privKey,
                 toPublicKey.hexToByteArray(),
             ).encodePayload()
     }
 
     fun nip44Decrypt(
-        encryptedContent: String,
+        ciphertext: String,
         fromPublicKey: HexKey,
-    ): String? {
-        if (keyPair.privKey == null) return null
+    ): String {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
+        if (ciphertext.isBlank()) throw SignerExceptions.NothingToDecrypt()
 
         return Nip44.decrypt(
-            payload = encryptedContent,
+            payload = ciphertext,
             privateKey = keyPair.privKey,
             pubKey = fromPublicKey.hexToByteArray(),
         )
     }
 
-    fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent? = PrivateZapRequestBuilder().decryptZapEvent(event, this)
+    fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = PrivateZapRequestBuilder().decryptZapEvent(event, this)
 
-    fun deriveKey(nonce: HexKey): HexKey? {
-        if (keyPair.privKey == null) return null
+    fun deriveKey(nonce: HexKey): HexKey {
+        if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
 
         return EncryptionKeyDerivation.derivePrivateKey(keyPair.privKey, nonce.hexToByteArray()).toHexKey()
     }
+
+    suspend fun decrypt(
+        encryptedContent: String,
+        fromPublicKey: HexKey,
+    ): String =
+        if (EncryptedInfo.isNIP04(encryptedContent)) {
+            nip04Decrypt(encryptedContent, fromPublicKey)
+        } else {
+            nip44Decrypt(encryptedContent, fromPublicKey)
+        }
 }

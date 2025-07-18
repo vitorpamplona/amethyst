@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -35,11 +34,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
-import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -47,7 +44,6 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.containsAny
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.math.BigDecimal
 
@@ -60,7 +56,6 @@ class User(
     var latestMetadata: MetadataEvent? = null
     var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
-    var latestBookmarkList: BookmarkListEvent? = null
 
     var reports = mapOf<User, Set<Note>>()
         private set
@@ -69,9 +64,6 @@ class User(
         private set
 
     var relaysBeingUsed = mapOf<NormalizedRelayUrl, RelayInfo>()
-        private set
-
-    var privateChatrooms = mapOf<ChatroomKey, Chatroom>()
         private set
 
     fun pubkey() = Hex.decode(pubkeyHex)
@@ -123,13 +115,6 @@ class User(
     fun nip05(): String? = info?.nip05
 
     fun profilePicture(): String? = info?.picture
-
-    fun updateBookmark(event: BookmarkListEvent) {
-        if (event.id == latestBookmarkList?.id) return
-
-        latestBookmarkList = event
-        flowSet?.bookmarks?.invalidateData()
-    }
 
     fun updateContactList(event: ContactListEvent) {
         if (event.id == latestContactList?.id) return
@@ -230,73 +215,6 @@ class User(
                 }
             }.flatten()
 
-    @Synchronized
-    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom =
-        privateChatrooms[key]
-            ?: run {
-                val privateChatroom = Chatroom()
-                privateChatrooms = privateChatrooms + Pair(key, privateChatroom)
-                privateChatroom
-            }
-
-    private fun getOrCreatePrivateChatroom(user: User): Chatroom {
-        val key = ChatroomKey(persistentSetOf(user.pubkeyHex))
-        return getOrCreatePrivateChatroom(key)
-    }
-
-    private fun getOrCreatePrivateChatroom(key: ChatroomKey): Chatroom = privateChatrooms[key] ?: getOrCreatePrivateChatroomSync(key)
-
-    fun addMessage(
-        room: ChatroomKey,
-        msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg !in privateChatroom.roomMessages) {
-            privateChatroom.addMessageSync(msg)
-            flowSet?.messages?.invalidateData()
-        }
-    }
-
-    fun addMessage(
-        user: User,
-        msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg !in privateChatroom.roomMessages) {
-            privateChatroom.addMessageSync(msg)
-            flowSet?.messages?.invalidateData()
-        }
-    }
-
-    fun createChatroom(withKey: ChatroomKey) {
-        getOrCreatePrivateChatroom(withKey)
-    }
-
-    fun removeMessage(
-        user: User,
-        msg: Note,
-    ) {
-        checkNotInMainThread()
-
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg in privateChatroom.roomMessages) {
-            privateChatroom.removeMessageSync(msg)
-            flowSet?.messages?.invalidateData()
-        }
-    }
-
-    fun removeMessage(
-        room: ChatroomKey,
-        msg: Note,
-    ) {
-        checkNotInMainThread()
-        val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg in privateChatroom.roomMessages) {
-            privateChatroom.removeMessageSync(msg)
-            flowSet?.messages?.invalidateData()
-        }
-    }
-
     fun addRelayBeingUsed(
         relay: NormalizedRelayUrl,
         eventTime: Long,
@@ -342,12 +260,6 @@ class User(
     fun transientFollowCount(): Int? = latestContactList?.unverifiedFollowKeySet()?.size
 
     suspend fun transientFollowerCount(): Int = LocalCache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkeyHex) ?: false }
-
-    fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
-        val messagesToUser = privateChatrooms[key] ?: return false
-
-        return messagesToUser.authors.any { this == it }
-    }
 
     fun hasReport(
         loggedIn: User,
@@ -432,10 +344,8 @@ class UserFlowSet(
     val relays = UserBundledRefresherFlow(u)
     val followers = UserBundledRefresherFlow(u)
     val reports = UserBundledRefresherFlow(u)
-    val messages = UserBundledRefresherFlow(u)
     val relayInfo = UserBundledRefresherFlow(u)
     val zaps = UserBundledRefresherFlow(u)
-    val bookmarks = UserBundledRefresherFlow(u)
     val statuses = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
@@ -444,10 +354,8 @@ class UserFlowSet(
             follows.hasObservers() ||
             followers.hasObservers() ||
             reports.hasObservers() ||
-            messages.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            bookmarks.hasObservers() ||
             statuses.hasObservers()
 }
 

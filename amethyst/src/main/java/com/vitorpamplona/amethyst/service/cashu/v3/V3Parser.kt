@@ -30,7 +30,7 @@ import java.util.Base64
 import kotlin.coroutines.cancellation.CancellationException
 
 class V3Parser {
-    companion object Companion {
+    companion object {
         fun parseCashuA(cashuToken: String): GenericLoadable<ImmutableList<CashuToken>> {
             try {
                 val base64token = cashuToken.replace("cashuA", "")

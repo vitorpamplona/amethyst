@@ -26,11 +26,10 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
-import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
-import com.vitorpamplona.quartz.utils.tryAndWait
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -44,11 +43,11 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
 
 class CommunityListState(
     val signer: NostrSigner,
     val cache: LocalCache,
+    val decryptionCache: CommunityListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -60,20 +59,13 @@ class CommunityListState(
 
     fun getCommunityList(): CommunityListEvent? = getCommunityListNote().event as? CommunityListEvent
 
-    suspend fun communityListWithBackup(note: Note): Set<AddressHint> =
-        communityList(
-            note.event as? CommunityListEvent ?: settings.backupCommunityList,
-        )
-
-    suspend fun communityList(event: CommunityListEvent?): Set<AddressHint> =
-        tryAndWait { continuation ->
-            event?.publicAndPrivateCommunities(signer) {
-                continuation.resume(it)
-            }
-        } ?: emptySet()
+    suspend fun communityListWithBackup(note: Note): Set<CommunityTag> {
+        val event = note.event as? CommunityListEvent ?: settings.backupCommunityList
+        return event?.let { decryptionCache.communities(it).toSet() } ?: emptySet()
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<AddressHint>> =
+    val flow: StateFlow<Set<CommunityTag>> =
         getCommunityListFlow()
             .transformLatest { noteState ->
                 emit(communityListWithBackup(noteState.note))
@@ -90,9 +82,9 @@ class CommunityListState(
     val flowSet: StateFlow<Set<String>> =
         flow
             .map { hint ->
-                hint.mapTo(mutableSetOf()) { it.addressId }
+                hint.mapTo(mutableSetOf()) { it.address.toValue() }
             }.onStart {
-                emit(flow.value.mapTo(mutableSetOf()) { it.addressId })
+                emit(flow.value.mapTo(mutableSetOf()) { it.address.toValue() })
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
@@ -100,54 +92,48 @@ class CommunityListState(
                 emptySet(),
             )
 
-    fun follow(
-        communities: List<AddressableNote>,
-        onDone: (CommunityListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun follow(communities: List<AddressableNote>): CommunityListEvent {
         val communityList = getCommunityList()
 
-        val partialHint = communities.mapNotNull { it.toEventHint<CommunityDefinitionEvent>() }
-        if (communityList == null) {
-            CommunityListEvent.createCommunities(partialHint, true, signer, onReady = onDone)
+        val communityTags =
+            communities.mapNotNull { community ->
+                if (community.address.kind == CommunityDefinitionEvent.KIND) {
+                    CommunityTag(community.address, community.relayHintUrl())
+                } else {
+                    null
+                }
+            }
+
+        return if (communityList == null) {
+            CommunityListEvent.create(communityTags, true, signer)
         } else {
-            CommunityListEvent.addCommunities(communityList, partialHint, true, signer, onReady = onDone)
+            CommunityListEvent.add(communityList, communityTags, true, signer)
         }
     }
 
-    fun follow(
-        community: AddressableNote,
-        onDone: (CommunityListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun follow(community: AddressableNote): CommunityListEvent? {
         val communityList = getCommunityList()
+        if (community.address.kind != CommunityDefinitionEvent.KIND) return communityList
 
-        val fullHint = community.toEventHint<CommunityDefinitionEvent>()
-        if (fullHint != null) {
-            if (communityList == null) {
-                CommunityListEvent.createCommunity(fullHint, true, signer, onReady = onDone)
-            } else {
-                CommunityListEvent.addCommunity(communityList, fullHint, true, signer, onReady = onDone)
-            }
+        return if (communityList == null) {
+            CommunityListEvent.create(
+                CommunityTag(community.address, community.relayHintUrl()),
+                true,
+                signer,
+            )
         } else {
-            val partialHint = community.toATag()
-            if (communityList == null) {
-                CommunityListEvent.createCommunity(partialHint, true, signer, onReady = onDone)
-            } else {
-                CommunityListEvent.addCommunity(communityList, partialHint, true, signer, onReady = onDone)
-            }
+            CommunityListEvent.add(communityList, CommunityTag(community.address, community.relayHintUrl()), true, signer)
         }
     }
 
-    fun unfollow(
-        community: AddressableNote,
-        onDone: (CommunityListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun unfollow(community: AddressableNote): CommunityListEvent? {
         val communityList = getCommunityList()
+        if (community.address.kind != CommunityDefinitionEvent.KIND) return communityList
 
-        if (communityList != null) {
-            CommunityListEvent.removeCommunity(communityList, community.address.toValue(), signer, onReady = onDone)
+        return if (communityList != null) {
+            CommunityListEvent.remove(communityList, CommunityTag(community.address, community.relayHintUrl()), signer)
+        } else {
+            null
         }
     }
 
@@ -156,9 +142,7 @@ class CommunityListState(
             Log.d("AccountRegisterObservers", "Loading saved Community list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                event.privateTags(signer) {
-                    LocalCache.justConsumeMyOwnEvent(event)
-                }
+                LocalCache.justConsumeMyOwnEvent(event)
             }
         }
 

@@ -68,40 +68,31 @@ class GiftWrapEvent(
 
     override fun isContentEncoded() = true
 
-    fun unwrapThrowing(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) {
-        plainContent(signer) { giftStr ->
-            val gift = fromJson(giftStr)
+    suspend fun unwrapThrowing(signer: NostrSigner): Event {
+        val giftStr = plainContent(signer)
+        val gift = fromJson(giftStr)
 
-            if (gift is WrappedEvent) {
-                gift.host = HostStub(this.id, this.pubKey, this.kind)
-            }
-            innerEventId = gift.id
-
-            onReady(gift)
+        if (gift is WrappedEvent) {
+            gift.host = HostStub(this.id, this.pubKey, this.kind)
         }
+        innerEventId = gift.id
+
+        return gift
     }
 
-    fun unwrap(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) {
+    suspend fun unwrapOrNull(signer: NostrSigner): Event? {
         try {
-            unwrapThrowing(signer, onReady)
-        } catch (e: Exception) {
+            return unwrapThrowing(signer)
+        } catch (_: Exception) {
             Log.w("GiftWrapEvent", "Couldn't Decrypt the content " + this.toNostrUri())
+            return null
         }
     }
 
-    private fun plainContent(
-        signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
-        if (content.isEmpty()) return
+    private suspend fun plainContent(signer: NostrSigner): String {
+        if (content.isEmpty()) return ""
 
-        signer.nip44Decrypt(content, pubKey, onReady)
+        return signer.nip44Decrypt(content, pubKey)
     }
 
     fun recipientPubKey() = tags.firstTagValue("p")
@@ -110,19 +101,18 @@ class GiftWrapEvent(
         const val KIND = 1059
         const val ALT = "Encrypted event"
 
-        fun create(
+        suspend fun create(
             event: Event,
             recipientPubKey: HexKey,
             createdAt: Long = TimeUtils.randomWithTwoDays(),
-            onReady: (GiftWrapEvent) -> Unit,
-        ) {
+        ): GiftWrapEvent {
             val signer = NostrSignerInternal(KeyPair()) // GiftWrap is always a random key
-            val serializedContent = event.toJson()
-            val tags = arrayOf(arrayOf("p", recipientPubKey))
-
-            signer.nip44Encrypt(serializedContent, recipientPubKey) { content ->
-                signer.sign(createdAt, KIND, tags, content, onReady)
-            }
+            return signer.sign(
+                createdAt = createdAt,
+                kind = KIND,
+                tags = arrayOf(arrayOf("p", recipientPubKey)),
+                content = signer.nip44Encrypt(event.toJson(), recipientPubKey),
+            )
         }
     }
 }

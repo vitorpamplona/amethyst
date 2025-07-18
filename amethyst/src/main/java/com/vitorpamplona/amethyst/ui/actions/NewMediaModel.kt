@@ -39,13 +39,11 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
 
 @Stable
 open class NewMediaModel : ViewModel() {
@@ -83,6 +81,19 @@ open class NewMediaModel : ViewModel() {
         context: Context,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
+    ) = try {
+        uploadUnsafe(context, onSucess, onError)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        context: Context,
+        onSucess: () -> Unit,
+        onError: (String, String) -> Unit,
     ) {
         viewModelScope.launch {
             val myAccount = account ?: return@launch
@@ -94,7 +105,6 @@ open class NewMediaModel : ViewModel() {
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     caption,
                     if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQualitySlider),
@@ -135,14 +145,8 @@ open class NewMediaModel : ViewModel() {
                     nip95s.map {
                         // upload each file as an individual nip95 event.
                         viewModelScope.launch(Dispatchers.IO) {
-                            withTimeoutOrNull(30000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    account?.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null) { nip95 ->
-                                        account?.consumeAndSendNip95(nip95.first, nip95.second)
-                                        continuation.resume(true)
-                                    }
-                                }
-                            }
+                            val nip95 = myAccount.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null)
+                            myAccount.consumeAndSendNip95(nip95.first, nip95.second)
                         }
                     }
 
@@ -150,20 +154,14 @@ open class NewMediaModel : ViewModel() {
                     videosAndOthers.map {
                         // upload each file as an individual nip95 event.
                         viewModelScope.launch(Dispatchers.IO) {
-                            withTimeoutOrNull(30000) {
-                                suspendCancellableCoroutine { continuation ->
-                                    account?.sendHeader(
-                                        url = it.url,
-                                        magnetUri = it.magnet,
-                                        headerInfo = it.fileHeader,
-                                        alt = caption,
-                                        contentWarningReason = if (sensitiveContent) "" else null,
-                                        originalHash = it.uploadedHash,
-                                    ) {
-                                        continuation.resume(true)
-                                    }
-                                }
-                            }
+                            account?.sendHeader(
+                                url = it.url,
+                                magnetUri = it.magnet,
+                                headerInfo = it.fileHeader,
+                                alt = caption,
+                                contentWarningReason = if (sensitiveContent) "" else null,
+                                originalHash = it.uploadedHash,
+                            )
                         }
                     }
 
@@ -171,17 +169,11 @@ open class NewMediaModel : ViewModel() {
                     if (imageUrls.isNotEmpty()) {
                         listOf(
                             viewModelScope.launch(Dispatchers.IO) {
-                                withTimeoutOrNull(30000) {
-                                    suspendCancellableCoroutine { continuation ->
-                                        account?.sendAllAsOnePictureEvent(
-                                            urlHeaderInfo = imageUrls,
-                                            caption = caption,
-                                            contentWarningReason = if (sensitiveContent) "" else null,
-                                        ) {
-                                            continuation.resume(true)
-                                        }
-                                    }
-                                }
+                                account?.sendAllAsOnePictureEvent(
+                                    urlHeaderInfo = imageUrls,
+                                    caption = caption,
+                                    contentWarningReason = if (sensitiveContent) "" else null,
+                                )
                             },
                         )
                     } else {

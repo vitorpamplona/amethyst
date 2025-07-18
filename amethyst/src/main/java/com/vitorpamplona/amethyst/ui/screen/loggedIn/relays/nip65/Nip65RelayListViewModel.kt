@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -39,6 +40,7 @@ import kotlinx.coroutines.launch
 
 @Stable
 class Nip65RelayListViewModel : ViewModel() {
+    private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
     private val _homeRelays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
@@ -49,8 +51,9 @@ class Nip65RelayListViewModel : ViewModel() {
 
     var hasModified = false
 
-    fun init(account: Account) {
-        this.account = account
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
     }
 
     fun load() {
@@ -60,7 +63,7 @@ class Nip65RelayListViewModel : ViewModel() {
 
     fun create() {
         if (hasModified) {
-            viewModelScope.launch(Dispatchers.IO) {
+            accountViewModel.runIOCatching {
                 val writes = _homeRelays.value.map { it.relay }.toSet()
                 val reads = _notificationRelays.value.map { it.relay }.toSet()
 

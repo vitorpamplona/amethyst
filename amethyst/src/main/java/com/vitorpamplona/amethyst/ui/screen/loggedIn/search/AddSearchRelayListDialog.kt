@@ -59,9 +59,9 @@ fun AddSearchRelayListDialog(
 ) {
     val postViewModel: SearchRelayListViewModel = viewModel()
 
-    postViewModel.init(accountViewModel.account)
+    postViewModel.init(accountViewModel)
 
-    LaunchedEffect(accountViewModel.account) {
+    LaunchedEffect(postViewModel, accountViewModel.account) {
         postViewModel.load()
     }
 

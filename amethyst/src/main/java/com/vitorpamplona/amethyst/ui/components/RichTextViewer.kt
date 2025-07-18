@@ -767,7 +767,7 @@ private fun DisplayNoteFromTag(
     } else {
         ClickableTextPrimary(
             text = "@${baseNote.idNote().toShortDisplay()}",
-            onClick = { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
+            onClick = { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } },
         )
     }
 

@@ -32,27 +32,27 @@ class SignResponse {
         fun parse(
             intent: Intent,
             unsignedEvent: Event,
-        ): SignerResult<SignResult> {
+        ): SignerResult.RequestAddressed<SignResult> {
             val eventJson = intent.getStringExtra("event")
             return if (eventJson != null) {
                 if (eventJson.startsWith("{")) {
                     val event = Event.fromJsonOrNull(eventJson)
                     if (event != null) {
                         if (event.verify()) {
-                            SignerResult.Successful(SignResult(event))
+                            SignerResult.RequestAddressed.Successful(SignResult(event))
                         } else {
-                            SignerResult.ReceivedButCouldNotVerifyResultingEvent(event)
+                            SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
                         }
                     } else {
-                        SignerResult.ReceivedButCouldNotParseEventFromResult(eventJson)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(eventJson)
                     }
                 } else {
-                    SignerResult.ReceivedButCouldNotPerform(eventJson)
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform(eventJson)
                 }
             } else {
                 val signature = intent.getStringExtra("result")
                 if (signature != null && signature.length == 128) {
-                    val event =
+                    val event: Event =
                         EventFactory.create(
                             id = unsignedEvent.id,
                             pubKey = unsignedEvent.pubKey,
@@ -63,12 +63,12 @@ class SignResponse {
                             sig = signature,
                         )
                     if (event.verify()) {
-                        SignerResult.Successful(SignResult(event))
+                        SignerResult.RequestAddressed.Successful(SignResult(event))
                     } else {
-                        SignerResult.ReceivedButCouldNotVerifyResultingEvent(event)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
                     }
                 } else {
-                    SignerResult.ReceivedButCouldNotPerform(signature)
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform(signature)
                 }
             }
         }

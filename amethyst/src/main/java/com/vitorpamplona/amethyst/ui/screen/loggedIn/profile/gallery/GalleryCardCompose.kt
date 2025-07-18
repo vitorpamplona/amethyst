@@ -154,7 +154,7 @@ fun ClickableNote(
                             } else {
                                 baseNote
                             }
-                        routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav.nav(it) }
+                        routeFor(redirectToNote, accountViewModel.account)?.let { nav.nav(it) }
                     },
                     onLongClick = showPopup,
                 )

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -166,6 +167,8 @@ class UploadOrchestrator {
                 originalHash = originalHash,
                 okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
             )
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            error(R.string.login_with_a_private_key_to_be_able_to_upload)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
@@ -207,6 +210,8 @@ class UploadOrchestrator {
                 originalHash = originalHash,
                 originalContentType = contentTypeForResult,
             )
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            error(R.string.login_with_a_private_key_to_be_able_to_upload)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)

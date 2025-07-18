@@ -127,39 +127,29 @@ class EmojiPackState(
                 emptyList(),
             )
 
-    fun addEmojiPack(
-        emojiPack: Note,
-        onDone: (EmojiPackSelectionEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
-
+    suspend fun addEmojiPack(emojiPack: Note): EmojiPackSelectionEvent {
         val emojiPackEvent = emojiPack.event
-        if (emojiPackEvent !is EmojiPackEvent) return
+        if (emojiPackEvent !is EmojiPackEvent) throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
 
-        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: return
+        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
 
         val usersEmojiList = getEmojiPackSelection()
-        if (usersEmojiList == null) {
+        return if (usersEmojiList == null) {
             val template = EmojiPackSelectionEvent.build(listOf(eventHint))
-            signer.sign(template, onDone)
+            signer.sign(template)
         } else {
             val template = EmojiPackSelectionEvent.add(usersEmojiList, eventHint)
-            signer.sign(template, onDone)
+            signer.sign(template)
         }
     }
 
-    fun removeEmojiPack(
-        emojiPack: Note,
-        onDone: (EmojiPackSelectionEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
-
-        val usersEmojiList = getEmojiPackSelection() ?: return
+    suspend fun removeEmojiPack(emojiPack: Note): EmojiPackSelectionEvent? {
+        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("Cannot remove an emoji pack to this kind of event.")
 
         val emojiPackEvent = emojiPack.event
-        if (emojiPackEvent !is EmojiPackEvent) return
+        if (emojiPackEvent !is EmojiPackEvent) return null
 
         val template = EmojiPackSelectionEvent.remove(usersEmojiList, emojiPackEvent)
-        signer.sign(template, onDone)
+        return signer.sign(template)
     }
 }

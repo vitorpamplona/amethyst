@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
-import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -38,7 +37,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.coroutines.executeAsync
-import kotlin.coroutines.resume
 
 class RegisterAccounts(
     private val accounts: List<AccountInfo>,
@@ -61,12 +59,8 @@ class RegisterAccounts(
         }
 
         return mapNotNullAsync(remainingTos) { info ->
-            tryAndWait { continuation ->
-                val signer = info.accountSettings.createSigner(Amethyst.instance.contentResolver)
-                RelayAuthEvent.create(info.relays, notificationToken, signer) { result ->
-                    continuation.resume(result)
-                }
-            }
+            val signer = info.accountSettings.createSigner(Amethyst.instance.contentResolver)
+            RelayAuthEvent.create(info.relays, notificationToken, signer)
         }
     }
 

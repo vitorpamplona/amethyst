@@ -94,12 +94,12 @@ class ContactListEvent(
 
         fun blockListFor(pubKeyHex: HexKey): String = "3:$pubKeyHex:"
 
-        fun createFromScratch(
+        suspend fun createFromScratch(
             followUsers: List<ContactTag> = emptyList(),
             relayUse: Map<String, ReadWrite>? = emptyMap(),
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): ContactListEvent? {
+        ): ContactListEvent {
             val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
             val tags =
@@ -109,13 +109,12 @@ class ContactListEvent(
             return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
 
-        fun createFromScratch(
+        suspend fun createFromScratch(
             followUsers: List<ContactTag>,
             relayUse: Map<String, ReadWrite>?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
+        ): ContactListEvent {
             val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
             val tags = followUsers.map { it.toTagArray() }
@@ -124,53 +123,47 @@ class ContactListEvent(
                 tags = tags.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
-                onReady = onReady,
             )
         }
 
-        fun followUser(
+        suspend fun followUser(
             earlierVersion: ContactListEvent,
             pubKeyHex: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
-            if (earlierVersion.isTaggedUser(pubKeyHex)) return
+        ): ContactListEvent {
+            if (earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
 
             return create(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.plus(element = arrayOf("p", pubKeyHex)),
                 signer = signer,
                 createdAt = createdAt,
-                onReady = onReady,
             )
         }
 
-        fun unfollowUser(
+        suspend fun unfollowUser(
             earlierVersion: ContactListEvent,
             pubKeyHex: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
-            if (!earlierVersion.isTaggedUser(pubKeyHex)) return
+        ): ContactListEvent {
+            if (!earlierVersion.isTaggedUser(pubKeyHex)) return earlierVersion
 
             return create(
                 content = earlierVersion.content,
                 tags = earlierVersion.tags.filter { it.size > 1 && it[1] != pubKeyHex }.toTypedArray(),
                 signer = signer,
                 createdAt = createdAt,
-                onReady = onReady,
             )
         }
 
-        fun updateRelayList(
+        suspend fun updateRelayList(
             earlierVersion: ContactListEvent,
             relayUse: Map<String, ReadWrite>?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
+        ): ContactListEvent {
             val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
 
             return create(
@@ -178,17 +171,15 @@ class ContactListEvent(
                 tags = earlierVersion.tags,
                 signer = signer,
                 createdAt = createdAt,
-                onReady = onReady,
             )
         }
 
-        fun create(
+        suspend fun create(
             content: String,
             tags: Array<Array<String>>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ContactListEvent) -> Unit,
-        ) {
+        ): ContactListEvent {
             val newTags =
                 if (tags.any { it.size > 1 && it[0] == "alt" }) {
                     tags
@@ -196,7 +187,7 @@ class ContactListEvent(
                     tags + AltTag.assemble(ALT)
                 }
 
-            signer.sign(createdAt, KIND, newTags, content, onReady)
+            return signer.sign(createdAt, KIND, newTags, content)
         }
     }
 }

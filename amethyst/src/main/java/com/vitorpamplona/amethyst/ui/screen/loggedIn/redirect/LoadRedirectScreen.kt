@@ -76,7 +76,7 @@ fun LoadRedirectScreen(
         val event = noteState.note.event
         if (event != null) {
             withContext(Dispatchers.IO) {
-                routeFor(event, accountViewModel.userProfile())?.let { route ->
+                routeFor(event, accountViewModel.account)?.let { route ->
                     nav.popUpTo(route, Route.EventRedirect::class)
                 }
             }

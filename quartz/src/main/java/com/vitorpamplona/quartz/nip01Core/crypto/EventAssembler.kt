@@ -48,7 +48,7 @@ class EventAssembler {
                 tags,
                 content,
                 sig,
-            ) as T
+            )
         }
     }
 }

@@ -24,9 +24,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class BlockedRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl>? = account.blockedRelayList.getBlockedRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? =
+        account.blockedRelayList.flow.value
+            .toList()
 
-    override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveBlockedRelayList(urlList)
     }
 }

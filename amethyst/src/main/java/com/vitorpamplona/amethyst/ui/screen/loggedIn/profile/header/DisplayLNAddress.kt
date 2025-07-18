@@ -109,8 +109,8 @@ fun DisplayLNAddress(
                     onSuccess = {
                         zapExpanded = false
                         // pay directly
-                        if (accountViewModel.account.hasWalletConnectSetup()) {
-                            accountViewModel.sendZapPaymentRequestFor(it, null, onSent = {}) { response ->
+                        if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
+                            accountViewModel.sendZapPaymentRequestFor(it, null) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
                                     showInfoMessageDialog = stringRes(context, R.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {

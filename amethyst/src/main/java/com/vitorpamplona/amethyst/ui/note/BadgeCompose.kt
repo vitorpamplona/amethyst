@@ -84,7 +84,7 @@ fun BadgeCompose(
                         onClick = {
                             routeFor(
                                 note,
-                                accountViewModel.userProfile(),
+                                accountViewModel.account,
                             )?.let { nav.nav(it) }
                         },
                     ),

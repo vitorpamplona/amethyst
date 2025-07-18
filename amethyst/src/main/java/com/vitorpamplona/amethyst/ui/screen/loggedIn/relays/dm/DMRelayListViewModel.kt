@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 class DMRelayListViewModel : BasicRelaySetupInfoModel() {
     override fun getRelayList(): List<NormalizedRelayUrl>? = account.dmRelayList.getDMRelayList()?.relays()
 
-    override fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveDMRelayList(urlList)
     }
 }

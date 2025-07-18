@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.routes
 
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -50,7 +51,7 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 
 fun routeFor(
     note: Note,
-    loggedIn: User,
+    loggedIn: Account,
 ): Route? {
     val noteEvent = note.event ?: return Route.EventRedirect(note.idHex)
 
@@ -59,10 +60,10 @@ fun routeFor(
 
 fun routeFor(
     noteEvent: Event,
-    loggedIn: User,
+    loggedIn: Account,
 ): Route? {
     if (noteEvent is DraftEvent) {
-        val innerEvent = noteEvent.preCachedDraft(loggedIn.pubkeyHex)
+        val innerEvent = loggedIn.draftsDecryptionCache.preCachedDraft(noteEvent)
 
         if (innerEvent is IsInPublicChatChannel) {
             innerEvent.channelId()?.let {
@@ -77,9 +78,9 @@ fun routeFor(
                 return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
             }
         } else if (innerEvent is ChatroomKeyable) {
-            val room = innerEvent.chatroomKey(loggedIn.pubkeyHex)
-            loggedIn.createChatroom(room)
-            return Route.Room(room.hashCode())
+            val room = innerEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
+            loggedIn.chatroomList.createChatroom(room)
+            return Route.Room(room)
         } else if (innerEvent is AddressableEvent) {
             return Route.Note(noteEvent.aTag().toTag())
         } else {
@@ -102,9 +103,9 @@ fun routeFor(
             return Route.LiveActivityChannel(it.kind, it.pubKeyHex, it.dTag)
         }
     } else if (noteEvent is ChatroomKeyable) {
-        val room = noteEvent.chatroomKey(loggedIn.pubkeyHex)
-        loggedIn.createChatroom(room)
-        return Route.Room(room.hashCode())
+        val room = noteEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
+        loggedIn.chatroomList.createChatroom(room)
+        return Route.Room(room)
     } else if (noteEvent is CommunityDefinitionEvent) {
         return Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
     } else if (noteEvent is GiftWrapEvent) {
@@ -159,18 +160,18 @@ fun routeToMessage(
     replyId: HexKey? = null,
     draftId: HexKey? = null,
     accountViewModel: AccountViewModel,
-): Route = routeToMessage(room, draftMessage, replyId, draftId, accountViewModel.userProfile())
+): Route = routeToMessage(room, draftMessage, replyId, draftId, accountViewModel.account)
 
 fun routeToMessage(
     room: ChatroomKey,
-    draftMessage: String?,
+    draftMessage: String? = null,
     replyId: HexKey? = null,
     draftId: HexKey? = null,
-    fromUser: User,
+    account: Account,
 ): Route {
-    fromUser.createChatroom(room)
+    account.chatroomList.createChatroom(room)
 
-    return Route.Room(room.hashCode(), draftMessage, replyId, draftId)
+    return Route.Room(room, draftMessage, replyId, draftId)
 }
 
 fun routeToMessage(
@@ -195,26 +196,26 @@ fun authorRouteFor(note: Note): Route.Profile? = note.author?.pubkeyHex?.let { R
 
 fun routeReplyTo(
     note: Note,
-    asUser: User,
+    account: Account,
 ): Route? {
     val noteEvent = note.event
     return when (noteEvent) {
         is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
         is PrivateDmEvent ->
             routeToMessage(
-                room = noteEvent.chatroomKey(asUser.pubkeyHex),
+                room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
                 draftMessage = null,
                 replyId = noteEvent.id,
                 draftId = null,
-                fromUser = asUser,
+                account = account,
             )
         is ChatroomKeyable ->
             routeToMessage(
-                room = noteEvent.chatroomKey(asUser.pubkeyHex),
+                room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
                 draftMessage = null,
                 replyId = noteEvent.id,
                 draftId = null,
-                fromUser = asUser,
+                account = account,
             )
         is CommentEvent -> {
             if (noteEvent.isGeohashedScoped()) {

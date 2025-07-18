@@ -28,10 +28,9 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
-import com.vitorpamplona.quartz.utils.tryAndWait
+import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -45,11 +44,11 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
 
 class PublicChatListState(
     val signer: NostrSigner,
     val cache: LocalCache,
+    val decryptionCache: PublicChatListDecryptionCache,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -61,20 +60,13 @@ class PublicChatListState(
 
     fun getChannelList(): ChannelListEvent? = getChannelListNote().event as? ChannelListEvent
 
-    suspend fun publicChatListWithBackup(note: Note): Set<EventIdHint> =
-        publicChatList(
-            note.event as? ChannelListEvent ?: settings.backupChannelList,
-        )
-
-    suspend fun publicChatList(event: ChannelListEvent?): Set<EventIdHint> =
-        tryAndWait { continuation ->
-            event?.publicAndPrivateChannels(signer) {
-                continuation.resume(it)
-            }
-        } ?: emptySet()
+    suspend fun publicChatListWithBackup(note: Note): Set<ChannelTag> {
+        val event = note.event as? ChannelListEvent ?: settings.backupChannelList
+        return event?.let { decryptionCache.channelSet(it) } ?: emptySet()
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<EventIdHint>> =
+    val flow: StateFlow<Set<ChannelTag>> =
         getChannelListFlow()
             .transformLatest { noteState ->
                 emit(publicChatListWithBackup(noteState.note))
@@ -101,54 +93,34 @@ class PublicChatListState(
                 emptySet(),
             )
 
-    fun follow(
-        channel: PublicChatChannel,
-        onDone: (ChannelListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun follow(channel: PublicChatChannel): ChannelListEvent {
         val publicChatList = getChannelList()
 
-        val fullHint = channel.toEventHint()
-        if (fullHint != null) {
-            if (publicChatList == null) {
-                ChannelListEvent.createChannel(fullHint, true, signer, onReady = onDone)
-            } else {
-                ChannelListEvent.addChannel(publicChatList, fullHint, true, signer, onReady = onDone)
-            }
+        return if (publicChatList == null) {
+            ChannelListEvent.create(ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
         } else {
-            val partialHint = channel.toEventId()
-            if (publicChatList == null) {
-                ChannelListEvent.createChannel(partialHint, true, signer, onReady = onDone)
-            } else {
-                ChannelListEvent.addChannel(publicChatList, partialHint, true, signer, onReady = onDone)
-            }
+            ChannelListEvent.add(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), true, signer)
         }
     }
 
-    fun follow(
-        channels: List<PublicChatChannel>,
-        onDone: (ChannelListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun follow(channels: List<PublicChatChannel>): ChannelListEvent {
         val publicChatList = getChannelList()
 
-        val partialHint = channels.map { it.toEventId() }
-        if (publicChatList == null) {
-            ChannelListEvent.createChannels(partialHint, true, signer, onReady = onDone)
+        val channelTags = channels.map { ChannelTag(it.idHex, it.relayHintUrl()) }
+        return if (publicChatList == null) {
+            ChannelListEvent.create(channelTags, true, signer)
         } else {
-            ChannelListEvent.addChannels(publicChatList, partialHint, true, signer, onReady = onDone)
+            ChannelListEvent.add(publicChatList, channelTags, true, signer)
         }
     }
 
-    fun unfollow(
-        channel: PublicChatChannel,
-        onDone: (ChannelListEvent) -> Unit,
-    ) {
-        if (!signer.isWriteable()) return
+    suspend fun unfollow(channel: PublicChatChannel): ChannelListEvent? {
         val publicChatList = getChannelList()
 
-        if (publicChatList != null) {
-            ChannelListEvent.removeChannel(publicChatList, channel.idHex, signer, onReady = onDone)
+        return if (publicChatList != null) {
+            ChannelListEvent.remove(publicChatList, ChannelTag(channel.idHex, channel.relayHintUrl()), signer)
+        } else {
+            null
         }
     }
 
@@ -157,9 +129,7 @@ class PublicChatListState(
             Log.d("AccountRegisterObservers", "Loading saved channel list ${event.toJson()}")
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch(Dispatchers.IO) {
-                event.privateTags(signer) {
-                    LocalCache.justConsumeMyOwnEvent(event)
-                }
+                LocalCache.justConsumeMyOwnEvent(event)
             }
         }
 

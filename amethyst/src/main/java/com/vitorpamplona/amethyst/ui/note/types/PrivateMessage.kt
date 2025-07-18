@@ -77,7 +77,7 @@ fun RenderPrivateMessage(
     userRoom?.let {
         if (it.users.size > 1 || (it.users.size == 1 && note.author == accountViewModel.account.userProfile())) {
             ChatroomHeader(it, MaterialTheme.colorScheme.replyModifier.padding(10.dp), accountViewModel) {
-                routeFor(note, accountViewModel.userProfile())?.let {
+                routeFor(note, accountViewModel.account)?.let {
                     nav.nav(it)
                 }
             }

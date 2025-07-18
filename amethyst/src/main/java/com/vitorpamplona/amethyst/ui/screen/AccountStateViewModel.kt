@@ -301,7 +301,7 @@ class AccountStateViewModel : ViewModel() {
                     backupNIP65RelayList = AdvertisedRelayListEvent.create(DefaultNIP65List, tempSigner),
                     backupDMRelayList = ChatMessageRelayListEvent.create(DefaultDMRelayList, tempSigner),
                     backupSearchRelayList = SearchRelayListEvent.create(DefaultSearchRelayList.toList(), tempSigner),
-                    backupChannelList = ChannelListEvent.create(DefaultChannels, tempSigner),
+                    backupChannelList = ChannelListEvent.create(emptyList(), DefaultChannels, tempSigner),
                     torSettings = TorSettingsFlow.build(torSettings),
                 )
 

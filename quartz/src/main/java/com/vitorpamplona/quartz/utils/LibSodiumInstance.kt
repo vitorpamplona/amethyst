@@ -82,7 +82,7 @@ object LibSodiumInstance {
         messageBytes: ByteArray,
         nonce: ByteArray,
         key: ByteArray,
-    ): ByteArray? {
+    ): ByteArray {
         val cipher = ByteArray(messageBytes.size)
         val k2 = ByteArray(32)
 
@@ -100,6 +100,6 @@ object LibSodiumInstance {
                 k2,
             )
 
-        return if (resultCode == 0) cipher else null
+        return if (resultCode == 0) cipher else throw IllegalStateException("Could not decrypt message")
     }
 }

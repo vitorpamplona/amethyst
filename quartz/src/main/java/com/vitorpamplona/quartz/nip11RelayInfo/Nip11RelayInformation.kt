@@ -48,7 +48,9 @@ class Nip11RelayInformation(
 ) {
     companion object {
         val mapper =
-            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            jacksonObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
 
         fun fromJson(json: String): Nip11RelayInformation = mapper.readValue(json, Nip11RelayInformation::class.java)
     }

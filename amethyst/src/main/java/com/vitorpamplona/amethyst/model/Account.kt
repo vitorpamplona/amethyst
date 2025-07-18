@@ -25,7 +25,9 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
@@ -38,19 +40,30 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.model.nip25Reactions.ReactionAction
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.model.nip38UserStatuses.UserStatusAction
-import com.vitorpamplona.amethyst.model.nip50Search.SearchRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.BlockPeopleListState
-import com.vitorpamplona.amethyst.model.nip51Lists.BlockedRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.GeohashListState
-import com.vitorpamplona.amethyst.model.nip51Lists.HashtagListState
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
+import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.nip51Lists.MuteListState
-import com.vitorpamplona.amethyst.model.nip51Lists.TrustedRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
+import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.PeopleListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
+import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
+import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
+import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
+import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
@@ -59,13 +72,13 @@ import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
+import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentQueryState
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
@@ -93,7 +106,6 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
@@ -108,10 +120,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
-import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEventIds
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
@@ -123,6 +132,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
+import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.reply
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -140,33 +150,32 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
-import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftBuilder
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -190,26 +199,19 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.utils.tryAndWait
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Base64
 import java.util.Locale
-import kotlin.coroutines.resume
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -227,25 +229,51 @@ class Account(
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
+    val nip47SignerState = NwcSignerState(signer, cache, scope, settings)
+
     val nip65RelayList = Nip65RelayListState(signer, cache, scope, settings)
-    val dmRelayList = DmRelayListState(signer, cache, scope, settings)
-    val searchRelayList = SearchRelayListState(signer, cache, scope, settings)
-    val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, scope, settings)
     val localRelayList = LocalRelayListState(signer, cache, scope, settings)
-    val trustedRelayList = TrustedRelayListState(signer, cache, scope, settings)
-    val blockedRelayList = BlockedRelayListState(signer, cache, scope, settings)
+
+    val dmRelayList = DmRelayListState(signer, cache, scope, settings)
+
+    val privateStorageDecryptionCache = PrivateStorageRelayListDecryptionCache(signer)
+    val privateStorageRelayList = PrivateStorageRelayListState(signer, cache, privateStorageDecryptionCache, scope, settings)
+
+    val searchRelayListDecryptionCache = SearchRelayListDecryptionCache(signer)
+    val searchRelayList = SearchRelayListState(signer, cache, searchRelayListDecryptionCache, scope, settings)
+
+    val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
+    val trustedRelayList = TrustedRelayListState(signer, cache, trustedRelayListDecryptionCache, scope, settings)
+
+    val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
+    val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
     val kind3FollowList = FollowListState(signer, cache, scope, settings)
-    val ephemeralChatList = EphemeralChatListState(signer, cache, scope, settings)
-    val publicChatList = PublicChatListState(signer, cache, scope, settings)
-    val communityList = CommunityListState(signer, cache, scope, settings)
-    val hashtagList = HashtagListState(signer, cache, scope, settings)
-    val geohashList = GeohashListState(signer, cache, scope, settings)
 
-    val muteList = MuteListState(signer, cache, scope, settings)
-    val blockPeopleList = BlockPeopleListState(signer, cache, scope)
+    val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
+    val ephemeralChatList = EphemeralChatListState(signer, cache, ephemeralChatListDecryptionCache, scope, settings)
+
+    val publicChatListDecryptionCache = PublicChatListDecryptionCache(signer)
+    val publicChatList = PublicChatListState(signer, cache, publicChatListDecryptionCache, scope, settings)
+
+    val communityListDecryptionCache = CommunityListDecryptionCache(signer)
+    val communityList = CommunityListState(signer, cache, communityListDecryptionCache, scope, settings)
+
+    val hashtagListDecryptionCache = HashtagListDecryptionCache(signer)
+    val hashtagList = HashtagListState(signer, cache, hashtagListDecryptionCache, scope, settings)
+
+    val geohashListDecryptionCache = GeohashListDecryptionCache(signer)
+    val geohashList = GeohashListState(signer, cache, geohashListDecryptionCache, scope, settings)
+
+    val muteListDecryptionCache = MuteListDecryptionCache(signer)
+    val muteList = MuteListState(signer, cache, muteListDecryptionCache, scope, settings)
+
+    val peopleListDecryptionCache = PeopleListDecryptionCache(signer)
+    val blockPeopleList = BlockPeopleListState(signer, cache, peopleListDecryptionCache, scope)
+
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
+    val bookmarkState = BookmarkListState(signer, cache, scope)
     val emoji = EmojiPackState(signer, cache, scope)
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
@@ -271,6 +299,21 @@ class Account(
     // Merges all follow lists to create a single All Follows feed.
     val allFollows = MergedFollowListsState(kind3FollowList, hashtagList, geohashList, communityList, scope)
 
+    val privateDMDecryptionCache = PrivateDMCache(signer)
+    val privateZapsDecryptionCache = PrivateZapCache(signer)
+    val draftsDecryptionCache = DraftEventCache(signer)
+
+    val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
+
+    val feedDecryptionCaches =
+        FeedDecryptionCaches(
+            peopleListCache = peopleListDecryptionCache,
+            muteListCache = muteListDecryptionCache,
+            communityListCache = communityListDecryptionCache,
+            hashtagCache = hashtagListDecryptionCache,
+            geohashCache = geohashListDecryptionCache,
+        )
+
     // App-ready Feeds
     val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> =
         FeedTopNavFilterState(
@@ -279,6 +322,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
         ).flow
@@ -292,6 +336,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
         ).flow
@@ -305,6 +350,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
         ).flow
@@ -318,6 +364,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
         ).flow
@@ -338,36 +385,9 @@ class Account(
 
     val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)
 
-    fun decryptPeopleList(
-        event: GeneralListEvent,
-        onReady: (Array<Array<String>>) -> Unit,
-    ) = event.privateTags(signer, onReady)
-
-    @OptIn(FlowPreview::class)
-    val decryptBookmarks: Flow<BookmarkListEvent?> by lazy {
-        userProfile()
-            .flow()
-            .bookmarks.stateFlow
-            .map { userState ->
-                if (userState.user.latestBookmarkList == null) {
-                    null
-                } else {
-                    val result =
-                        tryAndWait { continuation ->
-                            userState.user.latestBookmarkList?.privateTags(signer) {
-                                continuation.resume(userState.user.latestBookmarkList)
-                            }
-                        }
-
-                    result
-                }
-            }.debounce(1000)
-            .flowOn(Dispatchers.Default)
-    }
-
     fun isWriteable(): Boolean = settings.isWriteable()
 
-    fun updateWarnReports(warnReports: Boolean): Boolean {
+    suspend fun updateWarnReports(warnReports: Boolean): Boolean {
         if (settings.updateWarnReports(warnReports)) {
             sendNewAppSpecificData()
             return true
@@ -375,7 +395,7 @@ class Account(
         return false
     }
 
-    fun updateFilterSpam(filterSpam: Boolean): Boolean {
+    suspend fun updateFilterSpam(filterSpam: Boolean): Boolean {
         if (settings.updateFilterSpam(filterSpam)) {
             if (!settings.syncedSettings.security.filterSpamFromStrangers.value) {
                 hiddenUsers.resetTransientUsers()
@@ -387,19 +407,19 @@ class Account(
         return false
     }
 
-    fun updateShowSensitiveContent(show: Boolean?) {
+    suspend fun updateShowSensitiveContent(show: Boolean?) {
         if (settings.updateShowSensitiveContent(show)) {
             sendNewAppSpecificData()
         }
     }
 
-    fun changeReactionTypes(reactionSet: List<String>) {
+    suspend fun changeReactionTypes(reactionSet: List<String>) {
         if (settings.changeReactionTypes(reactionSet)) {
             sendNewAppSpecificData()
         }
     }
 
-    fun updateZapAmounts(
+    suspend fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
@@ -415,18 +435,18 @@ class Account(
         }
     }
 
-    fun toggleDontTranslateFrom(languageCode: String) {
+    suspend fun toggleDontTranslateFrom(languageCode: String) {
         settings.toggleDontTranslateFrom(languageCode)
         sendNewAppSpecificData()
     }
 
-    fun updateTranslateTo(languageCode: Locale) {
+    suspend fun updateTranslateTo(languageCode: Locale) {
         if (settings.updateTranslateTo(languageCode)) {
             sendNewAppSpecificData()
         }
     }
 
-    fun prefer(
+    suspend fun prefer(
         source: String,
         target: String,
         preference: String,
@@ -435,17 +455,13 @@ class Account(
         sendNewAppSpecificData()
     }
 
-    private fun sendNewAppSpecificData() {
-        if (!isWriteable()) return
-
-        appSpecific.saveNewAppSpecificData(::sendMyPublicAndPrivateOutbox)
-    }
+    private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
     suspend fun countFollowersOf(pubkey: HexKey): Int = cache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkey) ?: false }
 
     suspend fun followerCount(): Int = countFollowersOf(signer.pubKey)
 
-    fun sendNewUserMetadata(
+    suspend fun sendNewUserMetadata(
         name: String? = null,
         picture: String? = null,
         banner: String? = null,
@@ -461,21 +477,23 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        userMetadata.sendNewUserMetadata(
-            name,
-            picture,
-            banner,
-            website,
-            pronouns,
-            about,
-            nip05,
-            lnAddress,
-            lnURL,
-            twitter,
-            mastodon,
-            github,
-            ::sendMyPublicAndPrivateOutbox,
-        )
+        val userMetadataEvent =
+            userMetadata.sendNewUserMetadata(
+                name,
+                picture,
+                banner,
+                website,
+                pronouns,
+                about,
+                nip05,
+                lnAddress,
+                lnURL,
+                twitter,
+                mastodon,
+                github,
+            )
+
+        sendEverywhere(userMetadataEvent)
     }
 
     fun reactionTo(
@@ -507,54 +525,24 @@ class Account(
         onPrivate = ::broadcastPrivately,
     )
 
-    fun createZapRequestFor(
-        note: Note,
+    suspend fun createZapRequestFor(
+        event: Event,
         pollOption: Int?,
         message: String = "",
         zapType: LnZapEvent.ZapType,
         toUser: User?,
         additionalRelays: Set<NormalizedRelayUrl>? = null,
-        onReady: (LnZapRequestEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
-
+    ): LnZapRequestEvent {
         val relays = nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet())
-
-        note.event?.let { event ->
-            LnZapRequestEvent.create(
-                event,
-                relays = relays.mapTo(mutableSetOf()) { it.url },
-                signer,
-                pollOption,
-                message,
-                zapType,
-                toUser?.pubkeyHex,
-                onReady = onReady,
-            )
-        }
-    }
-
-    fun hasWalletConnectSetup(): Boolean = settings.zapPaymentRequest != null
-
-    fun isNIP47Author(pubkeyHex: String?): Boolean = (getNIP47Signer().pubKey == pubkeyHex)
-
-    fun getNIP47Signer(): NostrSigner =
-        settings.zapPaymentRequest
-            ?.secret
-            ?.hexToByteArray()
-            ?.let { NostrSignerInternal(KeyPair(it)) }
-            ?: signer
-
-    fun decryptZapPaymentResponseEvent(
-        zapResponseEvent: LnZapPaymentResponseEvent,
-        onReady: (Response) -> Unit,
-    ) {
-        val myNip47 = settings.zapPaymentRequest ?: return
-
-        val signer =
-            myNip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
-
-        zapResponseEvent.response(signer, onReady)
+        return LnZapRequestEvent.create(
+            event,
+            relays = relays.mapTo(mutableSetOf()) { it.url },
+            signer,
+            pollOption,
+            message,
+            zapType,
+            toUser?.pubkeyHex,
+        )
     }
 
     suspend fun calculateIfNoteWasZappedByAccount(
@@ -564,141 +552,92 @@ class Account(
         zappedNote?.isZappedBy(userProfile(), this, onWasZapped)
     }
 
-    suspend fun calculateZappedAmount(
-        zappedNote: Note?,
-        onReady: (BigDecimal) -> Unit,
-    ) {
-        zappedNote?.zappedAmountWithNWCPayments(getNIP47Signer(), onReady)
-    }
+    suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal = zappedNote.zappedAmountWithNWCPayments(nip47SignerState)
 
-    fun sendZapPaymentRequestFor(
+    suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
-        onSent: () -> Unit,
         onResponse: (Response?) -> Unit,
     ) {
-        if (!isWriteable()) return
-
-        settings.zapPaymentRequest?.let { nip47 ->
-            val signer =
-                nip47.secret?.hexToByteArray()?.let { NostrSignerInternal(KeyPair(it)) } ?: signer
-
-            LnZapPaymentRequestEvent.create(bolt11, nip47.pubKeyHex, signer) { event ->
-                val filter =
-                    NWCPaymentQueryState(
-                        fromServiceHex = nip47.pubKeyHex,
-                        toUserHex = event.pubKey,
-                        replyingToHex = event.id,
-                        relay = nip47.relayUri,
-                    )
-
-                Amethyst.instance.sources.nwc
-                    .subscribe(filter)
-
-                GlobalScope.launch(Dispatchers.IO) {
-                    delay(60000) // waits 1 minute to complete payment.
-                    Amethyst.instance.sources.nwc
-                        .unsubscribe(filter)
-                }
-
-                cache.consume(event, zappedNote, true, nip47.relayUri) {
-                    it.response(signer) { onResponse(it) }
-                }
-
-                client.send(event, setOf(nip47.relayUri))
-
-                onSent()
-            }
-        }
+        val (event, relay) = nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        client.send(event, setOf(relay))
     }
 
-    fun createZapRequestFor(
+    suspend fun createZapRequestFor(
         user: User,
         message: String = "",
         zapType: LnZapEvent.ZapType,
-        onReady: (LnZapRequestEvent) -> Unit,
-    ) {
+    ): LnZapRequestEvent {
         val relays = nip65RelayList.inboxFlow.value + user.inboxRelays()
 
-        LnZapRequestEvent.create(
-            userHex = user.pubkeyHex,
-            relays = relays,
-            signer = signer,
-            message = message,
-            zapType = zapType,
-        ) { zapRequest ->
-            LocalCache.justConsumeMyOwnEvent(zapRequest)
-            onReady(zapRequest)
-        }
+        val zapRequest =
+            LnZapRequestEvent.create(
+                userHex = user.pubkeyHex,
+                relays = relays,
+                signer = signer,
+                message = message,
+                zapType = zapType,
+            )
+
+        cache.justConsumeMyOwnEvent(zapRequest)
+        return zapRequest
     }
 
     suspend fun report(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = ReportAction.report(note, type, content, userProfile(), signer, ::sendMyPublicAndPrivateOutbox)
+    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
 
     suspend fun report(
         user: User,
         type: ReportType,
-    ) = ReportAction.report(user, type, userProfile(), signer, ::sendMyPublicAndPrivateOutbox)
+    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, userProfile(), signer))
 
-    fun delete(note: Note) {
+    suspend fun delete(note: Note) {
         delete(listOf(note))
     }
 
-    fun delete(notes: List<Note>) {
+    suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
         val myNotes = notes.filter { it.author == userProfile() && it.event != null }
         if (myNotes.isNotEmpty()) {
             // chunks in 200 elements to avoid going over the 65KB limit for events.
             myNotes.chunked(200).forEach { chunkedList ->
-                signer.sign(
-                    DeletionEvent.build(chunkedList.mapNotNull { it.event }),
-                ) { deletionEvent ->
-                    val myRelayList = outboxRelays.flow.value.toMutableSet()
-                    chunkedList.forEach {
-                        myRelayList.addAll(it.relays)
-                    }
-
-                    client.send(deletionEvent, myRelayList)
-                    cache.justConsumeMyOwnEvent(deletionEvent)
+                val template = DeletionEvent.build(chunkedList.mapNotNull { it.event })
+                val deletionEvent = signer.sign(template)
+                val myRelayList = outboxRelays.flow.value.toMutableSet()
+                chunkedList.forEach {
+                    myRelayList.addAll(it.relays)
                 }
+
+                client.send(deletionEvent, myRelayList)
+                cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
     }
 
-    fun delete(
+    suspend fun delete(
         event: Event,
         additionalRelays: Set<NormalizedRelayUrl>,
     ) {
         if (!isWriteable()) return
         if (event.pubKey != signer.pubKey) return
 
-        signer.sign(
-            DeletionEvent.build(listOf(event)),
-        ) { deletionEvent ->
-            client.send(deletionEvent, outboxRelays.flow.value + additionalRelays)
-            cache.justConsumeMyOwnEvent(deletionEvent)
-        }
+        val deletionEvent =
+            signer.sign(
+                DeletionEvent.build(listOf(event)),
+            )
+        client.send(deletionEvent, outboxRelays.flow.value + additionalRelays)
+        cache.justConsumeMyOwnEvent(deletionEvent)
     }
 
     suspend fun createHTTPAuthorization(
         url: String,
         method: String,
         body: ByteArray? = null,
-    ): HTTPAuthorizationEvent? {
-        if (!isWriteable()) return null
-
-        val template = HTTPAuthorizationEvent.build(url, method, body)
-
-        return tryAndWait { continuation ->
-            signer.sign(template) {
-                continuation.resume(it)
-            }
-        }
-    }
+    ): HTTPAuthorizationEvent? = signer.sign(HTTPAuthorizationEvent.build(url, method, body))
 
     suspend fun createBlossomUploadAuth(
         hash: HexKey,
@@ -712,9 +651,9 @@ class Account(
     ) = blossomServers.createBlossomDeleteAuth(hash, alt)
 
     suspend fun boost(note: Note) {
-        RepostAction.repost(note, signer) {
-            client.send(it, computeMyReactionToNote(note, it))
-            cache.justConsumeMyOwnEvent(it)
+        RepostAction.repost(note, signer)?.let { event ->
+            client.send(event, computeMyReactionToNote(note, event))
+            cache.justConsumeMyOwnEvent(event)
         }
     }
 
@@ -738,7 +677,7 @@ class Account(
                 if (pubkey == userProfile().pubkeyHex) {
                     notificationRelays.flow.value
                 } else {
-                    LocalCache
+                    cache
                         .getUserIfExists(pubkey)
                         ?.inboxRelays()
                         ?.ifEmpty { null }
@@ -747,7 +686,7 @@ class Account(
                 }
             }
 
-        val channelRelays = LocalCache.getAnyChannel(note)?.relays() ?: emptySet()
+        val channelRelays = cache.getAnyChannel(note)?.relays() ?: emptySet()
 
         val replyRelays =
             note.replyTo?.flatMapTo(mutableSetOf()) {
@@ -794,7 +733,7 @@ class Account(
         if (pubkey == userProfile().pubkeyHex) {
             notificationRelays.flow.value
         } else {
-            LocalCache
+            cache
                 .getUserIfExists(pubkey)
                 ?.inboxRelays()
                 ?.ifEmpty { null }
@@ -802,7 +741,7 @@ class Account(
                 ?: cache.relayHints.hintsForKey(pubkey).toSet()
         }
 
-    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = LocalCache.getAnyChannel(event)?.relays() ?: emptySet()
+    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = cache.getAnyChannel(event)?.relays() ?: emptySet()
 
     fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
         if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
@@ -943,27 +882,24 @@ class Account(
 
         val otsResolver = otsResolver()
 
-        settings.pendingAttestations.value.forEach { pair ->
-            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(pair.value), pair.key, otsResolver)
+        settings.pendingAttestations.value.toList().forEach { (key, value) ->
+            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver)
 
             if (otsState != null) {
-                val hint = cache.getNoteIfExists(pair.key)?.toEventHint<Event>()
-
+                val hint = cache.getNoteIfExists(key)?.toEventHint<Event>()
                 val template =
                     if (hint != null) {
                         OtsEvent.build(hint, otsState)
                     } else {
-                        OtsEvent.build(pair.key, otsState)
+                        OtsEvent.build(key, otsState)
                     }
 
-                signer.sign(template) {
-                    cache.justConsumeMyOwnEvent(it)
-                    client.send(it, computeRelayListToBroadcast(it))
+                val otsEvent = signer.sign(template)
 
-                    settings.pendingAttestations.update {
-                        it - pair.key
-                    }
-                }
+                cache.justConsumeMyOwnEvent(otsEvent)
+                client.send(otsEvent, computeRelayListToBroadcast(otsEvent))
+
+                settings.pendingAttestations.update { it - key }
             }
         }
     }
@@ -983,63 +919,70 @@ class Account(
         settings.addPendingAttestation(id, Base64.getEncoder().encodeToString(OtsEvent.stamp(id, otsResolver)))
     }
 
-    fun follow(user: User) = kind3FollowList.follow(user, this::sendMyPublicAndPrivateOutbox)
+    suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
-    fun unfollow(user: User) = kind3FollowList.unfollow(user, this::sendMyPublicAndPrivateOutbox)
+    suspend fun unfollow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.unfollow(user))
 
-    fun follow(channel: PublicChatChannel) = publicChatList.follow(channel, ::sendToPrivateOutboxAndLocal)
+    suspend fun follow(channel: PublicChatChannel) = sendMyPublicAndPrivateOutbox(publicChatList.follow(channel))
 
-    fun unfollow(channel: PublicChatChannel) = publicChatList.unfollow(channel, ::sendToPrivateOutboxAndLocal)
+    suspend fun unfollow(channel: PublicChatChannel) = sendMyPublicAndPrivateOutbox(publicChatList.unfollow(channel))
 
-    fun follow(channel: EphemeralChatChannel) = ephemeralChatList.follow(channel, ::sendToPrivateOutboxAndLocal)
+    suspend fun follow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.follow(channel))
 
-    fun unfollow(channel: EphemeralChatChannel) = ephemeralChatList.unfollow(channel, ::sendToPrivateOutboxAndLocal)
+    suspend fun unfollow(channel: EphemeralChatChannel) = sendMyPublicAndPrivateOutbox(ephemeralChatList.unfollow(channel))
 
-    fun follow(community: AddressableNote) = communityList.follow(community, ::sendToPrivateOutboxAndLocal)
+    suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
 
-    fun unfollow(community: AddressableNote) = communityList.unfollow(community, ::sendToPrivateOutboxAndLocal)
+    suspend fun unfollow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.unfollow(community))
 
-    fun followHashtag(tag: String) = hashtagList.follow(tag, ::sendMyPublicAndPrivateOutbox)
+    suspend fun followHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.follow(tag))
 
-    fun unfollowHashtag(tag: String) = hashtagList.unfollow(tag, ::sendMyPublicAndPrivateOutbox)
+    suspend fun unfollowHashtag(tag: String) = sendMyPublicAndPrivateOutbox(hashtagList.unfollow(tag))
 
-    fun followGeohash(geohash: String) = geohashList.follow(geohash, ::sendMyPublicAndPrivateOutbox)
+    suspend fun followGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.follow(geohash))
 
-    fun unfollowGeohash(geohash: String) = geohashList.unfollow(geohash, ::sendMyPublicAndPrivateOutbox)
+    suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
 
-    fun sendMyPublicAndPrivateOutbox(event: Event) {
+    fun sendMyPublicAndPrivateOutbox(event: Event?) {
+        if (event == null) return
         client.send(event, outboxRelays.flow.value)
         cache.justConsumeMyOwnEvent(event)
     }
 
-    fun createNip95(
+    fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
+        events.forEach {
+            client.send(it, outboxRelays.flow.value)
+            cache.justConsumeMyOwnEvent(it)
+        }
+    }
+
+    fun sendEverywhere(event: Event) {
+        client.send(event, outboxRelays.flow.value + client.relayStatusFlow().value.available)
+        cache.justConsumeMyOwnEvent(event)
+    }
+
+    suspend fun createNip95(
         byteArray: ByteArray,
         headerInfo: FileHeader,
         alt: String?,
         contentWarningReason: String?,
-        onReady: (Pair<FileStorageEvent, FileStorageHeaderEvent>) -> Unit,
-    ) {
-        if (!isWriteable()) return
+    ): Pair<FileStorageEvent, FileStorageHeaderEvent> {
+        val data = signer.sign(FileStorageEvent.build(byteArray, headerInfo.mimeType))
 
-        signer.sign(FileStorageEvent.build(byteArray, headerInfo.mimeType)) { data ->
-            val template =
-                FileStorageHeaderEvent.build(EventHintBundle(data, userProfile().bestRelayHint()), alt) {
-                    hash(headerInfo.hash)
-                    fileSize(headerInfo.size)
+        val template =
+            FileStorageHeaderEvent.build(EventHintBundle(data, userProfile().bestRelayHint()), alt) {
+                hash(headerInfo.hash)
+                fileSize(headerInfo.size)
 
-                    headerInfo.mimeType?.let { mimeType(it) }
-                    headerInfo.dim?.let { dimension(it) }
-                    headerInfo.blurHash?.let { blurhash(it.blurhash) }
+                headerInfo.mimeType?.let { mimeType(it) }
+                headerInfo.dim?.let { dimension(it) }
+                headerInfo.blurHash?.let { blurhash(it.blurhash) }
 
-                    contentWarningReason?.let { contentWarning(contentWarningReason) }
-                }
-
-            signer.sign(template) { signedEvent ->
-                onReady(
-                    Pair(data, signedEvent),
-                )
+                contentWarningReason?.let { contentWarning(contentWarningReason) }
             }
-        }
+
+        val signedEvent = signer.sign(template)
+        return Pair(data, signedEvent)
     }
 
     fun consumeAndSendNip95(
@@ -1089,40 +1032,10 @@ class Account(
         cache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
     }
 
-    fun createHeader(
-        imageUrl: String,
-        magnetUri: String?,
-        headerInfo: FileHeader,
-        alt: String?,
-        contentWarningReason: String? = null,
-        originalHash: String? = null,
-        onReady: (FileHeaderEvent) -> Unit,
-    ) {
-        if (!isWriteable()) return
-
-        signer.sign(
-            FileHeaderEvent.build(imageUrl, alt) {
-                hash(headerInfo.hash)
-                fileSize(headerInfo.size)
-
-                headerInfo.mimeType?.let { mimeType(it) }
-                headerInfo.dim?.let { dimension(it) }
-                headerInfo.blurHash?.let { blurhash(it.blurhash) }
-
-                originalHash?.let { originalHash(it) }
-                magnetUri?.let { magnet(it) }
-
-                contentWarningReason?.let { contentWarning(contentWarningReason) }
-            },
-            onReady,
-        )
-    }
-
-    fun sendAllAsOnePictureEvent(
+    suspend fun sendAllAsOnePictureEvent(
         urlHeaderInfo: Map<String, FileHeader>,
         caption: String?,
         contentWarningReason: String?,
-        onReady: (Note) -> Unit,
     ) {
         val iMetas =
             urlHeaderInfo.map {
@@ -1154,19 +1067,16 @@ class Account(
                 contentWarningReason?.let { contentWarning(contentWarningReason) }
             }
 
-        signAndComputeBroadcast(template) { event ->
-            cache.getNoteIfExists(event.id)?.let { onReady(it) }
-        }
+        signAndComputeBroadcast(template)
     }
 
-    fun sendHeader(
+    suspend fun sendHeader(
         url: String,
         magnetUri: String?,
         headerInfo: FileHeader,
         alt: String?,
         contentWarningReason: String?,
         originalHash: String? = null,
-        onReady: (Note) -> Unit,
     ) {
         if (!isWriteable()) return
 
@@ -1233,68 +1143,81 @@ class Account(
                 }
             }
 
-        signAndComputeBroadcast(template) { event ->
-            cache.getNoteIfExists(event.id)?.let { onReady(it) }
-        }
+        signAndComputeBroadcast(template)
     }
 
-    fun <T : Event> signAndSendPrivately(
+    suspend fun <T : Event> signAndSendPrivately(
         template: EventTemplate<T>,
         relayList: Set<NormalizedRelayUrl>,
     ) {
-        signer.sign(template) {
-            cache.justConsumeMyOwnEvent(it)
-            client.send(it, relayList)
-        }
+        val event = signer.sign(template)
+        cache.justConsumeMyOwnEvent(event)
+        client.send(event, relayList)
     }
 
-    fun <T : Event> signAndSendPrivatelyOrBroadcast(
+    suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
         template: EventTemplate<T>,
         relayList: (T) -> List<NormalizedRelayUrl>?,
-        onDone: (T) -> Unit = {},
-    ) {
-        signer.sign(template) {
-            cache.justConsumeMyOwnEvent(it)
-            val relays = relayList(it)
-            if (relays != null && relays.isNotEmpty()) {
-                client.send(it, relays.toSet())
-            } else {
-                client.send(it, computeRelayListToBroadcast(it))
-            }
-            onDone(it)
+    ): T {
+        val event = signer.sign(template)
+        cache.justConsumeMyOwnEvent(event)
+        val relays = relayList(event)
+        if (relays != null && relays.isNotEmpty()) {
+            client.send(event, relays.toSet())
+        } else {
+            client.send(event, computeRelayListToBroadcast(event))
         }
+        return event
     }
 
-    fun <T : Event> signAndComputeBroadcast(
+    suspend fun <T : Event> signAndComputeBroadcast(
         template: EventTemplate<T>,
         broadcast: List<Event> = emptyList(),
-        onDone: (T) -> Unit = {},
-    ) {
-        signer.sign(template) { event ->
-            cache.justConsumeMyOwnEvent(event)
-            val note =
-                if (event is AddressableEvent) {
-                    cache.getOrCreateAddressableNote(event.address())
-                } else {
-                    cache.getOrCreateNote(event.id)
-                }
+    ): T {
+        val event = signer.sign(template)
+        cache.justConsumeMyOwnEvent(event)
+        val note =
+            if (event is AddressableEvent) {
+                cache.getOrCreateAddressableNote(event.address())
+            } else {
+                cache.getOrCreateNote(event.id)
+            }
 
-            val relayList = computeRelayListToBroadcast(note)
+        val relayList = computeRelayListToBroadcast(note)
 
-            client.send(event, relayList)
+        client.send(event, relayList)
 
-            broadcast.forEach { client.send(it, relayList) }
+        broadcast.forEach { client.send(it, relayList) }
 
-            onDone(event)
-        }
+        return event
     }
 
-    fun <T : Event> signAndSend(
+    suspend fun <T : Event> signAndSend(
+        draftTag: String?,
+        template: EventTemplate<T>,
+        relayList: Set<NormalizedRelayUrl>,
+        broadcastNotes: List<Entity>,
+    ) = signAndSend(draftTag, template, relayList, mapEntitiesToNotes(broadcastNotes).toSet())
+
+    suspend fun <T : Event> signAndSend(
+        draftTag: String?,
         template: EventTemplate<T>,
         relayList: Set<NormalizedRelayUrl>,
         broadcastNotes: Set<Note>,
     ) {
-        signer.sign(template) {
+        if (draftTag != null) {
+            val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
+            val draftEvent =
+                DraftEvent.create(
+                    dTag = draftTag,
+                    innerEvent = rumor,
+                    anchorTagArray = emptyList(),
+                    signer = signer,
+                )
+            draftsDecryptionCache.preload(draftEvent, rumor)
+            sendDraftEvent(draftEvent)
+        } else {
+            val it = signer.sign(template)
             cache.justConsumeMyOwnEvent(it)
             client.send(it, relayList = relayList)
 
@@ -1302,36 +1225,7 @@ class Account(
         }
     }
 
-    fun <T : Event> signAndSend(
-        draftTag: String?,
-        template: EventTemplate<T>,
-        relayList: Set<NormalizedRelayUrl>,
-        broadcastNotes: List<Entity>,
-    ) = signAndSend(draftTag, template, relayList, mapEntitiesToNotes(broadcastNotes).toSet())
-
-    fun <T : Event> signAndSend(
-        draftTag: String?,
-        template: EventTemplate<T>,
-        relayList: Set<NormalizedRelayUrl>,
-        broadcastNotes: Set<Note>,
-    ) {
-        if (draftTag != null) {
-            signer.assembleRumor(template) { rumor ->
-                DraftEvent.create(draftTag, rumor, emptyList(), signer) { draftEvent ->
-                    sendDraftEvent(draftEvent)
-                }
-            }
-        } else {
-            signer.sign(template) {
-                cache.justConsumeMyOwnEvent(it)
-                client.send(it, relayList = relayList)
-
-                broadcastNotes.forEach { it.event?.let { client.send(it, relayList = relayList) } }
-            }
-        }
-    }
-
-    fun <T : Event> signAndSendNIP04Message(
+    suspend fun <T : Event> signAndSendNIP04Message(
         draftTag: String?,
         template: EventTemplate<T>,
         relayList: Set<NormalizedRelayUrl>,
@@ -1340,76 +1234,61 @@ class Account(
             if (template.content.isEmpty()) {
                 deleteDraft(draftTag)
             } else {
-                signer.assembleRumor(template) { rumor ->
-                    DraftEvent.create(draftTag, rumor, emptyList(), signer) { draftEvent ->
-                        sendDraftEvent(draftEvent)
-                    }
-                }
+                val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
+                val draftEvent = DraftEvent.create(draftTag, rumor, emptyList(), signer)
+                draftsDecryptionCache.preload(draftEvent, rumor)
+                sendDraftEvent(draftEvent)
             }
         } else {
-            signer.sign(template) {
-                cache.justConsumeMyOwnEvent(it)
-                client.send(it, relayList)
-            }
+            val newEvent = signer.sign(template)
+            cache.justConsumeMyOwnEvent(newEvent)
+            client.send(newEvent, relayList)
         }
     }
 
-    fun <T : Event> signAndSendWithList(
+    suspend fun <T : Event> signAndSendWithList(
         draftTag: String?,
         template: EventTemplate<T>,
         relayList: Collection<NormalizedRelayUrl>,
         broadcastNotes: Set<Note>,
     ) {
         if (draftTag != null) {
-            signer.assembleRumor(template) { rumor ->
-                DraftEvent.create(draftTag, rumor, emptyList(), signer) { draftEvent ->
-                    sendDraftEvent(draftEvent)
-                }
-            }
+            val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
+            val draftEvent = DraftEvent.create(draftTag, rumor, emptyList(), signer)
+            draftsDecryptionCache.preload(draftEvent, rumor)
+            sendDraftEvent(draftEvent)
         } else {
-            signer.sign(template) {
-                cache.justConsumeMyOwnEvent(it)
+            val event = signer.sign(template)
+            cache.justConsumeMyOwnEvent(event)
 
-                val relaySet = relayList.toSet()
+            val relaySet = relayList.toSet()
 
-                client.send(it, relayList = relaySet)
-                broadcastNotes.forEach { it.event?.let { client.send(it, relayList = relaySet) } }
-            }
+            client.send(event, relayList = relaySet)
+            broadcastNotes.forEach { it.event?.let { client.send(it, relayList = relaySet) } }
         }
     }
 
-    fun sendTorrentComment(
-        draftTag: String?,
-        template: EventTemplate<TorrentCommentEvent>,
-        broadcastNotes: Set<Note>,
-        relayList: Set<NormalizedRelayUrl>,
-    ) {
-        if (!isWriteable()) return
-
-        signAndSend(draftTag, template, relayList, broadcastNotes)
-    }
-
-    fun createAndSendDraft(
+    suspend fun createAndSendDraft(
         draftTag: String,
         template: EventTemplate<out Event>,
     ) {
-        val rumor = signer.assembleRumor(template)
-        DraftBuilder.encryptAndSign(draftTag, rumor, signer) { draftEvent ->
-            sendDraftEvent(draftEvent)
-        }
+        val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
+        val draftEvent = DraftBuilder.encryptAndSign(draftTag, rumor, signer)
+        draftsDecryptionCache.preload(draftEvent, rumor)
+        sendDraftEvent(draftEvent)
     }
 
-    fun deleteDraft(draftTag: String) {
+    suspend fun deleteDraft(draftTag: String) {
         val key = DraftEvent.createAddressTag(userProfile().pubkeyHex, draftTag)
         cache.getAddressableNoteIfExists(key)?.let { note ->
             val noteEvent = note.event
             if (noteEvent is DraftEvent) {
-                noteEvent.createDeletedEvent(signer) {
-                    client.send(it, outboxRelays.flow.value + note.relays)
-                    cache.justConsumeMyOwnEvent(it)
+                val deletedDraftEvent = noteEvent.createDeletedEvent(signer)
+                client.send(deletedDraftEvent, outboxRelays.flow.value + note.relays)
+                cache.justConsumeMyOwnEvent(deletedDraftEvent)
 
-                    delete(it, note.relays.toSet())
-                }
+                delete(deletedDraftEvent, note.relays.toSet())
+                draftsDecryptionCache.delete(noteEvent)
             }
         }
     }
@@ -1430,7 +1309,7 @@ class Account(
                 currentSceneRelay = readingSceneRelay,
             )
 
-        signer.sign(template, ::sendToPrivateOutboxAndLocal)
+        sendToPrivateOutboxAndLocal(signer.sign(template))
     }
 
     suspend fun updateInteractiveStoryReadingState(
@@ -1447,7 +1326,7 @@ class Account(
                 currentSceneRelay = readingSceneRelay,
             )
 
-        signer.sign(template, ::sendToPrivateOutboxAndLocal)
+        sendToPrivateOutboxAndLocal(signer.sign(template))
     }
 
     fun mapEntitiesToNotes(entities: List<Entity>): List<Note> =
@@ -1455,7 +1334,7 @@ class Account(
             when (it) {
                 is NPub -> null
                 is NProfile -> null
-                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> cache.getOrCreateNote(it.hex)
+                is NNote -> cache.getOrCreateNote(it.hex)
                 is NEvent -> cache.getOrCreateNote(it.hex)
                 is NEmbed -> cache.getOrCreateNote(it.event.id)
                 is NAddress -> cache.checkGetOrCreateAddressableNote(it.aTag())
@@ -1561,7 +1440,7 @@ class Account(
         signAndSendWithList(draftTag, template, relays, setOf(bounty))
     }
 
-    fun sendEdit(
+    suspend fun sendEdit(
         message: String,
         originalNote: Note,
         notify: HexKey?,
@@ -1572,24 +1451,25 @@ class Account(
 
         val idHex = originalNote.event?.id ?: return
 
-        TextNoteModificationEvent.create(
-            content = message,
-            eventId = idHex,
-            notify = notify,
-            summary = summary,
-            signer = signer,
-        ) { event ->
-            cache.justConsumeMyOwnEvent(event)
-            val note = cache.getOrCreateNote(event.id)
-            val relayList = computeRelayListToBroadcast(note)
+        val event =
+            TextNoteModificationEvent.create(
+                content = message,
+                eventId = idHex,
+                notify = notify,
+                summary = summary,
+                signer = signer,
+            )
 
-            client.send(event, relayList = relayList)
+        cache.justConsumeMyOwnEvent(event)
+        val note = cache.getOrCreateNote(event.id)
+        val relayList = computeRelayListToBroadcast(note)
 
-            broadcast.forEach { client.send(it, relayList) }
-        }
+        client.send(event, relayList = relayList)
+
+        broadcast.forEach { client.send(it, relayList) }
     }
 
-    fun sendPrivateMessage(
+    suspend fun sendPrivateMessage(
         message: String,
         toUser: PTag,
         replyingTo: Note? = null,
@@ -1603,36 +1483,36 @@ class Account(
     ) {
         if (!isWriteable()) return
 
-        signer.nip04Encrypt(
-            PrivateDmEvent.prepareMessageToEncrypt(message, imetas),
-            toUser.pubKey,
-        ) { encryptedContent ->
-            val template =
-                PrivateDmEvent.build(toUser, encryptedContent) {
-                    replyingTo?.let { reply(it.toEId()) }
+        val encryptedContent =
+            signer.nip04Encrypt(
+                PrivateDmEvent.prepareMessageToEncrypt(message, imetas),
+                toUser.pubKey,
+            )
 
-                    geohash?.let { geohash(it) }
-                    zapRaiserAmount?.let { zapraiser(it) }
-                    zapReceiver?.let { zapSplits(it) }
-                    emojis?.let { emojis(it) }
-                    contentWarningReason?.let { contentWarning(contentWarningReason) }
-                }
+        val template =
+            PrivateDmEvent.build(toUser, encryptedContent) {
+                replyingTo?.let { reply(it.toEId()) }
 
-            val destinationRelays = cache.getOrCreateUser(toUser.pubKey).dmInboxRelays()
+                geohash?.let { geohash(it) }
+                zapRaiserAmount?.let { zapraiser(it) }
+                zapReceiver?.let { zapSplits(it) }
+                emojis?.let { emojis(it) }
+                contentWarningReason?.let { contentWarning(contentWarningReason) }
+            }
 
-            signAndSendNIP04Message(draftTag, template, outboxRelays.flow.value + destinationRelays)
-        }
+        val destinationRelays = cache.getOrCreateUser(toUser.pubKey).dmInboxRelays()
+
+        signAndSendNIP04Message(draftTag, template, outboxRelays.flow.value + destinationRelays)
     }
 
-    fun sendNIP17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
+    suspend fun sendNIP17EncryptedFile(template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>) {
         if (!isWriteable()) return
 
-        NIP17Factory().createEncryptedFileNIP17(template, signer) {
-            broadcastPrivately(it)
-        }
+        val wraps = NIP17Factory().createEncryptedFileNIP17(template, signer)
+        broadcastPrivately(wraps)
     }
 
-    fun sendNIP17PrivateMessage(
+    suspend fun sendNIP17PrivateMessage(
         template: EventTemplate<ChatMessageEvent>,
         draftTag: String? = null,
     ) {
@@ -1642,16 +1522,14 @@ class Account(
             if (template.content.isEmpty()) {
                 deleteDraft(draftTag)
             } else {
-                signer.assembleRumor(template) {
-                    DraftEvent.create(draftTag, it, emptyList(), signer) { draftEvent ->
-                        sendDraftEvent(draftEvent)
-                    }
-                }
+                val rumor = RumorAssembler.assembleRumor(signer.pubKey, template)
+                val draftEvent = DraftEvent.create(draftTag, rumor, emptyList(), signer)
+                draftsDecryptionCache.preload(draftEvent, rumor)
+                sendDraftEvent(draftEvent)
             }
         } else {
-            NIP17Factory().createMessageNIP17(template, signer) {
-                broadcastPrivately(it)
-            }
+            val it = NIP17Factory().createMessageNIP17(template, signer)
+            broadcastPrivately(it)
         }
     }
 
@@ -1659,7 +1537,9 @@ class Account(
         sendToPrivateOutboxAndLocal(draftEvent)
     }
 
-    fun sendToPrivateOutboxAndLocal(event: Event) {
+    fun sendToPrivateOutboxAndLocal(event: Event?) {
+        if (event == null) return
+
         val relayList = privateStorageRelayList.flow.value + localRelayList.flow.value
         if (relayList.isNotEmpty()) {
             client.send(event, relayList.toSet())
@@ -1669,17 +1549,19 @@ class Account(
         cache.justConsumeMyOwnEvent(event)
     }
 
-    fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
+    suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 
         mine.forEach { giftWrap ->
-            giftWrap.unwrap(signer) { gift ->
-                if (gift is SealedRumorEvent) {
-                    gift.unseal(signer) { rumor ->
-                        cache.justConsumeMyOwnEvent(rumor)
-                    }
+            val gift = giftWrap.unwrapOrNull(signer)
+            if (gift is SealedRumorEvent) {
+                val rumor = gift.unsealOrNull(signer)
+                if (rumor != null) {
+                    cache.justConsumeMyOwnEvent(rumor)
                 }
+            }
 
+            if (gift != null) {
                 cache.justConsumeMyOwnEvent(gift)
             }
 
@@ -1700,20 +1582,20 @@ class Account(
         }
     }
 
-    fun createStatus(newStatus: String) = UserStatusAction.create(newStatus, signer, ::sendMyPublicAndPrivateOutbox)
+    suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
-    fun updateStatus(
+    suspend fun updateStatus(
         oldStatus: AddressableNote,
         newStatus: String,
-    ) = UserStatusAction.update(oldStatus, newStatus, signer, ::sendMyPublicAndPrivateOutbox)
+    ) = sendMyPublicAndPrivateOutbox(UserStatusAction.update(oldStatus, newStatus, signer))
 
-    fun deleteStatus(oldStatus: AddressableNote) = UserStatusAction.delete(oldStatus, signer, ::sendMyPublicAndPrivateOutbox)
+    suspend fun deleteStatus(oldStatus: AddressableNote) = sendMyPublicAndPrivateOutbox(UserStatusAction.delete(oldStatus, signer))
 
-    fun removeEmojiPack(emojiPack: Note) = emoji.removeEmojiPack(emojiPack, ::sendMyPublicAndPrivateOutbox)
+    suspend fun removeEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.removeEmojiPack(emojiPack))
 
-    fun addEmojiPack(emojiPack: Note) = emoji.addEmojiPack(emojiPack, ::sendMyPublicAndPrivateOutbox)
+    suspend fun addEmojiPack(emojiPack: Note) = sendMyPublicAndPrivateOutbox(emoji.addEmojiPack(emojiPack))
 
-    fun addToGallery(
+    suspend fun addToGallery(
         idHex: HexKey,
         url: String,
         relay: NormalizedRelayUrl?,
@@ -1722,192 +1604,95 @@ class Account(
         hash: String?,
         mimeType: String?,
     ) {
-        if (!isWriteable()) return
-
-        signer.sign(
+        val template =
             ProfileGalleryEntryEvent.build(url) {
                 fromEvent(idHex, relay)
                 hash?.let { hash(hash) }
                 mimeType?.let { mimeType(it) }
                 dim?.let { dimension(it) }
                 blurhash?.let { blurhash(it) }
-            },
-        ) {
-            client.send(it, outboxRelays.flow.value)
-            cache.justConsumeMyOwnEvent(it)
-        }
+            }
+
+        val event = signer.sign(template)
+        sendMyPublicAndPrivateOutbox(event)
     }
 
-    fun removeFromGallery(note: Note) {
+    suspend fun removeFromGallery(note: Note) {
         delete(note)
     }
 
-    fun addBookmark(
+    fun isInPrivateBookmarks(note: Note) = bookmarkState.isInPrivateBookmarks(note)
+
+    fun isInPublicBookmarks(note: Note) = bookmarkState.isInPublicBookmarks(note)
+
+    suspend fun addBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
         if (!isWriteable()) return
         if (note.isDraft()) return
 
-        if (note is AddressableNote) {
-            BookmarkListEvent.addReplaceable(
-                userProfile().latestBookmarkList,
-                note.toATag(),
-                isPrivate,
-                signer,
-            ) {
-                client.send(it, outboxRelays.flow.value)
-                cache.justConsumeMyOwnEvent(it)
-            }
-        } else {
-            BookmarkListEvent.addEvent(
-                userProfile().latestBookmarkList,
-                note.idHex,
-                isPrivate,
-                signer,
-            ) {
-                client.send(it, outboxRelays.flow.value)
-                cache.justConsumeMyOwnEvent(it)
-            }
-        }
+        sendMyPublicAndPrivateOutbox(bookmarkState.addBookmark(note, isPrivate))
     }
 
-    fun removeBookmark(
+    suspend fun removeBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
         if (!isWriteable()) return
+        if (note.isDraft()) return
 
-        val bookmarks = userProfile().latestBookmarkList ?: return
-
-        if (note is AddressableNote) {
-            BookmarkListEvent.removeReplaceable(
-                bookmarks,
-                note.toATag(),
-                isPrivate,
-                signer,
-            ) {
-                client.send(it, outboxRelays.flow.value)
-                cache.justConsumeMyOwnEvent(it)
-            }
-        } else {
-            BookmarkListEvent.removeEvent(
-                bookmarks,
-                note.idHex,
-                isPrivate,
-                signer,
-            ) {
-                client.send(it, outboxRelays.flow.value)
-                cache.justConsumeMyOwnEvent(it)
-            }
+        val event = bookmarkState.removeBookmark(note, isPrivate)
+        if (event != null) {
+            sendMyPublicAndPrivateOutbox(event)
         }
     }
 
-    fun sendAuthEvent(
+    suspend fun sendAuthEvent(
         relay: IRelayClient,
         challenge: String,
     ) {
-        RelayAuthEvent.create(relay.url, challenge, signer) {
-            client.sendIfExists(it, relay.url)
-        }
+        val auth = RelayAuthEvent.create(relay.url, challenge, signer)
+        client.sendIfExists(auth, relay.url)
     }
 
-    fun isInPrivateBookmarks(
-        note: Note,
-        onReady: (Boolean) -> Unit,
-    ) {
-        if (!isWriteable()) {
-            onReady(false)
-            false
-        }
-        if (userProfile().latestBookmarkList == null) {
-            onReady(false)
-            false
-        }
-
-        if (note is AddressableNote) {
-            userProfile().latestBookmarkList?.privateAddress(signer) {
-                onReady(it.contains(note.address))
-            }
-        } else {
-            userProfile().latestBookmarkList?.privateTaggedEvents(signer) {
-                onReady(it.contains(note.idHex))
-            }
-        }
+    suspend fun hideWord(word: String) {
+        sendMyPublicAndPrivateOutbox(muteList.hideWord(word))
     }
 
-    fun isInPublicBookmarks(note: Note): Boolean {
-        if (!isWriteable()) return false
-
-        return if (note is AddressableNote) {
-            userProfile().latestBookmarkList?.isTaggedAddressableNote(note.idHex) == true
-        } else {
-            userProfile().latestBookmarkList?.isTaggedEvent(note.idHex) == true
-        }
+    suspend fun showWord(word: String) {
+        sendMyPublicAndPrivateOutbox(blockPeopleList.showWord(word))
+        sendMyPublicAndPrivateOutbox(muteList.showWord(word))
     }
 
-    fun hideWord(word: String) {
-        if (!isWriteable()) return
-
-        muteList.hideWord(word, ::sendMyPublicAndPrivateOutbox)
+    suspend fun hideUser(pubkeyHex: HexKey) {
+        sendMyPublicAndPrivateOutbox(muteList.hideUser(pubkeyHex))
     }
 
-    fun showWord(word: String) {
-        if (!isWriteable()) return
-
-        blockPeopleList.showWord(word, ::sendMyPublicAndPrivateOutbox)
-        muteList.showWord(word, ::sendMyPublicAndPrivateOutbox)
-    }
-
-    fun hideUser(pubkeyHex: HexKey) {
-        if (!isWriteable()) return
-
-        muteList.hideUser(pubkeyHex, ::sendMyPublicAndPrivateOutbox)
-    }
-
-    fun showUser(pubkeyHex: HexKey) {
-        if (!isWriteable()) return
-
-        blockPeopleList.showUser(pubkeyHex, ::sendMyPublicAndPrivateOutbox)
-        muteList.showUser(pubkeyHex, ::sendMyPublicAndPrivateOutbox)
+    suspend fun showUser(pubkeyHex: HexKey) {
+        sendMyPublicAndPrivateOutbox(blockPeopleList.showUser(pubkeyHex))
+        sendMyPublicAndPrivateOutbox(muteList.showUser(pubkeyHex))
         hiddenUsers.showUser(pubkeyHex)
     }
 
-    fun requestDVMContentDiscovery(
+    suspend fun requestDVMContentDiscovery(
         dvmPublicKey: User,
         onReady: (event: NIP90ContentDiscoveryRequestEvent) -> Unit,
     ) {
         val relays = nip65RelayList.inboxFlow.value.toSet()
-        NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey.pubkeyHex, signer.pubKey, relays, signer) {
-            val relayList =
-                dvmPublicKey
-                    .inboxRelays()
-                    .ifEmpty {
-                        LocalCache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex) + dvmPublicKey.relaysBeingUsed.keys
-                    }.toSet()
+        val request = NIP90ContentDiscoveryRequestEvent.create(dvmPublicKey.pubkeyHex, signer.pubKey, relays, signer)
 
-            cache.justConsumeMyOwnEvent(it)
-            onReady(it)
-            client.send(it, relayList)
-        }
-    }
+        val relayList =
+            dvmPublicKey
+                .inboxRelays()
+                .ifEmpty {
+                    cache.relayHints.hintsForKey(dvmPublicKey.pubkeyHex) + dvmPublicKey.relaysBeingUsed.keys
+                }.toSet()
 
-    fun unwrap(
-        event: GiftWrapEvent,
-        onReady: (Event) -> Unit,
-    ) {
-        if (!isWriteable()) return
-
-        return event.unwrap(signer, onReady)
-    }
-
-    fun unseal(
-        event: SealedRumorEvent,
-        onReady: (Event) -> Unit,
-    ) {
-        if (!isWriteable()) return
-
-        return event.unseal(signer, onReady)
+        cache.justConsumeMyOwnEvent(request)
+        onReady(request)
+        delay(100)
+        client.send(request, relayList)
     }
 
     fun cachedDecryptContent(note: Note): String? = cachedDecryptContent(note.event)
@@ -1917,11 +1702,11 @@ class Account(
 
         return if (isWriteable()) {
             if (event is PrivateDmEvent) {
-                event.cachedContentFor(signer)
+                privateDMDecryptionCache.cachedDM(event)
             } else if (event is LnZapRequestEvent && event.isPrivateZap()) {
-                event.cachedPrivateZap()?.content
+                privateZapsDecryptionCache.cachedPrivateZap(event)?.content
             } else if (event is DraftEvent) {
-                event.preCachedDraft(signer)?.content
+                draftsDecryptionCache.preCachedDraft(event)?.content
             } else {
                 event.content
             }
@@ -1930,48 +1715,31 @@ class Account(
         }
     }
 
-    fun decryptContent(
-        note: Note,
-        onReady: (String) -> Unit,
-    ) {
+    suspend fun decryptContent(note: Note): String? {
         val event = note.event
-        if (event is PrivateDmEvent && isWriteable()) {
-            event.plainContent(signer, onReady)
-        } else if (event is LnZapRequestEvent) {
-            decryptZapContentAuthor(note) { onReady(it.content) }
-        } else if (event is DraftEvent) {
-            event.cachedDraft(signer) {
-                onReady(it.content)
-            }
-        } else {
-            event?.content?.let { onReady(it) }
-        }
-    }
-
-    fun decryptZapContentAuthor(
-        note: Note,
-        onReady: (Event) -> Unit,
-    ) {
-        val event = note.event
-        if (event is LnZapRequestEvent) {
+        return if (event is PrivateDmEvent && isWriteable()) {
+            privateDMDecryptionCache.decryptDM(event)
+        } else if (event is LnZapRequestEvent && isWriteable()) {
             if (event.isPrivateZap()) {
                 if (isWriteable()) {
-                    event.decryptPrivateZap(signer) { onReady(it) }
+                    privateZapsDecryptionCache.decryptPrivateZap(event)?.content
+                } else {
+                    null
                 }
             } else {
-                onReady(event)
+                event.content
             }
+        } else if (event is DraftEvent && isWriteable()) {
+            draftsDecryptionCache.cachedDraft(event)?.content
+        } else {
+            event?.content
         }
     }
 
     suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? =
         if (event.isPrivateZap()) {
             if (isWriteable()) {
-                tryAndWait { continuation ->
-                    event.decryptPrivateZap(signer) {
-                        continuation.resume(it)
-                    }
-                }
+                privateZapsDecryptionCache.decryptPrivateZap(event)
             } else {
                 null
             }
@@ -2049,21 +1817,21 @@ class Account(
         ).toSet()
     }
 
-    fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = dmRelayList.saveRelayList(dmRelays, ::sendMyPublicAndPrivateOutbox)
+    suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendEverywhere(dmRelayList.saveRelayList(dmRelays))
 
-    fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = privateStorageRelayList.saveRelayList(relays, ::sendMyPublicAndPrivateOutbox)
+    suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 
-    fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = searchRelayList.saveRelayList(searchRelays, ::sendMyPublicAndPrivateOutbox)
+    suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
 
-    fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = trustedRelayList.saveRelayList(trustedRelays, ::sendMyPublicAndPrivateOutbox)
+    suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
 
-    fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = blockedRelayList.saveRelayList(blockedRelays, ::sendMyPublicAndPrivateOutbox)
+    suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
-    fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = nip65RelayList.saveRelayList(relays, ::sendMyPublicAndPrivateOutbox)
+    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendEverywhere(nip65RelayList.saveRelayList(relays))
 
-    fun sendFileServersList(servers: List<String>) = fileStorageServers.saveFileServersList(servers, ::sendMyPublicAndPrivateOutbox)
+    suspend fun sendFileServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(fileStorageServers.saveFileServersList(servers))
 
-    fun sendBlossomServersList(servers: List<String>) = blossomServers.saveBlossomServersList(servers, ::sendMyPublicAndPrivateOutbox)
+    suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 
     fun getAllPeopleLists(): List<AddressableNote> = getAllPeopleLists(signer.pubKey)
 
@@ -2073,7 +1841,7 @@ class Account(
                 val noteEvent = addressableNote.event
 
                 if (noteEvent is PeopleListEvent) {
-                    noteEvent.pubKey == pubkey && (noteEvent.hasAnyTaggedUser() || noteEvent.cachedPrivateTags()?.isNotEmpty() == true)
+                    noteEvent.pubKey == pubkey && (noteEvent.hasAnyTaggedUser() || peopleListDecryptionCache.cachedUserIdSet(noteEvent).isNotEmpty())
                 } else if (noteEvent is FollowListEvent) {
                     noteEvent.pubKey == pubkey && noteEvent.hasAnyTaggedUser()
                 } else {
@@ -2221,10 +1989,11 @@ class Account(
         }
 
         scope.launch(Dispatchers.Default) {
+            Log.d("DB UPGRADE", "Migrating List")
             delay(1000 * 60 * 1)
             // waits 5 minutes before migrating the list.
             val contactList = userProfile().latestContactList
-            val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { cache.getPublicChatChannelIfExists(it) as? PublicChatChannel }
+            val oldChannels = contactList?.taggedEventIds()?.toSet()?.mapNotNull { cache.getPublicChatChannelIfExists(it) }
 
             if (oldChannels != null && oldChannels.isNotEmpty()) {
                 Log.d("DB UPGRADE", "Migrating List with ${oldChannels.size} old channels ")
@@ -2236,7 +2005,9 @@ class Account(
 
                 if (needsToUpgrade.isNotEmpty()) {
                     Log.d("DB UPGRADE", "Migrating List")
-                    publicChatList.follow(oldChannels, ::sendMyPublicAndPrivateOutbox)
+                    runCatching {
+                        sendMyPublicAndPrivateOutbox(publicChatList.follow(oldChannels))
+                    }
                 }
             }
 
@@ -2252,7 +2023,9 @@ class Account(
 
                 if (needsToUpgrade.isNotEmpty()) {
                     Log.d("DB UPGRADE", "Migrating List")
-                    communityList.follow(oldCommunities, ::sendMyPublicAndPrivateOutbox)
+                    runCatching {
+                        sendMyPublicAndPrivateOutbox(communityList.follow(oldCommunities))
+                    }
                 }
             }
 
@@ -2268,14 +2041,15 @@ class Account(
 
                 if (needsToUpgrade.isNotEmpty()) {
                     Log.d("DB UPGRADE", "Migrating List")
-                    hashtagList.follow(oldHashtags.toList(), ::sendMyPublicAndPrivateOutbox)
+                    runCatching {
+                        sendMyPublicAndPrivateOutbox(hashtagList.follow(oldHashtags.toList()))
+                    }
                 }
             }
 
             val oldGeohashes = contactList?.geohashes()?.toSet()
-
             if (oldGeohashes != null && oldGeohashes.isNotEmpty()) {
-                Log.d("DB UPGRADE", "Migrating List with ${oldGeohashes.size} old communities ")
+                Log.d("DB UPGRADE", "Migrating List with ${oldGeohashes.size} old geohashes ")
                 val existingGeohashes = geohashList.flow.value
 
                 val needsToUpgrade = oldGeohashes.filter { it !in existingGeohashes }
@@ -2284,7 +2058,9 @@ class Account(
 
                 if (needsToUpgrade.isNotEmpty()) {
                     Log.d("DB UPGRADE", "Migrating List")
-                    geohashList.follow(oldGeohashes.toList(), ::sendMyPublicAndPrivateOutbox)
+                    runCatching {
+                        sendMyPublicAndPrivateOutbox(geohashList.follow(oldGeohashes.toList()))
+                    }
                 }
             }
         }

@@ -26,12 +26,12 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 
 class DeriveKeyResponse {
     companion object {
-        fun parse(intent: Intent): SignerResult<DerivationResult> {
+        fun parse(intent: Intent): SignerResult.RequestAddressed<DerivationResult> {
             val newPrivateKey = intent.getStringExtra("result")
             return if (newPrivateKey != null) {
-                SignerResult.Successful(DerivationResult(newPrivateKey))
+                SignerResult.RequestAddressed.Successful(DerivationResult(newPrivateKey))
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
     }

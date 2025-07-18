@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.ephemChat.chat
 
+import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
@@ -39,4 +40,6 @@ data class RoomId(
             result
         }
     }
+
+    fun toTagArray() = RoomIdTag.assemble(id, relayUrl)
 }

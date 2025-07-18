@@ -48,18 +48,18 @@ class DecryptZapQuery(
                     val event = Event.fromJsonOrNull(decryptedEventAsJson) as? LnZapPrivateEvent
                     if (event != null) {
                         if (event.verify()) {
-                            SignerResult.Successful(ZapEventDecryptionResult(event))
+                            SignerResult.RequestAddressed.Successful(ZapEventDecryptionResult(event))
                         } else {
-                            SignerResult.ReceivedButCouldNotVerifyResultingEvent(event)
+                            SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
                         }
                     } else {
-                        SignerResult.ReceivedButCouldNotParseEventFromResult(decryptedEventAsJson)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(decryptedEventAsJson)
                     }
                 } else {
-                    SignerResult.ReceivedButCouldNotPerform(decryptedEventAsJson)
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform(decryptedEventAsJson)
                 }
             } else {
-                SignerResult.ReceivedButCouldNotPerform(decryptedEventAsJson)
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform(decryptedEventAsJson)
             }
         }
 }

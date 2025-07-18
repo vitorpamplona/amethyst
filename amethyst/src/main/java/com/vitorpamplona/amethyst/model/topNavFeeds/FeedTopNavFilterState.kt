@@ -51,6 +51,7 @@ class FeedTopNavFilterState(
     val locationFlow: StateFlow<LocationState.LocationResult>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
     val scope: CoroutineScope,
 ) {
@@ -62,7 +63,7 @@ class FeedTopNavFilterState(
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {
-                    NoteFeedFlow(note.flow().metadata.stateFlow, signer, followsRelays, blockedRelays)
+                    NoteFeedFlow(note.flow().metadata.stateFlow, signer, followsRelays, blockedRelays, caches)
                 } else {
                     UnknownFeedFlow(listName)
                 }

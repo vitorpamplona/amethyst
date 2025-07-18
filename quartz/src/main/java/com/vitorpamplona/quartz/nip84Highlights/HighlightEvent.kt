@@ -130,13 +130,10 @@ class HighlightEvent(
         const val KIND = 9802
         const val ALT = "Highlight/quote event"
 
-        fun create(
+        suspend fun create(
             msg: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (HighlightEvent) -> Unit,
-        ) {
-            signer.sign(createdAt, KIND, arrayOf(AltTag.assemble(ALT)), msg, onReady)
-        }
+        ): HighlightEvent = signer.sign(createdAt, KIND, arrayOf(AltTag.assemble(ALT)), msg)
     }
 }

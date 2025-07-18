@@ -50,20 +50,20 @@ class SignQuery(
                     val event = Event.fromJsonOrNull(eventJson)
                     if (event != null) {
                         if (event.verify()) {
-                            SignerResult.Successful(SignResult(event))
+                            SignerResult.RequestAddressed.Successful(SignResult(event))
                         } else {
-                            SignerResult.ReceivedButCouldNotVerifyResultingEvent(event)
+                            SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
                         }
                     } else {
-                        SignerResult.ReceivedButCouldNotParseEventFromResult(eventJson)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(eventJson)
                     }
                 } else {
-                    SignerResult.ReceivedButCouldNotParseEventFromResult(eventJson)
+                    SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(eventJson)
                 }
             } else {
                 val signature = cursor.getStringByName("result")
                 if (!signature.isNullOrBlank()) {
-                    val event =
+                    val event: Event =
                         EventFactory.create(
                             id = unsignedEvent.id,
                             pubKey = unsignedEvent.pubKey,
@@ -74,12 +74,12 @@ class SignQuery(
                             sig = signature,
                         )
                     if (event.verify()) {
-                        SignerResult.Successful(SignResult(event))
+                        SignerResult.RequestAddressed.Successful(SignResult(event))
                     } else {
-                        SignerResult.ReceivedButCouldNotVerifyResultingEvent(event)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
                     }
                 } else {
-                    SignerResult.ReceivedButCouldNotPerform()
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
                 }
             }
         }

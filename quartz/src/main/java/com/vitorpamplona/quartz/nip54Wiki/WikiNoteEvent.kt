@@ -133,21 +133,20 @@ class WikiNoteEvent(
     companion object {
         const val KIND = 30818
 
-        fun create(
+        suspend fun create(
             msg: String,
             title: String?,
             replyTos: List<String>?,
             mentions: List<String>?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (WikiNoteEvent) -> Unit,
-        ) {
+        ): WikiNoteEvent {
             val tags = mutableListOf<Array<String>>()
             replyTos?.forEach { tags.add(arrayOf("e", it)) }
             mentions?.forEach { tags.add(arrayOf("p", it)) }
             title?.let { tags.add(arrayOf("title", it)) }
             tags.add(AltTag.assemble("Wiki Post: $title"))
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), msg)
         }
     }
 }

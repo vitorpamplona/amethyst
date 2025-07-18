@@ -27,8 +27,8 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 
 open class DiscoverChatFeedFilter(
     val account: Account,
@@ -103,7 +103,7 @@ open class DiscoverChatFeedFilter(
     override fun sort(collection: Set<Note>): List<Note> {
         val lastNote =
             collection.associateWith { note ->
-                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNoteCreatedAt ?: 0
+                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0
             }
 
         return collection

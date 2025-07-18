@@ -60,7 +60,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun MoreOptionsButton(
@@ -187,7 +186,9 @@ fun NoteDropDownMenu(
             text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
+                accountViewModel.decrypt(lastNoteVersion) {
+                    clipboardManager.setText(AnnotatedString(it))
+                }
                 onDismiss()
             },
         )
@@ -359,24 +360,20 @@ fun WatchBookmarksFollowsAndAccount(
     val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-        withContext(Dispatchers.IO) {
-            accountViewModel.isInPrivateBookmarks(note) {
-                val newState =
-                    DropDownParams(
-                        isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                        isPrivateBookmarkNote = it,
-                        isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                        isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                        isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
-                        showSensitiveContent = showSensitiveContent,
-                    )
+        val newState =
+            DropDownParams(
+                isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
+                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
+                showSensitiveContent = showSensitiveContent,
+            )
 
-                launch(Dispatchers.Main) {
-                    onNew(
-                        newState,
-                    )
-                }
-            }
+        launch(Dispatchers.Main) {
+            onNew(
+                newState,
+            )
         }
     }
 }

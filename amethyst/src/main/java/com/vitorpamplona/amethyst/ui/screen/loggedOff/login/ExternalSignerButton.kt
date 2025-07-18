@@ -53,7 +53,7 @@ fun ExternalSignerButton(loginViewModel: LoginViewModel) {
                 val resultData = result.data
                 if (result.resultCode == Activity.RESULT_OK && resultData != null) {
                     val loginInfo = ExternalSignerLogin.parseResult(resultData)
-                    if (loginInfo is SignerResult.Successful<PubKeyResult>) {
+                    if (loginInfo is SignerResult.RequestAddressed.Successful<PubKeyResult>) {
                         loginViewModel.updateKey(TextFieldValue(loginInfo.result.pubkey), false)
                         loginViewModel.loginWithExternalSigner(loginInfo.result.packageName)
                     }

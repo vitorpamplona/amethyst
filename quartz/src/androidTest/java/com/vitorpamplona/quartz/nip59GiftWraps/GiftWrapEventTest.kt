@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Hex
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -41,104 +42,87 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class GiftWrapEventTest {
     @Test()
-    fun testNip17Utils() {
-        val sender = NostrSignerInternal(KeyPair())
-        val receiver = NostrSignerInternal(KeyPair())
-        val message = "Hola, que tal?"
+    fun testNip17Utils() =
+        runBlocking {
+            val sender = NostrSignerInternal(KeyPair())
+            val receiver = NostrSignerInternal(KeyPair())
+            val message = "Hola, que tal?"
 
-        // Requires 3 tests
-        val countDownLatch = CountDownLatch(3)
-
-        NIP17Factory().createMessageNIP17(
-            ChatMessageEvent.build(
-                message,
-                listOf(PTag(receiver.pubKey, null)),
-            ),
-            sender,
-        ) { events ->
-            countDownLatch.countDown()
+            val events =
+                NIP17Factory().createMessageNIP17(
+                    ChatMessageEvent.build(
+                        message,
+                        listOf(PTag(receiver.pubKey, null)),
+                    ),
+                    sender,
+                )
 
             // Simulate Receiver
             val eventsReceiverGets = events.wraps.filter { it.isTaggedUser(receiver.pubKey) }
             eventsReceiverGets.forEach {
-                it.unwrap(receiver) { event ->
-                    if (event is SealedRumorEvent) {
-                        event.unseal(receiver) { innerData ->
-                            countDownLatch.countDown()
-                            assertEquals(message, innerData.content)
-                        }
-                    } else {
-                        fail("Wrong Event")
-                    }
+                val event = it.unwrapThrowing(receiver)
+                if (event is SealedRumorEvent) {
+                    val innerData = event.unsealThrowing(receiver)
+                    assertEquals(message, innerData.content)
+                } else {
+                    fail("Wrong Event")
                 }
             }
 
             // Simulate Sender
             val eventsSenderGets = events.wraps.filter { it.isTaggedUser(sender.pubKey) }
             eventsSenderGets.forEach {
-                it.unwrap(sender) { event ->
-                    if (event is SealedRumorEvent) {
-                        event.unseal(sender) { innerData ->
-                            countDownLatch.countDown()
-                            assertEquals(message, innerData.content)
-                        }
-                    } else {
-                        fail("Wrong Event")
-                    }
+                val event = it.unwrapThrowing(sender)
+                if (event is SealedRumorEvent) {
+                    val innerData = event.unsealThrowing(sender)
+                    assertEquals(message, innerData.content)
+                } else {
+                    fail("Wrong Event")
                 }
             }
         }
 
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-    }
-
     @Test()
-    fun testNip17UtilsForGroups() {
-        val sender = NostrSignerInternal(KeyPair())
-        val receiver1 = NostrSignerInternal(KeyPair())
-        val receiver2 = NostrSignerInternal(KeyPair())
-        val receiver3 = NostrSignerInternal(KeyPair())
-        val receiver4 = NostrSignerInternal(KeyPair())
-        val message = "Hola, que tal?"
+    fun testNip17UtilsForGroups() =
+        runBlocking {
+            val sender = NostrSignerInternal(KeyPair())
+            val receiver1 = NostrSignerInternal(KeyPair())
+            val receiver2 = NostrSignerInternal(KeyPair())
+            val receiver3 = NostrSignerInternal(KeyPair())
+            val receiver4 = NostrSignerInternal(KeyPair())
+            val message = "Hola, que tal?"
 
-        val receivers =
-            listOf(
-                receiver1,
-                receiver2,
-                receiver3,
-                receiver4,
-            )
+            val receivers =
+                listOf(
+                    receiver1,
+                    receiver2,
+                    receiver3,
+                    receiver4,
+                )
 
-        val countDownLatch = CountDownLatch(receivers.size + 2)
-
-        NIP17Factory().createMessageNIP17(
-            ChatMessageEvent.build(
-                message,
-                receivers.map { PTag(it.pubKey, null) },
-            ),
-            sender,
-        ) { events ->
-            countDownLatch.countDown()
+            val events =
+                NIP17Factory().createMessageNIP17(
+                    ChatMessageEvent.build(
+                        message,
+                        receivers.map { PTag(it.pubKey, null) },
+                    ),
+                    sender,
+                )
 
             // Simulate Receiver
             receivers.forEach { receiver ->
                 val eventsReceiverGets = events.wraps.filter { it.isTaggedUser(receiver.pubKey) }
                 eventsReceiverGets.forEach {
-                    it.unwrap(receiver) { event ->
-                        if (event is SealedRumorEvent) {
-                            event.unseal(receiver) { innerData ->
-                                countDownLatch.countDown()
-                                assertEquals(message, innerData.content)
-                            }
-                        } else {
-                            fail("Wrong Event")
-                        }
+                    val event = it.unwrapThrowing(receiver)
+                    if (event is SealedRumorEvent) {
+                        val innerData = event.unsealThrowing(receiver)
+                        assertEquals(message, innerData.content)
+                    } else {
+                        fail("Wrong Event")
                     }
                 }
             }
@@ -146,149 +130,126 @@ class GiftWrapEventTest {
             // Simulate Sender
             val eventsSenderGets = events.wraps.filter { it.isTaggedUser(sender.pubKey) }
             eventsSenderGets.forEach {
-                it.unwrap(sender) { event ->
-                    if (event is SealedRumorEvent) {
-                        event.unseal(sender) { innerData ->
-                            countDownLatch.countDown()
-                            assertEquals(message, innerData.content)
-                        }
-                    } else {
-                        fail("Wrong Event")
-                    }
+                val event = it.unwrapThrowing(sender)
+                if (event is SealedRumorEvent) {
+                    val innerData = event.unsealThrowing(sender)
+                    assertEquals(message, innerData.content)
+                } else {
+                    fail("Wrong Event")
                 }
             }
         }
 
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-    }
-
     @Test()
-    fun testInternalsSimpleMessage() {
-        val sender = NostrSignerInternal(KeyPair())
-        val receiver = NostrSignerInternal(KeyPair())
+    fun testInternalsSimpleMessage() =
+        runBlocking {
+            val sender = NostrSignerInternal(KeyPair())
+            val receiver = NostrSignerInternal(KeyPair())
 
-        val countDownLatch = CountDownLatch(2)
-
-        var giftWrapEventToSender: GiftWrapEvent? = null
-        var giftWrapEventToReceiver: GiftWrapEvent? = null
-
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Hi There!",
-                to = listOf(PTag(receiver.pubKey, null)),
-            ),
-        ) { senderMessage ->
+            val senderMessage =
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Hi There!",
+                        to = listOf(PTag(receiver.pubKey, null)),
+                    ),
+                )
             // MsgFor the Receiver
+            val encMsgFromSenderToReceiver =
+                SealedRumorEvent.create(
+                    event = senderMessage,
+                    encryptTo = receiver.pubKey,
+                    signer = sender,
+                )
 
-            SealedRumorEvent.create(
-                event = senderMessage,
-                encryptTo = receiver.pubKey,
-                signer = sender,
-            ) { encMsgFromSenderToReceiver ->
-                // Should expose sender
-                assertEquals(encMsgFromSenderToReceiver.pubKey, sender.pubKey)
-                // Should not expose receiver
-                assertTrue(encMsgFromSenderToReceiver.tags.isEmpty())
+            // Should expose sender
+            assertEquals(encMsgFromSenderToReceiver.pubKey, sender.pubKey)
+            // Should not expose receiver
+            assertTrue(encMsgFromSenderToReceiver.tags.isEmpty())
 
+            val giftWrapToReceiver =
                 GiftWrapEvent.create(
                     event = encMsgFromSenderToReceiver,
                     recipientPubKey = receiver.pubKey,
-                ) { giftWrapToReceiver ->
-                    // Should not be signed by neither sender nor receiver
-                    assertNotEquals(giftWrapToReceiver.pubKey, sender.pubKey)
-                    assertNotEquals(giftWrapToReceiver.pubKey, receiver.pubKey)
+                )
 
-                    // Should not include sender as recipient
-                    assertNotEquals(giftWrapToReceiver.recipientPubKey(), sender.pubKey)
+            // Should not be signed by neither sender nor receiver
+            assertNotEquals(giftWrapToReceiver.pubKey, sender.pubKey)
+            assertNotEquals(giftWrapToReceiver.pubKey, receiver.pubKey)
 
-                    // Should be addressed to the receiver
-                    assertEquals(giftWrapToReceiver.recipientPubKey(), receiver.pubKey)
+            // Should not include sender as recipient
+            assertNotEquals(giftWrapToReceiver.recipientPubKey(), sender.pubKey)
 
-                    giftWrapEventToReceiver = giftWrapToReceiver
-
-                    countDownLatch.countDown()
-                }
-            }
+            // Should be addressed to the receiver
+            assertEquals(giftWrapToReceiver.recipientPubKey(), receiver.pubKey)
 
             // MsgFor the Sender
-            SealedRumorEvent.create(
-                event = senderMessage,
-                encryptTo = sender.pubKey,
-                signer = sender,
-            ) { encMsgFromSenderToSender ->
-                // Should expose sender
-                assertEquals(encMsgFromSenderToSender.pubKey, sender.pubKey)
-                // Should not expose receiver
-                assertTrue(encMsgFromSenderToSender.tags.isEmpty())
+            val encMsgFromSenderToSender =
+                SealedRumorEvent.create(
+                    event = senderMessage,
+                    encryptTo = sender.pubKey,
+                    signer = sender,
+                )
 
+            // Should expose sender
+            assertEquals(encMsgFromSenderToSender.pubKey, sender.pubKey)
+            // Should not expose receiver
+            assertTrue(encMsgFromSenderToSender.tags.isEmpty())
+
+            val giftWrapToSender =
                 GiftWrapEvent.create(
                     event = encMsgFromSenderToSender,
                     recipientPubKey = sender.pubKey,
-                ) { giftWrapToSender ->
-                    // Should not be signed by neither the sender, not the receiver
-                    assertNotEquals(giftWrapToSender.pubKey, sender.pubKey)
-                    assertNotEquals(giftWrapToSender.pubKey, receiver.pubKey)
+                )
 
-                    // Should not be addressed to the receiver
-                    assertNotEquals(giftWrapToSender.recipientPubKey(), receiver.pubKey)
-                    // Should be addressed to the sender
-                    assertEquals(giftWrapToSender.recipientPubKey(), sender.pubKey)
+            // Should not be signed by neither the sender, not the receiver
+            assertNotEquals(giftWrapToSender.pubKey, sender.pubKey)
+            assertNotEquals(giftWrapToSender.pubKey, receiver.pubKey)
 
-                    giftWrapEventToSender = giftWrapToSender
+            // Should not be addressed to the receiver
+            assertNotEquals(giftWrapToSender.recipientPubKey(), receiver.pubKey)
+            // Should be addressed to the sender
+            assertEquals(giftWrapToSender.recipientPubKey(), sender.pubKey)
 
-                    countDownLatch.countDown()
-                }
-            }
-        }
+            // Done
+            // -----
+            // Start receiving
 
-        // Done
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+            // Receiver's side
+            // Makes sure it can only be decrypted by the target user
 
-        // Receiver's side
-        // Makes sure it can only be decrypted by the target user
+            assertNotNull(giftWrapToSender)
+            assertNotNull(giftWrapToReceiver)
 
-        assertNotNull(giftWrapEventToSender)
-        assertNotNull(giftWrapEventToReceiver)
-
-        val countDownDecryptLatch = CountDownLatch(2)
-
-        giftWrapEventToSender!!.unwrap(sender) { unwrappedMsgForSenderBySender ->
+            val unwrappedMsgForSenderBySender = giftWrapToSender.unwrapThrowing(sender)
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForSenderBySender.kind)
             assertTrue(unwrappedMsgForSenderBySender is SealedRumorEvent)
 
             if (unwrappedMsgForSenderBySender is SealedRumorEvent) {
-                unwrappedMsgForSenderBySender.unseal(sender) { unwrappedRumorToSenderBySender ->
-                    assertEquals("Hi There!", unwrappedRumorToSenderBySender.content)
-                    countDownDecryptLatch.countDown()
-                }
+                val unwrappedRumorToSenderBySender = unwrappedMsgForSenderBySender.unsealThrowing(sender)
+                assertEquals("Hi There!", unwrappedRumorToSenderBySender.content)
 
-                unwrappedMsgForSenderBySender.unseal(receiver) { _ ->
-                    fail(
-                        "Should not be able to decrypt msg for the sender by the sender but decrypted with receiver",
-                    )
+                unwrappedMsgForSenderBySender.unsealOrNull(receiver)?.let { _ ->
+                    fail("Should not be able to decrypt msg for the sender by the sender but decrypted with receiver")
                 }
             }
-        }
 
-        giftWrapEventToReceiver!!.unwrap(sender) { _ ->
-            fail("Should not be able to decrypt msg for the receiver decrypted by the sender")
-        }
+            giftWrapToReceiver.unwrapOrNull(sender)?.let { _ ->
+                fail("Should not be able to decrypt msg for the receiver decrypted by the sender")
+            }
 
-        giftWrapEventToSender!!.unwrap(receiver) { _ ->
-            fail("Should not be able to decrypt msg for the sender decrypted by the receiver")
-        }
+            giftWrapToReceiver.unwrapOrNull(receiver)?.let { _ ->
+                fail("Should not be able to decrypt msg for the sender decrypted by the receiver")
+            }
 
-        giftWrapEventToReceiver!!.unwrap(receiver) { unwrappedMsgForReceiverByReceiver ->
+            val unwrappedMsgForReceiverByReceiver = giftWrapToReceiver.unwrapThrowing(receiver)
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverByReceiver.kind)
             assertTrue(unwrappedMsgForReceiverByReceiver is SealedRumorEvent)
 
             if (unwrappedMsgForReceiverByReceiver is SealedRumorEvent) {
-                unwrappedMsgForReceiverByReceiver.unseal(receiver) { unwrappedRumorToReceiverByReceiver ->
-                    assertEquals("Hi There!", unwrappedRumorToReceiverByReceiver?.content)
-                    countDownDecryptLatch.countDown()
-                }
+                val unwrappedRumorToReceiverByReceiver = unwrappedMsgForReceiverByReceiver.unsealThrowing(receiver)
+                assertEquals("Hi There!", unwrappedRumorToReceiverByReceiver.content)
 
-                unwrappedMsgForReceiverByReceiver.unseal(sender) { unwrappedRumorToReceiverBySender ->
+                unwrappedMsgForReceiverByReceiver.unsealOrNull(sender)?.let { _ ->
                     fail(
                         "Should not be able to decrypt msg for the receiver by the receiver but decrypted with the sender",
                     )
@@ -296,226 +257,193 @@ class GiftWrapEventTest {
             }
         }
 
-        assertTrue(countDownDecryptLatch.await(1, TimeUnit.SECONDS))
-    }
-
     @Test()
-    fun testInternalsGroupMessage() {
-        val sender = NostrSignerInternal(KeyPair())
-        val receiverA = NostrSignerInternal(KeyPair())
-        val receiverB = NostrSignerInternal(KeyPair())
+    fun testInternalsGroupMessage() =
+        runBlocking {
+            val sender = NostrSignerInternal(KeyPair())
+            val receiverA = NostrSignerInternal(KeyPair())
+            val receiverB = NostrSignerInternal(KeyPair())
 
-        val countDownLatch = CountDownLatch(3)
+            val senderMessage =
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Who is going to the party tonight?",
+                        to = listOf(PTag(receiverA.pubKey), PTag(receiverB.pubKey)),
+                    ),
+                )
 
-        var giftWrapEventToSender: GiftWrapEvent? = null
-        var giftWrapEventToReceiverA: GiftWrapEvent? = null
-        var giftWrapEventToReceiverB: GiftWrapEvent? = null
+            val msgFromSenderToReceiverA =
+                SealedRumorEvent.create(
+                    event = senderMessage,
+                    encryptTo = receiverA.pubKey,
+                    signer = sender,
+                )
 
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Who is going to the party tonight?",
-                to = listOf(PTag(receiverA.pubKey), PTag(receiverB.pubKey)),
-            ),
-        ) { senderMessage ->
-            SealedRumorEvent.create(
-                event = senderMessage,
-                encryptTo = receiverA.pubKey,
-                signer = sender,
-            ) { msgFromSenderToReceiverA ->
-                // Should expose sender
-                assertEquals(msgFromSenderToReceiverA.pubKey, sender.pubKey)
-                // Should not expose receiver
-                assertTrue(msgFromSenderToReceiverA.tags.isEmpty())
+            // Should expose sender
+            assertEquals(msgFromSenderToReceiverA.pubKey, sender.pubKey)
+            // Should not expose receiver
+            assertTrue(msgFromSenderToReceiverA.tags.isEmpty())
 
+            val giftWrapForReceiverA =
                 GiftWrapEvent.create(
                     event = msgFromSenderToReceiverA,
                     recipientPubKey = receiverA.pubKey,
-                ) { giftWrapForReceiverA ->
-                    // Should not be signed by neither sender nor receiver
-                    assertNotEquals(giftWrapForReceiverA.pubKey, sender.pubKey)
-                    assertNotEquals(giftWrapForReceiverA.pubKey, receiverA.pubKey)
-                    assertNotEquals(giftWrapForReceiverA.pubKey, receiverB.pubKey)
+                )
 
-                    // Should not include sender as recipient
-                    assertNotEquals(giftWrapForReceiverA.recipientPubKey(), sender.pubKey)
+            // Should not be signed by neither sender nor receiver
+            assertNotEquals(giftWrapForReceiverA.pubKey, sender.pubKey)
+            assertNotEquals(giftWrapForReceiverA.pubKey, receiverA.pubKey)
+            assertNotEquals(giftWrapForReceiverA.pubKey, receiverB.pubKey)
 
-                    // Should be addressed to the receiver
-                    assertEquals(giftWrapForReceiverA.recipientPubKey(), receiverA.pubKey)
+            // Should not include sender as recipient
+            assertNotEquals(giftWrapForReceiverA.recipientPubKey(), sender.pubKey)
 
-                    giftWrapEventToReceiverA = giftWrapForReceiverA
+            // Should be addressed to the receiver
+            assertEquals(giftWrapForReceiverA.recipientPubKey(), receiverA.pubKey)
 
-                    countDownLatch.countDown()
-                }
-            }
+            val msgFromSenderToReceiverB =
+                SealedRumorEvent.create(
+                    event = senderMessage,
+                    encryptTo = receiverB.pubKey,
+                    signer = sender,
+                )
 
-            SealedRumorEvent.create(
-                event = senderMessage,
-                encryptTo = receiverB.pubKey,
-                signer = sender,
-            ) { msgFromSenderToReceiverB ->
-                // Should expose sender
-                assertEquals(msgFromSenderToReceiverB.pubKey, sender.pubKey)
-                // Should not expose receiver
-                assertTrue(msgFromSenderToReceiverB.tags.isEmpty())
+            // Should expose sender
+            assertEquals(msgFromSenderToReceiverB.pubKey, sender.pubKey)
+            // Should not expose receiver
+            assertTrue(msgFromSenderToReceiverB.tags.isEmpty())
 
+            val giftWrapForReceiverB =
                 GiftWrapEvent.create(
                     event = msgFromSenderToReceiverB,
                     recipientPubKey = receiverB.pubKey,
-                ) { giftWrapForReceiverB ->
-                    // Should not be signed by neither sender nor receiver
-                    assertNotEquals(giftWrapForReceiverB.pubKey, sender.pubKey)
-                    assertNotEquals(giftWrapForReceiverB.pubKey, receiverA.pubKey)
-                    assertNotEquals(giftWrapForReceiverB.pubKey, receiverB.pubKey)
+                )
 
-                    // Should not include sender as recipient
-                    assertNotEquals(giftWrapForReceiverB.recipientPubKey(), sender.pubKey)
+            // Should not be signed by neither sender nor receiver
+            assertNotEquals(giftWrapForReceiverB.pubKey, sender.pubKey)
+            assertNotEquals(giftWrapForReceiverB.pubKey, receiverA.pubKey)
+            assertNotEquals(giftWrapForReceiverB.pubKey, receiverB.pubKey)
 
-                    // Should be addressed to the receiver
-                    assertEquals(giftWrapForReceiverB.recipientPubKey(), receiverB.pubKey)
+            // Should not include sender as recipient
+            assertNotEquals(giftWrapForReceiverB.recipientPubKey(), sender.pubKey)
 
-                    giftWrapEventToReceiverB = giftWrapForReceiverB
+            // Should be addressed to the receiver
+            assertEquals(giftWrapForReceiverB.recipientPubKey(), receiverB.pubKey)
 
-                    countDownLatch.countDown()
-                }
-            }
+            val msgFromSenderToSender =
+                SealedRumorEvent.create(
+                    event = senderMessage,
+                    encryptTo = sender.pubKey,
+                    signer = sender,
+                )
 
-            SealedRumorEvent.create(
-                event = senderMessage,
-                encryptTo = sender.pubKey,
-                signer = sender,
-            ) { msgFromSenderToSender ->
-                // Should expose sender
-                assertEquals(msgFromSenderToSender.pubKey, sender.pubKey)
-                // Should not expose receiver
-                assertTrue(msgFromSenderToSender.tags.isEmpty())
+            // Should expose sender
+            assertEquals(msgFromSenderToSender.pubKey, sender.pubKey)
+            // Should not expose receiver
+            assertTrue(msgFromSenderToSender.tags.isEmpty())
 
+            val giftWrapToSender =
                 GiftWrapEvent.create(
                     event = msgFromSenderToSender,
                     recipientPubKey = sender.pubKey,
-                ) { giftWrapToSender ->
-                    // Should not be signed by neither the sender, not the receiver
-                    assertNotEquals(giftWrapToSender.pubKey, sender.pubKey)
-                    assertNotEquals(giftWrapToSender.pubKey, receiverA.pubKey)
-                    assertNotEquals(giftWrapToSender.pubKey, receiverB.pubKey)
+                )
 
-                    // Should not be addressed to the receiver
-                    assertNotEquals(giftWrapToSender.recipientPubKey(), receiverA.pubKey)
-                    assertNotEquals(giftWrapToSender.recipientPubKey(), receiverB.pubKey)
-                    // Should be addressed to the sender
-                    assertEquals(giftWrapToSender.recipientPubKey(), sender.pubKey)
+            // Should not be signed by neither the sender, not the receiver
+            assertNotEquals(giftWrapToSender.pubKey, sender.pubKey)
+            assertNotEquals(giftWrapToSender.pubKey, receiverA.pubKey)
+            assertNotEquals(giftWrapToSender.pubKey, receiverB.pubKey)
 
-                    giftWrapEventToSender = giftWrapToSender
+            // Should not be addressed to the receiver
+            assertNotEquals(giftWrapToSender.recipientPubKey(), receiverA.pubKey)
+            assertNotEquals(giftWrapToSender.recipientPubKey(), receiverB.pubKey)
+            // Should be addressed to the sender
+            assertEquals(giftWrapToSender.recipientPubKey(), sender.pubKey)
 
-                    countDownLatch.countDown()
-                }
-            }
-        }
+            // Done
+            // -----
+            // Decrypting
 
-        // Done
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+            // Receiver's side
+            // Makes sure it can only be decrypted by the target user
 
-        // Receiver's side
-        // Makes sure it can only be decrypted by the target user
+            assertNotNull(giftWrapToSender)
+            assertNotNull(giftWrapForReceiverA)
+            assertNotNull(giftWrapForReceiverB)
 
-        assertNotNull(giftWrapEventToSender)
-        assertNotNull(giftWrapEventToReceiverA)
-        assertNotNull(giftWrapEventToReceiverB)
-
-        val countDownDecryptLatch = CountDownLatch(3)
-
-        giftWrapEventToSender?.unwrap(sender) { unwrappedMsgForSenderBySender ->
+            val unwrappedMsgForSenderBySender = giftWrapToSender.unwrapThrowing(sender)
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForSenderBySender.kind)
 
             if (unwrappedMsgForSenderBySender is SealedRumorEvent) {
-                unwrappedMsgForSenderBySender.unseal(receiverA) { unwrappedRumorToSenderByReceiverA ->
+                unwrappedMsgForSenderBySender.unsealOrNull(receiverA)?.let { _ ->
                     fail()
                 }
 
-                unwrappedMsgForSenderBySender.unseal(receiverB) { unwrappedRumorToSenderByReceiverB ->
+                unwrappedMsgForSenderBySender.unsealOrNull(receiverB)?.let { _ ->
                     fail()
                 }
 
-                unwrappedMsgForSenderBySender.unseal(sender) { unwrappedRumorToSenderBySender ->
-                    assertEquals(
-                        "Who is going to the party tonight?",
-                        unwrappedRumorToSenderBySender.content,
-                    )
-                }
+                val unwrappedRumorToSenderBySender = unwrappedMsgForSenderBySender.unsealThrowing(sender)
+                assertEquals("Who is going to the party tonight?", unwrappedRumorToSenderBySender.content)
             }
 
-            countDownDecryptLatch.countDown()
-        }
+            giftWrapForReceiverA.unwrapOrNull(sender)?.let { unwrappedMsgForReceiverBySenderA ->
+                fail("Should not be able to decode msg to the receiver A with the sender's key")
+            }
 
-        giftWrapEventToReceiverA!!.unwrap(sender) { unwrappedMsgForReceiverBySenderA ->
-            fail("Should not be able to decode msg to the receiver A with the sender's key")
-        }
+            giftWrapForReceiverB.unwrapOrNull(sender)?.let { unwrappedMsgForReceiverBySenderB ->
+                fail("Should not be able to decode msg to the receiver B with the sender's key")
+            }
 
-        giftWrapEventToReceiverB!!.unwrap(sender) { unwrappedMsgForReceiverBySenderB ->
-            fail("Should not be able to decode msg to the receiver B with the sender's key")
-        }
+            giftWrapToSender.unwrapOrNull(receiverA)?.let {
+                fail("Should not be able to decode msg to sender with the receiver A's key")
+            }
 
-        giftWrapEventToSender!!.unwrap(receiverA) {
-            fail("Should not be able to decode msg to sender with the receiver A's key")
-        }
-
-        giftWrapEventToReceiverA!!.unwrap(receiverA) { unwrappedMsgForReceiverAByReceiverA ->
+            val unwrappedMsgForReceiverAByReceiverA = giftWrapForReceiverA.unwrapThrowing(receiverA)
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverAByReceiverA.kind)
 
             if (unwrappedMsgForReceiverAByReceiverA is SealedRumorEvent) {
-                unwrappedMsgForReceiverAByReceiverA.unseal(receiverA) { unwrappedRumorToReceiverAByReceiverA ->
-                    assertEquals(
-                        "Who is going to the party tonight?",
-                        unwrappedRumorToReceiverAByReceiverA.content,
-                    )
-                }
+                val unwrappedRumorToReceiverAByReceiverA = unwrappedMsgForReceiverAByReceiverA.unsealThrowing(receiverA)
+                assertEquals("Who is going to the party tonight?", unwrappedRumorToReceiverAByReceiverA.content)
 
-                unwrappedMsgForReceiverAByReceiverA.unseal(sender) { unwrappedRumorToReceiverABySender ->
+                unwrappedMsgForReceiverAByReceiverA.unsealOrNull(sender)?.let { unwrappedRumorToReceiverABySender ->
                     fail()
                 }
 
-                unwrappedMsgForReceiverAByReceiverA.unseal(receiverB) { unwrappedRumorToReceiverAByReceiverB ->
+                unwrappedMsgForReceiverAByReceiverA.unsealOrNull(receiverB)?.let { unwrappedRumorToReceiverAByReceiverB ->
                     fail()
                 }
             }
 
-            countDownDecryptLatch.countDown()
-        }
+            giftWrapForReceiverB.unwrapOrNull(receiverA)?.let {
+                fail("Should not be able to decode msg to sender with the receiver A's key")
+            }
 
-        giftWrapEventToReceiverB!!.unwrap(receiverA) {
-            fail("Should not be able to decode msg to sender with the receiver A's key")
-        }
+            giftWrapToSender.unwrapOrNull(receiverB)?.let { unwrappedMsgForSenderByReceiverB ->
+                fail("Should not be able to decode msg to sender with the receiver B's key")
+            }
+            giftWrapForReceiverA.unwrapOrNull(receiverB)?.let { unwrappedMsgForReceiverAByReceiverB ->
+                fail("Should not be able to decode msg to receiver A with the receiver B's key")
+            }
 
-        giftWrapEventToSender!!.unwrap(receiverB) { unwrappedMsgForSenderByReceiverB ->
-            fail("Should not be able to decode msg to sender with the receiver B's key")
-        }
-        giftWrapEventToReceiverA!!.unwrap(receiverB) { unwrappedMsgForReceiverAByReceiverB ->
-            fail("Should not be able to decode msg to receiver A with the receiver B's key")
-        }
-        giftWrapEventToReceiverB!!.unwrap(receiverB) { unwrappedMsgForReceiverBByReceiverB ->
+            val unwrappedMsgForReceiverBByReceiverB = giftWrapForReceiverB.unwrapThrowing(receiverB)
             assertEquals(SealedRumorEvent.KIND, unwrappedMsgForReceiverBByReceiverB.kind)
 
             if (unwrappedMsgForReceiverBByReceiverB is SealedRumorEvent) {
-                unwrappedMsgForReceiverBByReceiverB.unseal(receiverA) { unwrappedRumorToReceiverBByReceiverA ->
+                unwrappedMsgForReceiverBByReceiverB.unsealOrNull(receiverA)?.let { unwrappedRumorToReceiverBByReceiverA ->
                     fail()
                 }
 
-                unwrappedMsgForReceiverBByReceiverB.unseal(receiverB) { unwrappedRumorToReceiverBByReceiverB ->
-                    assertEquals(
-                        "Who is going to the party tonight?",
-                        unwrappedRumorToReceiverBByReceiverB.content,
-                    )
+                val unwrappedRumorToReceiverBByReceiverB = unwrappedMsgForReceiverBByReceiverB.unsealThrowing(receiverB)
+                assertEquals(
+                    "Who is going to the party tonight?",
+                    unwrappedRumorToReceiverBByReceiverB.content,
+                )
 
-                    countDownDecryptLatch.countDown()
-                }
-
-                unwrappedMsgForReceiverBByReceiverB.unseal(sender) { unwrappedRumorToReceiverBBySender ->
+                unwrappedMsgForReceiverBByReceiverB.unsealOrNull(sender)?.let { unwrappedRumorToReceiverBBySender ->
                     fail()
                 }
             }
         }
-
-        assertTrue(countDownDecryptLatch.await(1, TimeUnit.SECONDS))
-    }
 
     @Test
     fun testCaseFromAmethyst1() {
@@ -537,18 +465,14 @@ class GiftWrapEventTest {
             }
             """.trimIndent()
 
-        var rumor: Event? = null
-
-        wait1SecondForResult { onDone ->
-            val privateKey = "de6152a85a0dea3b09a08a6f8139a314d498a7b52f7e5c28858b64270abd4c70"
-            unwrapUnsealRumor(json, privateKey) {
-                rumor = it
-                onDone()
+        val rumor: Event =
+            runBlocking {
+                val privateKey = "de6152a85a0dea3b09a08a6f8139a314d498a7b52f7e5c28858b64270abd4c70"
+                unwrapUnsealRumor(json, privateKey)
             }
-        }
 
         assertNotNull(rumor)
-        assertEquals("Hola, que tal?", rumor?.content)
+        assertEquals("Hola, que tal?", rumor.content)
     }
 
     @Test
@@ -573,17 +497,13 @@ class GiftWrapEventTest {
 
         val privateKey = "409ff7654141eaa16cd2161fe5bd127aeaef71f270c67587474b78998a8e3533"
 
-        var rumor: Event? = null
-
-        wait1SecondForResult { onDone ->
-            unwrapUnsealRumor(json, privateKey) {
-                rumor = it
-                onDone()
+        val rumor: Event =
+            runBlocking {
+                unwrapUnsealRumor(json, privateKey)
             }
-        }
 
         assertNotNull(rumor)
-        assertEquals("Hola, que tal?", rumor?.content)
+        assertEquals("Hola, que tal?", rumor.content)
     }
 
     @Test
@@ -610,17 +530,14 @@ class GiftWrapEventTest {
             """.trimIndent()
 
         val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771"
-        var rumor: Event? = null
 
-        wait1SecondForResult { onDone ->
-            unwrapUnsealRumor(json, privateKey) {
-                rumor = it
-                onDone()
+        val rumor: Event =
+            runBlocking {
+                unwrapUnsealRumor(json, privateKey)
             }
-        }
 
         assertNotNull(rumor)
-        assertEquals("test", rumor?.content)
+        assertEquals("test", rumor.content)
     }
 
     @Test
@@ -645,21 +562,17 @@ class GiftWrapEventTest {
 
         val privateKey = "09e0051fdf5fdd9dd7a54713583006442cbdbf87bdcdab1a402f26e527d56771"
 
-        var rumor: Event? = null
-
-        wait1SecondForResult { onDone ->
-            unwrapUnsealRumor(json, privateKey) {
-                rumor = it
-                onDone()
+        val rumor =
+            runBlocking {
+                unwrapUnsealRumor(json, privateKey)
             }
-        }
 
-        assertEquals("asdfasdfasdf", rumor?.content)
-        assertEquals(1690659269L, rumor?.createdAt)
-        assertEquals("827ba09d32ab81d62c60f657b350198c8aaba84372dab9ad3f4f6b8b7274b707", rumor?.id)
-        assertEquals(14, rumor?.kind)
-        assertEquals("subject", rumor?.tags?.firstOrNull()?.get(0))
-        assertEquals("test", rumor?.tags?.firstOrNull()?.get(1))
+        assertEquals("asdfasdfasdf", rumor.content)
+        assertEquals(1690659269L, rumor.createdAt)
+        assertEquals("827ba09d32ab81d62c60f657b350198c8aaba84372dab9ad3f4f6b8b7274b707", rumor.id)
+        assertEquals(14, rumor.kind)
+        assertEquals("subject", rumor.tags.firstOrNull()?.get(0))
+        assertEquals("test", rumor.tags.firstOrNull()?.get(1))
     }
 
     @Test
@@ -684,33 +597,28 @@ class GiftWrapEventTest {
 
         val privateKey = "7dd22cafc512c0bc363a259f6dcda515b13ae3351066d7976fd0bb79cbd0d700"
 
-        var rumor: Event? = null
-
-        wait1SecondForResult { onDone ->
-            unwrapUnsealRumor(json, privateKey) {
-                rumor = it
-                onDone()
+        val rumor =
+            runBlocking {
+                unwrapUnsealRumor(json, privateKey)
             }
-        }
 
-        assertEquals("8d1a56008d4e31dae2fb8bef36b3efea519eff75f57033107e2aa16702466ef2", rumor?.id)
-        assertEquals("Howdy", rumor?.content)
-        assertEquals(1690833960L, rumor?.createdAt)
-        assertEquals(14, rumor?.kind)
-        assertEquals("p", rumor?.tags?.firstOrNull()?.get(0))
+        assertEquals("8d1a56008d4e31dae2fb8bef36b3efea519eff75f57033107e2aa16702466ef2", rumor.id)
+        assertEquals("Howdy", rumor.content)
+        assertEquals(1690833960L, rumor.createdAt)
+        assertEquals(14, rumor.kind)
+        assertEquals("p", rumor.tags.firstOrNull()?.get(0))
         assertEquals(
             "b08d8857a92b4d6aa580ff55cc3c18c4edf313c83388c34abc118621f74f1a78",
-            rumor?.tags?.firstOrNull()?.get(1),
+            rumor.tags.firstOrNull()?.get(1),
         )
-        assertEquals("subject", rumor?.tags?.getOrNull(1)?.get(0))
-        assertEquals("Stuff", rumor?.tags?.getOrNull(1)?.get(1))
+        assertEquals("subject", rumor.tags.getOrNull(1)?.get(0))
+        assertEquals("Stuff", rumor.tags.getOrNull(1)?.get(1))
     }
 
-    fun unwrapUnsealRumor(
+    suspend fun unwrapUnsealRumor(
         json: String,
         privateKey: HexKey,
-        onReady: (Event) -> Unit,
-    ) {
+    ): Event {
         val pkBytes = NostrSignerInternal(KeyPair(privateKey.hexToByteArray()))
 
         val wrap = Event.fromJson(json) as GiftWrapEvent
@@ -718,13 +626,13 @@ class GiftWrapEventTest {
 
         assertEquals(pkBytes.pubKey, wrap.recipientPubKey())
 
-        wrap.unwrap(pkBytes) { event ->
-            if (event is SealedRumorEvent) {
-                event.unseal(pkBytes, onReady)
-            } else {
-                println(event.toJson())
-                fail("Event is not a Sealed Rumor")
-            }
+        val event = wrap.unwrapThrowing(pkBytes)
+        return if (event is SealedRumorEvent) {
+            event.unsealThrowing(pkBytes)
+        } else {
+            println(event.toJson())
+            fail("Event is not a Sealed Rumor")
+            throw Exception("Event is not a Sealed Rumor")
         }
     }
 
@@ -750,23 +658,11 @@ class GiftWrapEventTest {
         val wrap = Event.fromJson(msg) as GiftWrapEvent
         wrap.checkSignature()
 
-        var event: Event? = null
-
-        wait1SecondForResult { onDone ->
-            wrap.unwrap(receiversPrivateKey) {
-                event = it
-                onDone()
+        val event =
+            runBlocking {
+                wrap.unwrapThrowing(receiversPrivateKey)
             }
-        }
 
         assertNotNull(event)
     }
-}
-
-fun wait1SecondForResult(run: (onDone: () -> Unit) -> Unit) {
-    val countDownLatch = CountDownLatch(1)
-
-    run { countDownLatch.countDown() }
-
-    assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 }

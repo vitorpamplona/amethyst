@@ -59,7 +59,7 @@ class ReplyIdentifierTag {
         fun matchOrNull(
             tag: Array<String>,
             encodedScope: Set<String>,
-        ) = if (tag.has(1) && tag[0] == RootIdentifierTag.Companion.TAG_NAME && tag[1] in encodedScope) {
+        ) = if (tag.has(1) && tag[0] == TAG_NAME && tag[1] in encodedScope) {
             tag[1]
         } else {
             null
@@ -93,7 +93,7 @@ class ReplyIdentifierTag {
         @JvmStatic
         fun parseExternalId(tag: Tag): ExternalId? {
             ensure(tag.has(1)) { return null }
-            ensure(tag[0] == RootIdentifierTag.Companion.TAG_NAME) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
             val value = tag[1]

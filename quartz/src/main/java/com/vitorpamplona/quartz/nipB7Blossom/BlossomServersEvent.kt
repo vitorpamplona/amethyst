@@ -64,13 +64,12 @@ class BlossomServersEvent(
                 }.plusElement(AltTag.assemble(ALT))
                 .toTypedArray()
 
-        fun updateRelayList(
+        suspend fun updateRelayList(
             earlierVersion: BlossomServersEvent,
             relays: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomServersEvent) -> Unit,
-        ) {
+        ): BlossomServersEvent {
             val tags =
                 earlierVersion.tags
                     .filter { it[0] != "server" }
@@ -80,25 +79,19 @@ class BlossomServersEvent(
                         },
                     ).toTypedArray()
 
-            signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
+            return signer.sign(createdAt, KIND, tags, earlierVersion.content)
         }
 
-        fun createFromScratch(
+        suspend fun createFromScratch(
             relays: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomServersEvent) -> Unit,
-        ) {
-            create(relays, signer, createdAt, onReady)
-        }
+        ) = create(relays, signer, createdAt)
 
-        fun create(
+        suspend fun create(
             servers: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (BlossomServersEvent) -> Unit,
-        ) {
-            signer.sign(createdAt, KIND, createTagArray(servers), "", onReady)
-        }
+        ) = signer.sign<BlossomServersEvent>(createdAt, KIND, createTagArray(servers), "")
     }
 }

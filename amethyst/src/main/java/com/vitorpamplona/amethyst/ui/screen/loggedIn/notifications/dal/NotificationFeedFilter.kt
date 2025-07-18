@@ -39,8 +39,8 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
@@ -99,7 +99,7 @@ class NotificationFeedFilter(
                 val zapRequest = noteEvent.zapRequest
                 if (zapRequest != null) {
                     if (noteEvent.zapRequest?.isPrivateZap() == true) {
-                        zapRequest.cachedPrivateZap()?.pubKey ?: zapRequest.pubKey
+                        account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)?.pubKey ?: zapRequest.pubKey
                     } else {
                         zapRequest.pubKey
                     }

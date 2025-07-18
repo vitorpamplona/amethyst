@@ -24,8 +24,9 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
@@ -38,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.fail
@@ -49,6 +51,7 @@ import okhttp3.OkHttpClient
 import org.junit.Assert
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.runner.Request.method
 import org.junit.runner.RunWith
 import java.io.ByteArrayOutputStream
 import kotlin.random.Random
@@ -57,12 +60,16 @@ import kotlin.random.Random
 class ImageUploadTesting {
     companion object {
         val accountSettings = AccountSettings(KeyPair())
+        val signer = NostrSignerInternal(accountSettings.keyPair)
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val cache = LocalCache
 
-        val account =
-            Account(
+        val blossomServerListState =
+            BlossomServerListState(
+                signer = signer,
+                cache = cache,
+                scope = scope,
                 settings = accountSettings,
-                signer = NostrSignerInternal(accountSettings.keyPair),
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             )
     }
 
@@ -111,7 +118,7 @@ class ImageUploadTesting {
                     sensitiveContent = null,
                     serverBaseUrl = server.baseUrl,
                     okHttpClient = { client },
-                    httpAuth = account::createBlossomUploadAuth,
+                    httpAuth = blossomServerListState::createBlossomUploadAuth,
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
@@ -139,25 +146,27 @@ class ImageUploadTesting {
                     { client },
                 )
 
-        val paylod = getBitmap()
-        val inputStream = paylod.inputStream()
+        val payload = getBitmap()
+        val inputStream = payload.inputStream()
         val result =
             Nip96Uploader()
                 .upload(
                     inputStream = inputStream,
-                    length = paylod.size.toLong(),
+                    length = payload.size.toLong(),
                     contentType = "image/png",
                     alt = null,
                     sensitiveContent = null,
                     server = serverInfo,
                     okHttpClient = { client },
                     onProgress = {},
-                    httpAuth = account::createHTTPAuthorization,
+                    httpAuth = { url, method, body ->
+                        signer.sign(HTTPAuthorizationEvent.build(url, method, body))
+                    },
                     context = InstrumentationRegistry.getInstrumentation().targetContext,
                 )
 
         val url = result.url!!
-        val size = result.size
+        val size = result.size?.toInt()
         val dim = result.dimension
         val hash = result.sha256
 
@@ -183,7 +192,7 @@ class ImageUploadTesting {
                     assertEquals("${server.name}: Invalid dimensions", it.dim.toString(), dim.toString())
                 }
                 if (size != null) {
-                    assertEquals("${server.name}: Invalid size", it.size.toString(), size)
+                    assertEquals("${server.name}: Invalid size", it.size, size)
                 }
             },
             onFailure = { fail("${server.name}: It should not fail") },
@@ -225,6 +234,7 @@ class ImageUploadTesting {
             testBase(ServerName("sove", "https://sove.rent", ServerType.NIP96))
         }
 
+    @Ignore("Not Working anymore")
     @Test()
     fun testNostrBuild() =
         runBlocking {
@@ -239,6 +249,7 @@ class ImageUploadTesting {
         }
 
     @Test()
+    @Ignore("Not Working anymore")
     fun testVoidCat() =
         runBlocking {
             testBase(ServerName("void.cat", "https://void.cat", ServerType.NIP96))

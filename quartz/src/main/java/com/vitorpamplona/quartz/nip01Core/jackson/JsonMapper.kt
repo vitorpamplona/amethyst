@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorSerializer
 
 class JsonMapper {
-    companion object Companion {
+    companion object {
         val defaultPrettyPrinter = InliningTagArrayPrettyPrinter()
 
         val mapper =

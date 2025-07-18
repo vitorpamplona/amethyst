@@ -124,13 +124,12 @@ class LiveActivitiesEvent(
         const val KIND = 30311
         const val ALT = "Live activity event"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (LiveActivitiesEvent) -> Unit,
-        ) {
+        ): LiveActivitiesEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

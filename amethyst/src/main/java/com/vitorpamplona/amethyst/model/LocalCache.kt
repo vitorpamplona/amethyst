@@ -28,12 +28,12 @@ import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.observables.LatestByKindAndAuthor
 import com.vitorpamplona.amethyst.model.observables.LatestByKindWithETag
+import com.vitorpamplona.amethyst.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -83,7 +83,6 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -120,6 +119,7 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
@@ -127,16 +127,16 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
-import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
-import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
@@ -178,12 +178,11 @@ import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -210,11 +209,12 @@ object LocalCache : ILocalCache {
     val notes = LargeCache<HexKey, Note>()
     val addressables = LargeCache<Address, AddressableNote>()
 
+    val chatroomList = LargeCache<HexKey, ChatroomList>()
     val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
     val liveChatChannels = LargeCache<Address, LiveActivitiesChannel>()
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
-    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, (LnZapPaymentResponseEvent) -> Unit>>(10)
+    val awaitingPaymentRequests = ConcurrentHashMap<HexKey, Pair<Note?, suspend (LnZapPaymentResponseEvent) -> Unit>>(10)
 
     val relayHints = HintIndexer()
 
@@ -222,8 +222,6 @@ object LocalCache : ILocalCache {
 
     val observablesByKindAndETag = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindWithETag<Event>>>(10)
     val observablesByKindAndAuthor = ConcurrentHashMap<Int, ConcurrentHashMap<HexKey, LatestByKindAndAuthor<Event>>>(10)
-
-    val onNewEvents = mutableListOf<(Note) -> Unit>()
 
     fun <T : Event> observeETag(
         kind: Int,
@@ -321,6 +319,8 @@ object LocalCache : ILocalCache {
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
+    fun getChatroomListIfExists(key: String): ChatroomList? = chatroomList.get(key)
+
     fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
@@ -400,20 +400,13 @@ object LocalCache : ILocalCache {
         }
     }
 
-    fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel =
-        publicChatChannels.getOrCreate(key) {
-            PublicChatChannel(key)
-        }
+    fun getOrCreateChatroomList(key: HexKey): ChatroomList = chatroomList.getOrCreate(key) { ChatroomList(key) }
 
-    fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel =
-        liveChatChannels.getOrCreate(key) {
-            LiveActivitiesChannel(key)
-        }
+    fun getOrCreatePublicChatChannel(key: HexKey): PublicChatChannel = publicChatChannels.getOrCreate(key) { PublicChatChannel(key) }
 
-    fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel =
-        ephemeralChannels.getOrCreate(key) {
-            EphemeralChatChannel(key)
-        }
+    fun getOrCreateLiveChannel(key: Address): LiveActivitiesChannel = liveChatChannels.getOrCreate(key) { LiveActivitiesChannel(key) }
+
+    fun getOrCreateEphemeralChannel(key: RoomId): EphemeralChatChannel = ephemeralChannels.getOrCreate(key) { EphemeralChatChannel(key) }
 
     fun checkGetOrCreatePublicChatChannel(key: String): PublicChatChannel? {
         if (isValidHex(key)) {
@@ -521,19 +514,7 @@ object LocalCache : ILocalCache {
         event: BookmarkListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val user = getOrCreateUser(event.pubKey)
-        if (user.latestBookmarkList == null || event.createdAt > user.latestBookmarkList!!.createdAt) {
-            if (event.dTag() == "bookmark") {
-                if (wasVerified || justVerify(event)) {
-                    user.updateBookmark(event)
-                    return true
-                }
-            }
-        }
-
-        return false
-    }
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
 
     fun formattedDateTime(timestamp: Long): String =
         Instant
@@ -599,7 +580,7 @@ object LocalCache : ILocalCache {
             // Counts the replies
             replyTo.forEach { it.addReply(note) }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         } else {
@@ -711,7 +692,7 @@ object LocalCache : ILocalCache {
             if (event.createdAt > (note.createdAt() ?: 0)) {
                 note.loadEvent(event, author, replyTo)
 
-                refreshObservers(note)
+                refreshNewNoteObservers(note)
 
                 return true
             }
@@ -756,7 +737,7 @@ object LocalCache : ILocalCache {
 
                 note.loadEvent(event, author, replyTo)
 
-                refreshObservers(note)
+                refreshNewNoteObservers(note)
 
                 return true
             }
@@ -864,7 +845,7 @@ object LocalCache : ILocalCache {
 
             channel.updateChannelInfo(creator, event, event.createdAt)
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1054,7 +1035,7 @@ object LocalCache : ILocalCache {
 
             author.flowSet?.statuses?.invalidateData()
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1085,7 +1066,7 @@ object LocalCache : ILocalCache {
                 version.flowSet?.ots?.invalidateData()
             }
 
-            refreshObservers(version)
+            refreshNewNoteObservers(version)
             return true
         }
 
@@ -1175,7 +1156,7 @@ object LocalCache : ILocalCache {
         if (event.createdAt > (replaceableNote.createdAt() ?: 0) && (isVerified || justVerify(event))) {
             replaceableNote.loadEvent(event, author, computeReplyTo(event))
 
-            refreshObservers(replaceableNote)
+            refreshNewNoteObservers(replaceableNote)
 
             return true
         } else {
@@ -1199,39 +1180,7 @@ object LocalCache : ILocalCache {
         event: PrivateDmEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (wasVerified || justVerify(event)) {
-            val recipient = event.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }
-
-            // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
-
-            val repliesTo = computeReplyTo(event)
-
-            note.loadEvent(event, author, repliesTo)
-
-            if (recipient != null) {
-                author.addMessage(recipient, note)
-                recipient.addMessage(author, note)
-            }
-
-            refreshObservers(note)
-
-            return true
-        }
-
-        return false
-    }
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: DeletionEvent,
@@ -1300,7 +1249,7 @@ object LocalCache : ILocalCache {
                 }
             }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         } else {
@@ -1350,26 +1299,7 @@ object LocalCache : ILocalCache {
             getNoteIfExists(it)?.removeReply(deleteNote)
         }
 
-        if (deletedEvent is PrivateDmEvent) {
-            val author = deleteNote.author
-            val recipient =
-                deletedEvent.verifiedRecipientPubKey()?.let {
-                    checkGetOrCreateUser(it)
-                }
-
-            if (recipient != null && author != null) {
-                author.removeMessage(recipient, deleteNote)
-                recipient.removeMessage(author, deleteNote)
-            }
-        }
-
-        if (deletedEvent is DraftEvent) {
-            deletedEvent.allCache().forEach {
-                it?.let {
-                    deindexDraftAsRealEvent(deleteNote, it)
-                }
-            }
-        }
+        notes.remove(deleteNote.idHex)
 
         if (deletedEvent is WrappedEvent) {
             deleteWraps(deletedEvent)
@@ -1377,7 +1307,7 @@ object LocalCache : ILocalCache {
 
         deleteNote.clearFlow()
 
-        notes.remove(deleteNote.idHex)
+        refreshDeletedNoteObservers(deleteNote)
     }
 
     fun deleteWraps(event: WrappedEvent) {
@@ -1389,6 +1319,7 @@ object LocalCache : ILocalCache {
                     deleteWraps(noteEvent)
                 }
                 it.clearFlow()
+                refreshDeletedNoteObservers(it)
             }
 
             notes.remove(it.id)
@@ -1418,7 +1349,7 @@ object LocalCache : ILocalCache {
                 justConsumeAndUpdateIndexes(it, relay, false)
             }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1448,7 +1379,7 @@ object LocalCache : ILocalCache {
                 justConsumeAndUpdateIndexes(it, relay, false)
             }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1483,7 +1414,7 @@ object LocalCache : ILocalCache {
                 justConsumeAndUpdateIndexes(it, relay, false)
             }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1509,7 +1440,7 @@ object LocalCache : ILocalCache {
 
             repliesTo.forEach { it.addReaction(note) }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1553,7 +1484,7 @@ object LocalCache : ILocalCache {
                 }
             }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1576,7 +1507,7 @@ object LocalCache : ILocalCache {
                 oldChannel.addNote(note, relay)
                 note.loadEvent(event, author, emptyList())
 
-                refreshObservers(note)
+                refreshNewNoteObservers(note)
                 true
             } else {
                 wasVerified
@@ -1624,7 +1555,7 @@ object LocalCache : ILocalCache {
             oldChannel.addNote(note, relay)
             note.loadEvent(event, author, emptyList())
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
         }
 
         return isVerified
@@ -1709,7 +1640,6 @@ object LocalCache : ILocalCache {
 
         if (wasVerified || justVerify(event)) {
             val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
-
             if (existingZapRequest == null || existingZapRequest.event == null) {
                 // tries to add it
                 event.zapRequest?.let {
@@ -1733,7 +1663,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addZap(zapRequest, note) }
             mentions.forEach { it.addZap(zapRequest, note) }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1761,7 +1691,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addZap(note, null) }
             mentions.forEach { it.addZap(note, null) }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1826,7 +1756,7 @@ object LocalCache : ILocalCache {
                 }
             }
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1885,7 +1815,7 @@ object LocalCache : ILocalCache {
 
             note.loadEvent(eventNoData, author, emptyList())
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -1897,150 +1827,25 @@ object LocalCache : ILocalCache {
         event: ChatMessageEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (wasVerified || justVerify(event)) {
-            val recipientsHex = event.groupMembers()
-            val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
-
-            // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
-
-            val repliesTo = computeReplyTo(event)
-
-            note.loadEvent(event, author, repliesTo)
-
-            if (recipients.isNotEmpty()) {
-                recipients.forEach {
-                    val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
-
-                    val authorGroup =
-                        if (groupMinusRecipient.isEmpty()) {
-                            // note to self
-                            ChatroomKey(persistentSetOf(it.pubkeyHex))
-                        } else {
-                            ChatroomKey(groupMinusRecipient.toImmutableSet())
-                        }
-
-                    it.addMessage(authorGroup, note)
-                }
-            }
-
-            refreshObservers(note)
-
-            return true
-        }
-
-        return false
-    }
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     private fun consume(
         event: ChatMessageEncryptedFileHeaderEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (wasVerified || justVerify(event)) {
-            val recipientsHex = event.groupMembers()
-            val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
-
-            // Log.d("PM", "${author.toBestDisplayName()} to ${recipient?.toBestDisplayName()}")
-
-            val repliesTo = computeReplyTo(event)
-
-            note.loadEvent(event, author, repliesTo)
-
-            if (recipients.isNotEmpty()) {
-                recipients.forEach {
-                    val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
-
-                    val authorGroup =
-                        if (groupMinusRecipient.isEmpty()) {
-                            // note to self
-                            ChatroomKey(persistentSetOf(it.pubkeyHex))
-                        } else {
-                            ChatroomKey(groupMinusRecipient.toImmutableSet())
-                        }
-
-                    it.addMessage(authorGroup, note)
-                }
-            }
-
-            refreshObservers(note)
-
-            return true
-        }
-
-        return false
-    }
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: SealedRumorEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            author.addRelayBeingUsed(relay, event.createdAt)
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (wasVerified || justVerify(event)) {
-            note.loadEvent(event, author, emptyList())
-            refreshObservers(note)
-            return true
-        }
-
-        return false
-    }
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: GiftWrapEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean {
-        val note = getOrCreateNote(event.id)
-        val author = getOrCreateUser(event.pubKey)
-
-        if (relay != null) {
-            note.addRelay(relay)
-        }
-
-        // Already processed this event.
-        if (note.event != null) return false
-
-        if (wasVerified || justVerify(event)) {
-            note.loadEvent(event, author, emptyList())
-            refreshObservers(note)
-            return true
-        }
-
-        return false
-    }
+    ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
         event: LnZapPaymentRequestEvent,
@@ -2056,7 +1861,7 @@ object LocalCache : ILocalCache {
         zappedNote: Note?,
         wasVerified: Boolean,
         relay: NormalizedRelayUrl?,
-        onResponse: (LnZapPaymentResponseEvent) -> Unit,
+        onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
     ): Boolean {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
@@ -2075,7 +1880,7 @@ object LocalCache : ILocalCache {
 
             awaitingPaymentRequests.put(event.id, Pair(zappedNote, onResponse))
 
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
 
             return true
         }
@@ -2106,7 +1911,9 @@ object LocalCache : ILocalCache {
 
             requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            responseCallback(event)
+            GlobalScope.launch(Dispatchers.Default) {
+                responseCallback(event)
+            }
 
             return true
         }
@@ -2438,9 +2245,9 @@ object LocalCache : ILocalCache {
             pruneOldMessagesChannel(channel)
         }
 
-        users.forEach { _, user ->
-            user.privateChatrooms.values.map {
-                val toBeRemoved = it.pruneMessagesToTheLatestOnly()
+        chatroomList.forEach { userHex, room ->
+            room.chatrooms.map { key, chatroom ->
+                val toBeRemoved = chatroom.pruneMessagesToTheLatestOnly()
 
                 val childrenToBeRemoved = mutableListOf<Note>()
 
@@ -2456,7 +2263,7 @@ object LocalCache : ILocalCache {
 
                 if (toBeRemoved.size > 1) {
                     println(
-                        "PRUNE: ${toBeRemoved.size} private messages from ${user.toBestDisplayName()} to ${it.authors.joinToString(", ") { it.toBestDisplayName() }} removed. ${it.roomMessages.size} kept",
+                        "PRUNE: ${toBeRemoved.size} private messages from $userHex to ${key.users.joinToString()} removed. ${chatroom.roomMessages.size} kept",
                     )
                 }
             }
@@ -2582,6 +2389,8 @@ object LocalCache : ILocalCache {
         note.clearFlow()
 
         notes.remove(note.idHex)
+
+        refreshDeletedNoteObservers(note)
     }
 
     fun removeFromCache(nextToBeRemoved: List<Note>) {
@@ -2665,11 +2474,14 @@ object LocalCache : ILocalCache {
     // Observers line up here.
     val live: LocalCacheFlow = LocalCacheFlow()
 
-    private fun refreshObservers(newNote: Note) {
+    private fun refreshNewNoteObservers(newNote: Note) {
         val event = newNote.event as Event
         updateObservables(event)
-        onNewEvents.forEach { it(newNote) }
-        live.invalidateData(newNote)
+        live.newNote(newNote)
+    }
+
+    private fun refreshDeletedNoteObservers(newNote: Note) {
+        live.removedNote(newNote)
     }
 
     fun justVerify(event: Event): Boolean {
@@ -2680,7 +2492,7 @@ object LocalCache : ILocalCache {
                 event.checkSignature()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.w("Event Verification Failed", "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}: ${event.toJson()}")
+                Log.w("Event Verification Failed", "Kind: ${event.kind} from ${dateFormatter(event.createdAt, "", "")} with message ${e.message}")
             }
             false
         } else {
@@ -2702,163 +2514,10 @@ object LocalCache : ILocalCache {
             val note = Note(event.id)
             note.loadEvent(event, getOrCreateUser(event.pubKey), emptyList())
             relay?.let { note.addRelay(it) }
-            refreshObservers(note)
+            refreshNewNoteObservers(note)
         }
 
         return false
-    }
-
-    fun indexDraftAsRealEvent(
-        draftWrap: DraftEvent,
-        draft: Event,
-    ) {
-        val note = getOrCreateAddressableNote(draftWrap.address())
-        val author = getOrCreateUser(draftWrap.pubKey)
-
-        when (draft) {
-            is PrivateDmEvent -> {
-                draft.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }?.let { recipient ->
-                    author.addMessage(recipient, note)
-                    recipient.addMessage(author, note)
-                }
-            }
-            is ChatMessageEvent -> {
-                val recipientsHex = draft.groupMembers()
-                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
-
-                if (recipients.isNotEmpty()) {
-                    recipients.forEach {
-                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
-
-                        val authorGroup =
-                            if (groupMinusRecipient.isEmpty()) {
-                                // note to self
-                                ChatroomKey(persistentSetOf(it.pubkeyHex))
-                            } else {
-                                ChatroomKey(groupMinusRecipient.toImmutableSet())
-                            }
-
-                        it.addMessage(authorGroup, note)
-                    }
-                }
-            }
-            is ChatMessageEncryptedFileHeaderEvent -> {
-                val recipientsHex = draft.groupMembers()
-                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
-
-                if (recipients.isNotEmpty()) {
-                    recipients.forEach {
-                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
-
-                        val authorGroup =
-                            if (groupMinusRecipient.isEmpty()) {
-                                // note to self
-                                ChatroomKey(persistentSetOf(it.pubkeyHex))
-                            } else {
-                                ChatroomKey(groupMinusRecipient.toImmutableSet())
-                            }
-
-                        it.addMessage(authorGroup, note)
-                    }
-                }
-            }
-            is EphemeralChatEvent -> {
-                draft.roomId()?.let {
-                    getOrCreateEphemeralChannel(it).addNote(note, null)
-                }
-            }
-            is ChannelMessageEvent -> {
-                draft.channelId()?.let { channelId ->
-                    checkGetOrCreatePublicChatChannel(channelId)?.addNote(note, null)
-                }
-            }
-            is LiveActivitiesChatMessageEvent -> {
-                draft.activityAddress()?.let { channelId ->
-                    getOrCreateLiveChannel(channelId).addNote(note, null)
-                }
-            }
-            is TextNoteEvent -> {
-                val replyTo = computeReplyTo(draft)
-                val author = getOrCreateUser(draftWrap.pubKey)
-                note.loadEvent(draftWrap, author, replyTo)
-                replyTo.forEach { it.addReply(note) }
-            }
-        }
-    }
-
-    fun deindexDraftAsRealEvent(
-        draftWrap: Note,
-        draft: Event,
-    ) {
-        val author = draftWrap.author ?: return
-
-        when (draft) {
-            is PrivateDmEvent -> {
-                draft.verifiedRecipientPubKey()?.let { getOrCreateUser(it) }?.let { recipient ->
-                    author.removeMessage(recipient, draftWrap)
-                    recipient.removeMessage(author, draftWrap)
-                }
-            }
-            is ChatMessageEvent -> {
-                val recipientsHex = draft.recipientsPubKey().plus(author.pubkeyHex).toSet()
-                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
-
-                if (recipients.isNotEmpty()) {
-                    recipients.forEach {
-                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
-
-                        val authorGroup =
-                            if (groupMinusRecipient.isEmpty()) {
-                                // note to self
-                                ChatroomKey(persistentSetOf(it.pubkeyHex))
-                            } else {
-                                ChatroomKey(groupMinusRecipient.toImmutableSet())
-                            }
-
-                        it.removeMessage(authorGroup, draftWrap)
-                    }
-                }
-            }
-            is ChatMessageEncryptedFileHeaderEvent -> {
-                val recipientsHex = draft.groupMembers()
-                val recipients = recipientsHex.mapNotNull { checkGetOrCreateUser(it) }.toSet()
-
-                if (recipients.isNotEmpty()) {
-                    recipients.forEach {
-                        val groupMinusRecipient = recipientsHex.minus(it.pubkeyHex)
-
-                        val authorGroup =
-                            if (groupMinusRecipient.isEmpty()) {
-                                // note to self
-                                ChatroomKey(persistentSetOf(it.pubkeyHex))
-                            } else {
-                                ChatroomKey(groupMinusRecipient.toImmutableSet())
-                            }
-
-                        it.removeMessage(authorGroup, draftWrap)
-                    }
-                }
-            }
-            is ChannelMessageEvent -> {
-                draft.channelId()?.let { channelId ->
-                    getPublicChatChannelIfExists(channelId)?.removeNote(draftWrap)
-                }
-            }
-            is EphemeralChatEvent -> {
-                draft.roomId()?.let {
-                    getEphemeralChatChannelIfExists(it)?.removeNote(draftWrap)
-                }
-            }
-            is LiveActivitiesChatMessageEvent -> {
-                draft.activityAddress()?.let { channelId ->
-                    getLiveActivityChannelIfExists(channelId)?.removeNote(draftWrap)
-                }
-            }
-            is TextNoteEvent -> {
-                val replyTo = computeReplyTo(draft)
-                replyTo.forEach { it.removeReply(draftWrap) }
-            }
-        }
     }
 
     fun consume(nip19: Entity) {
@@ -3122,7 +2781,7 @@ object LocalCache : ILocalCache {
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            e.printStackTrace()
+            Log.w("LocalCache", "Cannot consume ${event.kind}", e)
             false
         }
 
@@ -3159,15 +2818,24 @@ object LocalCache : ILocalCache {
 
 @Stable
 class LocalCacheFlow {
-    private val _newEventBundles = MutableSharedFlow<Set<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
+    private val _newEventBundles = MutableSharedFlow<Set<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
     val newEventBundles = _newEventBundles.asSharedFlow() // read-only public view
+
+    private val _deletedEventBundles = MutableSharedFlow<Set<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
+    val deletedEventBundles = _deletedEventBundles.asSharedFlow() // read-only public view
 
     // Refreshes observers in batches.
     private val bundler = BundledInsert<Note>(1000, Dispatchers.Default)
 
-    fun invalidateData(newNote: Note) {
+    fun newNote(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->
             _newEventBundles.emit(bundledNewNotes)
+        }
+    }
+
+    fun removedNote(newNote: Note) {
+        bundler.invalidateList(newNote) { bundledNewNotes ->
+            _deletedEventBundles.emit(bundledNewNotes)
         }
     }
 }

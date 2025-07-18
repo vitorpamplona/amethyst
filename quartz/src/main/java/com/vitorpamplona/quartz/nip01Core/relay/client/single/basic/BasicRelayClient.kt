@@ -144,7 +144,6 @@ open class BasicRelayClient(
             stats.newError(e.message ?: "Error trying to connect: ${e.javaClass.simpleName}")
 
             markConnectionAsClosed()
-            e.printStackTrace()
         } finally {
             connectingMutex.set(false)
         }
@@ -224,7 +223,6 @@ open class BasicRelayClient(
             markConnectionAsClosed()
 
             Log.w(logTag, "OnFailure $code $response ${t.message} $socket")
-            t.printStackTrace()
             listener.onError(
                 this@BasicRelayClient,
                 "",

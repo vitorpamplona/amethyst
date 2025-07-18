@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 abstract class BasicRelaySetupInfoModel : ViewModel() {
+    lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     private val _relays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
@@ -41,8 +43,9 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     var hasModified = false
 
-    fun init(account: Account) {
-        this.account = account
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
     }
 
     fun load() {
@@ -52,11 +55,11 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     abstract fun getRelayList(): List<NormalizedRelayUrl>?
 
-    abstract fun saveRelayList(urlList: List<NormalizedRelayUrl>)
+    abstract suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>)
 
     fun create() {
         if (hasModified) {
-            viewModelScope.launch(Dispatchers.IO) {
+            accountViewModel.runIOCatching {
                 saveRelayList(_relays.value.map { it.relay })
                 clear()
             }

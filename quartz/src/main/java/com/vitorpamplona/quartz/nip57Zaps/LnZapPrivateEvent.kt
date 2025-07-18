@@ -61,21 +61,18 @@ class LnZapPrivateEvent(
         const val KIND = 9733
         const val ALT = "Private zap"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             tags: Array<Array<String>> = emptyArray(),
             content: String = "",
             createdAt: Long = TimeUtils.now(),
-            onReady: (LnZapPrivateEvent) -> Unit,
-        ) {
-            signer.sign(createdAt, KIND, tags, content, onReady)
-        }
+        ): LnZapPrivateEvent = signer.sign(createdAt, KIND, tags, content)
 
         fun create(
             signer: NostrSignerSync,
             tags: Array<Array<String>> = emptyArray(),
             content: String = "",
             createdAt: Long = TimeUtils.now(),
-        ): LnZapPrivateEvent? = signer.sign(createdAt, KIND, tags, content)
+        ): LnZapPrivateEvent = signer.sign(createdAt, KIND, tags, content)
     }
 }

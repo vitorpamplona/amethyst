@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -85,13 +85,13 @@ fun RenderFollowSetThumb(
         val noteEvent = it.event as? FollowListEvent
 
         FollowSetCard(
-            name = noteEvent?.nameOrTitle()?.ifBlank { null } ?: noteEvent?.dTag() ?: "",
+            name = noteEvent?.title()?.ifBlank { null } ?: noteEvent?.dTag() ?: "",
             media = noteEvent?.image()?.ifBlank { null },
             description = noteEvent?.description(),
             users =
                 accountViewModel
                     .loadUsersSync(
-                        noteEvent?.pubKeys() ?: emptyList(),
+                        noteEvent?.followIds() ?: emptyList(),
                     ).toImmutableList(),
         )
     }

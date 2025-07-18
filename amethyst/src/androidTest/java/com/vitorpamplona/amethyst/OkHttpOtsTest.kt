@@ -30,12 +30,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
-import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class OkHttpOtsTest {
@@ -49,9 +47,9 @@ class OkHttpOtsTest {
     val resolver =
         OtsResolver(
             OkHttpBitcoinExplorer(
-                OkHttpBitcoinExplorer.MEMPOOL_API_URL,
+                baseAPI = OkHttpBitcoinExplorer.MEMPOOL_API_URL,
                 client = OkHttpClient.Builder().build(),
-                otsCache,
+                cache = otsCache,
             ),
             OkHttpCalendarBuilder { OkHttpClient.Builder().build() },
         )
@@ -80,20 +78,15 @@ class OkHttpOtsTest {
     @Test
     fun createOTSEventAndVerify() {
         val signer = NostrSignerInternal(KeyPair())
-        var ots: OtsEvent? = null
-
-        val countDownLatch = CountDownLatch(1)
 
         val otsFile = OtsEvent.stamp(otsEvent2Digest, resolver)
 
-        signer.sign(OtsEvent.build(otsEvent2Digest, otsFile)) {
-            ots = it
-            countDownLatch.countDown()
-        }
+        val ots =
+            runBlocking {
+                signer.sign(OtsEvent.build(otsEvent2Digest, otsFile))
+            }
 
-        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-        println(ots!!.toJson())
+        println(ots.toJson())
         println(resolver.info(ots.otsByteArray()))
 
         // Should not be valid because we need to wait for confirmations

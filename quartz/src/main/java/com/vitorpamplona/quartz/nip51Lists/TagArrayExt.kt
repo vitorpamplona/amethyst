@@ -22,12 +22,21 @@ package com.vitorpamplona.quartz.nip51Lists
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.utils.startsWith
+import com.vitorpamplona.quartz.utils.startsWithAny
 
 inline fun TagArray.filterToArray(predicate: (Array<String>) -> Boolean): TagArray = filterTo(ArrayList(), predicate).toTypedArray()
 
 inline fun TagArray.remove(predicate: (Array<String>) -> Boolean): TagArray = filterNotTo(ArrayList(this.size), predicate).toTypedArray()
 
 fun TagArray.remove(startsWith: Array<String>): TagArray = filterNotTo(ArrayList(this.size), { it.startsWith(startsWith) }).toTypedArray()
+
+fun TagArray.removeAny(startsWith: List<Array<String>>): TagArray =
+    filterNotTo(
+        ArrayList(this.size),
+        {
+            it.startsWithAny(startsWith)
+        },
+    ).toTypedArray()
 
 fun TagArray.replaceAll(
     startsWith: Array<String>,

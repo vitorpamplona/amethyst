@@ -42,7 +42,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AmethystClickableIcon
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.Chatroom
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelFabColumn
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -104,9 +104,12 @@ fun MessagesTwoPane(
                 Box(Modifier.fillMaxSize().systemBarsPadding()) {
                     twoPaneNav.innerNav.value?.let {
                         if (it is Route.Room) {
-                            Chatroom(
-                                roomId = it.id.toString(),
+                            ChatroomView(
+                                room = it.toKey(),
                                 accountViewModel = accountViewModel,
+                                draftMessage = it.message,
+                                replyToNote = it.replyId,
+                                editFromDraft = it.draftId,
                                 nav = nav,
                             )
                         }

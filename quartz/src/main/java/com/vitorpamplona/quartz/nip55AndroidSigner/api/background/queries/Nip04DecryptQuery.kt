@@ -46,9 +46,9 @@ class Nip04DecryptQuery(
         ) { cursor ->
             val plaintext = cursor.getStringByName("result")
             if (!plaintext.isNullOrBlank()) {
-                SignerResult.Successful(DecryptionResult(plaintext))
+                SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
 }

@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz
 
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -68,22 +67,23 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
-import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.interests.HashtagListEvent
-import com.vitorpamplona.quartz.nip51Lists.locations.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarRSVPEvent
@@ -124,19 +124,30 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 
+interface EventBuilder {
+    fun build(
+        id: HexKey,
+        pubKey: HexKey,
+        createdAt: Long,
+        tags: Array<Array<String>>,
+        content: String,
+        sig: HexKey,
+    ): Event
+}
+
 class EventFactory {
     companion object {
-        val factories: MutableMap<Int, (HexKey, HexKey, Long, Array<Array<String>>, String, HexKey) -> Event> = mutableMapOf()
+        val factories: MutableMap<Int, EventBuilder> = mutableMapOf()
 
-        fun create(
-            id: String,
-            pubKey: String,
+        fun <T : Event> create(
+            id: HexKey,
+            pubKey: HexKey,
             createdAt: Long,
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-            sig: String,
-        ): Event =
+            sig: HexKey,
+        ): T =
             when (kind) {
                 AdvertisedRelayListEvent.KIND -> AdvertisedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 AppDefinitionEvent.KIND -> AppDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
@@ -265,12 +276,9 @@ class EventFactory {
                 VideoVerticalEvent.KIND -> VideoVerticalEvent(id, pubKey, createdAt, tags, content, sig)
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> {
-                    factories[kind]?.let {
-                        return it(id, pubKey, createdAt, tags, content, sig)
-                    }
-
-                    Event(id, pubKey, createdAt, kind, tags, content, sig)
+                    factories[kind]?.build(id, pubKey, createdAt, tags, content, sig)
+                        ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
                 }
-            }
+            } as T
     }
 }

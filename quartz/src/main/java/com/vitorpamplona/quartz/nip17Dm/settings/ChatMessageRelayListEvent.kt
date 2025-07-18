@@ -54,19 +54,17 @@ class ChatMessageRelayListEvent(
 
         fun createTagArray(relays: List<NormalizedRelayUrl>): Array<Array<String>> =
             relays
-                .map {
-                    RelayTag.assemble(it)
-                }.plusElement(
+                .map { RelayTag.assemble(it) }
+                .plusElement(
                     AltTag.assemble("Relay list to receive private messages"),
                 ).toTypedArray()
 
-        fun updateRelayList(
+        suspend fun updateRelayList(
             earlierVersion: ChatMessageRelayListEvent,
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ChatMessageRelayListEvent) -> Unit,
-        ) {
+        ): ChatMessageRelayListEvent {
             val tags =
                 earlierVersion.tags
                     .filter(RelayTag::notMatch)
@@ -76,31 +74,19 @@ class ChatMessageRelayListEvent(
                         },
                     ).toTypedArray()
 
-            signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
+            return signer.sign(createdAt, KIND, tags, earlierVersion.content)
         }
 
-        fun createFromScratch(
+        suspend fun create(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (ChatMessageRelayListEvent) -> Unit,
-        ) {
-            create(relays, signer, createdAt, onReady)
-        }
-
-        fun create(
-            relays: List<NormalizedRelayUrl>,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (ChatMessageRelayListEvent) -> Unit,
-        ) {
-            signer.sign(createdAt, KIND, createTagArray(relays), "", onReady)
-        }
+        ): ChatMessageRelayListEvent = signer.sign(createdAt, KIND, createTagArray(relays), "")
 
         fun create(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): ChatMessageRelayListEvent? = signer.sign(createdAt, KIND, createTagArray(relays), "")
+        ): ChatMessageRelayListEvent = signer.sign(createdAt, KIND, createTagArray(relays), "")
     }
 }

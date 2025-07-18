@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -41,16 +40,15 @@ class NIP90UserDiscoveryRequestEvent(
         const val KIND = 5301
         const val ALT = "NIP90 Content Discovery request"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AppRecommendationEvent) -> Unit,
-        ) {
+        ): NIP90UserDiscoveryRequestEvent {
             val tags =
                 arrayOf(
                     AltTag.assemble(ALT),
                 )
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

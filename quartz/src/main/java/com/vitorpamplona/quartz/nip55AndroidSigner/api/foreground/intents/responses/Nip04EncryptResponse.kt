@@ -26,12 +26,12 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 
 class Nip04EncryptResponse {
     companion object {
-        fun parse(intent: Intent): SignerResult<EncryptionResult> {
+        fun parse(intent: Intent): SignerResult.RequestAddressed<EncryptionResult> {
             val ciphertext = intent.getStringExtra("result")
             return if (ciphertext != null) {
-                SignerResult.Successful(EncryptionResult(ciphertext))
+                SignerResult.RequestAddressed.Successful(EncryptionResult(ciphertext))
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
     }

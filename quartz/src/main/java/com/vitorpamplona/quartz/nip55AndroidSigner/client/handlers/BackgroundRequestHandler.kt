@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.RequestAddressed
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
@@ -39,7 +38,6 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip04E
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip44DecryptQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip44EncryptQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.SignQuery
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
 class BackgroundRequestHandler(
@@ -56,108 +54,31 @@ class BackgroundRequestHandler(
     val decryptZap = DecryptZapQuery(loggedInUser, packageName, contentResolver)
     val deriveKey = DeriveKeyQuery(loggedInUser, packageName, contentResolver)
 
-    fun login(onReady: (HexKey) -> Unit): Boolean {
-        val backgroundResult = login.query()
+    fun login() = login.query() as? SignerResult.RequestAddressed<PubKeyResult>
 
-        if (backgroundResult is SignerResult.Successful<PubKeyResult>) {
-            onReady(backgroundResult.result.pubkey)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
-
-    fun sign(
-        unsignedEvent: Event,
-        onReady: (Event) -> Unit,
-    ): Boolean {
-        val backgroundResult = sign.query(unsignedEvent)
-
-        if (backgroundResult is SignerResult.Successful<SignResult>) {
-            onReady(backgroundResult.result.event)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
+    fun sign(unsignedEvent: Event) = sign.query(unsignedEvent) as? SignerResult.RequestAddressed<SignResult>
 
     fun nip04Encrypt(
         plaintext: String,
         toPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ): Boolean {
-        val backgroundResult = nip04Encrypt.query(plaintext, toPubKey)
-
-        if (backgroundResult is SignerResult.Successful<EncryptionResult>) {
-            onReady(backgroundResult.result.ciphertext)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
+    ) = nip04Encrypt.query(plaintext, toPubKey) as? SignerResult.RequestAddressed<EncryptionResult>
 
     fun nip04Decrypt(
         ciphertext: String,
         fromPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ): Boolean {
-        val backgroundResult = nip04Decrypt.query(ciphertext, fromPubKey)
-
-        if (backgroundResult is SignerResult.Successful<DecryptionResult>) {
-            onReady(backgroundResult.result.plaintext)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
+    ) = nip04Decrypt.query(ciphertext, fromPubKey) as? SignerResult.RequestAddressed<DecryptionResult>
 
     fun nip44Encrypt(
         plaintext: String,
         toPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ): Boolean {
-        val backgroundResult = nip44Encrypt.query(plaintext, toPubKey)
-
-        if (backgroundResult is SignerResult.Successful<EncryptionResult>) {
-            onReady(backgroundResult.result.ciphertext)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
+    ) = nip44Encrypt.query(plaintext, toPubKey) as? SignerResult.RequestAddressed<EncryptionResult>
 
     fun nip44Decrypt(
         ciphertext: String,
         fromPubKey: HexKey,
-        onReady: (String) -> Unit,
-    ): Boolean {
-        val backgroundResult = nip44Decrypt.query(ciphertext, fromPubKey)
+    ) = nip44Decrypt.query(ciphertext, fromPubKey) as? SignerResult.RequestAddressed<DecryptionResult>
 
-        if (backgroundResult is SignerResult.Successful<DecryptionResult>) {
-            onReady(backgroundResult.result.plaintext)
-        }
+    fun decryptZapEvent(event: LnZapRequestEvent) = decryptZap.query(event) as? SignerResult.RequestAddressed<ZapEventDecryptionResult>
 
-        return backgroundResult is RequestAddressed
-    }
-
-    fun decryptZapEvent(
-        event: LnZapRequestEvent,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    ): Boolean {
-        val backgroundResult = decryptZap.query(event)
-
-        if (backgroundResult is SignerResult.Successful<ZapEventDecryptionResult>) {
-            onReady(backgroundResult.result.privateEvent)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
-
-    fun deriveKey(
-        nonce: HexKey,
-        onReady: (HexKey) -> Unit,
-    ): Boolean {
-        val backgroundResult = deriveKey.query(nonce)
-
-        if (backgroundResult is SignerResult.Successful<DerivationResult>) {
-            onReady(backgroundResult.result.newPrivKey)
-        }
-
-        return backgroundResult is RequestAddressed
-    }
+    fun deriveKey(nonce: HexKey) = deriveKey.query(nonce) as? SignerResult.RequestAddressed<DerivationResult>
 }

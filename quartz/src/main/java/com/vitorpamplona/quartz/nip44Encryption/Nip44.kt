@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
-import android.util.Log
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
@@ -49,8 +48,8 @@ object Nip44 {
         payload: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
-        if (payload.isEmpty()) return null
+    ): String {
+        require(payload.isNotBlank()) { "Payload must not be blank" }
         return if (payload[0] == '{') {
             decryptNIP44FromJackson(payload, privateKey, pubKey)
         } else {
@@ -62,14 +61,13 @@ object Nip44 {
         json: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
+    ): String {
         // Ignores if it is not a valid json
         val info =
             try {
                 JsonMapper.mapper.readValue(json, EncryptedInfoString::class.java)
             } catch (e: Exception) {
-                Log.e("NIP44", "Unable to parse json $json")
-                return null
+                throw IllegalArgumentException("Unable to parse NIP-44 JSON: $json")
             }
 
         return when (info.v) {
@@ -101,31 +99,25 @@ object Nip44 {
                 v2.decrypt(encryptedInfo, privateKey, pubKey)
             }
 
-            else -> null
+            else -> throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${info.v}")
         }
     }
 
     private fun decryptNIP44FromBase64(
-        payload: String,
+        ciphertext: String,
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): String? {
-        if (payload.isEmpty()) return null
+    ): String {
+        require(ciphertext.isNotBlank()) { "ciphertext must not be blank" }
 
         // Ignores if it is not base64
-        val byteArray =
-            try {
-                Base64.getDecoder().decode(payload)
-            } catch (e: Exception) {
-                Log.e("NIP44", "Unable to parse base64 $payload")
-                return null
-            }
+        val byteArray = Base64.getDecoder().decode(ciphertext)
 
         return when (byteArray[0].toInt()) {
-            EncryptedInfo.V -> Nip04.decrypt(payload, privateKey, pubKey)
-            Nip44v1.EncryptedInfo.V -> v1.decrypt(payload, privateKey, pubKey)
-            Nip44v2.EncryptedInfo.V -> v2.decrypt(payload, privateKey, pubKey)
-            else -> null
+            EncryptedInfo.V -> Nip04.decrypt(ciphertext, privateKey, pubKey)
+            Nip44v1.EncryptedInfo.V -> v1.decrypt(ciphertext, privateKey, pubKey)
+            Nip44v2.EncryptedInfo.V -> v2.decrypt(ciphertext, privateKey, pubKey)
+            else -> throw IllegalArgumentException("Invalid or unsupported NIP-44 version code ${byteArray[0].toInt()}")
         }
     }
 }

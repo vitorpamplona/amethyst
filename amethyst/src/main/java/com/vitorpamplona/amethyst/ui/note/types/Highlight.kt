@@ -271,7 +271,7 @@ fun DisplayEntryForNote(
     if (description != null) {
         ClickableTextPrimary(
             text = description,
-            onClick = { routeFor(note, accountViewModel.userProfile())?.let { nav.nav(it) } },
+            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
         )
     } else {
         DisplayEvent(noteEvent.id, note.toNostrUri(), null, accountViewModel, nav)

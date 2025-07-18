@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip51Lists
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import kotlinx.coroutines.CancellationException
 
 @Immutable
 abstract class PrivateTagArrayEvent(
@@ -35,61 +35,28 @@ abstract class PrivateTagArrayEvent(
     pubKey: HexKey,
     createdAt: Long,
     kind: Int,
-    tags: Array<Array<String>>,
+    tags: TagArray,
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient private var privateTagsCache: Array<Array<String>>? = null
-
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (privateTagsCache?.sumOf { pointerSizeInBytes + it.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() } } ?: 0)
-
     override fun isContentEncoded() = true
 
-    fun cachedPrivateTags(): Array<Array<String>>? = privateTagsCache
+    suspend fun decrypt(signer: NostrSigner): TagArray {
+        if (signer.pubKey != pubKey) throw SignerExceptions.UnauthorizedDecryptionException()
 
-    fun privateTags(
-        signer: NostrSigner,
-        onReady: (Array<Array<String>>) -> Unit,
-    ) {
-        if (content.isEmpty()) {
-            onReady(emptyArray())
-            return
-        }
-
-        privateTagsCache?.let {
-            onReady(it)
-            return
-        }
-
-        try {
-            PrivateTagsInContent.decrypt(content, signer) {
-                privateTagsCache = it
-                privateTagsCache?.let { onReady(it) }
-            }
-        } catch (e: Throwable) {
-            onReady(emptyArray())
-            Log.w("GeneralList", "Error parsing the JSON ${e.message}")
-        }
+        return PrivateTagsInContent.decrypt(content, signer)
     }
 
-    fun mergeTagList(
-        signer: NostrSigner,
-        onReady: (Array<Array<String>>) -> Unit,
-    ) {
-        privateTags(signer) {
-            onReady(tags + it)
+    suspend fun privateTags(signer: NostrSigner): TagArray? {
+        if (signer.pubKey != pubKey) {
+            return null
         }
-    }
 
-    fun <T> mapAllTags(
-        privateTags: Array<Array<String>>,
-        mapper: (Array<String>) -> T,
-    ): Set<T> {
-        val privateRooms = privateTags.mapNotNull(mapper)
-        val publicRooms = tags.mapNotNull(mapper)
-
-        return (privateRooms + publicRooms).toSet()
+        return try {
+            PrivateTagsInContent.decrypt(content, signer)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
     }
 }

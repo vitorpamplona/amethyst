@@ -26,7 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -37,8 +39,6 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 import kotlinx.collections.immutable.persistentSetOf
 
 @Immutable
@@ -50,21 +50,35 @@ class PrivateDmEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    ChatroomKeyable {
-    @Transient private var decryptedContent: Map<HexKey, String> = mapOf()
+    ChatroomKeyable,
+    PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun countMemory(): Long =
-        super.countMemory() +
-            pointerSizeInBytes + (decryptedContent.values.sumOf { pointerSizeInBytes + it.bytesUsedInMemory() })
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
 
     override fun isContentEncoded() = true
+
+    fun canDecrypt(signer: NostrSigner) = canDecrypt(signer.pubKey)
+
+    fun canDecrypt(signerPubKey: HexKey) = pubKey == signerPubKey || recipientPubKey() == signerPubKey
+
+    suspend fun decryptContent(signer: NostrSigner): String {
+        if (!canDecrypt(signer.pubKey)) throw SignerExceptions.UnauthorizedDecryptionException()
+
+        val retVal = signer.decrypt(content, talkingWith(signer.pubKey))
+        return if (retVal.startsWith(NIP_18_ADVERTISEMENT)) {
+            retVal.substring(16)
+        } else {
+            retVal
+        }
+    }
 
     /**
      * This may or may not be the actual recipient's pub key. The event is intended to look like a
      * nip-04 EncryptedDmEvent but may omit the recipient, too. This value can be queried and used for
      * initial messages.
      */
-    private fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)
+    fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     fun recipientPubKeyBytes() = recipientPubKey()?.runCatching { Hex.decode(this) }?.getOrNull()
 
@@ -79,42 +93,11 @@ class PrivateDmEvent(
 
     fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) verifiedRecipientPubKey() ?: pubKey else pubKey
 
-    override fun chatroomKey(toRemove: String): ChatroomKey = ChatroomKey(persistentSetOf(talkingWith(toRemove)))
+    override fun chatroomKey(toRemove: HexKey): ChatroomKey = ChatroomKey(persistentSetOf(talkingWith(toRemove)))
 
-    /**
-     * To be fully compatible with nip-04, we read e-tags that are in violation to nip-18.
-     *
-     * Nip-18 messages should refer to other events by inline references in the content like
-     * `[](e/c06f795e1234a9a1aecc731d768d4f3ca73e80031734767067c82d67ce82e506).
-     */
     fun replyTo() = tags.firstNotNullOfOrNull(MarkedETag::parseId)
 
     fun with(pubkeyHex: HexKey): Boolean = pubkeyHex == pubKey || tags.any(PTag::isTagged, pubkeyHex)
-
-    fun cachedContentFor(signer: NostrSigner): String? = decryptedContent[signer.pubKey]
-
-    fun plainContent(
-        signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
-        decryptedContent[signer.pubKey]?.let {
-            onReady(it)
-            return
-        }
-
-        signer.decrypt(content, talkingWith(signer.pubKey)) { retVal ->
-            val content =
-                if (retVal.startsWith(NIP_18_ADVERTISEMENT)) {
-                    retVal.substring(16)
-                } else {
-                    retVal
-                }
-
-            decryptedContent = decryptedContent + Pair(signer.pubKey, content)
-
-            onReady(content)
-        }
-    }
 
     companion object {
         const val KIND = 4
@@ -123,11 +106,11 @@ class PrivateDmEvent(
 
         fun prepareMessageToEncrypt(
             msg: String,
-            imetas: List<IMetaTag>? = null,
+            iMetas: List<IMetaTag>? = null,
             advertiseNip18: Boolean = true,
         ): String {
             var message = msg
-            imetas?.forEach {
+            iMetas?.forEach {
                 message = message.replace(it.url, Nip54InlineMetadata().createUrl(it.url, it.properties))
             }
 

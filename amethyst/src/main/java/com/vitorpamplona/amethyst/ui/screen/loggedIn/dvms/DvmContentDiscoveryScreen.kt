@@ -117,10 +117,10 @@ fun DvmContentDiscoveryScreen(
             DvmTopBar(appDefinitionEventId, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
-    ) {
-        Column(Modifier.padding(it)) {
-            LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) {
-                it?.let { baseNote ->
+    ) { paddingValues ->
+        Column(Modifier.padding(paddingValues)) {
+            LoadNote(baseNoteHex = appDefinitionEventId, accountViewModel = accountViewModel) { note ->
+                note?.let { baseNote ->
                     WatchNoteEvent(
                         baseNote,
                         onNoteEventFound = {
@@ -376,7 +376,7 @@ fun FeedDVM(
             if (invoice != null) {
                 val context = LocalContext.current
                 Button(onClick = {
-                    if (accountViewModel.account.hasWalletConnectSetup()) {
+                    if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
                         accountViewModel.sendZapPaymentRequestFor(
                             bolt11 = invoice,
                             zappedNote = null,
@@ -413,7 +413,7 @@ fun FeedDVM(
                     val amountInInvoice =
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice).toLong()
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
 

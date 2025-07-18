@@ -45,36 +45,34 @@ class RelayAuthEvent(
     companion object {
         const val KIND = 22242
 
-        fun create(
+        suspend fun create(
             relay: NormalizedRelayUrl,
             challenge: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (RelayAuthEvent) -> Unit,
-        ) {
+        ): RelayAuthEvent {
             val content = ""
             val tags =
                 arrayOf(
                     RelayTag.assemble(relay),
                     ChallengeTag.assemble(challenge),
                 )
-            signer.sign(createdAt, KIND, tags, content, onReady)
+            return signer.sign(createdAt, KIND, tags, content)
         }
 
-        fun create(
+        suspend fun create(
             relays: List<NormalizedRelayUrl>,
             challenge: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (RelayAuthEvent) -> Unit,
-        ) {
+        ): RelayAuthEvent {
             val content = ""
             val tags =
                 relays
                     .map { RelayTag.assemble(it) }
                     .plusElement(ChallengeTag.assemble(challenge))
                     .toTypedArray()
-            signer.sign(createdAt, KIND, tags, content, onReady)
+            return signer.sign(createdAt, KIND, tags, content)
         }
     }
 }

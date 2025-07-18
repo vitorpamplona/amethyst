@@ -34,21 +34,21 @@ class DecryptZapResponse {
             return intent
         }
 
-        fun parse(intent: Intent): SignerResult<ZapEventDecryptionResult> {
+        fun parse(intent: Intent): SignerResult.RequestAddressed<ZapEventDecryptionResult> {
             val eventJson = intent.getStringExtra("result")
             return if (!eventJson.isNullOrBlank()) {
                 if (eventJson.startsWith("{")) {
                     val event = Event.fromJsonOrNull(eventJson) as? LnZapPrivateEvent
                     if (event != null) {
-                        SignerResult.Successful(ZapEventDecryptionResult(event))
+                        SignerResult.RequestAddressed.Successful(ZapEventDecryptionResult(event))
                     } else {
-                        SignerResult.ReceivedButCouldNotParseEventFromResult(eventJson)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(eventJson)
                     }
                 } else {
-                    SignerResult.ReceivedButCouldNotPerform()
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
                 }
             } else {
-                SignerResult.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }
         }
     }

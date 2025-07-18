@@ -55,6 +55,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">You are using a public key and public keys are read-only. Login with a Private key to be able to unfollow</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">You are using a public key and public keys are read-only. Login with a Private key to be able to hide a word or sentence</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">You are using a public key and public keys are read-only. Login with a Private key to be able to show a word or sentence</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">You are using a public key and public keys are read-only. Login with a Private key to be able to change settings</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">You are using a public key and public keys are read-only. Login with a Private key to be able to upload</string>
+
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">You are using a public key and public keys are read-only. Login with a Private key to be able to sign for events</string>
+
+    <string name="unauthorized_exception">Unauthorized Decryption</string>
+    <string name="unauthorized_exception_description">The signer did not authorize a decryption that is required to make this operation. Activate NIP-44 decryptions in your signer app and try again</string>
 
 
     <string name="zaps">Zaps</string>

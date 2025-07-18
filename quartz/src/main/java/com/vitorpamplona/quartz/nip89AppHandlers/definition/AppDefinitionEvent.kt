@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 import java.util.UUID
 
 @Immutable
@@ -66,8 +67,8 @@ class AppDefinitionEvent(
                     newMetadata
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
-                Log.w("AppDefinitionEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}")
+                if (e is CancellationException) throw e
+                Log.w("AppDefinitionEvent", "Content Parse Error: ${toNostrUri()} ${e.localizedMessage}", e)
                 null
             }
         }

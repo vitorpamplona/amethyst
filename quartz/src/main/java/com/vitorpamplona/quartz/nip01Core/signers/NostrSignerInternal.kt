@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import kotlinx.coroutines.CancellationException
 
 class NostrSignerInternal(
     val keyPair: KeyPair,
@@ -34,59 +35,68 @@ class NostrSignerInternal(
 
     override fun isWriteable(): Boolean = keyPair.privKey != null
 
-    override fun <T : Event> sign(
+    inline fun <T> runWrapErrors(action: () -> T): T =
+        try {
+            action()
+        } catch (e: SignerExceptions) {
+            throw e
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            throw SignerExceptions.CouldNotPerformException("Could not sign event.", e)
+        }
+
+    override suspend fun <T : Event> sign(
         createdAt: Long,
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-        onReady: (T) -> Unit,
-    ) {
-        signerSync.sign<T>(createdAt, kind, tags, content)?.let { onReady(it) }
-    }
+    ): T =
+        runWrapErrors {
+            signerSync.sign<T>(createdAt, kind, tags, content)
+        }
 
-    override fun nip04Encrypt(
+    override suspend fun nip04Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        signerSync.nip04Encrypt(plaintext, toPublicKey)?.let { onReady(it) }
-    }
+    ): String =
+        runWrapErrors {
+            signerSync.nip04Encrypt(plaintext, toPublicKey)
+        }
 
-    override fun nip04Decrypt(
+    override suspend fun nip04Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        signerSync.nip04Decrypt(ciphertext, fromPublicKey)?.let { onReady(it) }
-    }
+    ): String =
+        runWrapErrors {
+            signerSync.nip04Decrypt(ciphertext, fromPublicKey)
+        }
 
-    override fun nip44Encrypt(
+    override suspend fun nip44Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        signerSync.nip44Encrypt(plaintext, toPublicKey)?.let { onReady(it) }
-    }
+    ): String =
+        runWrapErrors {
+            signerSync.nip44Encrypt(plaintext, toPublicKey)
+        }
 
-    override fun nip44Decrypt(
+    override suspend fun nip44Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        signerSync.nip44Decrypt(ciphertext, fromPublicKey)?.let { onReady(it) }
+    ): String =
+        runWrapErrors {
+            signerSync.nip44Decrypt(ciphertext, fromPublicKey)
+        }
+
+    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
+        if (!event.isPrivateZap()) throw SignerExceptions.NothingToDecrypt()
+
+        return runWrapErrors {
+            signerSync.decryptZapEvent(event)
+        }
     }
 
-    override fun decryptZapEvent(
-        event: LnZapRequestEvent,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    ) {
-        signerSync.decryptZapEvent(event)?.let { onReady(it) }
-    }
-
-    override fun deriveKey(
-        nonce: HexKey,
-        onReady: (HexKey) -> Unit,
-    ) {
-        signerSync.deriveKey(nonce)?.let { onReady(it) }
-    }
+    override suspend fun deriveKey(nonce: HexKey): HexKey =
+        runWrapErrors {
+            signerSync.deriveKey(nonce)
+        }
 }

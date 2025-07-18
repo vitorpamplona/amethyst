@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.signers
 
-import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -33,104 +31,49 @@ abstract class NostrSigner(
 ) {
     abstract fun isWriteable(): Boolean
 
-    fun <T : Event> sign(
-        ev: EventTemplate<T>,
-        onReady: (T) -> Unit,
-    ) = sign(ev.createdAt, ev.kind, ev.tags, ev.content, onReady)
+    suspend fun <T : Event> sign(ev: EventTemplate<T>): T = sign(ev.createdAt, ev.kind, ev.tags, ev.content)
 
-    abstract fun <T : Event> sign(
+    abstract suspend fun <T : Event> sign(
         createdAt: Long,
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-        onReady: (T) -> Unit,
-    )
+    ): T
 
-    abstract fun nip04Encrypt(
+    abstract suspend fun nip04Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun nip04Decrypt(
+    abstract suspend fun nip04Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun nip44Encrypt(
+    abstract suspend fun nip44Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun nip44Decrypt(
+    abstract suspend fun nip44Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    )
+    ): String
 
-    abstract fun decryptZapEvent(
-        event: LnZapRequestEvent,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    )
+    abstract suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent
 
-    abstract fun deriveKey(
-        nonce: HexKey,
-        onReady: (HexKey) -> Unit,
-    )
+    abstract suspend fun deriveKey(nonce: HexKey): HexKey
 
-    fun decrypt(
+    suspend fun decrypt(
         encryptedContent: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        if (EncryptedInfo.isNIP04(encryptedContent)) {
-            nip04Decrypt(encryptedContent, fromPublicKey, onReady)
+    ): String {
+        if (encryptedContent.isBlank()) throw SignerExceptions.NothingToDecrypt()
+
+        return if (EncryptedInfo.isNIP04(encryptedContent)) {
+            nip04Decrypt(encryptedContent, fromPublicKey)
         } else {
-            nip44Decrypt(encryptedContent, fromPublicKey, onReady)
+            nip44Decrypt(encryptedContent, fromPublicKey)
         }
     }
-
-    fun <T : Event> assembleRumor(
-        ev: EventTemplate<T>,
-        onReady: (T) -> Unit,
-    ) = assembleRumor(ev.createdAt, ev.kind, ev.tags, ev.content, onReady)
-
-    fun <T : Event> assembleRumor(
-        createdAt: Long,
-        kind: Int,
-        tags: Array<Array<String>>,
-        content: String,
-        onReady: (T) -> Unit,
-    ) {
-        onReady(
-            EventFactory.create(
-                id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
-                pubKey = pubKey,
-                createdAt = createdAt,
-                kind = kind,
-                tags = tags,
-                content = content,
-                sig = "",
-            ) as T,
-        )
-    }
-
-    fun <T : Event> assembleRumor(ev: EventTemplate<T>) = assembleRumor<T>(ev.createdAt, ev.kind, ev.tags, ev.content)
-
-    fun <T : Event> assembleRumor(
-        createdAt: Long,
-        kind: Int,
-        tags: Array<Array<String>>,
-        content: String,
-    ) = EventFactory.create(
-        id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
-        pubKey = pubKey,
-        createdAt = createdAt,
-        kind = kind,
-        tags = tags,
-        content = content,
-        sig = "",
-    ) as T
 }

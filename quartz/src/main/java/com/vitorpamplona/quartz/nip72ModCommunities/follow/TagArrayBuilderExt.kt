@@ -24,6 +24,12 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
+
+fun TagArrayBuilder<CommunityListEvent>.name(name: String) = addUnique(NameTag.assemble(name))
+
+fun TagArrayBuilder<CommunityListEvent>.communities(communities: List<CommunityTag>) = addAll(communities.map { it.toTagArray() })
 
 fun TagArrayBuilder<CommunityListEvent>.followCommunity(
     address: Address,

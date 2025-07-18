@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNote
 data class NNote(
     val hex: String,
 ) : Entity {
-    companion object Companion {
+    companion object {
         fun parse(bytes: ByteArray): NNote? {
             if (bytes.isEmpty()) return null
             return NNote(bytes.toHexKey())

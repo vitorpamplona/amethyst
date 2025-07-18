@@ -43,8 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -58,13 +60,8 @@ import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.BlockedRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
-import com.vitorpamplona.quartz.nip51Lists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
@@ -79,7 +76,9 @@ fun DisplayRelaySet(
     val relays by
         remember(noteEvent) {
             mutableStateOf(
-                noteEvent.relays().toImmutableList(),
+                RelayListCard(
+                    noteEvent.relays().toImmutableList(),
+                ),
             )
         }
 
@@ -110,14 +109,18 @@ fun DisplayNIP65RelayList(
     val writeRelays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.writeRelaysNorm()?.toImmutableList() ?: persistentListOf(),
+                RelayListCard(
+                    noteEvent.writeRelaysNorm() ?: emptyList(),
+                ),
             )
         }
 
     val readRelays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.readRelaysNorm()?.toImmutableList() ?: persistentListOf(),
+                RelayListCard(
+                    noteEvent.readRelaysNorm() ?: emptyList(),
+                ),
             )
         }
 
@@ -152,7 +155,9 @@ fun DisplayDMRelayList(
     val relays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.relays().toImmutableList(),
+                RelayListCard(
+                    noteEvent.relays(),
+                ),
             )
         }
 
@@ -173,14 +178,9 @@ fun DisplaySearchRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? SearchRelayListEvent ?: return
-
-    val relays by
-        remember(baseNote) {
-            mutableStateOf(
-                noteEvent.relays().toImmutableList(),
-            )
-        }
+    val relays by accountViewModel.account.searchRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.searchRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
 
     DisplayRelaySet(
         relays,
@@ -199,14 +199,9 @@ fun DisplayBlockedRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? BlockedRelayListEvent ?: return
-
-    val relays by
-        remember(baseNote) {
-            mutableStateOf(
-                noteEvent.relays().toImmutableList(),
-            )
-        }
+    val relays by accountViewModel.account.blockedRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.blockedRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
 
     DisplayRelaySet(
         relays,
@@ -225,14 +220,9 @@ fun DisplayTrustedRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? TrustedRelayListEvent ?: return
-
-    val relays by
-        remember(baseNote) {
-            mutableStateOf(
-                noteEvent.relays().toImmutableList(),
-            )
-        }
+    val relays by accountViewModel.account.trustedRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.trustedRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
 
     DisplayRelaySet(
         relays,
@@ -246,7 +236,7 @@ fun DisplayTrustedRelayList(
 
 @Composable
 fun DisplayRelaySet(
-    relays: ImmutableList<NormalizedRelayUrl>,
+    relay: RelayListCard,
     relayListName: String,
     relayDescription: String?,
     backgroundColor: MutableState<Color>,
@@ -257,9 +247,9 @@ fun DisplayRelaySet(
 
     val toMembersShow =
         if (expanded) {
-            relays
+            relay.relays
         } else {
-            relays.take(3)
+            relay.relays.take(3)
         }
 
     Text(
@@ -313,7 +303,7 @@ fun DisplayRelaySet(
             }
         }
 
-        if (relays.size > 3 && !expanded) {
+        if (relay.relays.size > 3 && !expanded) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,

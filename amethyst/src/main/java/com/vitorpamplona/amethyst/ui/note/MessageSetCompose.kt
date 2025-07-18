@@ -85,7 +85,7 @@ fun MessageSetCompose(
                         scope.launch {
                             routeFor(
                                 baseNote,
-                                accountViewModel.userProfile(),
+                                accountViewModel.account,
                             )?.let { nav.nav(it) }
                         }
                     },

@@ -24,6 +24,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.serialization.Serializable
 
 sealed class Route {
@@ -122,11 +123,20 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class Room(
-        val id: Int,
+        val id: String,
         val message: String? = null,
         val replyId: HexKey? = null,
         val draftId: HexKey? = null,
-    ) : Route()
+    ) : Route() {
+        constructor(key: ChatroomKey, message: String? = null, replyId: HexKey? = null, draftId: HexKey? = null) : this(
+            id = key.users.joinToString(","),
+            message = message,
+            replyId = replyId,
+            draftId = draftId,
+        )
+
+        fun toKey(): ChatroomKey = ChatroomKey(id.split(",").toSet())
+    }
 
     @Serializable data class RoomByAuthor(
         val id: String,

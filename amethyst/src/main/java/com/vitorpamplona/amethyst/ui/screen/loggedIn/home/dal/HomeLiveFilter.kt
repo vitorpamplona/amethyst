@@ -79,7 +79,7 @@ class HomeLiveFilter(
 
         val revisedOldList =
             oldList.filter { channel ->
-                channel.lastNoteCreatedAt > fiveMinsAgo
+                (channel.lastNote?.createdAt() ?: 0) > fiveMinsAgo
             }
 
         val newItemsToBeAdded = applyFilter(newItems)
@@ -140,7 +140,7 @@ class HomeLiveFilter(
 
         return collection.sortedWith(
             compareByDescending<EphemeralChatChannel> { followCounts[it] }
-                .thenByDescending<EphemeralChatChannel> { it.lastNoteCreatedAt }
+                .thenByDescending<EphemeralChatChannel> { it.lastNote?.createdAt() ?: 0 }
                 .thenBy { it.roomId.id }
                 .thenBy { it.roomId.relayUrl },
         )

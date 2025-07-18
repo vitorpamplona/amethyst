@@ -43,10 +43,10 @@ import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
-import com.vitorpamplona.amethyst.service.relayClient.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -118,7 +118,7 @@ class Amethyst : Application() {
     val notifyCoordinator = NotifyCoordinator(client)
 
     // Authenticates with relays.
-    val authCoordinator = AuthCoordinator(client)
+    val authCoordinator = AuthCoordinator(client, applicationIOScope)
 
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 

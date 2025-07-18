@@ -28,4 +28,6 @@ interface IActivityLauncher {
     fun unregisterForegroundLauncher(launcher: ((Intent) -> Unit))
 
     fun newResponse(data: Intent)
+
+    fun hasForegroundActivity(): Boolean
 }

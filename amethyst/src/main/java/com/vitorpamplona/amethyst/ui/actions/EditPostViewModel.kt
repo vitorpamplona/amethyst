@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyClientListener.onError
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.alt
@@ -168,6 +170,23 @@ open class EditPostViewModel : ViewModel() {
         server: ServerName,
         onError: (String, String) -> Unit,
         context: Context,
+    ) = try {
+        uploadUnsafe(alt, sensitiveContent, mediaQuality, isPrivate, server, onError, context)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        alt: String?,
+        sensitiveContent: Boolean,
+        mediaQuality: Int,
+        isPrivate: Boolean = false,
+        server: ServerName,
+        onError: (String, String) -> Unit,
+        context: Context,
     ) {
         viewModelScope.launch {
             val myAccount = account ?: return@launch
@@ -177,7 +196,6 @@ open class EditPostViewModel : ViewModel() {
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     alt,
                     if (sensitiveContent) "" else null,
                     MediaCompressor.intToCompressorQuality(mediaQuality),
@@ -189,21 +207,21 @@ open class EditPostViewModel : ViewModel() {
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(
-                            state.result.bytes,
-                            headerInfo = state.result.fileHeader,
-                            alt,
-                            if (sensitiveContent) "" else null,
-                        ) { nip95 ->
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val nip95 =
+                            myAccount.createNip95(
+                                byteArray = state.result.bytes,
+                                headerInfo = state.result.fileHeader,
+                                alt = alt,
+                                contentWarningReason = if (sensitiveContent) "" else null,
+                            )
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
-                            }
-
-                            urlPreview = findUrlInMessage()
+                        note?.let {
+                            message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
                         }
+
+                        urlPreview = findUrlInMessage()
                     } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         val iMeta =
                             IMetaTagBuilder(state.result.url)

@@ -26,10 +26,18 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.BackgroundRequestHandler
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.ForegroundRequestHandler
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import java.lang.Exception
 
 class NostrSignerExternal(
     pubKey: HexKey,
@@ -54,13 +62,14 @@ class NostrSignerExternal(
         this.foregroundQuery.launcher.newResponse(data)
     }
 
-    override fun <T : Event> sign(
+    override fun hasForegroundActivity() = this.foregroundQuery.launcher.hasForegroundActivity()
+
+    override suspend fun <T : Event> sign(
         createdAt: Long,
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-        onReady: (T) -> Unit,
-    ) {
+    ): T {
         val unsignedEvent =
             Event(
                 id = EventHasher.hashId(pubKey, createdAt, kind, tags, content),
@@ -72,70 +81,110 @@ class NostrSignerExternal(
                 sig = "",
             )
 
-        val newOnReady: (Event) -> Unit = { result ->
-            (result as? T)?.let(onReady)
+        val result = backgroundQuery.sign(unsignedEvent) ?: foregroundQuery.sign(unsignedEvent)
+
+        if (result is SignerResult.RequestAddressed.Successful<SignResult>) {
+            (result.result.event as? T)?.let {
+                return it
+            }
         }
 
-        if (!backgroundQuery.sign(unsignedEvent, newOnReady)) {
-            foregroundQuery.sign(unsignedEvent, newOnReady)
-        }
+        throw convertExceptions("Could not sign", result)
     }
 
-    override fun nip04Encrypt(
+    override suspend fun nip04Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        if (!backgroundQuery.nip04Encrypt(plaintext, toPublicKey, onReady)) {
-            foregroundQuery.nip04Encrypt(plaintext, toPublicKey, onReady)
+    ): String {
+        val result = backgroundQuery.nip04Encrypt(plaintext, toPublicKey) ?: foregroundQuery.nip04Encrypt(plaintext, toPublicKey)
+
+        if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
+            return result.result.ciphertext
         }
+
+        throw convertExceptions("Could not encrypt", result)
     }
 
-    override fun nip04Decrypt(
+    override suspend fun nip04Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        if (!backgroundQuery.nip04Decrypt(ciphertext, fromPublicKey, onReady)) {
-            foregroundQuery.nip04Decrypt(ciphertext, fromPublicKey, onReady)
+    ): String {
+        if (ciphertext.isBlank()) throw SignerExceptions.NothingToDecrypt()
+
+        val result = backgroundQuery.nip04Decrypt(ciphertext, fromPublicKey) ?: foregroundQuery.nip04Decrypt(ciphertext, fromPublicKey)
+
+        if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
+            return result.result.plaintext
         }
+
+        throw convertExceptions("Could not decrypt", result)
     }
 
-    override fun nip44Encrypt(
+    override suspend fun nip44Encrypt(
         plaintext: String,
         toPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        if (!backgroundQuery.nip44Encrypt(plaintext, toPublicKey, onReady)) {
-            foregroundQuery.nip44Encrypt(plaintext, toPublicKey, onReady)
+    ): String {
+        val result = backgroundQuery.nip44Encrypt(plaintext, toPublicKey) ?: foregroundQuery.nip44Encrypt(plaintext, toPublicKey)
+
+        if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
+            return result.result.ciphertext
         }
+
+        throw convertExceptions("Could not encrypt", result)
     }
 
-    override fun nip44Decrypt(
+    override suspend fun nip44Decrypt(
         ciphertext: String,
         fromPublicKey: HexKey,
-        onReady: (String) -> Unit,
-    ) {
-        if (!backgroundQuery.nip44Decrypt(ciphertext, fromPublicKey, onReady)) {
-            foregroundQuery.nip44Decrypt(ciphertext, fromPublicKey, onReady)
+    ): String {
+        if (ciphertext.isBlank()) throw SignerExceptions.NothingToDecrypt()
+
+        val result = backgroundQuery.nip44Decrypt(ciphertext, fromPublicKey) ?: foregroundQuery.nip44Decrypt(ciphertext, fromPublicKey)
+
+        if (result is SignerResult.RequestAddressed.Successful<DecryptionResult>) {
+            return result.result.plaintext
         }
+
+        throw convertExceptions("Could not decrypt", result)
     }
 
-    override fun deriveKey(
-        nonce: HexKey,
-        onReady: (HexKey) -> Unit,
-    ) {
-        if (!backgroundQuery.deriveKey(nonce, onReady)) {
-            foregroundQuery.deriveKey(nonce, onReady)
+    override suspend fun deriveKey(nonce: HexKey): HexKey {
+        val result = backgroundQuery.deriveKey(nonce) ?: foregroundQuery.deriveKey(nonce)
+
+        if (result is SignerResult.RequestAddressed.Successful<DerivationResult>) {
+            return result.result.newPrivKey
         }
+
+        throw convertExceptions("Could not derive key", result)
     }
 
-    override fun decryptZapEvent(
-        event: LnZapRequestEvent,
-        onReady: (LnZapPrivateEvent) -> Unit,
-    ) {
-        if (!backgroundQuery.decryptZapEvent(event, onReady)) {
-            foregroundQuery.decryptZapEvent(event, onReady)
+    override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent {
+        if (!event.isPrivateZap()) throw SignerExceptions.NothingToDecrypt()
+
+        val result = backgroundQuery.decryptZapEvent(event) ?: foregroundQuery.decryptZapEvent(event)
+
+        if (result is SignerResult.RequestAddressed.Successful<ZapEventDecryptionResult>) {
+            return result.result.privateEvent
         }
+
+        throw convertExceptions("Could not decrypt private zap", result)
     }
+
+    fun convertExceptions(
+        title: String,
+        result: SignerResult.RequestAddressed<*>,
+    ): Exception =
+        when (result) {
+            is SignerResult.RequestAddressed.Successful<*> -> IllegalStateException("$title: This should not happen. There is a bug on Quartz.")
+            is SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult<*> -> IllegalStateException("$title: Failed to parse event: ${result.eventJson}.")
+            is SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent<*> -> IllegalStateException("$title: Failed to verify event: ${result.invalidEvent.toJson()}.")
+
+            is SignerResult.RequestAddressed.ReceivedButCouldNotPerform<*> -> SignerExceptions.CouldNotPerformException("$title: ${result.message}")
+            is SignerResult.RequestAddressed.SignerNotFound<*> -> SignerExceptions.SignerNotFoundException("$title: Signer app was not found.")
+
+            is SignerResult.RequestAddressed.AutomaticallyRejected<*> -> SignerExceptions.AutomaticallyUnauthorizedException("$title: User has rejected the request.")
+            is SignerResult.RequestAddressed.ManuallyRejected<*> -> SignerExceptions.ManuallyUnauthorizedException("$title: User has rejected the request.")
+            is SignerResult.RequestAddressed.TimedOut<*> -> SignerExceptions.TimedOutException("$title: User didn't accept or reject in time.")
+            is SignerResult.RequestAddressed.NoActivityToLaunchFrom<*> -> SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException("$title: No activity to launch from.")
+        }
 }

@@ -23,5 +23,7 @@ package com.vitorpamplona.quartz.nip17Dm.base
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 interface NIP17Group {
+    fun isIncluded(pubKey: HexKey): Boolean
+
     fun groupMembers(): Set<HexKey>
 }
