@@ -60,11 +60,25 @@ class LoginViewModel : ViewModel() {
         isFirstLogin: Boolean,
         newAccountKey: String?,
     ) {
+        clear()
         this.isFirstLogin = isFirstLogin
-        acceptedTerms = isFirstLogin
+        acceptedTerms = !isFirstLogin
         if (newAccountKey != null) {
             key = TextFieldValue(newAccountKey)
         }
+    }
+
+    fun clear() {
+        key = TextFieldValue("")
+        password = TextFieldValue("")
+
+        errorManager.clearErrors()
+        acceptedTerms = false
+        processingLogin = false
+        isTemporary = false
+        offerTemporaryLogin = false
+        torSettings = TorSettings()
+        isFirstLogin = false
     }
 
     fun updateKey(
