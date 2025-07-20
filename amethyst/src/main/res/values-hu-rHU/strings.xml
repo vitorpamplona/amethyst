@@ -572,6 +572,7 @@
     <string name="add_sensitive_content_label">Érzékeny tartalom</string>
     <string name="add_sensitive_content_description">Érzékeny tartalom-figyelmeztetés hozzáadása a tartalom megjelenítése előtt</string>
     <string name="preferences">Alkalmazás-beállítások</string>
+    <string name="user_preferences">Felhasználói beállítások</string>
     <string name="settings">Beállítások</string>
     <string name="connectivity_type_always">Mindig</string>
     <string name="connectivity_type_wifi_only">Csak Wi-Fi-n</string>
@@ -974,4 +975,6 @@
     <string name="group_relay_explanation">Az átjátszó, amelyhez a csevegés összes felhasználója csatlakozik</string>
     <string name="share_image">Kép megosztása…</string>
     <string name="search_by_hashtag">Hashtag keresése: #%1$s</string>
+    <string name="dont_translate_from">Innentől NE fordítsa le</string>
+    <string name="dont_translate_from_description">Az itt látható nyelvek nem lesznek lefordítva. Az eltávolításához és az újbóli fordításhoz válasszon ki egy nyelvet.</string>
 </resources>
