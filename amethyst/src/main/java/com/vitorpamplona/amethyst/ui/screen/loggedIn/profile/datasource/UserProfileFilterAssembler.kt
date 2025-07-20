@@ -40,6 +40,7 @@ class UserProfileFilterAssembler(
             UserProfileMediaFilterSubAssembler(client, ::allKeys),
             UserProfileFollowersFilterSubAssembler(client, ::allKeys),
             UserProfileZapsFilterSubAssembler(client, ::allKeys),
+            UserProfileTipsFilterSubAssembler(client, ::allKeys),
         )
 
     override fun start() = group.forEach { it.start() }

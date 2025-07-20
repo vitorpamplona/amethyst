@@ -49,7 +49,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import com.vitorpamplona.amethyst.R
@@ -67,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.ui.theme.MoneroOrange
 import com.vitorpamplona.amethyst.ui.theme.Size19Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
@@ -249,6 +252,7 @@ fun ReactionRowIconPreview() {
         OutlinedZapIcon(Size20Modifier)
         ZapIcon(Size20Modifier)
         ZappedIcon(Size20Modifier)
+        MoneroIcon(Size20Modifier)
         ShareIcon(Size20Modifier, Color.Unspecified)
     }
 }
@@ -278,6 +282,27 @@ fun OutlinedZapIcon(
         contentDescription = stringRes(contentDescriptor),
         tint = tint,
         modifier = modifier,
+    )
+}
+
+@Composable
+fun TippedMoneroIcon(
+    modifier: Modifier,
+    tint: Color = MoneroOrange,
+) {
+    MoneroIcon(modifier, tint)
+}
+
+@Composable
+fun MoneroIcon(
+    modifier: Modifier,
+    tint: Color = Color.Unspecified,
+) {
+    Icon(
+        imageVector = ImageVector.vectorResource(R.drawable.monero),
+        modifier = modifier,
+        contentDescription = stringRes(R.string.monero),
+        tint = tint,
     )
 }
 

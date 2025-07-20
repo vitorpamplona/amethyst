@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.model.ThemeType
+import com.vitorpamplona.amethyst.model.TipsType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -61,8 +62,16 @@ class SharedPreferencesViewModel : ViewModel() {
             sharedPrefs.dontAskForNotificationPermissions = savedSettings.dontAskForNotificationPermissions
             sharedPrefs.gallerySet = savedSettings.gallerySet
             sharedPrefs.featureSet = savedSettings.featureSet
+            sharedPrefs.tipsType = savedSettings.tipsType
 
             updateLanguageInTheUI()
+        }
+    }
+
+    fun updateTipsType(newTipsType: TipsType) {
+        if (sharedPrefs.tipsType != newTipsType) {
+            sharedPrefs.tipsType = newTipsType
+            saveSharedSettings()
         }
     }
 
@@ -197,6 +206,7 @@ class SharedPreferencesViewModel : ViewModel() {
                     sharedPrefs.dontAskForNotificationPermissions,
                     sharedPrefs.featureSet,
                     sharedPrefs.gallerySet,
+                    sharedPrefs.tipsType,
                 ),
             )
         }
