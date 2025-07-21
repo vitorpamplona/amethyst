@@ -273,7 +273,7 @@ fun NoteDropDownMenu(
             },
         )
         HorizontalDivider(thickness = DividerThickness)
-        if (accountViewModel.account.hasPendingAttestations(note)) {
+        if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.timestamp_pending)) },
                 onClick = {
@@ -363,8 +363,8 @@ fun WatchBookmarksFollowsAndAccount(
         val newState =
             DropDownParams(
                 isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                isPrivateBookmarkNote = accountViewModel.isInPrivateBookmarks(note),
-                isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
+                isPrivateBookmarkNote = accountViewModel.account.bookmarkState.isInPrivateBookmarks(note),
+                isPublicBookmarkNote = accountViewModel.account.bookmarkState.isInPublicBookmarks(note),
                 isLoggedUser = accountViewModel.isLoggedUser(note.author),
                 isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
                 showSensitiveContent = showSensitiveContent,

@@ -741,33 +741,17 @@ class AccountViewModel(
 
     fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
-    fun addPrivateBookmark(note: Note) {
-        runIOCatching { account.addBookmark(note, true) }
-    }
+    fun addPrivateBookmark(note: Note) = runIOCatching { account.addBookmark(note, true) }
 
-    fun addPublicBookmark(note: Note) {
-        runIOCatching { account.addBookmark(note, false) }
-    }
+    fun addPublicBookmark(note: Note) = runIOCatching { account.addBookmark(note, false) }
 
-    fun removePrivateBookmark(note: Note) {
-        runIOCatching { account.removeBookmark(note, true) }
-    }
+    fun removePrivateBookmark(note: Note) = runIOCatching { account.removeBookmark(note, true) }
 
-    fun removePublicBookmark(note: Note) {
-        runIOCatching { account.removeBookmark(note, false) }
-    }
+    fun removePublicBookmark(note: Note) = runIOCatching { account.removeBookmark(note, false) }
 
-    fun isInPrivateBookmarks(note: Note): Boolean = account.isInPrivateBookmarks(note)
+    fun broadcast(note: Note) = runIOCatching { account.broadcast(note) }
 
-    fun isInPublicBookmarks(note: Note): Boolean = account.isInPublicBookmarks(note)
-
-    fun broadcast(note: Note) {
-        runIOCatching { account.broadcast(note) }
-    }
-
-    fun timestamp(note: Note) {
-        runIOCatching { account.timestamp(note) }
-    }
+    fun timestamp(note: Note) = runIOCatching { account.otsState.timestamp(note) }
 
     var lastTimeItTriedToUpdateAttestations: Long = 0
 

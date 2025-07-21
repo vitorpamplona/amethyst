@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowsPerOutboxRelay
+import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip18Reposts.RepostAction
@@ -127,10 +128,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -207,10 +206,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.util.Base64
 import java.util.Locale
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -304,6 +301,15 @@ class Account(
     val draftsDecryptionCache = DraftEventCache(signer)
 
     val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
+
+    val otsResolver: OtsResolver =
+        OtsResolverBuilder().build(
+            Amethyst.instance.okHttpClients,
+            ::shouldUseTorForMoneyOperations,
+            Amethyst.instance.otsBlockHeightCache,
+        )
+
+    val otsState = OtsState(signer, cache, otsResolver, scope, settings)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
@@ -457,10 +463,6 @@ class Account(
 
     private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
-    suspend fun countFollowersOf(pubkey: HexKey): Int = cache.users.count { _, it -> it.latestContactList?.isTaggedUser(pubkey) ?: false }
-
-    suspend fun followerCount(): Int = countFollowersOf(signer.pubKey)
-
     suspend fun sendNewUserMetadata(
         name: String? = null,
         picture: String? = null,
@@ -493,7 +495,7 @@ class Account(
                 github,
             )
 
-        sendEverywhere(userMetadataEvent)
+        sendLiterallyEverywhere(userMetadataEvent)
     }
 
     fun reactionTo(
@@ -877,47 +879,7 @@ class Account(
         }
     }
 
-    suspend fun updateAttestations() {
-        Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
-
-        val otsResolver = otsResolver()
-
-        settings.pendingAttestations.value.toList().forEach { (key, value) ->
-            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver)
-
-            if (otsState != null) {
-                val hint = cache.getNoteIfExists(key)?.toEventHint<Event>()
-                val template =
-                    if (hint != null) {
-                        OtsEvent.build(hint, otsState)
-                    } else {
-                        OtsEvent.build(key, otsState)
-                    }
-
-                val otsEvent = signer.sign(template)
-
-                cache.justConsumeMyOwnEvent(otsEvent)
-                client.send(otsEvent, computeRelayListToBroadcast(otsEvent))
-
-                settings.pendingAttestations.update { it - key }
-            }
-        }
-    }
-
-    fun hasPendingAttestations(note: Note): Boolean {
-        val id = note.event?.id ?: note.idHex
-        return settings.pendingAttestations.value[id] != null
-    }
-
-    fun timestamp(note: Note) {
-        if (!isWriteable()) return
-        if (note.isDraft()) return
-
-        val id = note.event?.id ?: note.idHex
-        val otsResolver = otsResolver()
-
-        settings.addPendingAttestation(id, Base64.getEncoder().encodeToString(OtsEvent.stamp(id, otsResolver)))
-    }
+    suspend fun updateAttestations() = sendAutomatic(otsState.updateAttestations())
 
     suspend fun follow(user: User) = sendMyPublicAndPrivateOutbox(kind3FollowList.follow(user))
 
@@ -943,6 +905,14 @@ class Account(
 
     suspend fun unfollowGeohash(geohash: String) = sendMyPublicAndPrivateOutbox(geohashList.unfollow(geohash))
 
+    fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
+
+    fun sendAutomatic(event: Event?) {
+        if (event == null) return
+        cache.justConsumeMyOwnEvent(event)
+        client.send(event, computeRelayListToBroadcast(event))
+    }
+
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
         if (event == null) return
         client.send(event, outboxRelays.flow.value)
@@ -956,7 +926,7 @@ class Account(
         }
     }
 
-    fun sendEverywhere(event: Event) {
+    fun sendLiterallyEverywhere(event: Event) {
         client.send(event, outboxRelays.flow.value + client.relayStatusFlow().value.available)
         cache.justConsumeMyOwnEvent(event)
     }
@@ -1620,16 +1590,11 @@ class Account(
         delete(note)
     }
 
-    fun isInPrivateBookmarks(note: Note) = bookmarkState.isInPrivateBookmarks(note)
-
-    fun isInPublicBookmarks(note: Note) = bookmarkState.isInPublicBookmarks(note)
-
     suspend fun addBookmark(
         note: Note,
         isPrivate: Boolean,
     ) {
-        if (!isWriteable()) return
-        if (note.isDraft()) return
+        if (!isWriteable() || note.isDraft()) return
 
         sendMyPublicAndPrivateOutbox(bookmarkState.addBookmark(note, isPrivate))
     }
@@ -1638,8 +1603,7 @@ class Account(
         note: Note,
         isPrivate: Boolean,
     ) {
-        if (!isWriteable()) return
-        if (note.isDraft()) return
+        if (!isWriteable() || note.isDraft()) return
 
         val event = bookmarkState.removeBookmark(note, isPrivate)
         if (event != null) {
@@ -1735,16 +1699,7 @@ class Account(
         }
     }
 
-    suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? =
-        if (event.isPrivateZap()) {
-            if (isWriteable()) {
-                privateZapsDecryptionCache.decryptPrivateZap(event)
-            } else {
-                null
-            }
-        } else {
-            null
-        }
+    suspend fun decryptZapOrNull(event: LnZapRequestEvent): LnZapPrivateEvent? = if (event.isPrivateZap() && isWriteable()) privateZapsDecryptionCache.decryptPrivateZap(event) else null
 
     fun isAllHidden(users: Set<HexKey>): Boolean = users.all { isHidden(it) }
 
@@ -1816,7 +1771,7 @@ class Account(
         ).toSet()
     }
 
-    suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendEverywhere(dmRelayList.saveRelayList(dmRelays))
+    suspend fun saveDMRelayList(dmRelays: List<NormalizedRelayUrl>) = sendLiterallyEverywhere(dmRelayList.saveRelayList(dmRelays))
 
     suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 
@@ -1826,7 +1781,7 @@ class Account(
 
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
-    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendEverywhere(nip65RelayList.saveRelayList(relays))
+    suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
 
     suspend fun sendFileServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(fileStorageServers.saveFileServersList(servers))
 
@@ -1964,13 +1919,6 @@ class Account(
             TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip96UploadsViaTor.value)
             TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip96UploadsViaTor.value)
         }
-
-    fun otsResolver(): OtsResolver =
-        OtsResolverBuilder().build(
-            Amethyst.instance.okHttpClients,
-            ::shouldUseTorForMoneyOperations,
-            Amethyst.instance.otsBlockHeightCache,
-        )
 
     init {
         Log.d("AccountRegisterObservers", "Init")
