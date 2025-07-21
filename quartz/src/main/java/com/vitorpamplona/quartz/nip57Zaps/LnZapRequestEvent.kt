@@ -87,8 +87,8 @@ class LnZapRequestEvent(
         const val ALT = "Zap request"
 
         suspend fun create(
-            originalNote: Event,
-            relays: Set<String>,
+            zappedEvent: Event,
+            relays: Set<NormalizedRelayUrl>,
             signer: NostrSigner,
             pollOption: Int?,
             message: String,
@@ -98,13 +98,13 @@ class LnZapRequestEvent(
         ): LnZapRequestEvent {
             var tags =
                 listOf(
-                    arrayOf("e", originalNote.id),
-                    arrayOf("p", toUserPubHex ?: originalNote.pubKey),
-                    arrayOf("relays") + relays,
+                    arrayOf("e", zappedEvent.id),
+                    arrayOf("p", toUserPubHex ?: zappedEvent.pubKey),
+                    arrayOf("relays") + relays.map { it.url },
                     AltTag.assemble(ALT),
                 )
-            if (originalNote is AddressableEvent) {
-                tags = tags + listOf(arrayOf("a", originalNote.aTag().toTag()))
+            if (zappedEvent is AddressableEvent) {
+                tags = tags + listOf(arrayOf("a", zappedEvent.aTag().toTag()))
             }
             if (pollOption != null && pollOption >= 0) {
                 tags = tags + listOf(arrayOf(PollOptionTag.TAG_NAME, pollOption.toString()))

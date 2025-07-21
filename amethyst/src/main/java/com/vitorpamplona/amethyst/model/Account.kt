@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
+import com.vitorpamplona.amethyst.model.privacyOptions.PrivacyState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
@@ -79,9 +80,8 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
 import com.vitorpamplona.amethyst.service.location.LocationState
-import com.vitorpamplona.amethyst.service.ots.OtsResolverBuilder
+import com.vitorpamplona.amethyst.service.ots.OkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
-import com.vitorpamplona.amethyst.ui.tor.TorType
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -118,7 +118,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.downloadFirst
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
@@ -130,7 +129,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip04Dm.PrivateDMCache
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.reply
@@ -302,14 +300,17 @@ class Account(
 
     val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
 
-    val otsResolver: OtsResolver =
-        OtsResolverBuilder().build(
+    val privacyState = PrivacyState(settings)
+    val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)
+
+    val otsResolverBuilder: OkHttpOtsResolverBuilder =
+        OkHttpOtsResolverBuilder(
             Amethyst.instance.okHttpClients,
-            ::shouldUseTorForMoneyOperations,
+            privacyState::shouldUseTorForMoneyOperations,
             Amethyst.instance.otsBlockHeightCache,
         )
 
-    val otsState = OtsState(signer, cache, otsResolver, scope, settings)
+    val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
     val feedDecryptionCaches =
         FeedDecryptionCaches(
@@ -389,8 +390,6 @@ class Account(
 
      */
 
-    val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)
-
     fun isWriteable(): Boolean = settings.isWriteable()
 
     suspend fun updateWarnReports(warnReports: Boolean): Boolean {
@@ -463,67 +462,15 @@ class Account(
 
     private suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
-    suspend fun sendNewUserMetadata(
-        name: String? = null,
-        picture: String? = null,
-        banner: String? = null,
-        website: String? = null,
-        pronouns: String? = null,
-        about: String? = null,
-        nip05: String? = null,
-        lnAddress: String? = null,
-        lnURL: String? = null,
-        twitter: String? = null,
-        mastodon: String? = null,
-        github: String? = null,
-    ) {
-        if (!isWriteable()) return
-
-        val userMetadataEvent =
-            userMetadata.sendNewUserMetadata(
-                name,
-                picture,
-                banner,
-                website,
-                pronouns,
-                about,
-                nip05,
-                lnAddress,
-                lnURL,
-                twitter,
-                mastodon,
-                github,
-            )
-
-        sendLiterallyEverywhere(userMetadataEvent)
-    }
-
-    fun reactionTo(
-        note: Note,
-        reaction: String,
-    ): List<Note> = note.reactedBy(userProfile(), reaction)
-
-    fun hasBoosted(note: Note): Boolean = boostsTo(note).isNotEmpty()
-
-    fun boostsTo(note: Note): List<Note> = note.boostedBy(userProfile())
-
-    fun hasReacted(
-        note: Note,
-        reaction: String,
-    ): Boolean = note.hasReacted(userProfile(), reaction)
-
     suspend fun reactTo(
         note: Note,
         reaction: String,
     ) = ReactionAction.reactTo(
-        note,
-        reaction,
-        userProfile(),
-        signer,
-        onPublic = {
-            client.send(it, computeMyReactionToNote(note, it))
-            cache.justConsumeMyOwnEvent(it)
-        },
+        note = note,
+        reaction = reaction,
+        by = userProfile(),
+        signer = signer,
+        onPublic = ::sendAutomatic,
         onPrivate = ::broadcastPrivately,
     )
 
@@ -534,18 +481,15 @@ class Account(
         zapType: LnZapEvent.ZapType,
         toUser: User?,
         additionalRelays: Set<NormalizedRelayUrl>? = null,
-    ): LnZapRequestEvent {
-        val relays = nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet())
-        return LnZapRequestEvent.create(
-            event,
-            relays = relays.mapTo(mutableSetOf()) { it.url },
-            signer,
-            pollOption,
-            message,
-            zapType,
-            toUser?.pubkeyHex,
-        )
-    }
+    ) = LnZapRequestEvent.create(
+        zappedEvent = event,
+        relays = nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet()),
+        signer = signer,
+        pollOption = pollOption,
+        message = message,
+        zapType = zapType,
+        toUserPubHex = toUser?.pubkeyHex,
+    )
 
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note?,
@@ -570,12 +514,10 @@ class Account(
         message: String = "",
         zapType: LnZapEvent.ZapType,
     ): LnZapRequestEvent {
-        val relays = nip65RelayList.inboxFlow.value + user.inboxRelays()
-
         val zapRequest =
             LnZapRequestEvent.create(
                 userHex = user.pubkeyHex,
-                relays = relays,
+                relays = nip65RelayList.inboxFlow.value + user.inboxRelays(),
                 signer = signer,
                 message = message,
                 zapType = zapType,
@@ -596,9 +538,7 @@ class Account(
         type: ReportType,
     ) = sendMyPublicAndPrivateOutbox(ReportAction.report(user, type, userProfile(), signer))
 
-    suspend fun delete(note: Note) {
-        delete(listOf(note))
-    }
+    suspend fun delete(note: Note) = delete(listOf(note))
 
     suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
@@ -627,10 +567,7 @@ class Account(
         if (!isWriteable()) return
         if (event.pubKey != signer.pubKey) return
 
-        val deletionEvent =
-            signer.sign(
-                DeletionEvent.build(listOf(event)),
-            )
+        val deletionEvent = signer.sign(DeletionEvent.build(listOf(event)))
         client.send(deletionEvent, outboxRelays.flow.value + additionalRelays)
         cache.justConsumeMyOwnEvent(deletionEvent)
     }
@@ -1821,104 +1758,6 @@ class Account(
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(BuildConfig.VERSION_NAME)
-
-    fun shouldUseTorForImageDownload(url: String) =
-        shouldUseTorFor(
-            url,
-            settings.torSettings.torType.value,
-            settings.torSettings.imagesViaTor.value,
-        )
-
-    fun shouldUseTorFor(
-        url: String,
-        torType: TorType,
-        imagesViaTor: Boolean,
-    ) = when (torType) {
-        TorType.OFF -> false
-        TorType.INTERNAL -> shouldUseTor(url, imagesViaTor)
-        TorType.EXTERNAL -> shouldUseTor(url, imagesViaTor)
-    }
-
-    private fun shouldUseTor(
-        normalizedUrl: String,
-        final: Boolean,
-    ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl)) {
-            false
-        } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
-            true
-        } else {
-            final
-        }
-
-    fun shouldUseTorForVideoDownload() =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> settings.torSettings.videosViaTor.value
-            TorType.EXTERNAL -> settings.torSettings.videosViaTor.value
-        }
-
-    fun shouldUseTorForVideoDownload(url: String) =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.videosViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.videosViaTor.value)
-        }
-
-    fun shouldUseTorForPreviewUrl(url: String) =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.urlPreviewsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.urlPreviewsViaTor.value)
-        }
-
-    fun shouldUseTorForTrustedRelays() =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> settings.torSettings.trustedRelaysViaTor.value
-            TorType.EXTERNAL -> settings.torSettings.trustedRelaysViaTor.value
-        }
-
-    fun shouldUseTorForClean(relay: NormalizedRelayUrl) = torRelayState.flow.value.useTor(relay)
-
-    private fun checkLocalHostOnionAndThen(
-        url: String,
-        final: Boolean,
-    ): Boolean = checkLocalHostOnionAndThen(url, settings.torSettings.onionRelaysViaTor.value, final)
-
-    private fun checkLocalHostOnionAndThen(
-        normalizedUrl: String,
-        isOnionRelaysActive: Boolean,
-        final: Boolean,
-    ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl)) {
-            false
-        } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
-            isOnionRelaysActive
-        } else {
-            final
-        }
-
-    fun shouldUseTorForMoneyOperations(url: String) =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.moneyOperationsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.moneyOperationsViaTor.value)
-        }
-
-    fun shouldUseTorForNIP05(url: String) =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip05VerificationsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip05VerificationsViaTor.value)
-        }
-
-    fun shouldUseTorForNIP96(url: String) =
-        when (settings.torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip96UploadsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, settings.torSettings.nip96UploadsViaTor.value)
-        }
 
     init {
         Log.d("AccountRegisterObservers", "Init")

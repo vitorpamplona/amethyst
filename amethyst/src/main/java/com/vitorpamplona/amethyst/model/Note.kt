@@ -745,14 +745,14 @@ open class Note(
     fun hasReacted(
         loggedIn: User,
         content: String,
-    ): Boolean = reactedBy(loggedIn, content).isNotEmpty()
+    ): Boolean = allReactionsOfContentByAuthor(loggedIn, content).isNotEmpty()
 
-    fun reactedBy(
+    fun allReactionsOfContentByAuthor(
         loggedIn: User,
         content: String,
     ): List<Note> = reactions[content]?.filter { it.author == loggedIn } ?: emptyList()
 
-    fun reactedBy(loggedIn: User): List<String> = reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
+    fun allReactionsByAuthor(loggedIn: User): List<String> = reactions.filter { it.value.any { it.author == loggedIn } }.mapNotNull { it.key }
 
     fun hasBoostedInTheLast5Minutes(loggedIn: User): Boolean {
         val fiveMinsAgo = TimeUtils.fiveMinutesAgo()

@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
@@ -35,17 +34,17 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 class NewUserMetadataViewModel : ViewModel() {
+    private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
     // val userName = mutableStateOf("")
@@ -68,9 +67,12 @@ class NewUserMetadataViewModel : ViewModel() {
     var isUploadingImageForPicture by mutableStateOf(false)
     var isUploadingImageForBanner by mutableStateOf(false)
 
-    fun load(account: Account) {
-        this.account = account
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
 
+    fun load() {
         account.userProfile().let {
             // userName.value = it.bestUsername() ?: ""
             displayName.value = it.info?.bestName() ?: ""
@@ -100,21 +102,25 @@ class NewUserMetadataViewModel : ViewModel() {
 
     fun create() {
         // Tries to not delete any existing attribute that we do not work with.
-        viewModelScope.launch(Dispatchers.IO) {
-            account.sendNewUserMetadata(
-                name = displayName.value,
-                picture = picture.value,
-                banner = banner.value,
-                website = website.value,
-                pronouns = pronouns.value,
-                about = about.value,
-                nip05 = nip05.value,
-                lnAddress = lnAddress.value,
-                lnURL = lnURL.value,
-                twitter = twitter.value,
-                mastodon = mastodon.value,
-                github = github.value,
-            )
+        accountViewModel.runIOCatching {
+            val metadata =
+                account.userMetadata.sendNewUserMetadata(
+                    name = displayName.value,
+                    picture = picture.value,
+                    banner = banner.value,
+                    website = website.value,
+                    pronouns = pronouns.value,
+                    about = about.value,
+                    nip05 = nip05.value,
+                    lnAddress = lnAddress.value,
+                    lnURL = lnURL.value,
+                    twitter = twitter.value,
+                    mastodon = mastodon.value,
+                    github = github.value,
+                )
+
+            account.sendLiterallyEverywhere(metadata)
+
             clear()
         }
     }
@@ -139,7 +145,7 @@ class NewUserMetadataViewModel : ViewModel() {
         context: Context,
         onError: (String, String) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        accountViewModel.runIOCatching {
             upload(
                 uri,
                 context,
@@ -155,7 +161,7 @@ class NewUserMetadataViewModel : ViewModel() {
         context: Context,
         onError: (String, String) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        accountViewModel.runIOCatching {
             upload(
                 uri,
                 context,
@@ -187,7 +193,7 @@ class NewUserMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -200,7 +206,7 @@ class NewUserMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )

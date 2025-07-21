@@ -76,7 +76,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
+import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -2102,7 +2102,7 @@ object LocalCache : ILocalCache {
 
     suspend fun findEarliestOtsForNote(
         note: Note,
-        resolverBuilder: () -> OtsResolver,
+        resolverBuilder: OtsResolverBuilder,
     ): Long? {
         checkNotInMainThread()
 

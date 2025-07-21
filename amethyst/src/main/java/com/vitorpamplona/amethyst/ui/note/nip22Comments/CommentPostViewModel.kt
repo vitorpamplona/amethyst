@@ -623,7 +623,7 @@ open class CommentPostViewModel :
             iMetaAttachments.downloadAndPrepare(item.link.url) {
                 Amethyst.Companion.instance.okHttpClients
                     .getHttpClient(
-                        accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url)
+                        accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url)
                             ?: false,
                     )
             }

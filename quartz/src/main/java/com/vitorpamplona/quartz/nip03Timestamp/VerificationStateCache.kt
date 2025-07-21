@@ -29,15 +29,15 @@ class VerificationStateCache {
 
     fun verify(
         event: OtsEvent,
-        resolverBuilder: () -> OtsResolver,
+        resolverBuilder: OtsResolverBuilder,
     ): VerificationState {
         cache.put(event.id, VerificationState.Verifying)
-        return event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
+        return event.verifyState(resolverBuilder.build()).also { cache.put(event.id, it) }
     }
 
     fun cacheVerify(
         event: OtsEvent,
-        resolverBuilder: () -> OtsResolver,
+        resolverBuilder: OtsResolverBuilder,
     ): VerificationState =
         when (val verif = cache[event.id]) {
             is VerificationState.Verifying -> verif
@@ -45,7 +45,7 @@ class VerificationStateCache {
             is VerificationState.NetworkError -> {
                 // try again in 5 mins
                 if (verif.time < TimeUtils.fiveMinutesAgo()) {
-                    event.verifyState(resolverBuilder()).also { cache.put(event.id, it) }
+                    event.verifyState(resolverBuilder.build()).also { cache.put(event.id, it) }
                 } else {
                     verify(event, resolverBuilder)
                 }

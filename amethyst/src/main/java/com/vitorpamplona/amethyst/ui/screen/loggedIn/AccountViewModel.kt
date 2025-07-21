@@ -98,7 +98,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -266,13 +265,6 @@ class AccountViewModel(
 
     fun userProfile(): User = account.userProfile()
 
-    suspend fun reactTo(
-        note: Note,
-        reaction: String,
-    ) {
-        account.reactTo(note, reaction)
-    }
-
     fun <T : Event> observeByETag(
         kind: Int,
         eTag: HexKey,
@@ -287,8 +279,8 @@ class AccountViewModel(
         note: Note,
         reaction: String,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val currentReactions = account.reactionTo(note, reaction)
+        runIOCatching {
+            val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
@@ -298,14 +290,8 @@ class AccountViewModel(
     }
 
     fun reactToOrDelete(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val reaction = reactionChoices().first()
-            if (hasReactedTo(note, reaction)) {
-                deleteReactionTo(note, reaction)
-            } else {
-                reactTo(note, reaction)
-            }
-        }
+        val reaction = reactionChoices().first()
+        reactToOrDelete(note, reaction)
     }
 
     @Immutable
@@ -401,24 +387,6 @@ class AccountViewModel(
                 ).also {
                     noteMustShowExpandButtonFlows.put(note, it)
                 }
-
-    fun hasReactedTo(
-        baseNote: Note,
-        reaction: String,
-    ): Boolean = account.hasReacted(baseNote, reaction)
-
-    suspend fun deleteReactionTo(
-        note: Note,
-        reaction: String,
-    ) {
-        account.delete(account.reactionTo(note, reaction))
-    }
-
-    fun hasBoosted(baseNote: Note): Boolean = account.hasBoosted(baseNote)
-
-    fun deleteBoostsTo(note: Note) {
-        runIOCatching { account.delete(account.boostsTo(note)) }
-    }
 
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
@@ -977,7 +945,7 @@ class AccountViewModel(
                 .verifyNip05(
                     nip05,
                     okHttpClient = {
-                        app.okHttpClients.getHttpClient(account.shouldUseTorForNIP05(it))
+                        app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForNIP05(it))
                     },
                     onSuccess = {
                         // Marks user as verified
@@ -1103,7 +1071,7 @@ class AccountViewModel(
     ) {
         onResult(
             withContext(Dispatchers.Default) {
-                LocalCache.findEarliestOtsForNote(note, account::otsResolver)
+                LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
             },
         )
     }
@@ -1228,21 +1196,7 @@ class AccountViewModel(
         }
     }
 
-    fun createChatRoomFor(
-        user: User,
-        then: (ChatroomKey) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
-            account.chatroomList.createChatroom(withKey)
-            then(withKey)
-        }
-    }
-
-    fun setTorSettings(newTorSettings: TorSettings) =
-        viewModelScope.launch(Dispatchers.IO) {
-            account.settings.setTorSettings(newTorSettings)
-        }
+    fun setTorSettings(newTorSettings: TorSettings) = runIOCatching { account.settings.setTorSettings(newTorSettings) }
 
     class Factory(
         val accountSettings: AccountSettings,
@@ -1357,8 +1311,11 @@ class AccountViewModel(
         }
 
         if (isWriteable()) {
-            if (hasBoosted(baseNote)) {
-                deleteBoostsTo(baseNote)
+            val boosts = baseNote.boostedBy(userProfile())
+            if (boosts.isNotEmpty()) {
+                runIOCatching {
+                    account.delete(boosts)
+                }
             } else {
                 onMore()
             }
@@ -1496,21 +1453,21 @@ class AccountViewModel(
         }
     }
 
-    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.shouldUseTorForVideoDownload(url))
+    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.privacyState.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(url))
+    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(url))
 
-    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload(url))
+    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForImageDownload(url))
 
-    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForVideoDownload(url))
+    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForMoneyOperations(url))
+    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForMoneyOperations(url))
 
-    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForPreviewUrl(url))
+    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForPreviewUrl(url))
 
-    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForClean(url))
+    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = app.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(url))
 
-    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
+    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForTrustedRelays())
 
     fun dataSources() = app.sources
 

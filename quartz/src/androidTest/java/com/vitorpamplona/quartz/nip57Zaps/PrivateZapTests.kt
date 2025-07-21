@@ -92,7 +92,7 @@ class PrivateZapTests {
         val privateZapRequest =
             runBlocking {
                 LnZapRequestEvent.create(
-                    originalNote = poll,
+                    zappedEvent = poll,
                     relays = setOf("wss://relay.damus.io/"),
                     signer = loggedIn,
                     pollOption = 0,
@@ -152,7 +152,7 @@ class PrivateZapTests {
         val privateZapRequest =
             runBlocking {
                 LnZapRequestEvent.create(
-                    originalNote = textNote,
+                    zappedEvent = textNote,
                     relays = setOf("wss://relay.damus.io/", "wss://relay.damus2.io/", "wss://relay.damus3.io/"),
                     signer = loggedIn,
                     pollOption = null,

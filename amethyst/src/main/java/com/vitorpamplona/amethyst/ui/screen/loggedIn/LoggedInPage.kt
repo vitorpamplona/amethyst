@@ -130,7 +130,7 @@ fun SetProxyDeterminator(accountViewModel: AccountViewModel) {
 @Composable
 fun ObserveImageLoadingTor(accountViewModel: AccountViewModel) {
     LaunchedEffect(accountViewModel) {
-        Amethyst.instance.setImageLoader(accountViewModel.account::shouldUseTorForImageDownload)
+        Amethyst.instance.setImageLoader(accountViewModel.account.privacyState::shouldUseTorForImageDownload)
     }
 }
 

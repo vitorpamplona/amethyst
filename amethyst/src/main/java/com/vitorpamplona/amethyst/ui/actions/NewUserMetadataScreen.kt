@@ -58,10 +58,11 @@ fun NewUserMetadataScreen(
     accountViewModel: AccountViewModel,
 ) {
     val postViewModel: NewUserMetadataViewModel = viewModel()
+    postViewModel.init(accountViewModel)
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        postViewModel.load(accountViewModel.account)
+    LaunchedEffect(accountViewModel) {
+        postViewModel.load()
     }
 
     Scaffold(

@@ -85,7 +85,7 @@ class DecryptAndIndexProcessor(
 
             is OtsEvent -> {
                 // verifies new OTS upon arrival
-                Amethyst.instance.otsVerifCache.cacheVerify(event, account::otsResolver)
+                Amethyst.instance.otsVerifCache.cacheVerify(event, account.otsResolverBuilder)
             }
 
             is DraftEvent -> {

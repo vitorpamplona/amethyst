@@ -115,4 +115,6 @@ class TorRelayState(
                     dmRelayList = dmRelayState.flow.value,
                 ),
             )
+
+    fun shouldUseTorForClean(relay: NormalizedRelayUrl) = flow.value.useTor(relay)
 }

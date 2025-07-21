@@ -24,10 +24,10 @@ import android.util.Log
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.ots.OkHttpOtsResolverBuilder
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
 import java.util.Base64
@@ -35,7 +35,7 @@ import java.util.Base64
 class OtsState(
     val signer: NostrSigner,
     val cache: LocalCache,
-    val otsResolver: OtsResolver,
+    val otsResolver: OkHttpOtsResolverBuilder,
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
@@ -43,7 +43,7 @@ class OtsState(
         Log.d("Pending Attestations", "Updating ${settings.pendingAttestations.value.size} pending attestations")
 
         return settings.pendingAttestations.value.toList().mapNotNull { (key, value) ->
-            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver)
+            val otsState = OtsEvent.upgrade(Base64.getDecoder().decode(value), key, otsResolver.build())
 
             if (otsState != null) {
                 val hint = cache.getNoteIfExists(key)?.toEventHint<Event>()
@@ -75,6 +75,15 @@ class OtsState(
 
         val id = note.event?.id ?: note.idHex
 
-        settings.addPendingAttestation(id, Base64.getEncoder().encodeToString(OtsEvent.stamp(id, otsResolver)))
+        settings.addPendingAttestation(
+            id = id,
+            stamp =
+                Base64.getEncoder().encodeToString(
+                    OtsEvent.stamp(
+                        id,
+                        otsResolver.build(),
+                    ),
+                ),
+        )
     }
 }

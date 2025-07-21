@@ -786,7 +786,7 @@ open class ShortNotePostViewModel :
                 item.link.url,
             ) {
                 Amethyst.instance.okHttpClients.getHttpClient(
-                    accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url)
+                    accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url)
                         ?: false,
                 )
             }

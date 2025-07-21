@@ -210,7 +210,7 @@ class ChannelMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
                         onProgress = {},
                         httpAuth = account::createHTTPAuthorization,
                         context = context,
@@ -223,7 +223,7 @@ class ChannelMetadataViewModel : ViewModel() {
                         alt = null,
                         sensitiveContent = null,
                         serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(it)) },
+                        okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(it)) },
                         httpAuth = account::createBlossomUploadAuth,
                         context = context,
                     )

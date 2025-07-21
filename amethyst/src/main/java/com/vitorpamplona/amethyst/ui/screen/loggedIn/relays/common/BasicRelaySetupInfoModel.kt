@@ -72,7 +72,7 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
                 Nip11CachedRetriever.loadRelayInfo(
                     relay = item.relay,
                     okHttpClient = {
-                        Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForClean(item.relay))
+                        Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay))
                     },
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)

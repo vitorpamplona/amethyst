@@ -79,7 +79,7 @@ fun routeFor(
             }
         } else if (innerEvent is ChatroomKeyable) {
             val room = innerEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
-            loggedIn.chatroomList.createChatroom(room)
+            loggedIn.chatroomList.getOrCreatePrivateChatroom(room)
             return Route.Room(room)
         } else if (innerEvent is AddressableEvent) {
             return Route.Note(noteEvent.aTag().toTag())
@@ -104,7 +104,7 @@ fun routeFor(
         }
     } else if (noteEvent is ChatroomKeyable) {
         val room = noteEvent.chatroomKey(loggedIn.userProfile().pubkeyHex)
-        loggedIn.chatroomList.createChatroom(room)
+        loggedIn.chatroomList.getOrCreatePrivateChatroom(room)
         return Route.Room(room)
     } else if (noteEvent is CommunityDefinitionEvent) {
         return Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
@@ -169,7 +169,7 @@ fun routeToMessage(
     draftId: HexKey? = null,
     account: Account,
 ): Route {
-    account.chatroomList.createChatroom(room)
+    account.chatroomList.getOrCreatePrivateChatroom(room)
 
     return Route.Room(room, draftMessage, replyId, draftId)
 }

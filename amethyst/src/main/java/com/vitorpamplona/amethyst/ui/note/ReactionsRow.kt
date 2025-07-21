@@ -1355,7 +1355,7 @@ fun ReactionChoicePopup(
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
     val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
-    val toRemove = remember { baseNote.reactedBy(accountViewModel.userProfile()).toImmutableSet() }
+    val toRemove = remember { baseNote.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet() }
 
     Popup(
         alignment = Alignment.BottomCenter,

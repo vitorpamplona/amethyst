@@ -93,7 +93,7 @@ class Nip65RelayListViewModel : ViewModel() {
             _homeRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     relay = item.relay,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForClean(item.relay)) },
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay)) },
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -104,7 +104,7 @@ class Nip65RelayListViewModel : ViewModel() {
             _notificationRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
                     relay = item.relay,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForClean(item.relay)) },
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay)) },
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
                     },

@@ -541,7 +541,7 @@ open class NewProductViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaDescription.downloadAndPrepare(
                 item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
         }
 

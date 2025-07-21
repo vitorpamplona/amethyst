@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 @Composable
 fun MessageButton(
@@ -49,12 +51,10 @@ fun MessageButton(
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            accountViewModel.createChatRoomFor(user) { chatroomKey ->
-                nav.nav(
-                    routeToMessage(
-                        room = chatroomKey,
-                        account = accountViewModel.account,
-                    ),
+            nav.nav {
+                routeToMessage(
+                    room = ChatroomKey(setOf(user.pubkeyHex)),
+                    account = accountViewModel.account,
                 )
             }
         },

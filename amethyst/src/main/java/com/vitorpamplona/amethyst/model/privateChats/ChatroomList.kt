@@ -65,10 +65,6 @@ class ChatroomList(
         }
     }
 
-    fun createChatroom(withKey: ChatroomKey) {
-        getOrCreatePrivateChatroom(withKey)
-    }
-
     fun removeMessage(
         user: User,
         msg: Note,
