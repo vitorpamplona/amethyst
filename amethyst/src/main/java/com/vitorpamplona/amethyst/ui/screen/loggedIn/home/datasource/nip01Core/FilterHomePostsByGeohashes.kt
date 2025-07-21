@@ -63,7 +63,7 @@ fun filterHomePostsByGeohashes(
                 Filter(
                     kinds = HomePostsByGeohashKinds,
                     tags = mapOf("g" to geotags.sorted()),
-                    limit = 100,
+                    limit = geotags.size * 20,
                     since = since,
                 ),
         ),

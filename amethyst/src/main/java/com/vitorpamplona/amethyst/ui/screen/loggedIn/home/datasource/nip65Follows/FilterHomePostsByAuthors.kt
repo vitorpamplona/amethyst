@@ -80,7 +80,7 @@ fun filterHomePostsByAuthors(
                 Filter(
                     kinds = HomePostsKinds,
                     authors = authorList,
-                    limit = 400,
+                    limit = authorList.size * 10,
                     since = since,
                 ),
         ),
@@ -90,7 +90,7 @@ fun filterHomePostsByAuthors(
                 Filter(
                     kinds = HomePostsKinds2,
                     authors = authorList,
-                    limit = 400,
+                    limit = authorList.size * 10,
                     since = since,
                 ),
         ),

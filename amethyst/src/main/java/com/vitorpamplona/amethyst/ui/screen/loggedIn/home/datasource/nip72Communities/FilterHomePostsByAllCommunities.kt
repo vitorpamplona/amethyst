@@ -46,7 +46,7 @@ fun filterHomePostsFromAllCommunities(
                             "a" to communityList,
                             "k" to HomePostsFromCommunityKindsStr,
                         ),
-                    limit = 300,
+                    limit = communityList.size * 20,
                     since = since,
                 ),
         ),
@@ -57,7 +57,7 @@ fun filterHomePostsFromAllCommunities(
                 Filter(
                     tags = mapOf("a" to communityList),
                     kinds = HomePostsFromCommunityKinds,
-                    limit = 300,
+                    limit = communityList.size * 20,
                     since = since,
                 ),
         ),

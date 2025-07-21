@@ -78,7 +78,7 @@ fun filterHomePostsByGlobal(
                 filter =
                     Filter(
                         kinds = HomePostsByGlobalKinds,
-                        limit = 400,
+                        limit = 50,
                         since = since,
                     ),
             ),
@@ -87,7 +87,7 @@ fun filterHomePostsByGlobal(
                 filter =
                     Filter(
                         kinds = HomePostsByGlobalKinds2,
-                        limit = 400,
+                        limit = 50,
                         since = since,
                     ),
             ),
