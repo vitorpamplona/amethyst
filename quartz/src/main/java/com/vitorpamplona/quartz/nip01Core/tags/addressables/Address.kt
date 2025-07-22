@@ -63,8 +63,9 @@ data class Address(
         ) = "$kind:$pubKeyHex:$dTag"
 
         @JvmStatic
-        fun parse(addressId: String): Address? =
-            try {
+        fun parse(addressId: String): Address? {
+            if (addressId.isBlank()) return null
+            return try {
                 val parts = addressId.split(":", limit = 3)
                 if (parts.size > 2 && parts[1].length == 64 && Hex.isHex(parts[1])) {
                     Address(parts[0].toInt(), parts[1], parts.getOrNull(2) ?: "")
@@ -74,11 +75,11 @@ data class Address(
                         if (addr is NAddress) {
                             addr.address()
                         } else {
-                            Log.w("AddressableId", "Error parsing. Pubkey is not hex: $addressId")
+                            Log.w("AddressableId", "Error parsing. naddr1 seems invalid: $addressId")
                             null
                         }
                     } else {
-                        Log.w("AddressableId", "Error parsing. Pubkey is not hex: $addressId")
+                        Log.w("AddressableId", "Error parsing. Not a valid address: $addressId")
                         null
                     }
                 }
@@ -86,6 +87,7 @@ data class Address(
                 Log.e("AddressableId", "Error parsing: $addressId: ${t.message}", t)
                 null
             }
+        }
 
         fun isOfKind(
             addressId: String,
