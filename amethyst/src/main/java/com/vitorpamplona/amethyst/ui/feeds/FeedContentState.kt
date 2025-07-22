@@ -72,6 +72,15 @@ class FeedContentState(
         viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
     }
 
+    fun visibleNotes(): List<Note> {
+        val currentState = _feedContent.value
+        return if (currentState is FeedState.Loaded) {
+            currentState.feed.value.list
+        } else {
+            emptyList()
+        }
+    }
+
     fun refreshSuspended() {
         checkNotInMainThread()
 

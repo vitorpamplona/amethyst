@@ -26,7 +26,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -49,20 +48,17 @@ fun ChatroomList(
 ) {
     val pagerState = rememberPagerState { 2 }
 
-    val markKnownAsRead = remember { mutableStateOf(false) }
-    val markNewAsRead = remember { mutableStateOf(false) }
-
     WatchLifecycleAndUpdateModel(knownFeedContentState)
     WatchLifecycleAndUpdateModel(newFeedContentState)
 
     ChatroomListFilterAssemblerSubscription(accountViewModel)
 
     val tabs by
-        remember(knownFeedContentState, markKnownAsRead) {
+        remember(knownFeedContentState) {
             derivedStateOf {
                 listOf(
-                    MessagesTabItem(R.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState, markKnownAsRead),
-                    MessagesTabItem(R.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState, markNewAsRead),
+                    MessagesTabItem(R.string.known, ScrollStateKeys.MESSAGES_KNOWN, knownFeedContentState),
+                    MessagesTabItem(R.string.new_requests, ScrollStateKeys.MESSAGES_NEW, newFeedContentState),
                 )
             }
         }
@@ -71,8 +67,8 @@ fun ChatroomList(
         MessagesTabHeader(
             pagerState,
             tabs,
-            { markKnownAsRead.value = true },
-            { markNewAsRead.value = true },
+            { accountViewModel.markAllChatNotesAsRead(knownFeedContentState.visibleNotes()) },
+            { accountViewModel.markAllChatNotesAsRead(newFeedContentState.visibleNotes()) },
         )
 
         MessagesPager(

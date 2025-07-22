@@ -38,7 +38,6 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,7 +61,6 @@ class MessagesTabItem(
     val resource: Int,
     val scrollStateKey: String,
     val feedContentState: FeedContentState,
-    val markAsRead: MutableState<Boolean>,
 )
 
 @Composable
@@ -132,7 +130,6 @@ fun MessagesPager(
             scrollStateKey = tabs[page].scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
-            markAsRead = tabs[page].markAsRead,
         )
     }
 }

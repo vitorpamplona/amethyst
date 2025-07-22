@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -109,6 +108,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
@@ -1188,26 +1188,16 @@ class AccountViewModel(
         return onIsNew
     }
 
-    fun markAllAsRead(
-        notes: ImmutableList<Note>,
-        accountViewModel: AccountViewModel,
-        onDone: () -> Unit,
-    ) {
+    fun markAllChatNotesAsRead(notes: List<Note>) {
         viewModelScope.launch(Dispatchers.IO) {
             for (note in notes) {
-                note.event?.createdAt?.let { date ->
-                    val route = routeFor(note, accountViewModel.account)
-                    route?.let {
-                        if (route is Route.Room) {
-                            account.markAsRead("Room/${route.id}", date)
-                        } else if (route is Route.PublicChatChannel) {
-                            account.markAsRead("Channel/${route.id}", date)
-                        }
-                    }
+                val noteEvent = note.event
+                if (noteEvent is IsInPublicChatChannel) {
+                    account.markAsRead("Channel/${noteEvent.channelId()}", noteEvent.createdAt)
+                } else if (noteEvent is ChatroomKeyable) {
+                    account.markAsRead("Room/${noteEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
                 }
             }
-
-            onDone()
         }
     }
 
