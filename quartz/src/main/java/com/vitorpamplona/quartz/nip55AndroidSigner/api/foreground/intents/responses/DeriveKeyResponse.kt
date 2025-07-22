@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
-import android.content.Intent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 
 class DeriveKeyResponse {
     companion object {
-        fun parse(intent: Intent): SignerResult.RequestAddressed<DerivationResult> {
-            val newPrivateKey = intent.getStringExtra("result")
+        fun parse(intent: IntentResult): SignerResult.RequestAddressed<DerivationResult> {
+            val newPrivateKey = intent.result
             return if (newPrivateKey != null) {
                 SignerResult.RequestAddressed.Successful(DerivationResult(newPrivateKey))
             } else {

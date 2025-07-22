@@ -18,25 +18,40 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.client
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results
 
 import android.content.Intent
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.LoginRequest
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.LoginResponse
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
-object ExternalSignerLogin {
-    fun createIntent(permissions: List<Permission> = LoginRequest.DefaultPermissions): Intent {
-        val intent = LoginRequest.assemble(permissions)
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+class IntentResult(
+    val `package`: String?,
+    val result: String?,
+    val event: String?,
+    val id: String?,
+) {
+    fun toJson(): String = JsonMapper.mapper.writeValueAsString(this)
+
+    fun toIntent(): Intent {
+        val intent = Intent()
+        intent.putExtra("id", id)
+        intent.putExtra("result", result)
+        intent.putExtra("event", event)
+        intent.putExtra("package", `package`)
         return intent
     }
 
-    fun parseResult(data: Intent): SignerResult<PubKeyResult> {
-        val result = IntentResult.fromIntent(data)
-        return LoginResponse.parse(result)
+    companion object {
+        fun fromIntent(data: Intent): IntentResult =
+            IntentResult(
+                id = data.getStringExtra("id"),
+                result = data.getStringExtra("result"),
+                event = data.getStringExtra("event"),
+                `package` = data.getStringExtra("package"),
+            )
+
+        fun fromJson(json: String): IntentResult = JsonMapper.mapper.readValue<IntentResult>(json)
+
+        fun fromJsonArray(json: String): List<IntentResult> = JsonMapper.mapper.readValue<List<IntentResult>>(json)
     }
 }

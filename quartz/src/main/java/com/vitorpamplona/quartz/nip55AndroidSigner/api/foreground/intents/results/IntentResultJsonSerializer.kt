@@ -18,25 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.client
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results
 
-import android.content.Intent
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.LoginRequest
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.LoginResponse
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 
-object ExternalSignerLogin {
-    fun createIntent(permissions: List<Permission> = LoginRequest.DefaultPermissions): Intent {
-        val intent = LoginRequest.assemble(permissions)
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        return intent
-    }
-
-    fun parseResult(data: Intent): SignerResult<PubKeyResult> {
-        val result = IntentResult.fromIntent(data)
-        return LoginResponse.parse(result)
+class IntentResultJsonSerializer : StdSerializer<IntentResult>(IntentResult::class.java) {
+    override fun serialize(
+        result: IntentResult,
+        gen: JsonGenerator,
+        provider: SerializerProvider,
+    ) {
+        gen.writeStartObject()
+        result.`package`?.let { gen.writeStringField("package", it) }
+        result.result?.let { gen.writeStringField("result", it) }
+        result.event?.let { gen.writeStringField("event", it) }
+        result.id?.let { gen.writeStringField("id", it) }
+        gen.writeEndObject()
     }
 }

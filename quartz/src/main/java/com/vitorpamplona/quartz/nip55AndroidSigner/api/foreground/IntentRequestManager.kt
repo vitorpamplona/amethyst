@@ -23,13 +23,13 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.util.Log
-import android.util.Log.e
 import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.IResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.tryAndWait
-import kotlinx.coroutines.CancellationException
+import kotlin.collections.forEach
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 
@@ -61,7 +61,7 @@ class IntentRequestManager(
     val activityNotFoundIntent = Intent()
 
     // LRU cache to store pending requests and their continuations.
-    private val awaitingRequests = LruCache<String, Continuation<Intent>>(2000)
+    private val awaitingRequests = LruCache<String, Continuation<IntentResult>>(2000)
 
     // Function to launch an Intent in the foreground.
     private var appLauncher: ((Intent) -> Unit)? = null
@@ -79,10 +79,21 @@ class IntentRequestManager(
     }
 
     fun newResponse(data: Intent) {
-        val callId = data.getStringExtra("id")
-        if (callId != null) {
-            awaitingRequests[callId]?.resume(data)
-            awaitingRequests.remove(callId)
+        val results = data.getStringExtra("results")
+        if (results != null) {
+            // This happens when the intent responds to many requests at the same time.
+            IntentResult.fromJsonArray(results).forEach { result ->
+                if (result.id != null) {
+                    awaitingRequests[result.id]?.resume(result)
+                    awaitingRequests.remove(result.id)
+                }
+            }
+        } else {
+            val result = IntentResult.fromIntent(data)
+            if (result.id != null) {
+                awaitingRequests[result.id]?.resume(result)
+                awaitingRequests.remove(result.id)
+            }
         }
     }
 
@@ -102,7 +113,7 @@ class IntentRequestManager(
      */
     suspend fun <T : IResult> launchWaitAndParse(
         requestIntentBuilder: () -> Intent,
-        parser: (intent: Intent) -> SignerResult.RequestAddressed<T>,
+        parser: (intent: IntentResult) -> SignerResult.RequestAddressed<T>,
     ): SignerResult.RequestAddressed<T> =
         appLauncher?.let { launcher ->
             val requestIntent = requestIntentBuilder()
@@ -111,32 +122,31 @@ class IntentRequestManager(
             requestIntent.putExtra("id", callId)
             requestIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
-            val resultIntent =
-                tryAndWait(foregroundApprovalTimeout) { continuation ->
-                    continuation.invokeOnCancellation {
-                        awaitingRequests.remove(callId)
+            try {
+                val resultIntent =
+                    tryAndWait(foregroundApprovalTimeout) { continuation ->
+                        continuation.invokeOnCancellation {
+                            awaitingRequests.remove(callId)
+                        }
+
+                        awaitingRequests.put(callId, continuation)
+
+                        try {
+                            launcher.invoke(requestIntent)
+                        } catch (e: Exception) {
+                            Log.e("ExternalSigner", "Error launching intent", e)
+                            awaitingRequests.remove(callId)
+                            throw e
+                        }
                     }
 
-                    awaitingRequests.put(callId, continuation)
-
-                    try {
-                        launcher.invoke(requestIntent)
-                    } catch (e: ActivityNotFoundException) {
-                        Log.e("ExternalSigner", "Error launching intent", e)
-                        awaitingRequests.remove(callId)
-                        continuation.resume(activityNotFoundIntent)
-                    } catch (e: Exception) {
-                        Log.e("ExternalSigner", "Error launching intent", e)
-                        awaitingRequests.remove(callId)
-                        continuation.resume(null)
-                        if (e is CancellationException) throw e
-                    }
+                when (resultIntent) {
+                    null -> SignerResult.RequestAddressed.TimedOut()
+                    else -> parser(resultIntent)
                 }
-
-            when (resultIntent) {
-                null -> SignerResult.RequestAddressed.TimedOut()
-                activityNotFoundIntent -> SignerResult.RequestAddressed.SignerNotFound()
-                else -> parser(resultIntent)
+            } catch (e: ActivityNotFoundException) {
+                Log.e("ExternalSigner", "Error launching intent: Signer not found", e)
+                SignerResult.RequestAddressed.SignerNotFound()
             }
         } ?: SignerResult.RequestAddressed.NoActivityToLaunchFrom()
 }

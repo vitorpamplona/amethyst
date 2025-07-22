@@ -18,25 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.client
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results
 
-import android.content.Intent
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.LoginRequest
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.LoginResponse
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 
-object ExternalSignerLogin {
-    fun createIntent(permissions: List<Permission> = LoginRequest.DefaultPermissions): Intent {
-        val intent = LoginRequest.assemble(permissions)
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        return intent
-    }
-
-    fun parseResult(data: Intent): SignerResult<PubKeyResult> {
-        val result = IntentResult.fromIntent(data)
-        return LoginResponse.parse(result)
+class IntentResultJsonDeserializer : StdDeserializer<IntentResult>(IntentResult::class.java) {
+    override fun deserialize(
+        jp: JsonParser,
+        ctxt: DeserializationContext,
+    ): IntentResult {
+        val jsonObject: JsonNode = jp.codec.readTree(jp)
+        return IntentResult(
+            `package` = jsonObject.get("package")?.asText()?.intern(),
+            result = jsonObject.get("result")?.asText()?.intern(),
+            event = jsonObject.get("event")?.asText()?.intern(),
+            id = jsonObject.get("id")?.asText()?.intern(),
+        )
     }
 }

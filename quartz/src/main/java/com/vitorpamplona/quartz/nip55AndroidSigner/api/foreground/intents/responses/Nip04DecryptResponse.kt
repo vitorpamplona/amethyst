@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
-import android.content.Intent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 
 class Nip04DecryptResponse {
     companion object {
-        fun parse(intent: Intent): SignerResult.RequestAddressed<DecryptionResult> {
-            val ciphertext = intent.getStringExtra("result")
+        fun parse(intent: IntentResult): SignerResult.RequestAddressed<DecryptionResult> {
+            val ciphertext = intent.result
             return if (ciphertext != null) {
                 SignerResult.RequestAddressed.Successful(DecryptionResult(ciphertext))
             } else {

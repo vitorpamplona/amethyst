@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
-import android.content.Intent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 
 class LoginResponse {
     companion object {
-        fun parse(intent: Intent): SignerResult.RequestAddressed<PubKeyResult> {
-            val pubkey = intent.getStringExtra("result")
-            val packageName = intent.getStringExtra("package")
+        fun parse(intent: IntentResult): SignerResult.RequestAddressed<PubKeyResult> {
+            val pubkey = intent.result
+            val packageName = intent.`package`
 
             return if (pubkey != null && packageName != null) {
                 SignerResult.RequestAddressed.Successful(

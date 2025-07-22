@@ -20,20 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
-import android.content.Intent
 import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 
 class SignResponse {
     companion object {
         fun parse(
-            intent: Intent,
+            intent: IntentResult,
             unsignedEvent: Event,
         ): SignerResult.RequestAddressed<SignResult> {
-            val eventJson = intent.getStringExtra("event")
+            val eventJson = intent.event
             return if (eventJson != null) {
                 if (eventJson.startsWith("{")) {
                     val event = Event.fromJsonOrNull(eventJson)
@@ -50,7 +50,7 @@ class SignResponse {
                     SignerResult.RequestAddressed.ReceivedButCouldNotPerform(eventJson)
                 }
             } else {
-                val signature = intent.getStringExtra("result")
+                val signature = intent.result
                 if (signature != null && signature.length == 128) {
                     val event: Event =
                         EventFactory.create(
