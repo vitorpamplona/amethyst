@@ -20,12 +20,22 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 
 class LoginResponse {
     companion object {
+        fun assemble(
+            pubkey: HexKey,
+            packageName: String,
+        ): IntentResult =
+            IntentResult(
+                result = pubkey,
+                `package` = packageName,
+            )
+
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<PubKeyResult> {
             val pubkey = intent.result
             val packageName = intent.`package`

@@ -24,11 +24,11 @@ import android.content.Intent
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
-class IntentResult(
-    val `package`: String?,
-    val result: String?,
-    val event: String?,
-    val id: String?,
+data class IntentResult(
+    val `package`: String? = null,
+    val result: String? = null,
+    val event: String? = null,
+    val id: String? = null,
 ) {
     fun toJson(): String = JsonMapper.mapper.writeValueAsString(this)
 

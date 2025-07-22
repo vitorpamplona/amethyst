@@ -29,6 +29,12 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.result
 
 class SignResponse {
     companion object {
+        fun assemble(event: Event): IntentResult =
+            IntentResult(
+                event = event.toJson(),
+                result = event.sig,
+            )
+
         fun parse(
             intent: IntentResult,
             unsignedEvent: Event,

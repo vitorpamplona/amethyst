@@ -26,10 +26,15 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.result
 
 class Nip04DecryptResponse {
     companion object {
+        fun assemble(plaintext: String): IntentResult =
+            IntentResult(
+                result = plaintext,
+            )
+
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<DecryptionResult> {
-            val ciphertext = intent.result
-            return if (ciphertext != null) {
-                SignerResult.RequestAddressed.Successful(DecryptionResult(ciphertext))
+            val plaintext = intent.result
+            return if (plaintext != null) {
+                SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))
             } else {
                 SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }

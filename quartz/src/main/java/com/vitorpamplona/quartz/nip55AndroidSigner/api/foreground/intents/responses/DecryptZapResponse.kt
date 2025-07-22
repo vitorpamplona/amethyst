@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
-import android.content.Intent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
@@ -29,11 +28,10 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 
 class DecryptZapResponse {
     companion object {
-        fun assemble(event: LnZapPrivateEvent): Intent {
-            val intent = Intent()
-            intent.putExtra("result", event.toJson())
-            return intent
-        }
+        fun assemble(event: LnZapPrivateEvent): IntentResult =
+            IntentResult(
+                result = event.toJson(),
+            )
 
         fun parse(intent: IntentResult): SignerResult.RequestAddressed<ZapEventDecryptionResult> {
             val eventJson = intent.result
