@@ -145,7 +145,10 @@ fun EditField(
                 isActive = channelScreenModel.canPost(),
                 modifier = EditFieldTrailingIconModifier,
             ) {
-                channelScreenModel.sendPost(onSendNewMessage)
+                accountViewModel.runIOCatching {
+                    channelScreenModel.sendPostSync()
+                    onSendNewMessage()
+                }
             }
         },
         leadingIcon = {

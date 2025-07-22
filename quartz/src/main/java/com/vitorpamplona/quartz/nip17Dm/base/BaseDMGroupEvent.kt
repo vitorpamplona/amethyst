@@ -69,7 +69,7 @@ open class BaseDMGroupEvent(
         return result
     }
 
-    override fun isIncluded(pubKey: HexKey) = tags.any(PTag::isTagged, pubKey)
+    override fun isIncluded(pubKey: HexKey) = pubKey == this.pubKey || tags.any(PTag::isTagged, pubKey)
 
     override fun groupMembers() = recipientsPubKey().plus(pubKey).toSet()
 

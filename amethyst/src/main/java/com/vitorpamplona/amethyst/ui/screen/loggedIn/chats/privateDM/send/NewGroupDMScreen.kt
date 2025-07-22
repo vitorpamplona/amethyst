@@ -70,7 +70,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -174,7 +173,7 @@ fun NewGroupDMScreen(
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.runIOCatching {
                         postViewModel.sendDraftSync()
                         delay(100)
                         nav.popBack()
@@ -184,7 +183,7 @@ fun NewGroupDMScreen(
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
                         postViewModel.room?.let {
                             nav.nav(routeToMessage(it, null, null, null, accountViewModel))

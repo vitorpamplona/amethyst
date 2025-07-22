@@ -765,6 +765,23 @@ class AccountViewModel(
                     R.string.unauthorized_exception,
                     R.string.unauthorized_exception_description,
                 )
+            } catch (e: SignerExceptions.SignerNotFoundException) {
+                toastManager.toast(
+                    R.string.signer_not_found_exception,
+                    R.string.signer_not_found_exception_description,
+                )
+            } catch (e: SignerExceptions.TimedOutException) {
+                Log.w("AccountViewModel", "TimedOutException", e)
+            } catch (e: SignerExceptions.NothingToDecrypt) {
+                Log.w("AccountViewModel", "NothingToDecrypt", e)
+            } catch (e: SignerExceptions.CouldNotPerformException) {
+                Log.w("AccountViewModel", "CouldNotPerformException", e)
+            } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
+                Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
+            } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
+                Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
+            } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
+                Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
             }
         }
     }

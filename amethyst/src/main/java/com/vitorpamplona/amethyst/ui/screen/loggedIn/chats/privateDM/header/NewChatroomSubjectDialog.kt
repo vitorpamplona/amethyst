@@ -56,8 +56,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun NewChatroomSubjectDialog(
@@ -100,7 +98,7 @@ fun NewChatroomSubjectDialog(
 
                     PostButton(
                         onPost = {
-                            scope.launch(Dispatchers.IO) {
+                            accountViewModel.runIOCatching {
                                 val template =
                                     ChatMessageEvent.build(
                                         message.value,

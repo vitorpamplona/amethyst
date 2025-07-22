@@ -1424,8 +1424,6 @@ class Account(
         template: EventTemplate<ChatMessageEvent>,
         draftTag: String? = null,
     ) {
-        if (!isWriteable()) return
-
         if (draftTag != null) {
             if (template.content.isEmpty()) {
                 deleteDraft(draftTag)

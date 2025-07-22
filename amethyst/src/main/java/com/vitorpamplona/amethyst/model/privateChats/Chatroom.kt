@@ -42,8 +42,6 @@ class Chatroom {
 
     @Synchronized
     fun addMessageSync(msg: Note) {
-        checkNotInMainThread()
-
         if (msg !in roomMessages) {
             roomMessages = roomMessages + msg
 

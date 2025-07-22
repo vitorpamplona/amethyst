@@ -63,6 +63,9 @@
     <string name="unauthorized_exception">Unauthorized Decryption</string>
     <string name="unauthorized_exception_description">The signer did not authorize a decryption that is required to make this operation. Activate NIP-44 decryptions in your signer app and try again</string>
 
+    <string name="signer_not_found_exception">Signer not found</string>
+    <string name="signer_not_found_exception_description">Was the Signer app uninstalled? Check if the signer is installed and has this account. Log off and Log in again of the signer app has changed.</string>
+
 
     <string name="zaps">Zaps</string>
     <string name="view_count">View count</string>

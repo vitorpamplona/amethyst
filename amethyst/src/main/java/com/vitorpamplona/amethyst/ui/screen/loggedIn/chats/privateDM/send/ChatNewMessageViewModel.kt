@@ -345,13 +345,6 @@ class ChatNewMessageViewModel :
         nip17 = draftEvent is NIP17Group
     }
 
-    fun sendPost(onDone: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendPostSync()
-            onDone()
-        }
-    }
-
     suspend fun sendPostSync() {
         innerSendPost(null)
         accountViewModel.deleteDraft(draftTag.current)
