@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @Stable
@@ -48,22 +47,18 @@ abstract class FeedViewModel(
 
     override fun invalidateData(ignoreIfDoing: Boolean) = feedState.invalidateData(ignoreIfDoing)
 
-    private var collectorJob: Job? = null
-
     init {
         Log.d("Init", "Starting new Model: ${this.javaClass.simpleName}")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.Default) {
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
-                    feedState.updateFeedWith(newNotes)
-                }
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Update feeds: ${this@FeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                feedState.updateFeedWith(newNotes)
             }
+        }
     }
 
     override fun onCleared() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
-        collectorJob?.cancel()
         super.onCleared()
     }
 }

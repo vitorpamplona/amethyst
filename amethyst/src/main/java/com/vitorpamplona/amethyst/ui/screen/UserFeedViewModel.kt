@@ -36,7 +36,6 @@ import com.vitorpamplona.ammolite.relays.BundledUpdate
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -99,26 +98,19 @@ open class UserFeedViewModel(
         }
     }
 
-    var collectorJob: Job? = null
-
     init {
         Log.d("Init", "${this.javaClass.simpleName}")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.IO) {
-                checkNotInMainThread()
-
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    checkNotInMainThread()
-
-                    invalidateData()
-                }
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Update feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                invalidateData()
             }
+        }
     }
 
     override fun onCleared() {
         Log.d("Init", "OnCleared: ${this.javaClass.simpleName}")
         bundler.cancel()
-        collectorJob?.cancel()
         super.onCleared()
     }
 }

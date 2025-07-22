@@ -82,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -135,7 +134,6 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -1224,55 +1222,46 @@ class AccountViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings, app) as T
     }
 
-    private var collectorJobNew: Job? = null
-    private var collectorJobDeleted: Job? = null
-    private val bundlerInsert = BundledInsert<Set<Note>>(3000, Dispatchers.Default)
-
     init {
         Log.d("Init", "AccountViewModel")
-        collectorJobNew =
-            viewModelScope.launch(Dispatchers.Default) {
-                feedStates.init()
-                // awaits for init to finish before starting to capture new events.
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    if (isDebug) {
-                        Log.d(
-                            "Rendering Metrics",
-                            "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                        )
-                    }
-                    logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
-                        feedStates.updateFeedsWith(newNotes)
-                        upgradeAttestations()
-                        viewModelScope.launch(Dispatchers.Default) {
-                            newNotesPreProcessor.runNew(newNotes)
-                        }
+        viewModelScope.launch(Dispatchers.Default) {
+            feedStates.init()
+            // awaits for init to finish before starting to capture new events.
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                if (isDebug) {
+                    Log.d(
+                        "Rendering Metrics",
+                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                    )
+                }
+                logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
+                    feedStates.updateFeedsWith(newNotes)
+                    upgradeAttestations()
+                    viewModelScope.launch(Dispatchers.Default) {
+                        newNotesPreProcessor.runNew(newNotes)
                     }
                 }
             }
+        }
 
-        collectorJobDeleted =
-            viewModelScope.launch(Dispatchers.Default) {
-                LocalCache.live.deletedEventBundles.collect { newNotes ->
-                    if (isDebug) {
-                        Log.d(
-                            "Rendering Metrics",
-                            "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                        )
-                    }
-                    logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
-                        newNotesPreProcessor.runDeleted(newNotes)
-                    }
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
+                if (isDebug) {
+                    Log.d(
+                        "Rendering Metrics",
+                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                    )
+                }
+                logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
+                    newNotesPreProcessor.runDeleted(newNotes)
                 }
             }
+        }
     }
 
     override fun onCleared() {
         Log.d("Init", "AccountViewModel onCleared")
         feedStates.destroy()
-        bundlerInsert.cancel()
-        collectorJobNew?.cancel()
-        collectorJobDeleted?.cancel()
         super.onCleared()
     }
 
