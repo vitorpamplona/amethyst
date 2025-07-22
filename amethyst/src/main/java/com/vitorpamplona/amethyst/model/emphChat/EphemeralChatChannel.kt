@@ -18,30 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions
+package com.vitorpamplona.amethyst.model.emphChat
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfHalfHorzModifier
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.model.Channel
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 
-@Composable
-fun LeaveChatButton(
-    channel: PublicChatChannel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    FilledTonalButton(
-        modifier = HalfHalfHorzModifier,
-        onClick = { accountViewModel.unfollow(channel) },
-        contentPadding = ButtonPadding,
-    ) {
-        Text(text = stringRes(R.string.leave))
-    }
+@Stable
+class EphemeralChatChannel(
+    val roomId: RoomId,
+) : Channel() {
+    override fun relays() = setOf(roomId.relayUrl)
+
+    override fun toBestDisplayName() = roomId.toDisplayKey()
+
+    override fun anyNameStartsWith(prefix: String): Boolean = roomId.id.contains(prefix, true)
 }

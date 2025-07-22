@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListDecryptionCache
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
@@ -41,6 +42,7 @@ import com.vitorpamplona.amethyst.model.nip17Dms.DmInboxRelayState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.model.nip25Reactions.ReactionAction
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState

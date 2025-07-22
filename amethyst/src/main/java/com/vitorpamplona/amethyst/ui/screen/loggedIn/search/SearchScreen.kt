@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -295,9 +296,11 @@ private fun DisplaySearchResults(
             ephemeralChannels,
             key = { _, item -> "ephem" + item.roomId.toKey() },
         ) { _, item ->
+            val relayInfo by loadRelayInfo(item.roomId.relayUrl, accountViewModel)
+
             ChannelName(
                 channelIdHex = item.roomId.toKey(),
-                channelPicture = item.profilePicture(),
+                channelPicture = relayInfo.icon,
                 channelTitle = {
                     Text(
                         item.toBestDisplayName(),
@@ -305,7 +308,7 @@ private fun DisplaySearchResults(
                     )
                 },
                 channelLastTime = null,
-                channelLastContent = item.summary(),
+                channelLastContent = stringRes(R.string.ephemeral_relay_chat),
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,

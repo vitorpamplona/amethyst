@@ -54,8 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
@@ -160,8 +160,10 @@ private fun ChannelRoomCompose(
     val authorName by observeUserName(lastMessage.author!!, accountViewModel)
     val channelState by observeChannel(channel, accountViewModel)
 
-    val channelPicture = channelState?.channel?.profilePicture() ?: channel.profilePicture()
-    val channelName = channelState?.channel?.toBestDisplayName() ?: channel.toBestDisplayName()
+    val channel = channelState?.channel as? PublicChatChannel ?: return
+
+    val channelPicture = channel.profilePicture()
+    val channelName = channel.toBestDisplayName()
 
     val noteEvent = lastMessage.event
 

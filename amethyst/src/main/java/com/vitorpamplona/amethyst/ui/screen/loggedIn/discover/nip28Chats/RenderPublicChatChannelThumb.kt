@@ -43,8 +43,8 @@ import coil3.compose.AsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
@@ -93,13 +93,11 @@ fun RenderPublicChatChannelThumb(
     nav: INav,
 ) {
     val channelUpdates by observeChannel(channel, accountViewModel)
+    val publicChat = channelUpdates?.channel as PublicChatChannel
 
-    val name = remember(channelUpdates) { channelUpdates?.channel?.toBestDisplayName() ?: "" }
-    val description = remember(channelUpdates) { channelUpdates?.channel?.summary()?.ifBlank { null } }
-    var cover by
-        remember(channelUpdates) {
-            mutableStateOf(channelUpdates?.channel?.profilePicture()?.ifBlank { null })
-        }
+    val name = remember(channelUpdates) { publicChat.toBestDisplayName() }
+    val description = remember(channelUpdates) { publicChat.summary()?.ifBlank { null } }
+    var cover by remember(channelUpdates) { mutableStateOf(publicChat.profilePicture()?.ifBlank { null }) }
 
     var participantUsers by
         remember(baseNote) {

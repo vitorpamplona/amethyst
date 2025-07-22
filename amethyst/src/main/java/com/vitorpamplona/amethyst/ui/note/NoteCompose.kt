@@ -54,7 +54,7 @@ import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent

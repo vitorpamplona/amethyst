@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.feeds
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable

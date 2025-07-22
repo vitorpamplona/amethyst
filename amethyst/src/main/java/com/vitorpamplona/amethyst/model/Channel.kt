@@ -22,163 +22,19 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
-import com.vitorpamplona.amethyst.ui.note.toShortDisplay
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHintOptional
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
-import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
-class EphemeralChatChannel(
-    val roomId: RoomId,
-) : Channel() {
-    override fun relays() = setOf(roomId.relayUrl)
-
-    override fun toBestDisplayName() = roomId.toDisplayKey()
-
-    override fun summary(): String? = null
-
-    override fun profilePicture(): String? = null
-
-    override fun anyNameStartsWith(prefix: String): Boolean = roomId.id.contains(prefix, true)
-}
-
-@Stable
-class PublicChatChannel(
-    val idHex: String,
-) : Channel() {
-    var event: ChannelCreateEvent? = null
-    var infoTags = EmptyTagList
-    var info = ChannelDataNorm(null, null, null, null)
-
-    override fun relays() = info.relays?.toSet() ?: super.relays()
-
-    fun relayHintUrls() = relays().take(3)
-
-    fun relayHintUrl() = relays().firstOrNull()
-
-    fun toNEvent() = NEvent.create(idHex, event?.pubKey, ChannelCreateEvent.KIND, relayHintUrls())
-
-    fun toNostrUri() = "nostr:${toNEvent()}"
-
-    fun toEventHint() = event?.let { EventHintBundle(it, relayHintUrl(), null) }
-
-    fun toEventId() = EventIdHintOptional(idHex, relayHintUrl())
-
-    fun updateChannelInfo(
-        creator: User,
-        event: ChannelCreateEvent,
-    ) {
-        this.event = event
-        this.infoTags = event.tags.toImmutableListOfLists()
-        updateChannelInfo(creator, event.channelInfo(), event.createdAt)
-    }
-
-    fun updateChannelInfo(
-        creator: User,
-        event: ChannelMetadataEvent,
-    ) {
-        this.infoTags = event.tags.toImmutableListOfLists()
-        updateChannelInfo(creator, event.channelInfo(), event.createdAt)
-    }
-
-    fun updateChannelInfo(
-        creator: User,
-        channelInfo: ChannelDataNorm,
-        updatedAt: Long,
-    ) {
-        this.info = channelInfo
-        super.updateChannelInfo(creator, updatedAt)
-    }
-
-    override fun toBestDisplayName(): String = info.name ?: toNEvent().toShortDisplay()
-
-    override fun summary(): String? = info.about
-
-    override fun profilePicture(): String? {
-        if (info.picture.isNullOrBlank()) return super.profilePicture()
-        return info.picture ?: super.profilePicture()
-    }
-
-    override fun anyNameStartsWith(prefix: String): Boolean =
-        idHex.startsWith(prefix) ||
-            info.name?.contains(prefix, true) == true ||
-            info.about?.contains(prefix, true) == true
-}
-
-@Stable
-class LiveActivitiesChannel(
-    val address: Address,
-) : Channel() {
-    var info: LiveActivitiesEvent? = null
-
-    fun address() = address
-
-    override fun relays() = info?.allRelayUrls()?.toSet() ?: super.relays()
-
-    fun relayHintUrl() = relays().firstOrNull()
-
-    fun relayHintUrls() = relays().take(3)
-
-    fun updateChannelInfo(
-        creator: User,
-        channelInfo: LiveActivitiesEvent,
-        updatedAt: Long,
-    ) {
-        this.info = channelInfo
-        super.updateChannelInfo(creator, updatedAt)
-    }
-
-    override fun toBestDisplayName(): String = info?.title() ?: toNAddr().toShortDisplay()
-
-    override fun summary(): String? = info?.summary()
-
-    override fun profilePicture(): String? = info?.image()?.ifBlank { null }
-
-    override fun anyNameStartsWith(prefix: String): Boolean =
-        info?.title()?.contains(prefix, true) == true ||
-            info?.summary()?.contains(prefix, true) == true
-
-    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrls())
-
-    fun toATag() = ATag(address, relayHintUrl())
-
-    fun toNostrUri() = "nostr:${toNAddr()}"
-}
-
-data class Counter(
-    var number: Int = 0,
-)
-
-@Stable
 abstract class Channel {
-    var creator: User? = null
-    var updatedMetadataAt: Long = 0
     val notes = LargeCache<HexKey, Note>()
     var lastNote: Note? = null
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
     abstract fun toBestDisplayName(): String
-
-    open fun summary(): String? = null
-
-    open fun creatorName(): String? = creator?.toBestDisplayName()
-
-    open fun profilePicture(): String? = creator?.info?.banner
 
     open fun relays(): Set<NormalizedRelayUrl> =
         relays.keys
@@ -188,13 +44,7 @@ abstract class Channel {
                 o2Count.compareTo(o1Count) // descending
             }
 
-    open fun updateChannelInfo(
-        creator: User,
-        updatedAt: Long,
-    ) {
-        this.creator = creator
-        this.updatedMetadataAt = updatedAt
-
+    fun updateChannelInfo() {
         flowSet?.metadata?.invalidateData()
     }
 
@@ -296,6 +146,10 @@ abstract class Channel {
         }
     }
 }
+
+data class Counter(
+    var number: Int = 0,
+)
 
 @Stable
 class ChannelFlowSet(

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities
 
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap

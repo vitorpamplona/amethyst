@@ -24,8 +24,8 @@ import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
