@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
 import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -74,8 +75,11 @@ class NotificationFeedFilter(
 
         val notifications =
             LocalCache.notes.filterIntoSet { _, note ->
-                acceptableEvent(note, filterParams)
-            }
+                note.event !is AddressableEvent && acceptableEvent(note, filterParams)
+            } +
+                LocalCache.addressables.filterIntoSet { _, note ->
+                    acceptableEvent(note, filterParams)
+                }
 
         return sort(notifications)
     }
@@ -126,7 +130,7 @@ class NotificationFeedFilter(
             it.event !is GiftWrapEvent &&
             it.event !is PrivateTagArrayEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor) == true) &&
+            (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             tagsAnEventByUser(it, loggedInUserHex)
