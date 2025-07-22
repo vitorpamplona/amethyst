@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import kotlin.collections.flatten
 
 fun filterContentDVMsAuthors(
     relay: NormalizedRelayUrl,
@@ -53,6 +54,7 @@ fun filterContentDVMsAuthors(
 fun filterContentDVMsByAuthors(
     authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -64,7 +66,7 @@ fun filterContentDVMsByAuthors(
                 filterContentDVMsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()
@@ -73,6 +75,7 @@ fun filterContentDVMsByAuthors(
 fun filterContentDVMsByAuthors(
     authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -84,7 +87,7 @@ fun filterContentDVMsByAuthors(
                 filterContentDVMsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

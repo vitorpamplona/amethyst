@@ -35,6 +35,8 @@ open class DiscoverChatFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultDiscoveryFollowList.value
 
+    override fun limit() = 100
+
     override fun showHiddenKey(): Boolean =
         account.settings.defaultDiscoveryFollowList.value ==
             PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||

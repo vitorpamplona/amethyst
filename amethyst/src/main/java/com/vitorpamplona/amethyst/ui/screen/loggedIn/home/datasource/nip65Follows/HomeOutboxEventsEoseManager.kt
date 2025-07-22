@@ -44,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class HomeOutboxEventsEoseManager(
@@ -55,15 +56,17 @@ class HomeOutboxEventsEoseManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
+        val newThreadSince = key.feedState.homeNewThreads.lastNoteCreatedAtIfFilled()
+        val repliesSince = key.feedState.homeReplies.lastNoteCreatedAtIfFilled()
         return when (feedSettings) {
-            is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since)
-            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since)
-            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since)
-            is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since)
-            is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since)
-            is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since)
-            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since)
-            is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since)
+            is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since, newThreadSince)
+            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since, newThreadSince, repliesSince)
+            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+            is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since, newThreadSince, repliesSince)
+            is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since, newThreadSince)
+            is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since, newThreadSince)
+            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+            is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
             else -> emptyList()
         }
     }
@@ -94,7 +97,17 @@ class HomeOutboxEventsEoseManager(
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followRelayFlow().collectLatest {
+                    key.followRelayFlow().sample(1000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    key.feedState.homeNewThreads.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    key.feedState.homeReplies.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

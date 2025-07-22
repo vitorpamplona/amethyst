@@ -27,10 +27,12 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 class AccountNotificationsEoseFromInboxRelaysManager(
@@ -49,7 +51,16 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         key.account.notificationRelays.flow.value.flatMap {
-            filterNotificationsToPubkey(it, user(key).pubkeyHex, since?.get(it)?.time)
+            filterSummaryNotificationsToPubkey(
+                relay = it,
+                pubkey = user(key).pubkeyHex,
+                since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo(),
+            )
+            filterNotificationsToPubkey(
+                relay = it,
+                pubkey = user(key).pubkeyHex,
+                since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled(),
+            )
         }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
@@ -61,7 +72,12 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.notificationRelays.flow.collectLatest {
+                    key.account.notificationRelays.flow.sample(1000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

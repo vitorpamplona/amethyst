@@ -42,6 +42,8 @@ open class DiscoverLiveFeedFilter(
 
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
+    override fun limit() = 50
+
     override fun showHiddenKey(): Boolean =
         followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)

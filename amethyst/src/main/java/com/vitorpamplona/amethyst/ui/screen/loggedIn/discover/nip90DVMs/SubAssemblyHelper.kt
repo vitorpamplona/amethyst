@@ -42,15 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeContentDVMsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long?,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterContentDVMsByAllCommunities(feedSettings, since)
-        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByFollows(feedSettings, since)
-        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since)
-        is GlobalTopNavPerRelayFilterSet -> filterContentDVMsGlobal(feedSettings, since)
-        is HashtagTopNavPerRelayFilterSet -> filterContentDVMsByHashtag(feedSettings, since)
-        is LocationTopNavPerRelayFilterSet -> filterContentDVMsByGeohash(feedSettings, since)
-        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterContentDVMsByCommunity(feedSettings, since)
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterContentDVMsByAllCommunities(feedSettings, since, defaultSince)
+        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByFollows(feedSettings, since, defaultSince)
+        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterContentDVMsGlobal(feedSettings, since, defaultSince)
+        is HashtagTopNavPerRelayFilterSet -> filterContentDVMsByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterContentDVMsByGeohash(feedSettings, since, defaultSince)
+        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterContentDVMsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

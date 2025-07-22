@@ -42,15 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeLongFormFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterLongFormByAllCommunities(feedSettings, since)
-        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterLongFormByFollows(feedSettings, since)
-        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterLongFormByAuthors(feedSettings, since)
-        is GlobalTopNavPerRelayFilterSet -> filterLongFormGlobal(feedSettings, since)
-        is HashtagTopNavPerRelayFilterSet -> filterLongFormByHashtag(feedSettings, since)
-        is LocationTopNavPerRelayFilterSet -> filterLongFormByGeohash(feedSettings, since)
-        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterLongFormByAuthors(feedSettings, since)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterLongFormByCommunity(feedSettings, since)
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterLongFormByAllCommunities(feedSettings, since, defaultSince)
+        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterLongFormByFollows(feedSettings, since, defaultSince)
+        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterLongFormByAuthors(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterLongFormGlobal(feedSettings, since, defaultSince)
+        is HashtagTopNavPerRelayFilterSet -> filterLongFormByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterLongFormByGeohash(feedSettings, since, defaultSince)
+        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterLongFormByAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterLongFormByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

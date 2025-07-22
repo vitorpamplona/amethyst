@@ -42,7 +42,7 @@ fun filterLongFormAuthors(
                 Filter(
                     authors = authorList,
                     kinds = listOf(LongTextNoteEvent.KIND),
-                    limit = 30,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -52,6 +52,7 @@ fun filterLongFormAuthors(
 fun filterLongFormByAuthors(
     authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -63,7 +64,7 @@ fun filterLongFormByAuthors(
                 filterLongFormAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()
@@ -72,6 +73,7 @@ fun filterLongFormByAuthors(
 fun filterLongFormByAuthors(
     authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -83,7 +85,7 @@ fun filterLongFormByAuthors(
                 filterLongFormAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

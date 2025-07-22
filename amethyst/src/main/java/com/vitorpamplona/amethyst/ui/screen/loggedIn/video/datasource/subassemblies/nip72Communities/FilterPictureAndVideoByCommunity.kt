@@ -52,7 +52,7 @@ fun filterPictureAndVideoCommunity(
                             "a" to listOf(community),
                             "k" to PictureAndVideoKTags,
                         ),
-                    limit = 500,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -64,7 +64,7 @@ fun filterPictureAndVideoCommunity(
                     authors = authors,
                     tags = mapOf("a" to listOf(community)),
                     kinds = PictureAndVideoKinds,
-                    limit = 500,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -80,7 +80,7 @@ fun filterPictureAndVideoCommunity(
                             "a" to listOf(community),
                             "k" to PictureAndVideoLegacyKTags,
                         ),
-                    limit = 500,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -96,7 +96,7 @@ fun filterPictureAndVideoCommunity(
                             "m" to LegacyMimeTypes,
                         ),
                     kinds = PictureAndVideoLegacyKinds,
-                    limit = 500,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -106,6 +106,7 @@ fun filterPictureAndVideoCommunity(
 fun filterPictureAndVideoByCommunity(
     communitySet: SingleCommunityTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -115,7 +116,7 @@ fun filterPictureAndVideoByCommunity(
                 relay = it.key,
                 community = it.value.community,
                 authors = it.value.authors,
-                since = since?.get(it.key)?.time,
+                since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()
 }

@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -45,8 +46,8 @@ class DiscoveryFollowsDiscoverySubAssembler2(
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
 
-        return makeFollowSetsFilter(feedSettings, since) +
-            makeLiveActivitiesFilter(feedSettings, since)
+        return makeFollowSetsFilter(feedSettings, since, key.feedStates.discoverFollowSets.lastNoteCreatedAtIfFilled()) +
+            makeLiveActivitiesFilter(feedSettings, since, key.feedStates.discoverLive.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: DiscoveryQueryState) = key.account.userProfile()
@@ -75,7 +76,17 @@ class DiscoveryFollowsDiscoverySubAssembler2(
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followsPerRelayFlow().sample(500).collectLatest {
+                    key.followsPerRelayFlow().sample(1000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    combine(
+                        key.feedStates.discoverFollowSets.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverLive.lastNoteCreatedAtWhenFullyLoaded,
+                    ) {
+                        Any()
+                    }.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

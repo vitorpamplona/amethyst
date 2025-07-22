@@ -30,17 +30,27 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 fun filterCommunitiesGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
     return relays.set.flatMap {
-        val since = since?.get(it.key)?.time
+        val since = since?.get(it.key)?.time ?: defaultSince
         listOf(
             RelayBasedFilter(
                 relay = it.key,
                 filter =
                     Filter(
-                        kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
+                        kinds = listOf(CommunityDefinitionEvent.KIND),
+                        limit = 100,
+                        since = since,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds = listOf(CommunityPostApprovalEvent.KIND),
                         limit = 30,
                         since = since,
                     ),

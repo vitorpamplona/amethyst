@@ -58,15 +58,16 @@ class VideoOutboxEventsFilterSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
+        val defaultSince = key.feedState.videoFeed.lastNoteCreatedAtWhenFullyLoaded.value
         return when (feedSettings) {
-            is AllCommunitiesTopNavPerRelayFilterSet -> filterPictureAndVideoByAllCommunities(feedSettings, since)
-            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByFollows(feedSettings, since)
-            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since)
-            is GlobalTopNavPerRelayFilterSet -> filterPictureAndVideoGlobal(feedSettings, since)
-            is HashtagTopNavPerRelayFilterSet -> filterPictureAndVideoByHashtag(feedSettings, since)
-            is LocationTopNavPerRelayFilterSet -> filterPictureAndVideoByGeohash(feedSettings, since)
-            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since)
-            is SingleCommunityTopNavPerRelayFilterSet -> filterPictureAndVideoByCommunity(feedSettings, since)
+            is AllCommunitiesTopNavPerRelayFilterSet -> filterPictureAndVideoByAllCommunities(feedSettings, since, defaultSince)
+            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByFollows(feedSettings, since, defaultSince)
+            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
+            is GlobalTopNavPerRelayFilterSet -> filterPictureAndVideoGlobal(feedSettings, since, defaultSince)
+            is HashtagTopNavPerRelayFilterSet -> filterPictureAndVideoByHashtag(feedSettings, since, defaultSince)
+            is LocationTopNavPerRelayFilterSet -> filterPictureAndVideoByGeohash(feedSettings, since, defaultSince)
+            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
+            is SingleCommunityTopNavPerRelayFilterSet -> filterPictureAndVideoByCommunity(feedSettings, since, defaultSince)
             else -> emptyList()
         }
     }
@@ -92,7 +93,12 @@ class VideoOutboxEventsFilterSubAssembler(
         userJobMap[user] =
             listOf(
                 key.scope.launch(Dispatchers.Default) {
-                    key.followsPerRelayFlow().sample(500).collectLatest {
+                    key.followsPerRelayFlow().sample(1000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.scope.launch(Dispatchers.Default) {
+                    key.feedState.videoFeed.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

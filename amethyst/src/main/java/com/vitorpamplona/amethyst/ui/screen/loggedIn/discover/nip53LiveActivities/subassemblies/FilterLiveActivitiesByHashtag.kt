@@ -55,6 +55,7 @@ fun filterLiveActivitiesByHashtag(
 fun filterLiveActivitiesByHashtag(
     hashSet: HashtagTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (hashSet.set.isEmpty()) return emptyList()
 
@@ -66,7 +67,7 @@ fun filterLiveActivitiesByHashtag(
                 filterLiveActivitiesByHashtag(
                     relay = relayHashSet.key,
                     hashtags = relayHashSet.value.hashtags,
-                    since = since?.get(relayHashSet.key)?.time,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

@@ -43,7 +43,7 @@ fun VideoFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel.account) {
-            VideoQueryState(accountViewModel.account, accountViewModel.viewModelScope)
+            VideoQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
         }
 
     KeyDataSourceSubscription(state, filterAssembler)

@@ -27,11 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun filterLongFormByFollows(
     followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
     return followsSet.set.flatMap {
-        val since = since?.get(it.key)?.time
+        val since = since?.get(it.key)?.time ?: defaultSince
         val relay = it.key
 
         listOfNotNull(

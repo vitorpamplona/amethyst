@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -44,9 +45,8 @@ class DiscoveryFollowsDiscoverySubAssembler3(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
-
-        return makePublicChatsFilter(feedSettings, since) +
-            makeCommunitiesFilter(feedSettings, since)
+        return makePublicChatsFilter(feedSettings, since, key.feedStates.discoverPublicChats.lastNoteCreatedAtIfFilled()) +
+            makeCommunitiesFilter(feedSettings, since, key.feedStates.discoverCommunities.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: DiscoveryQueryState) = key.account.userProfile()
@@ -76,6 +76,16 @@ class DiscoveryFollowsDiscoverySubAssembler3(
                 },
                 key.scope.launch(Dispatchers.Default) {
                     key.followsPerRelayFlow().sample(500).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    combine(
+                        key.feedStates.discoverPublicChats.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverCommunities.lastNoteCreatedAtWhenFullyLoaded,
+                    ) {
+                        Any()
+                    }.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

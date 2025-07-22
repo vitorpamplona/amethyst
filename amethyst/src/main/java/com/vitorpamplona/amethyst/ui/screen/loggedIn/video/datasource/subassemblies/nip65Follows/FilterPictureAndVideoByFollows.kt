@@ -30,25 +30,26 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun filterPictureAndVideoByFollows(
     followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
     return followsSet.set.flatMap {
-        val since = since?.get(it.key)?.time
+        val since = since?.get(it.key)?.time ?: defaultSince
         val relay = it.key
 
         listOfNotNull(
-            it.value.authors?.let {
-                filterPictureAndVideoAuthors(relay, it, since)
+            it.value.authors?.let { authors ->
+                filterPictureAndVideoAuthors(relay, authors, since)
             },
-            it.value.geotags?.let {
-                filterPictureAndVideoGeohash(relay, it, since)
+            it.value.geotags?.let { geotags ->
+                filterPictureAndVideoGeohash(relay, geotags, since)
             },
-            it.value.hashtags?.let {
-                filterPictureAndVideoHashtag(relay, it, since)
+            it.value.hashtags?.let { hashtags ->
+                filterPictureAndVideoHashtag(relay, hashtags, since)
             },
-            it.value.communities?.let {
-                filterPictureAndVideoAllCommunities(relay, it, since)
+            it.value.communities?.let { communities ->
+                filterPictureAndVideoAllCommunities(relay, communities, since)
             },
         ).flatten()
     }

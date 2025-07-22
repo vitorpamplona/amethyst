@@ -53,6 +53,7 @@ fun filterClassifiedsByGeohash(
 fun filterClassifiedsByGeohash(
     geoSet: LocationTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
@@ -64,7 +65,7 @@ fun filterClassifiedsByGeohash(
                 filterClassifiedsByGeohash(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

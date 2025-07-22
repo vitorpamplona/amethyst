@@ -36,6 +36,8 @@ open class DiscoverMarketplaceFeedFilter(
 
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
+    override fun limit() = 150
+
     override fun showHiddenKey(): Boolean =
         followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)

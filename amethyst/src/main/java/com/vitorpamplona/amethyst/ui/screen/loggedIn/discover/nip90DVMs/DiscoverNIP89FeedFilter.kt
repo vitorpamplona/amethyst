@@ -38,6 +38,8 @@ open class DiscoverNIP89FeedFilter(
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
 
+    override fun limit() = 50
+
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
     override fun showHiddenKey(): Boolean =

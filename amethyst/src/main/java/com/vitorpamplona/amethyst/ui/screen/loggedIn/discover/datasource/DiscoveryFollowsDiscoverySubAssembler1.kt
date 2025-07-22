@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -46,9 +47,9 @@ class DiscoveryFollowsDiscoverySubAssembler1(
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
 
-        return makeLongFormFilter(feedSettings, since) +
-            makeClassifiedsFilter(feedSettings, since) +
-            makeContentDVMsFilter(feedSettings, since)
+        return makeLongFormFilter(feedSettings, since, key.feedStates.discoverReads.lastNoteCreatedAtIfFilled()) +
+            makeClassifiedsFilter(feedSettings, since, key.feedStates.discoverMarketplace.lastNoteCreatedAtIfFilled()) +
+            makeContentDVMsFilter(feedSettings, since, key.feedStates.discoverDVMs.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: DiscoveryQueryState) = key.account.userProfile()
@@ -78,6 +79,17 @@ class DiscoveryFollowsDiscoverySubAssembler1(
                 },
                 key.scope.launch(Dispatchers.Default) {
                     key.followsPerRelayFlow().sample(500).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.Default) {
+                    combine(
+                        key.feedStates.discoverReads.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverDVMs.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverMarketplace.lastNoteCreatedAtWhenFullyLoaded,
+                    ) {
+                        Any()
+                    }.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },

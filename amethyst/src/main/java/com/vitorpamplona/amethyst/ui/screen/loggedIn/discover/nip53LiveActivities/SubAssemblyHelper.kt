@@ -42,15 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeLiveActivitiesFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterLiveActivitiesByAllCommunities(feedSettings, since)
-        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterLiveActivitiesByFollows(feedSettings, since)
-        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterLiveActivitiesByAuthors(feedSettings, since)
-        is GlobalTopNavPerRelayFilterSet -> filterLiveActivitiesGlobal(feedSettings, since)
-        is HashtagTopNavPerRelayFilterSet -> filterLiveActivitiesByHashtag(feedSettings, since)
-        is LocationTopNavPerRelayFilterSet -> filterLiveActivitiesByGeohash(feedSettings, since)
-        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterLiveActivitiesByAuthors(feedSettings, since)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterLiveActivitiesByCommunity(feedSettings, since)
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterLiveActivitiesByAllCommunities(feedSettings, since, defaultSince)
+        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterLiveActivitiesByFollows(feedSettings, since, defaultSince)
+        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterLiveActivitiesByAuthors(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterLiveActivitiesGlobal(feedSettings, since, defaultSince)
+        is HashtagTopNavPerRelayFilterSet -> filterLiveActivitiesByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterLiveActivitiesByGeohash(feedSettings, since, defaultSince)
+        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterLiveActivitiesByAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterLiveActivitiesByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

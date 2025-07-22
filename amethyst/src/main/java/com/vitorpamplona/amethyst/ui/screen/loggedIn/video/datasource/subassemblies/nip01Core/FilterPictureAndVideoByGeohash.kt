@@ -43,7 +43,7 @@ fun filterPictureAndVideoGeohash(
                 Filter(
                     kinds = PictureAndVideoKinds,
                     tags = mapOf("g" to geoHashes),
-                    limit = 100,
+                    limit = if (since == null) 200 else null,
                     since = since,
                 ),
         ),
@@ -57,7 +57,7 @@ fun filterPictureAndVideoGeohash(
                             "g" to geoHashes,
                             "m" to LegacyMimeTypes,
                         ),
-                    limit = 100,
+                    limit = if (since == null) 200 else null,
                     since = since,
                 ),
         ),
@@ -67,6 +67,7 @@ fun filterPictureAndVideoGeohash(
 fun filterPictureAndVideoByGeohash(
     geoSet: LocationTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
@@ -78,7 +79,7 @@ fun filterPictureAndVideoByGeohash(
                 filterPictureAndVideoGeohash(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

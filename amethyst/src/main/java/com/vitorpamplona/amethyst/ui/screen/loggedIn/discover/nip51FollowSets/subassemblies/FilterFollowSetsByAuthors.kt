@@ -52,6 +52,7 @@ fun filterFollowSetsAuthors(
 fun filterFollowSetsByAuthors(
     authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -63,7 +64,7 @@ fun filterFollowSetsByAuthors(
                 filterFollowSetsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()
@@ -72,6 +73,7 @@ fun filterFollowSetsByAuthors(
 fun filterFollowSetsByAuthors(
     authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -83,7 +85,7 @@ fun filterFollowSetsByAuthors(
                 filterFollowSetsAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

@@ -41,7 +41,7 @@ fun filterHomePostsByScopes(
                 Filter(
                     kinds = CommentKinds,
                     tags = mapOf("I" to scopesToLoad.toList()),
-                    limit = scopesToLoad.size * 20,
+                    limit = 100,
                     since = since,
                 ),
         ),

@@ -44,7 +44,7 @@ fun filterPictureAndVideoHashtag(
                 Filter(
                     kinds = PictureAndVideoKinds,
                     tags = mapOf("t" to hashtags),
-                    limit = 50,
+                    limit = if (since == null) 100 else null,
                     since = since,
                 ),
         ),
@@ -58,7 +58,7 @@ fun filterPictureAndVideoHashtag(
                             "t" to hashtags,
                             "m" to LegacyMimeTypes,
                         ),
-                    limit = 50,
+                    limit = if (since == null) 100 else null,
                     since = since,
                 ),
         ),
@@ -68,6 +68,7 @@ fun filterPictureAndVideoHashtag(
 fun filterPictureAndVideoByHashtag(
     hashSet: HashtagTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (hashSet.set.isEmpty()) return emptyList()
 
@@ -79,7 +80,7 @@ fun filterPictureAndVideoByHashtag(
                 filterPictureAndVideoHashtag(
                     relay = relayHashSet.key,
                     hashtags = relayHashSet.value.hashtags,
-                    since = since?.get(relayHashSet.key)?.time,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

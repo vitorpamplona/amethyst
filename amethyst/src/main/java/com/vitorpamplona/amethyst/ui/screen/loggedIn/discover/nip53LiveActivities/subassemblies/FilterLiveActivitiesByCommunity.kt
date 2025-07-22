@@ -71,6 +71,7 @@ fun filterLiveActivitiesByCommunity(
 fun filterLiveActivitiesByCommunity(
     communitySet: SingleCommunityTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -80,7 +81,7 @@ fun filterLiveActivitiesByCommunity(
                 relay = it.key,
                 community = it.value.community,
                 authors = it.value.authors,
-                since = since?.get(it.key)?.time,
+                since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()
 }

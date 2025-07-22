@@ -42,15 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makePublicChatsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterPublicChatsByAllCommunities(feedSettings, since)
-        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByFollows(feedSettings, since)
-        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByAuthors(feedSettings, since)
-        is GlobalTopNavPerRelayFilterSet -> filterPublicChatsGlobal(feedSettings, since)
-        is HashtagTopNavPerRelayFilterSet -> filterPublicChatsByHashtag(feedSettings, since)
-        is LocationTopNavPerRelayFilterSet -> filterPublicChatsByGeohash(feedSettings, since)
-        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByAuthors(feedSettings, since)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterPublicChatsByCommunity(feedSettings, since)
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterPublicChatsByAllCommunities(feedSettings, since, defaultSince)
+        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByFollows(feedSettings, since, defaultSince)
+        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByAuthors(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterPublicChatsGlobal(feedSettings, since, defaultSince)
+        is HashtagTopNavPerRelayFilterSet -> filterPublicChatsByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterPublicChatsByGeohash(feedSettings, since, defaultSince)
+        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterPublicChatsByAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterPublicChatsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

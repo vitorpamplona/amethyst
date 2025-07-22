@@ -42,15 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun makeFollowSetsFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllCommunitiesTopNavPerRelayFilterSet -> filterFollowSetsByAllCommunities(feedSettings, since)
-        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterFollowSetsByFollows(feedSettings, since)
-        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterFollowSetsByAuthors(feedSettings, since)
-        is GlobalTopNavPerRelayFilterSet -> filterFollowSetsGlobal(feedSettings, since)
-        is HashtagTopNavPerRelayFilterSet -> filterFollowSetsByHashtag(feedSettings, since)
-        is LocationTopNavPerRelayFilterSet -> filterFollowSetsByGeohash(feedSettings, since)
-        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterFollowSetsByAuthors(feedSettings, since)
-        is SingleCommunityTopNavPerRelayFilterSet -> filterFollowSetsByCommunity(feedSettings, since)
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterFollowSetsByAllCommunities(feedSettings, since, defaultSince)
+        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterFollowSetsByFollows(feedSettings, since, defaultSince)
+        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterFollowSetsByAuthors(feedSettings, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterFollowSetsGlobal(feedSettings, since, defaultSince)
+        is HashtagTopNavPerRelayFilterSet -> filterFollowSetsByHashtag(feedSettings, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterFollowSetsByGeohash(feedSettings, since, defaultSince)
+        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterFollowSetsByAuthors(feedSettings, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterFollowSetsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureMeta
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoMeta
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
@@ -43,6 +44,8 @@ class VideoFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value
+
+    override fun limit() = 300
 
     override fun showHiddenKey(): Boolean =
         account.settings.defaultStoriesFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
@@ -82,16 +85,23 @@ class VideoFeedFilter(
         return urls.isNotEmpty() && (urls.any { RichTextParser.Companion.isImageOrVideoUrl(it) } || isSupportedMimeType)
     }
 
-    fun acceptableiMetas(iMetas: List<VideoMeta>): Boolean =
+    fun acceptableVideoiMetas(iMetas: List<VideoMeta>): Boolean =
         iMetas.any {
-            !it.url.contains("youtu.be") && !it.url.contains("youtube.com") && (RichTextParser.Companion.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
+            !it.url.contains("youtu.be") && !it.url.contains("youtube.com") && (RichTextParser.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
         }
+
+    fun acceptablePictureiMetas(iMetas: List<PictureMeta>): Boolean =
+        iMetas.any {
+            !it.url.contains("youtu.be") && !it.url.contains("youtube.com") && (RichTextParser.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
+        }
+
+    fun acceptanceEvent(noteEvent: PictureEvent) = acceptablePictureiMetas(noteEvent.imetaTags())
 
     fun acceptanceEvent(noteEvent: FileHeaderEvent) = acceptableUrls(noteEvent.urls(), noteEvent.mimeType())
 
-    fun acceptanceEvent(noteEvent: VideoVerticalEvent) = acceptableiMetas(noteEvent.imetaTags())
+    fun acceptanceEvent(noteEvent: VideoVerticalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
-    fun acceptanceEvent(noteEvent: VideoHorizontalEvent) = acceptableiMetas(noteEvent.imetaTags())
+    fun acceptanceEvent(noteEvent: VideoHorizontalEvent) = acceptableVideoiMetas(noteEvent.imetaTags())
 
     fun acceptableEvent(
         note: Note,
@@ -113,7 +123,8 @@ class VideoFeedFilter(
                             SUPPORTED_VIDEO_FEED_MIME_TYPES_SET,
                         )
                 ) ||
-                noteEvent is PictureEvent
+                noteEvent is PictureEvent &&
+                acceptanceEvent(noteEvent)
         ) &&
             params.match(noteEvent) &&
             (params.isHiddenList || account.isAcceptable(note))

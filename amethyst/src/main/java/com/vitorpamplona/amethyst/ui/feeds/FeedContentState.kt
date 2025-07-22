@@ -57,6 +57,8 @@ class FeedContentState(
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
 
+    val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
+
     fun sendToTop() {
         if (scrolltoTopPending) return
 
@@ -81,6 +83,8 @@ class FeedContentState(
         }
     }
 
+    fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
+
     fun refreshSuspended() {
         checkNotInMainThread()
 
@@ -103,6 +107,10 @@ class FeedContentState(
     }
 
     private fun updateFeed(notes: ImmutableList<Note>) {
+        if (notes.size >= localFilter.limit()) {
+            lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull { it.event != null }?.createdAt())
+        }
+
         val currentState = _feedContent.value
         if (notes.isEmpty()) {
             _feedContent.tryEmit(FeedState.Empty)

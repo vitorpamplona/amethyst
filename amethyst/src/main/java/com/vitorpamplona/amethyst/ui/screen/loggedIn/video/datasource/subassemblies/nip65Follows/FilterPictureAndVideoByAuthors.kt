@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.math.max
 
 fun filterPictureAndVideoAuthors(
     relay: NormalizedRelayUrl,
@@ -44,7 +45,7 @@ fun filterPictureAndVideoAuthors(
                 Filter(
                     authors = authorList,
                     kinds = PictureAndVideoKinds,
-                    limit = 100,
+                    limit = if (since == null) max(authorList.size * 20, 200) else null,
                     since = since,
                 ),
         ),
@@ -55,7 +56,7 @@ fun filterPictureAndVideoAuthors(
                     authors = authorList,
                     kinds = PictureAndVideoLegacyKinds,
                     tags = LegacyMimeTypeMap,
-                    limit = 100,
+                    limit = if (since == null) max(authorList.size * 20, 200) else null,
                     since = since,
                 ),
         ),
@@ -65,6 +66,7 @@ fun filterPictureAndVideoAuthors(
 fun filterPictureAndVideoByAuthors(
     authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -76,7 +78,7 @@ fun filterPictureAndVideoByAuthors(
                 filterPictureAndVideoAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()
@@ -85,6 +87,7 @@ fun filterPictureAndVideoByAuthors(
 fun filterPictureAndVideoByAuthors(
     authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -96,7 +99,7 @@ fun filterPictureAndVideoByAuthors(
                 filterPictureAndVideoAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

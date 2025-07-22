@@ -23,8 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follo
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
@@ -35,38 +33,37 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import kotlin.math.max
 
-val HomePostsKinds =
+val HomePostsNewThreadKinds =
     listOf(
         TextNoteEvent.KIND,
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
         ClassifiedsEvent.KIND,
         LongTextNoteEvent.KIND,
-        EphemeralChatEvent.KIND,
         HighlightEvent.KIND,
-    )
-
-val HomePostsKinds2 =
-    listOf(
-        PollNoteEvent.KIND,
-        AudioTrackEvent.KIND,
-        AudioHeaderEvent.KIND,
-        PinListEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
-        LiveActivitiesChatMessageEvent.KIND,
-        LiveActivitiesEvent.KIND,
         WikiNoteEvent.KIND,
+        PollNoteEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
     )
 
-fun filterHomePostsByAuthors(
+val HomePostsConversationKinds =
+    listOf(
+        LiveActivitiesChatMessageEvent.KIND,
+        CommentEvent.KIND,
+        LiveActivitiesEvent.KIND,
+        EphemeralChatEvent.KIND,
+    )
+
+fun filterNewHomePostsByAuthors(
     relay: NormalizedRelayUrl,
     authors: Set<HexKey>,
     since: Long? = null,
@@ -78,19 +75,30 @@ fun filterHomePostsByAuthors(
             relay = relay,
             filter =
                 Filter(
-                    kinds = HomePostsKinds,
+                    kinds = HomePostsNewThreadKinds,
                     authors = authorList,
-                    limit = authorList.size * 10,
+                    limit = max(authorList.size * 10, 300),
                     since = since,
                 ),
         ),
+    )
+}
+
+fun filterReplyHomePostsByAuthors(
+    relay: NormalizedRelayUrl,
+    authors: Set<HexKey>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    val authorList = authors.sorted()
+
+    return listOf(
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
-                    kinds = HomePostsKinds2,
+                    kinds = HomePostsConversationKinds,
                     authors = authorList,
-                    limit = authorList.size * 10,
+                    limit = max(authorList.size * 10, 300),
                     since = since,
                 ),
         ),
@@ -100,6 +108,8 @@ fun filterHomePostsByAuthors(
 fun filterHomePostsByAuthors(
     authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    sinceBoundaryNew: Long?,
+    sinceBoundaryReply: Long?,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -108,11 +118,16 @@ fun filterHomePostsByAuthors(
             if (it.value.authors.isEmpty()) {
                 null
             } else {
-                filterHomePostsByAuthors(
+                filterNewHomePostsByAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
-                )
+                    since = since?.get(it.key)?.time ?: sinceBoundaryNew,
+                ) +
+                    filterReplyHomePostsByAuthors(
+                        relay = it.key,
+                        authors = it.value.authors,
+                        since = since?.get(it.key)?.time ?: sinceBoundaryReply,
+                    )
             }
         }.flatten()
 }
@@ -120,6 +135,8 @@ fun filterHomePostsByAuthors(
 fun filterHomePostsByAuthors(
     authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    sinceBoundaryNew: Long?,
+    sinceBoundaryReply: Long?,
 ): List<RelayBasedFilter> {
     if (authorSet.set.isEmpty()) return emptyList()
 
@@ -128,11 +145,16 @@ fun filterHomePostsByAuthors(
             if (it.value.authors.isEmpty()) {
                 null
             } else {
-                filterHomePostsByAuthors(
+                filterNewHomePostsByAuthors(
                     relay = it.key,
                     authors = it.value.authors,
-                    since = since?.get(it.key)?.time,
-                )
+                    since = since?.get(it.key)?.time ?: sinceBoundaryNew,
+                ) +
+                    filterReplyHomePostsByAuthors(
+                        relay = it.key,
+                        authors = it.value.authors,
+                        since = since?.get(it.key)?.time ?: sinceBoundaryReply,
+                    )
             }
         }.flatten()
 }

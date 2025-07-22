@@ -31,11 +31,12 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 fun filterPublicChatsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
     return relays.set.map {
-        val since = since?.get(it.key)?.time
+        val since = since?.get(it.key)?.time ?: defaultSince
         RelayBasedFilter(
             relay = it.key,
             filter =

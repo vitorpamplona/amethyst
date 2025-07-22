@@ -22,50 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
-import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
-import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
-import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
-import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsConversationKinds
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsNewThreadKinds
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
-import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-
-val HomePostsByGlobalKinds =
-    listOf(
-        TextNoteEvent.KIND,
-        RepostEvent.KIND,
-        GenericRepostEvent.KIND,
-        ClassifiedsEvent.KIND,
-        LongTextNoteEvent.KIND,
-        EphemeralChatEvent.KIND,
-        HighlightEvent.KIND,
-    )
-
-val HomePostsByGlobalKinds2 =
-    listOf(
-        PollNoteEvent.KIND,
-        AudioTrackEvent.KIND,
-        AudioHeaderEvent.KIND,
-        PinListEvent.KIND,
-        InteractiveStoryPrologueEvent.KIND,
-        LiveActivitiesChatMessageEvent.KIND,
-        LiveActivitiesEvent.KIND,
-        WikiNoteEvent.KIND,
-    )
 
 fun filterHomePostsByGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    newThreadSince: Long?,
+    repliesSince: Long?,
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
@@ -77,18 +43,18 @@ fun filterHomePostsByGlobal(
                 relay = relayUrl,
                 filter =
                     Filter(
-                        kinds = HomePostsByGlobalKinds,
+                        kinds = HomePostsNewThreadKinds,
                         limit = 50,
-                        since = since,
+                        since = since ?: newThreadSince,
                     ),
             ),
             RelayBasedFilter(
                 relay = relayUrl,
                 filter =
                     Filter(
-                        kinds = HomePostsByGlobalKinds2,
+                        kinds = HomePostsConversationKinds,
                         limit = 50,
-                        since = since,
+                        since = since ?: repliesSince,
                     ),
             ),
         )

@@ -46,18 +46,23 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
-val NotificationsPerKeyKinds =
+val SummaryKinds =
     listOf(
         TextNoteEvent.KIND,
         ReactionEvent.KIND,
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
-        ReportEvent.KIND,
         LnZapEvent.KIND,
+    )
+
+val NotificationsPerKeyKinds =
+    listOf(
+        ReportEvent.KIND,
         LnZapPaymentResponseEvent.KIND,
         ChannelMessageEvent.KIND,
         EphemeralChatEvent.KIND,
         BadgeAwardEvent.KIND,
+        PollNoteEvent.KIND,
     )
 
 val NotificationsPerKeyKinds2 =
@@ -74,7 +79,26 @@ val NotificationsPerKeyKinds2 =
         InteractiveStorySceneEvent.KIND,
     )
 
-val NotificationsPerKeyKinds3 = listOf(PollNoteEvent.KIND)
+fun filterSummaryNotificationsToPubkey(
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey?,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = SummaryKinds,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = if (since == null) 2000 else null,
+                    since = since,
+                ),
+        ),
+    )
+}
 
 fun filterNotificationsToPubkey(
     relay: NormalizedRelayUrl,
@@ -90,7 +114,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 2000,
+                    limit = if (since == null) 50 else null,
                     since = since,
                 ),
         ),
@@ -100,17 +124,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 50,
-                    since = since,
-                ),
-        ),
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = NotificationsPerKeyKinds3,
-                    tags = mapOf("p" to listOf(pubkey)),
-                    limit = 100,
+                    limit = if (since == null) 100 else null,
                     since = since,
                 ),
         ),
@@ -129,9 +143,19 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             relay = relay,
             filter =
                 Filter(
-                    kinds = NotificationsPerKeyKinds,
+                    kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = NotificationsPerKeyKinds,
+                    tags = mapOf("p" to listOf(pubkey)),
+                    limit = 5,
                     since = since,
                 ),
         ),
@@ -141,17 +165,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 10,
-                    since = since,
-                ),
-        ),
-        RelayBasedFilter(
-            relay = relay,
-            filter =
-                Filter(
-                    kinds = NotificationsPerKeyKinds3,
-                    tags = mapOf("p" to listOf(pubkey)),
-                    limit = 10,
+                    limit = 5,
                     since = since,
                 ),
         ),

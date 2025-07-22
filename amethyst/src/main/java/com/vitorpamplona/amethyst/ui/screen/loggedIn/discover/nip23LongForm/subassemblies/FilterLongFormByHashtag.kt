@@ -44,7 +44,7 @@ fun filterLongFormByHashtag(
                 Filter(
                     kinds = listOf(LongTextNoteEvent.KIND),
                     tags = mapOf("t" to hashtags),
-                    limit = 30,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -54,6 +54,7 @@ fun filterLongFormByHashtag(
 fun filterLongFormByHashtag(
     hashSet: HashtagTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (hashSet.set.isEmpty()) return emptyList()
 
@@ -65,7 +66,7 @@ fun filterLongFormByHashtag(
                 filterLongFormByHashtag(
                     relay = relayHashSet.key,
                     hashtags = relayHashSet.value.hashtags,
-                    since = since?.get(relayHashSet.key)?.time,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

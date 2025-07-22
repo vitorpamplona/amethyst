@@ -31,18 +31,19 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 fun filterPictureAndVideoGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
     return relays.set.flatMap {
-        val since = since?.get(it.key)?.time
+        val since = since?.get(it.key)?.time ?: defaultSince
         listOf(
             RelayBasedFilter(
                 relay = it.key,
                 filter =
                     Filter(
                         kinds = PictureAndVideoKinds,
-                        limit = 100,
+                        limit = if (since == null) 50 else null,
                         since = since,
                     ),
             ),
@@ -52,7 +53,7 @@ fun filterPictureAndVideoGlobal(
                     Filter(
                         kinds = PictureAndVideoLegacyKinds,
                         tags = LegacyMimeTypeMap,
-                        limit = 100,
+                        limit = if (since == null) 50 else null,
                         since = since,
                     ),
             ),

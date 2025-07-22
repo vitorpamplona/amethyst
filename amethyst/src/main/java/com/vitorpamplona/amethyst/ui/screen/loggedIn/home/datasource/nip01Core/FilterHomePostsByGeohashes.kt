@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import kotlin.collections.flatten
 
 val HomePostsByGeohashKinds =
     listOf(
@@ -63,7 +64,7 @@ fun filterHomePostsByGeohashes(
                 Filter(
                     kinds = HomePostsByGeohashKinds,
                     tags = mapOf("g" to geotags.sorted()),
-                    limit = geotags.size * 20,
+                    limit = 100,
                     since = since,
                 ),
         ),
@@ -73,6 +74,7 @@ fun filterHomePostsByGeohashes(
 fun filterHomePostsByGeohashes(
     geoSet: LocationTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long?,
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
@@ -84,12 +86,12 @@ fun filterHomePostsByGeohashes(
                 filterHomePostsByGeohashes(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 ) +
                     filterHomePostsByScopes(
                         relay = it.key,
                         scopesToLoad = it.value.geotagScopes,
-                        since = since?.get(it.key)?.time,
+                        since = since?.get(it.key)?.time ?: defaultSince,
                     )
             }
         }.flatten()

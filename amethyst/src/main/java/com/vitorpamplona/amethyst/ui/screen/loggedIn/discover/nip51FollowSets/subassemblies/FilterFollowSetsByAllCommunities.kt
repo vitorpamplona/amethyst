@@ -69,6 +69,7 @@ fun filterFollowSetsAllCommunities(
 fun filterFollowSetsByAllCommunities(
     communitySet: AllCommunitiesTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -77,7 +78,7 @@ fun filterFollowSetsByAllCommunities(
             filterContentDVMsAllCommunities(
                 relay = it.key,
                 communities = it.value.communities,
-                since = since?.get(it.key)?.time,
+                since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()
 }

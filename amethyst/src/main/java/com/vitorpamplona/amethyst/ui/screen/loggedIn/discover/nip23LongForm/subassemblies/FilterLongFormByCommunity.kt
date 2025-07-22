@@ -70,6 +70,7 @@ fun filterLongFormByCommunity(
 fun filterLongFormByCommunity(
     communitySet: SingleCommunityTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -79,7 +80,7 @@ fun filterLongFormByCommunity(
                 relay = it.key,
                 community = it.value.community,
                 authors = it.value.authors,
-                since = since?.get(it.key)?.time,
+                since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()
 }

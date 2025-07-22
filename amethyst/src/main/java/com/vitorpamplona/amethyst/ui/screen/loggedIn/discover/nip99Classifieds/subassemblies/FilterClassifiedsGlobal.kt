@@ -29,11 +29,12 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 fun filterClassifiedsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
     return relays.set.flatMap {
-        val since = since?.get(it.key)?.time
+        val since = since?.get(it.key)?.time ?: defaultSince
         listOf(
             RelayBasedFilter(
                 relay = it.key,

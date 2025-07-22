@@ -75,6 +75,7 @@ fun filterPublicChatsAllCommunities(
 fun filterPublicChatsByAllCommunities(
     communitySet: AllCommunitiesTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
     return communitySet.set
@@ -82,7 +83,7 @@ fun filterPublicChatsByAllCommunities(
             filterPublicChatsAllCommunities(
                 relay = it.key,
                 communities = it.value.communities,
-                since = since?.get(it.key)?.time,
+                since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()
 }

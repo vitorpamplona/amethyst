@@ -44,7 +44,7 @@ fun filterLongFormByGeohash(
                 Filter(
                     kinds = listOf(LongTextNoteEvent.KIND),
                     tags = mapOf("g" to geoHashes),
-                    limit = 30,
+                    limit = 100,
                     since = since,
                 ),
         ),
@@ -54,6 +54,7 @@ fun filterLongFormByGeohash(
 fun filterLongFormByGeohash(
     geoSet: LocationTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (geoSet.set.isEmpty()) return emptyList()
 
@@ -65,7 +66,7 @@ fun filterLongFormByGeohash(
                 filterLiveActivitiesByGeohash(
                     relay = it.key,
                     geotags = it.value.geotags,
-                    since = since?.get(it.key)?.time,
+                    since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }
         }.flatten()

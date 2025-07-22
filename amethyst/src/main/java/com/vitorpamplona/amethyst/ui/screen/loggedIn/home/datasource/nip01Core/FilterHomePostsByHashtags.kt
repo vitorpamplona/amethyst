@@ -78,6 +78,7 @@ fun filterHomePostsByHashtags(
 fun filterHomePostsByHashtags(
     hashtagSet: HashtagTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long?,
 ): List<RelayBasedFilter> {
     if (hashtagSet.set.isEmpty()) return emptyList()
 
@@ -86,8 +87,7 @@ fun filterHomePostsByHashtags(
             if (it.value.hashtags.isEmpty()) {
                 null
             } else {
-                val since = since?.get(it.key)?.time
-
+                val since = since?.get(it.key)?.time ?: defaultSince
                 return filterHomePostsByHashtags(
                     relay = it.key,
                     hashToLoad = it.value.hashtags,

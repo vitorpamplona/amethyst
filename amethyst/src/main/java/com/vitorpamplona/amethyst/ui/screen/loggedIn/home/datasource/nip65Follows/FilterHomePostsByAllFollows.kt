@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 fun filterHomePostsByAllFollows(
     followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    sinceBoundaryNew: Long?,
+    sinceBoundaryReply: Long?,
 ): List<RelayBasedFilter> {
     if (followsSet.set.isEmpty()) return emptyList()
 
@@ -39,22 +41,25 @@ fun filterHomePostsByAllFollows(
 
         listOfNotNull(
             filter.authors?.let {
-                filterHomePostsByAuthors(relay, it, since)
+                filterNewHomePostsByAuthors(relay, it, since ?: sinceBoundaryNew)
+            },
+            filter.authors?.let {
+                filterReplyHomePostsByAuthors(relay, it, since ?: sinceBoundaryReply)
             },
             filter.geotags?.let {
-                filterHomePostsByGeohashes(relay, it, since)
+                filterHomePostsByGeohashes(relay, it, since ?: sinceBoundaryNew)
             },
             filter.geotagScopes?.let {
-                filterHomePostsByScopes(relay, it, since)
+                filterHomePostsByScopes(relay, it, since ?: sinceBoundaryNew)
             },
             filter.hashtags?.let {
-                filterHomePostsByHashtags(relay, it, since)
+                filterHomePostsByHashtags(relay, it, since ?: sinceBoundaryNew)
             },
             filter.hashtagScopes?.let {
-                filterHomePostsByScopes(relay, it, since)
+                filterHomePostsByScopes(relay, it, since ?: sinceBoundaryNew)
             },
             filter.communities?.let {
-                filterHomePostsFromAllCommunities(relay, it, since)
+                filterHomePostsFromAllCommunities(relay, it, since ?: sinceBoundaryNew)
             },
         ).flatten()
     }

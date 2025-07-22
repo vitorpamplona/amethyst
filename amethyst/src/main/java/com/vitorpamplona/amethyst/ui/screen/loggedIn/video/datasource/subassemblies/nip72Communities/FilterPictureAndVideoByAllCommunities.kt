@@ -52,7 +52,7 @@ fun filterPictureAndVideoAllCommunities(
                             "a" to communityList,
                             "k" to PictureAndVideoKTags,
                         ),
-                    limit = 100,
+                    limit = if (since == null) 200 else null,
                     since = since,
                 ),
         ),
@@ -63,7 +63,7 @@ fun filterPictureAndVideoAllCommunities(
                 Filter(
                     tags = mapOf("a" to communityList),
                     kinds = PictureAndVideoKinds,
-                    limit = 100,
+                    limit = if (since == null) 200 else null,
                     since = since,
                 ),
         ),
@@ -78,7 +78,7 @@ fun filterPictureAndVideoAllCommunities(
                             "a" to communityList,
                             "k" to listOf(FileHeaderEvent.KIND.toString(), FileStorageHeaderEvent.KIND.toString()),
                         ),
-                    limit = 100,
+                    limit = if (since == null) 200 else null,
                     since = since,
                 ),
         ),
@@ -93,7 +93,7 @@ fun filterPictureAndVideoAllCommunities(
                             "m" to LegacyMimeTypes,
                         ),
                     kinds = PictureAndVideoLegacyKinds,
-                    limit = 100,
+                    limit = if (since == null) 200 else null,
                     since = since,
                 ),
         ),
@@ -103,6 +103,7 @@ fun filterPictureAndVideoAllCommunities(
 fun filterPictureAndVideoByAllCommunities(
     communitySet: AllCommunitiesTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
+    defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
@@ -111,7 +112,7 @@ fun filterPictureAndVideoByAllCommunities(
             filterPictureAndVideoAllCommunities(
                 relay = it.key,
                 communities = it.value.communities,
-                since = since?.get(it.key)?.time,
+                since = since?.get(it.key)?.time ?: defaultSince,
             )
         }.flatten()
 }

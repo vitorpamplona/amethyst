@@ -32,7 +32,7 @@ abstract class FeedFilter<T> {
         return feed.take(limit())
     }
 
-    open fun limit() = 1000
+    open fun limit() = 500
 
     /** Returns a string that serves as the key to invalidate the list if it changes. */
     abstract fun feedKey(): Any
