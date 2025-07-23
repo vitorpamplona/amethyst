@@ -83,6 +83,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -233,6 +234,7 @@ class EventFactory {
                 HashtagListEvent.KIND -> HashtagListEvent(id, pubKey, createdAt, tags, content, sig)
                 HighlightEvent.KIND -> HighlightEvent(id, pubKey, createdAt, tags, content, sig)
                 HTTPAuthorizationEvent.KIND -> HTTPAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
+                IndexerRelayListEvent.KIND -> IndexerRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 InteractiveStoryPrologueEvent.KIND -> InteractiveStoryPrologueEvent(id, pubKey, createdAt, tags, content, sig)
                 InteractiveStorySceneEvent.KIND -> InteractiveStorySceneEvent(id, pubKey, createdAt, tags, content, sig)
                 InteractiveStoryReadingStateEvent.KIND -> InteractiveStoryReadingStateEvent(id, pubKey, createdAt, tags, content, sig)

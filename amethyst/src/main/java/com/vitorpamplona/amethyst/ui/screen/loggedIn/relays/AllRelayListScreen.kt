@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
+import com.vitorpamplona.amethyst.model.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.model.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
@@ -54,6 +55,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedR
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.DMRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm.renderDMItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.IndexerRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.indexer.renderIndexerItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.LocalRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.local.renderLocalItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37.PrivateOutboxRelayListViewModel
@@ -86,6 +89,7 @@ fun AllRelayListScreen(
     val localViewModel: LocalRelayListViewModel = viewModel()
     val connectedViewModel: ConnectedRelayListViewModel = viewModel()
     val broadcastViewModel: BroadcastRelayListViewModel = viewModel()
+    val indexerViewModel: IndexerRelayListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
@@ -96,6 +100,7 @@ fun AllRelayListScreen(
     blockedViewModel.init(accountViewModel)
     trustedViewModel.init(accountViewModel)
     broadcastViewModel.init(accountViewModel)
+    indexerViewModel.init(accountViewModel)
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
@@ -107,6 +112,7 @@ fun AllRelayListScreen(
         blockedViewModel.load()
         trustedViewModel.load()
         broadcastViewModel.load()
+        indexerViewModel.load()
     }
 
     MappedAllRelayListView(
@@ -119,6 +125,7 @@ fun AllRelayListScreen(
         blockedViewModel,
         trustedViewModel,
         broadcastViewModel,
+        indexerViewModel,
         accountViewModel,
         nav,
     )
@@ -136,6 +143,7 @@ fun MappedAllRelayListView(
     blockedViewModel: BlockedRelayListViewModel,
     trustedViewModel: TrustedRelayListViewModel,
     broadcastViewModel: BroadcastRelayListViewModel,
+    indexerViewModel: IndexerRelayListViewModel,
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
@@ -149,6 +157,7 @@ fun MappedAllRelayListView(
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
     val connectedRelays by connectedViewModel.relays.collectAsStateWithLifecycle()
     val broadcastRelays by broadcastViewModel.relays.collectAsStateWithLifecycle()
+    val indexerRelays by indexerViewModel.relays.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -163,6 +172,7 @@ fun MappedAllRelayListView(
                     trustedViewModel.clear()
                     blockedViewModel.clear()
                     broadcastViewModel.clear()
+                    indexerViewModel.clear()
                     newNav.popBack()
                 },
                 onPost = {
@@ -174,6 +184,7 @@ fun MappedAllRelayListView(
                     trustedViewModel.create()
                     blockedViewModel.create()
                     broadcastViewModel.create()
+                    indexerViewModel.create()
                     newNav.popBack()
                 },
             )
@@ -242,6 +253,17 @@ fun MappedAllRelayListView(
 
             item {
                 SettingsCategoryWithButton(
+                    stringRes(R.string.indexer_section),
+                    stringRes(R.string.indexer_section_explainer),
+                    SettingsCategorySpacingModifier,
+                ) {
+                    ResetIndexerRelays(indexerViewModel)
+                }
+            }
+            renderIndexerItems(indexerRelays, indexerViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategoryWithButton(
                     stringRes(R.string.search_section),
                     stringRes(R.string.search_section_explainer),
                     SettingsCategorySpacingModifier,
@@ -296,6 +318,23 @@ fun ResetSearchRelays(postViewModel: SearchRelayListViewModel) {
         onClick = {
             postViewModel.deleteAll()
             DefaultSearchRelayList.forEach {
+                postViewModel.addRelay(
+                    relaySetupInfoBuilder(it),
+                )
+            }
+            postViewModel.loadRelayDocuments()
+        },
+    ) {
+        Text(stringRes(R.string.default_relays))
+    }
+}
+
+@Composable
+fun ResetIndexerRelays(postViewModel: IndexerRelayListViewModel) {
+    OutlinedButton(
+        onClick = {
+            postViewModel.deleteAll()
+            DefaultIndexerRelayList.forEach {
                 postViewModel.addRelay(
                     relaySetupInfoBuilder(it),
                 )

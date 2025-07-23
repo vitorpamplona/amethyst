@@ -139,6 +139,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -954,6 +955,12 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: TrustedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: IndexerRelayListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2760,6 +2767,7 @@ object LocalCache : ILocalCache {
                 is GitRepositoryEvent -> consume(event, relay, wasVerified)
                 is HashtagListEvent -> consume(event, relay, wasVerified)
                 is HighlightEvent -> consume(event, relay, wasVerified)
+                is IndexerRelayListEvent -> consume(event, relay, wasVerified)
                 is InteractiveStoryPrologueEvent -> consume(event, relay, wasVerified)
                 is InteractiveStorySceneEvent -> consume(event, relay, wasVerified)
                 is InteractiveStoryReadingStateEvent -> consume(event, relay, wasVerified)

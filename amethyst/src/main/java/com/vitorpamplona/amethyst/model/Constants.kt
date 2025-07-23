@@ -43,6 +43,10 @@ object Constants {
     val auth = RelayUrlNormalizer.normalize("wss://auth.nostr1.com")
     val oxchat = RelayUrlNormalizer.normalize("wss://relay.0xchat.com")
 
+    val purplepages = RelayUrlNormalizer.normalize("wss://purplepag.es")
+    val coracle = RelayUrlNormalizer.normalize("wss://indexer.coracle.social")
+    val userkinds = RelayUrlNormalizer.normalize("wss://user.kindpag.es")
+
     val eventFinderRelays = setOf(band, wine, damus, primal, mom, nos, bitcoiner, oxtr, fmtwiz, bg)
 
     val defaultSearchRelaySet = setOf(band, wine, where)

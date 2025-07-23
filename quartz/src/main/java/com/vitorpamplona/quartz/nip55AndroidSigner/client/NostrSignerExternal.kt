@@ -96,6 +96,8 @@ class NostrSignerExternal(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
+        if (plaintext.isBlank()) return ""
+
         val result = backgroundQuery.nip04Encrypt(plaintext, toPublicKey) ?: foregroundQuery.nip04Encrypt(plaintext, toPublicKey)
 
         if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {
@@ -124,6 +126,8 @@ class NostrSignerExternal(
         plaintext: String,
         toPublicKey: HexKey,
     ): String {
+        if (plaintext.isBlank()) return ""
+
         val result = backgroundQuery.nip44Encrypt(plaintext, toPublicKey) ?: foregroundQuery.nip44Encrypt(plaintext, toPublicKey)
 
         if (result is SignerResult.RequestAddressed.Successful<EncryptionResult>) {

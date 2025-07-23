@@ -84,6 +84,8 @@ val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
 val DefaultSearchRelayList = setOf(Constants.band, Constants.wine, Constants.where, Constants.nostoday)
 
+val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds)
+
 val DefaultSignerPermissions =
     listOf(
         Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),

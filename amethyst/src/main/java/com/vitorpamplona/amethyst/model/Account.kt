@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecry
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
+import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
@@ -247,6 +249,9 @@ class Account(
     val broadcastRelayListDecryptionCache = BroadcastRelayListDecryptionCache(signer)
     val broadcastRelayList = BroadcastRelayListState(signer, cache, broadcastRelayListDecryptionCache, scope, settings)
 
+    val indexerRelayListDecryptionCache = IndexerRelayListDecryptionCache(signer)
+    val indexerRelayList = IndexerRelayListState(signer, cache, indexerRelayListDecryptionCache, scope, settings)
+
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
@@ -293,7 +298,7 @@ class Account(
 
     // Follows Relays
     val followOutboxes = FollowListOutboxRelays(kind3FollowList, blockedRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, trustedRelayList, broadcastRelayList, scope)
+    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, trustedRelayList, broadcastRelayList, indexerRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, cache, scope).flow
@@ -871,7 +876,7 @@ class Account(
     }
 
     fun sendLiterallyEverywhere(event: Event) {
-        client.send(event, outboxRelays.flow.value + client.relayStatusFlow().value.available)
+        client.send(event, outboxRelays.flow.value + indexerRelayList.flow.value + client.relayStatusFlow().value.available)
         cache.justConsumeMyOwnEvent(event)
     }
 
@@ -1718,6 +1723,8 @@ class Account(
     suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 
     suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+
+    suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
 

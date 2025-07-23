@@ -235,6 +235,27 @@ fun DisplayTrustedRelayList(
 }
 
 @Composable
+fun DisplayIndexerRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relays by accountViewModel.account.indexerRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.indexerRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.indexer_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
 fun DisplayBroadcastRelayList(
     baseNote: Note,
     backgroundColor: MutableState<Color>,

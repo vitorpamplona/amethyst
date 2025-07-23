@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
@@ -189,6 +190,7 @@ import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -656,6 +658,7 @@ private fun RenderNoteRow(
         is SearchRelayListEvent -> DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is BlockedRelayListEvent -> DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is TrustedRelayListEvent -> DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is IndexerRelayListEvent -> DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is BroadcastRelayListEvent -> DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is PinListEvent -> RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
         is EmojiPackEvent -> RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)

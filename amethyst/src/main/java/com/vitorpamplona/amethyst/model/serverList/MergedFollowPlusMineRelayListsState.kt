@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxRelays
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -43,6 +44,7 @@ class MergedFollowPlusMineRelayListsState(
     val localRelayList: LocalRelayListState,
     val trustedRelayList: TrustedRelayListState,
     val broadcastRelayList: BroadcastRelayListState,
+    val indexerRelayList: IndexerRelayListState,
     val scope: CoroutineScope,
 ) {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
@@ -57,6 +59,7 @@ class MergedFollowPlusMineRelayListsState(
                 localRelayList.flow,
                 trustedRelayList.flow,
                 broadcastRelayList.flow,
+                indexerRelayList.flow,
             ),
             ::mergeLists,
         ).onStart {
@@ -70,6 +73,7 @@ class MergedFollowPlusMineRelayListsState(
                         localRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
+                        indexerRelayList.flow.value,
                     ),
                 ),
             )
@@ -86,6 +90,7 @@ class MergedFollowPlusMineRelayListsState(
                         localRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
+                        indexerRelayList.flow.value,
                     ),
                 ),
             )

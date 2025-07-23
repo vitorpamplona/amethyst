@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
@@ -51,6 +52,7 @@ val BasicAccountInfoKinds2 =
         BlockedRelayListEvent.KIND,
         TrustedRelayListEvent.KIND,
         BroadcastRelayListEvent.KIND,
+        IndexerRelayListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(

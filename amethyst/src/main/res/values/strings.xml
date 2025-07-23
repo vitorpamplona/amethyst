@@ -1094,7 +1094,11 @@
 
     <string name="broadcast_relays_title">Broadcast Relays</string>
     <string name="broadcast_section">Broadcast Relays</string>
-    <string name="broadcast_section_explainer">Relays that specialize in pushing your notes to all of the other relays. Amethyst will add this relay to all new events made by you</string>
+    <string name="broadcast_section_explainer">Relays that specialize in pushing your notes to all of the other relays, like sendit.nosflare.com. Amethyst will add this relay to all new events made by you</string>
+
+    <string name="indexer_relays_title">Indexer Relays</string>
+    <string name="indexer_section">Indexer Relays</string>
+    <string name="indexer_section_explainer">Relays that specialize in hosting everyone\'s metadata and relay lists, like purplepag.es. Amethyst will use these relays to find users that are not in your lists.</string>
 
     <string name="blocked_relays_title">Blocked Relays</string>
     <string name="blocked_section">Blocked Relays</string>

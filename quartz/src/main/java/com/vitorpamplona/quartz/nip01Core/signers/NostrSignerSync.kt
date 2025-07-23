@@ -79,6 +79,7 @@ class NostrSignerSync(
         toPublicKey: HexKey,
     ): String {
         if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
+        if (plaintext.isBlank()) return ""
 
         return Nip04.encrypt(
             plaintext,
@@ -102,6 +103,7 @@ class NostrSignerSync(
         toPublicKey: HexKey,
     ): String {
         if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
+        if (plaintext.isBlank()) return ""
 
         return Nip44
             .encrypt(

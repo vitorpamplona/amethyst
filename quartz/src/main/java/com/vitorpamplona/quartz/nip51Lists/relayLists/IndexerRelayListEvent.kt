@@ -36,14 +36,14 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
-import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.broadcastRelays
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.indexerRelays
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.plus
 
 @Immutable
-class BroadcastRelayListEvent(
+class IndexerRelayListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -58,7 +58,7 @@ class BroadcastRelayListEvent(
     suspend fun decryptRelays(signer: NostrSigner): List<NormalizedRelayUrl> = publicRelays() + (decryptPrivateRelays(signer) ?: emptyList())
 
     companion object {
-        const val KIND = 10088
+        const val KIND = 10087
         const val ALT = "Broadcasting relays from this author"
         val TAGS = arrayOf(AltTag.assemble(ALT))
 
@@ -66,18 +66,17 @@ class BroadcastRelayListEvent(
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, "", null)
 
-        fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, "")
+        fun createAddressTag(pubKey: HexKey): String = Address.Companion.assemble(KIND, pubKey, "")
 
         suspend fun updateRelayList(
-            earlierVersion: BroadcastRelayListEvent,
+            earlierVersion: IndexerRelayListEvent,
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): BroadcastRelayListEvent {
+        ): IndexerRelayListEvent {
             val newRelayList = relays.map { RelayTag.assemble(it) }
-            println("AABBCC 1 ${earlierVersion.content}")
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            println("AABBCC 2 ${privateTags.size}")
+
             val publicTags = earlierVersion.tags.remove(RelayTag::match)
             val newPrivateTags = privateTags.remove(RelayTag::notMatch).plus(newRelayList)
 
@@ -88,7 +87,7 @@ class BroadcastRelayListEvent(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): BroadcastRelayListEvent {
+        ): IndexerRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
@@ -97,7 +96,7 @@ class BroadcastRelayListEvent(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): BroadcastRelayListEvent {
+        ): IndexerRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
@@ -107,14 +106,14 @@ class BroadcastRelayListEvent(
             privateRelays: List<NormalizedRelayUrl> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<BroadcastRelayListEvent>.() -> Unit = {},
-        ) = eventTemplate<BroadcastRelayListEvent>(
+            initializer: TagArrayBuilder<IndexerRelayListEvent>.() -> Unit = {},
+        ) = eventTemplate<IndexerRelayListEvent>(
             kind = KIND,
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)
-            broadcastRelays(publicRelays)
+            indexerRelays(publicRelays)
 
             initializer()
         }
