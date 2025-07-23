@@ -54,9 +54,9 @@ object MediaSaverToDisk {
         localContext: Context,
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
-    ) {
+    ) = withContext(Dispatchers.IO) {
         when {
-            videoUri.isNullOrBlank() -> return
+            videoUri.isNullOrBlank() -> return@withContext
             videoUri.startsWith("file") ->
                 save(
                     localFile = videoUri.toUri().toFile(),

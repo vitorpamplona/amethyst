@@ -1158,16 +1158,10 @@ class AccountViewModel(
             .sortedBy { account.isFollowing(it) }
             .reversed()
 
-    fun checkVideoIsOnline(
-        videoUrl: String,
-        onDone: (Boolean) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            onDone(
-                OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo),
-            )
+    suspend fun checkVideoIsOnline(videoUrl: String): Boolean =
+        withContext(Dispatchers.IO) {
+            OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo)
         }
-    }
 
     fun loadAndMarkAsRead(
         routeForLastRead: String,

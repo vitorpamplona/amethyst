@@ -45,6 +45,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AROUND_ME
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.OnlineChecker.isOnline
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
@@ -90,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import kotlin.collections.forEachIndexed
 
 @Composable
 fun HomeScreen(
@@ -375,17 +378,13 @@ fun CheckIfVideoIsOnline(
     accountViewModel: AccountViewModel,
     whenOnline: @Composable (Boolean) -> Unit,
 ) {
-    var online by remember {
-        mutableStateOf(
-            OnlineChecker.isOnlineCached(url),
-        )
-    }
-
-    LaunchedEffect(key1 = url) {
-        accountViewModel.checkVideoIsOnline(url) { isOnline ->
-            if (online != isOnline) {
-                online = isOnline
-            }
+    val online by produceState(
+        initialValue = OnlineChecker.isOnlineCached(url),
+        key1 = url,
+    ) {
+        val isOnline = accountViewModel.checkVideoIsOnline(url)
+        if (value != isOnline) {
+            value = isOnline
         }
     }
 
@@ -398,17 +397,13 @@ fun CrossfadeCheckIfVideoIsOnline(
     accountViewModel: AccountViewModel,
     whenOnline: @Composable () -> Unit,
 ) {
-    var online by remember {
-        mutableStateOf(
-            OnlineChecker.isOnlineCached(url),
-        )
-    }
-
-    LaunchedEffect(key1 = url) {
-        accountViewModel.checkVideoIsOnline(url) { isOnline ->
-            if (online != isOnline) {
-                online = isOnline
-            }
+    val online by produceState(
+        initialValue = OnlineChecker.isOnlineCached(url),
+        key1 = url,
+    ) {
+        val isOnline = accountViewModel.checkVideoIsOnline(url)
+        if (value != isOnline) {
+            value = isOnline
         }
     }
 
