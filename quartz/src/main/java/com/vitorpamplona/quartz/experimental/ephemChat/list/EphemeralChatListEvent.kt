@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.experimental.ephemChat.list
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.rooms
+import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
+import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag.Companion.parse
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -35,7 +37,7 @@ import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
-import com.vitorpamplona.quartz.nip51Lists.remove
+import com.vitorpamplona.quartz.nip51Lists.removeParsing
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.lang.reflect.Modifier.isPrivate
 
@@ -48,6 +50,10 @@ class EphemeralChatListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun publicRooms() = tags.rooms()
+
+    fun publicRoomSet() = tags.roomSet()
+
     companion object {
         const val KIND = 10023
         const val ALT = "Ephemeral Chat List"
@@ -109,8 +115,8 @@ class EphemeralChatListEvent(
         ): EphemeralChatListEvent {
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             return resign(
-                privateTags = privateTags.remove(room.toTagArray()),
-                tags = earlierVersion.tags.remove(room.toTagArray()),
+                privateTags = privateTags.removeParsing(RoomIdTag::parse, room),
+                tags = earlierVersion.tags.removeParsing(RoomIdTag::parse, room),
                 signer = signer,
                 createdAt = createdAt,
             )

@@ -37,8 +37,8 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
-import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.removeAny
+import com.vitorpamplona.quartz.nip51Lists.removeParsing
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -142,8 +142,8 @@ class ChannelListEvent(
         ): ChannelListEvent {
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
             return resign(
-                privateTags = privateTags.remove(channel.toTagArray()),
-                tags = earlierVersion.tags.remove(channel.toTagArray()),
+                privateTags = privateTags.removeParsing(ChannelTag::parseId, channel.eventId),
+                tags = earlierVersion.tags.removeParsing(ChannelTag::parseId, channel.eventId),
                 signer = signer,
                 createdAt = createdAt,
             )

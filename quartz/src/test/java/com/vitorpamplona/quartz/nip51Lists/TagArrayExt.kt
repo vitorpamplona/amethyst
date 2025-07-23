@@ -18,28 +18,42 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.ephemChat.chat
+package com.vitorpamplona.quartz.nip51Lists
 
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import junit.framework.TestCase.assertTrue
+import org.junit.Test
+import java.util.Arrays
 
-data class RoomId(
-    val id: String,
-    val relayUrl: NormalizedRelayUrl,
-) : Comparable<RoomId> {
-    fun toKey() = "$id@$relayUrl"
+class TagArrayExt {
+    val tags =
+        arrayOf(
+            arrayOf("group", "test", "wss://nos.lol"),
+            arrayOf("group", "_", "wss://nos.lol"),
+        )
 
-    fun toDisplayKey() = id + "@" + relayUrl.displayUrl()
+    val expectedTags =
+        arrayOf(
+            arrayOf("group", "test", "wss://nos.lol"),
+        )
 
-    override fun compareTo(other: RoomId): Int {
-        val result = id.compareTo(other.id)
-        return if (result == 0) {
-            relayUrl.url.compareTo(other.relayUrl.url)
-        } else {
-            result
-        }
+    @Test
+    fun testRemove() {
+        assertTrue(
+            Arrays.deepEquals(expectedTags, tags.remove(arrayOf("group", "_", "wss://nos.lol"))),
+        )
     }
 
-    fun toTagArray() = RoomIdTag.assemble(this)
+    @Test
+    fun testRemoveParsing() {
+        val removing = RoomId("_", RelayUrlNormalizer.normalize("wss://nos.lol"))
+        assertTrue(
+            Arrays.deepEquals(
+                expectedTags,
+                tags.removeParsing(RoomIdTag::parse, removing),
+            ),
+        )
+    }
 }

@@ -97,7 +97,6 @@ class EphemeralChatListState(
 
     suspend fun unfollow(channel: EphemeralChatChannel): EphemeralChatListEvent? {
         val ephemeralChatList = getEphemeralChatList()
-
         return if (ephemeralChatList != null) {
             EphemeralChatListEvent.remove(
                 earlierVersion = ephemeralChatList,

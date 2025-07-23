@@ -1571,14 +1571,16 @@ object LocalCache : ILocalCache {
 
         val new = consumeRegularEvent(event, relay, wasVerified)
 
-        val channel = checkGetOrCreatePublicChatChannel(channelId)
-        if (channel == null) {
-            Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
-            return false
-        }
+        if (new) {
+            val channel = checkGetOrCreatePublicChatChannel(channelId)
+            if (channel == null) {
+                Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
+                return false
+            }
 
-        val note = getOrCreateNote(event.id)
-        channel.addNote(note, relay)
+            val note = getOrCreateNote(event.id)
+            channel.addNote(note, relay)
+        }
 
         return new
     }
@@ -1592,9 +1594,11 @@ object LocalCache : ILocalCache {
 
         val new = consumeRegularEvent(event, relay, wasVerified)
 
-        val note = getOrCreateNote(event.id)
-        val channel = getOrCreateEphemeralChannel(roomId)
-        channel.addNote(note, relay)
+        if (new) {
+            val note = getOrCreateNote(event.id)
+            val channel = getOrCreateEphemeralChannel(roomId)
+            channel.addNote(note, relay)
+        }
 
         return new
     }
@@ -1608,10 +1612,11 @@ object LocalCache : ILocalCache {
 
         val new = consumeRegularEvent(event, relay, wasVerified)
 
-        val channel = getOrCreateLiveChannel(activityAddress)
-
-        val note = getOrCreateNote(event.id)
-        channel.addNote(note, relay)
+        if (new) {
+            val channel = getOrCreateLiveChannel(activityAddress)
+            val note = getOrCreateNote(event.id)
+            channel.addNote(note, relay)
+        }
 
         return new
     }

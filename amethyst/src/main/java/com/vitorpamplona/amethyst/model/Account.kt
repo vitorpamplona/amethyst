@@ -854,8 +854,8 @@ class Account(
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {
         if (event == null) return
-        client.send(event, outboxRelays.flow.value)
         cache.justConsumeMyOwnEvent(event)
+        client.send(event, outboxRelays.flow.value)
     }
 
     fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
