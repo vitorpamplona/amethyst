@@ -32,5 +32,5 @@ class EphemeralChatChannel(
 
     override fun toBestDisplayName() = roomId.toDisplayKey()
 
-    override fun anyNameStartsWith(prefix: String): Boolean = roomId.id.contains(prefix, true)
+    fun anyNameStartsWith(prefix: String): Boolean = roomId.id.contains(prefix, true)
 }

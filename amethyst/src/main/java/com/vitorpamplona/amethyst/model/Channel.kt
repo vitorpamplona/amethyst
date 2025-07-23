@@ -85,8 +85,6 @@ abstract class Channel {
         notes.remove(note.idHex)
     }
 
-    abstract fun anyNameStartsWith(prefix: String): Boolean
-
     fun pruneOldMessages(): Set<Note> {
         val important =
             notes

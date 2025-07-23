@@ -61,7 +61,7 @@ class LiveActivitiesChannel(
 
     fun profilePicture(): String? = info?.image()?.ifBlank { null }
 
-    override fun anyNameStartsWith(prefix: String): Boolean =
+    fun anyNameStartsWith(prefix: String): Boolean =
         info?.title()?.contains(prefix, true) == true ||
             info?.summary()?.contains(prefix, true) == true
 

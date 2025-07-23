@@ -94,7 +94,7 @@ class PublicChatChannel(
         return info.picture ?: creator?.info?.banner
     }
 
-    override fun anyNameStartsWith(prefix: String): Boolean =
+    fun anyNameStartsWith(prefix: String): Boolean =
         idHex.startsWith(prefix) ||
             info.name?.contains(prefix, true) == true ||
             info.about?.contains(prefix, true) == true
