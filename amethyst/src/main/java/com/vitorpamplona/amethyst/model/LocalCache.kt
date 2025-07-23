@@ -322,8 +322,6 @@ object LocalCache : ILocalCache {
 
     fun getNoteIfExists(key: ETag): Note? = notes.get(key.eventId)
 
-    fun getChatroomListIfExists(key: String): ChatroomList? = chatroomList.get(key)
-
     fun getPublicChatChannelIfExists(key: String): PublicChatChannel? = publicChatChannels.get(key)
 
     fun getEphemeralChatChannelIfExists(key: RoomId): EphemeralChatChannel? = ephemeralChannels.get(key)
@@ -1571,6 +1569,8 @@ object LocalCache : ILocalCache {
     ): Boolean {
         val channelId = event.channelId() ?: return false
 
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
         val channel = checkGetOrCreatePublicChatChannel(channelId)
         if (channel == null) {
             Log.w("LocalCache", "Unable to create public chat channel for event ${event.toJson()}")
@@ -1580,7 +1580,7 @@ object LocalCache : ILocalCache {
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
 
-        return consumeRegularEvent(event, relay, wasVerified)
+        return new
     }
 
     fun consume(
@@ -1590,11 +1590,13 @@ object LocalCache : ILocalCache {
     ): Boolean {
         val roomId = event.roomId() ?: return false
 
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
         val note = getOrCreateNote(event.id)
         val channel = getOrCreateEphemeralChannel(roomId)
         channel.addNote(note, relay)
 
-        return consumeRegularEvent(event, relay, wasVerified)
+        return new
     }
 
     fun consume(
@@ -1604,12 +1606,14 @@ object LocalCache : ILocalCache {
     ): Boolean {
         val activityAddress = event.activityAddress() ?: return false
 
+        val new = consumeRegularEvent(event, relay, wasVerified)
+
         val channel = getOrCreateLiveChannel(activityAddress)
 
         val note = getOrCreateNote(event.id)
         channel.addNote(note, relay)
 
-        return consumeRegularEvent(event, relay, wasVerified)
+        return new
     }
 
     fun consume(

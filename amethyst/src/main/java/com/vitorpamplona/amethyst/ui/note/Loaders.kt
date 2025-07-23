@@ -33,12 +33,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -167,6 +169,20 @@ fun LoadPublicChatChannel(
     val channel =
         produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
             value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
+        }
+
+    channel.value?.let { content(it) }
+}
+
+@Composable
+fun LoadEphemeralChatChannel(
+    id: RoomId,
+    accountViewModel: AccountViewModel,
+    content: @Composable (EphemeralChatChannel) -> Unit,
+) {
+    val channel =
+        produceStateIfNotNull(accountViewModel.getEphemeralChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateEphemeralChatChannel(id)
         }
 
     channel.value?.let { content(it) }

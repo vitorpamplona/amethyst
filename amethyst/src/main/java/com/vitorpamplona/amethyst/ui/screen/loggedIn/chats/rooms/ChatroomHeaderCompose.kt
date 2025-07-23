@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
@@ -72,11 +73,14 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -146,6 +150,13 @@ private fun ChatroomEntry(
             val room = baseNoteEvent.chatroomKey(accountViewModel.userProfile().pubkeyHex)
             UserRoomCompose(room, lastMessage, accountViewModel, nav)
         }
+        is EphemeralChatEvent -> {
+            baseNoteEvent.roomId()?.let {
+                LoadEphemeralChatChannel(it, accountViewModel) { channel ->
+                    ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
+                }
+            }
+        }
         else -> BlankNote()
     }
 }
@@ -182,6 +193,38 @@ private fun ChannelRoomCompose(
         channelIdHex = channel.idHex,
         channelPicture = channelPicture,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, R.string.public_chat, modifier) },
+        channelLastTime = lastMessage.createdAt(),
+        channelLastContent = "$authorName: $description",
+        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+        loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+        onClick = { nav.nav(routeFor(channel)) },
+    )
+}
+
+@Composable
+private fun ChannelRoomCompose(
+    lastMessage: Note,
+    channel: EphemeralChatChannel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val authorName by observeUserName(lastMessage.author!!, accountViewModel)
+    val channelState by observeChannel(channel, accountViewModel)
+
+    val channel = channelState?.channel as? EphemeralChatChannel ?: return
+
+    val relayInfo by loadRelayInfo(channel.roomId.relayUrl, accountViewModel)
+
+    val noteEvent = lastMessage.event
+    val description = noteEvent?.content?.take(200)
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("Channel/${channel.roomId.toKey()}").collectAsStateWithLifecycle()
+
+    ChannelName(
+        channelIdHex = channel.roomId.toKey(),
+        channelPicture = relayInfo.icon,
+        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channel.toBestDisplayName(), R.string.ephemeral_relay_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
