@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -50,12 +50,12 @@ class MergedTopFeedAuthorListsState(
     fun authorList(navFilter: IFeedTopNavPerRelayFilterSet): Map<NormalizedRelayUrl, Set<HexKey>?> =
         when (navFilter) {
             is AllCommunitiesTopNavPerRelayFilterSet -> emptyMap()
-            is AllFollowsByOutboxTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
-            is AuthorsByOutboxTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
+            is AllFollowsTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
+            is AuthorsTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
             is GlobalTopNavPerRelayFilterSet -> emptyMap()
             is HashtagTopNavPerRelayFilterSet -> emptyMap()
             is LocationTopNavPerRelayFilterSet -> emptyMap()
-            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
+            is MutedAuthorsTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
             is SingleCommunityTopNavPerRelayFilterSet -> navFilter.set.mapValues { it.value.authors }
             else -> emptyMap()
         }

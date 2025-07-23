@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -62,7 +62,7 @@ fun filterLiveActivitiesAuthors(
 }
 
 fun filterLiveActivitiesByAuthors(
-    authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
+    authorSet: AuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
@@ -83,7 +83,7 @@ fun filterLiveActivitiesByAuthors(
 }
 
 fun filterLiveActivitiesByAuthors(
-    authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
+    authorSet: MutedAuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {

@@ -22,10 +22,9 @@ package com.vitorpamplona.amethyst.model.serverList
 
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
-import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxRelays
+import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -38,11 +37,10 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 class MergedFollowPlusMineRelayListsState(
-    val followsOutboxRelayList: FollowListOutboxRelays,
+    val followsOutboxOrProxyRelayList: FollowListOutboxOrProxyRelays,
     val nip65RelayList: Nip65RelayListState,
     val privateOutboxRelayList: PrivateStorageRelayListState,
     val localRelayList: LocalRelayListState,
-    val trustedRelayList: TrustedRelayListState,
     val broadcastRelayList: BroadcastRelayListState,
     val indexerRelayList: IndexerRelayListState,
     val scope: CoroutineScope,
@@ -52,12 +50,11 @@ class MergedFollowPlusMineRelayListsState(
     val flow: StateFlow<Set<NormalizedRelayUrl>> =
         combine(
             listOf(
-                followsOutboxRelayList.flow,
+                followsOutboxOrProxyRelayList.flow,
                 nip65RelayList.outboxFlow,
                 nip65RelayList.inboxFlow,
                 privateOutboxRelayList.flow,
                 localRelayList.flow,
-                trustedRelayList.flow,
                 broadcastRelayList.flow,
                 indexerRelayList.flow,
             ),
@@ -66,12 +63,11 @@ class MergedFollowPlusMineRelayListsState(
             emit(
                 mergeLists(
                     arrayOf(
-                        followsOutboxRelayList.flow.value,
+                        followsOutboxOrProxyRelayList.flow.value,
                         nip65RelayList.outboxFlow.value,
                         nip65RelayList.inboxFlow.value,
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
-                        trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
                         indexerRelayList.flow.value,
                     ),
@@ -83,12 +79,11 @@ class MergedFollowPlusMineRelayListsState(
                 SharingStarted.Eagerly,
                 mergeLists(
                     arrayOf(
-                        followsOutboxRelayList.flow.value,
+                        followsOutboxOrProxyRelayList.flow.value,
                         nip65RelayList.outboxFlow.value,
                         nip65RelayList.inboxFlow.value,
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
-                        trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
                         indexerRelayList.flow.value,
                     ),

@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies.filterCommunitiesByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies.filterCommunitiesByAuthors
@@ -46,12 +46,12 @@ fun makeCommunitiesFilter(
 ): List<RelayBasedFilter> =
     when (feedSettings) {
         is AllCommunitiesTopNavPerRelayFilterSet -> filterCommunitiesByAllCommunities(feedSettings, since, defaultSince)
-        is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterCommunitiesByFollows(feedSettings, since, defaultSince)
-        is AuthorsByOutboxTopNavPerRelayFilterSet -> filterCommunitiesByAuthors(feedSettings, since, defaultSince)
+        is AllFollowsTopNavPerRelayFilterSet -> filterCommunitiesByFollows(feedSettings, since, defaultSince)
+        is AuthorsTopNavPerRelayFilterSet -> filterCommunitiesByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterCommunitiesGlobal(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterCommunitiesByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterCommunitiesByGeohash(feedSettings, since, defaultSince)
-        is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterCommunitiesByAuthors(feedSettings, since, defaultSince)
+        is MutedAuthorsTopNavPerRelayFilterSet -> filterCommunitiesByAuthors(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterCommunitiesByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
     }

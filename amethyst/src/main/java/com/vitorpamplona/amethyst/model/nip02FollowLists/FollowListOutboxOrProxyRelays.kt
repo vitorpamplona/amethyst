@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -31,19 +32,24 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
+import kotlin.collections.flatten
 
-class FollowListOutboxRelays(
+class FollowListOutboxOrProxyRelays(
     kind3Follows: FollowListState,
     blockedRelayList: BlockedRelayListState,
+    proxyRelayList: ProxyRelayListState,
     val cache: LocalCache,
     scope: CoroutineScope,
 ) {
@@ -57,35 +63,64 @@ class FollowListOutboxRelays(
 
     fun allRelayListFlows(followList: Set<HexKey>): List<StateFlow<NoteState>> = followList.map { getNIP65RelayListFlow(it) }
 
-    fun combineAllFlows(
-        flows: List<StateFlow<NoteState>>,
-        blockedRelays: Set<NormalizedRelayUrl>,
-    ): Flow<Set<NormalizedRelayUrl>> =
+    fun combineAllFlows(flows: List<StateFlow<NoteState>>): Flow<Set<NormalizedRelayUrl>> =
         combine(flows) { relayListNotes: Array<NoteState> ->
-            relayListNotes.mapNotNull {
-                (it.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()
-            }
-        }.map {
-            it.flatten().toSet().minus(blockedRelays)
+            relayListNotes
+                .mapNotNull {
+                    (it.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()
+                }.flatten()
+                .toSet()
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val flow: StateFlow<Set<NormalizedRelayUrl>> =
-        combineTransform(kind3Follows.flow, blockedRelayList.flow) { followList, blockedRelays ->
-            val flows: List<StateFlow<NoteState>> = allRelayListFlows(followList.authors)
-            val relayListFlows = combineAllFlows(flows, blockedRelays)
-            emitAll(relayListFlows)
+    val outboxRelayFlow: StateFlow<Set<NormalizedRelayUrl>> =
+        kind3Follows.flow
+            .transformLatest {
+                emitAll(combineAllFlows(allRelayListFlows(it.authors)))
+            }.onStart {
+                emit(
+                    kind3Follows.flow.value.authors
+                        .mapNotNull {
+                            getNIP65RelayList(it)?.writeRelaysNorm()
+                        }.flatten()
+                        .toSet(),
+                )
+            }.distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptySet(),
+            )
+
+    val outboxRelayMinusBlockedFlow: StateFlow<Set<NormalizedRelayUrl>> =
+        combine(outboxRelayFlow, blockedRelayList.flow) { followList, blockedRelays ->
+            followList.minus(blockedRelays)
         }.onStart {
-            val blocked = blockedRelayList.flow.value.toSet()
-            val authors = kind3Follows.flow.value.authors
-            val perRelay =
-                authors
-                    .mapNotNull {
-                        getNIP65RelayList(it)?.writeRelaysNorm()?.minus(blocked)
-                    }.flatten()
-                    .toSet()
-            emit(perRelay)
+            emit(outboxRelayFlow.value.minus(blockedRelayList.flow.value.toSet()))
         }.flowOn(Dispatchers.Default)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptySet(),
+            )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow: StateFlow<Set<NormalizedRelayUrl>> =
+        proxyRelayList.flow
+            .flatMapLatest { proxyRelays ->
+                if (proxyRelays.isEmpty()) {
+                    outboxRelayMinusBlockedFlow
+                } else {
+                    MutableStateFlow(proxyRelays)
+                }
+            }.onStart {
+                emit(
+                    proxyRelayList.flow.value.ifEmpty {
+                        outboxRelayMinusBlockedFlow.value
+                    },
+                )
+            }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
@@ -98,13 +133,7 @@ class FollowListOutboxRelays(
             .map { relayList ->
                 relayList.map { it.url }.toSet()
             }.onStart {
-                emit(
-                    kind3Follows.flow.value.authors
-                        .mapNotNull {
-                            getNIP65RelayList(it)?.writeRelaysNorm()?.map { it.url }?.toSet()
-                        }.flatten()
-                        .toSet(),
-                )
+                emit(flow.value.map { it.url }.toSet())
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,

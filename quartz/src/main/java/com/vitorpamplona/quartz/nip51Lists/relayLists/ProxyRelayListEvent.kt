@@ -36,14 +36,14 @@ import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.RelayTag
-import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.indexerRelays
+import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.proxyRelays
 import com.vitorpamplona.quartz.nip51Lists.relayLists.tags.relays
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.collections.plus
 
 @Immutable
-class IndexerRelayListEvent(
+class ProxyRelayListEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
@@ -58,8 +58,8 @@ class IndexerRelayListEvent(
     suspend fun decryptRelays(signer: NostrSigner): List<NormalizedRelayUrl> = publicRelays() + (decryptPrivateRelays(signer) ?: emptyList())
 
     companion object {
-        const val KIND = 10086
-        const val ALT = "Indexer relays from this author"
+        const val KIND = 10087
+        const val ALT = "Proxy relays from this author"
         val TAGS = arrayOf(AltTag.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
@@ -69,11 +69,11 @@ class IndexerRelayListEvent(
         fun createAddressTag(pubKey: HexKey): String = Address.Companion.assemble(KIND, pubKey, "")
 
         suspend fun updateRelayList(
-            earlierVersion: IndexerRelayListEvent,
+            earlierVersion: ProxyRelayListEvent,
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): IndexerRelayListEvent {
+        ): ProxyRelayListEvent {
             val newRelayList = relays.map { RelayTag.assemble(it) }
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
 
@@ -87,7 +87,7 @@ class IndexerRelayListEvent(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): IndexerRelayListEvent {
+        ): ProxyRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
@@ -96,7 +96,7 @@ class IndexerRelayListEvent(
             relays: List<NormalizedRelayUrl>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): IndexerRelayListEvent {
+        ): ProxyRelayListEvent {
             val privateTagArray = relays.map { RelayTag.assemble(it) }.toTypedArray()
             return signer.signNip51List(createdAt, KIND, TAGS, privateTagArray)
         }
@@ -106,14 +106,14 @@ class IndexerRelayListEvent(
             privateRelays: List<NormalizedRelayUrl> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<IndexerRelayListEvent>.() -> Unit = {},
-        ) = eventTemplate<IndexerRelayListEvent>(
+            initializer: TagArrayBuilder<ProxyRelayListEvent>.() -> Unit = {},
+        ) = eventTemplate<ProxyRelayListEvent>(
             kind = KIND,
             description = PrivateTagsInContent.encryptNip44(privateRelays.map { RelayTag.assemble(it) }.toTypedArray(), signer),
             createdAt = createdAt,
         ) {
             alt(ALT)
-            indexerRelays(publicRelays)
+            proxyRelays(publicRelays)
 
             initializer()
         }

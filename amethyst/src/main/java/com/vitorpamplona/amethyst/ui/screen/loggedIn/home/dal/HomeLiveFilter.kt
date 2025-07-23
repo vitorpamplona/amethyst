@@ -25,9 +25,12 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveComplexFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -130,6 +133,9 @@ class HomeLiveFilter(
                 is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
                 is AllFollowsByOutboxTopNavFilter -> topFilter.authors
                 is SingleCommunityTopNavFilter -> topFilter.authors
+                is AuthorsByProxyTopNavFilter -> topFilter.authors
+                is MutedAuthorsByProxyTopNavFilter -> topFilter.authors
+                is AllFollowsByProxyTopNavFilter -> topFilter.authors
                 else -> null
             }
 

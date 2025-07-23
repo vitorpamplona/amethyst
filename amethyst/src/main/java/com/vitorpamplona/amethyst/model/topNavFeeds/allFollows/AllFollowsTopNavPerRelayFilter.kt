@@ -18,25 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
+package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
-@Composable
-fun HashtagFilterAssemblerSubscription(
-    tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            HashtagQueryState(tag.hashtag, accountViewModel.account.followOutboxesOrProxy.flow.value)
-        }
-
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
+/**
+ * This is a big OR filter.
+ */
+@Immutable
+class AllFollowsTopNavPerRelayFilter(
+    val authors: Set<String>? = null,
+    val hashtags: Set<String>? = null,
+    val geotags: Set<String>? = null,
+    val communities: Set<String>? = null,
+) : IFeedTopNavPerRelayFilter {
+    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
+    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.toScope(it) }
 }

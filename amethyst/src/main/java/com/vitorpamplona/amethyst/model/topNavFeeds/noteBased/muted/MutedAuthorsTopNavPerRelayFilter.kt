@@ -18,25 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
+package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
 
-@Composable
-fun HashtagFilterAssemblerSubscription(
-    tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            HashtagQueryState(tag.hashtag, accountViewModel.account.followOutboxesOrProxy.flow.value)
-        }
-
-    KeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
-}
+@Immutable
+class MutedAuthorsTopNavPerRelayFilter(
+    val authors: Set<String>,
+) : IFeedTopNavPerRelayFilter

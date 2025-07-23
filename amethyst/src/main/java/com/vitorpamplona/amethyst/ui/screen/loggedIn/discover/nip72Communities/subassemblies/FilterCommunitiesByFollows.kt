@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterCommunitiesByFollows(
-    followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {

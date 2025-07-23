@@ -48,9 +48,12 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -208,6 +211,9 @@ fun LoadModerators(
                     is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
                     is AllFollowsByOutboxTopNavFilter -> topFilter.authors
                     is SingleCommunityTopNavFilter -> topFilter.authors
+                    is AuthorsByProxyTopNavFilter -> topFilter.authors
+                    is MutedAuthorsByProxyTopNavFilter -> topFilter.authors
+                    is AllFollowsByProxyTopNavFilter -> topFilter.authors
                     else -> null
                 }
 

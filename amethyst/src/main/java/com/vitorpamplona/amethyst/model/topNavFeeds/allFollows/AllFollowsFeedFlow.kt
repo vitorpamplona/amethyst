@@ -26,23 +26,37 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 class AllFollowsFeedFlow(
     val allFollows: StateFlow<FollowListState.Kind3Follows?>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
-    fun convert(kind3: FollowListState.Kind3Follows?): AllFollowsByOutboxTopNavFilter =
+    fun convert(
+        kind3: FollowListState.Kind3Follows?,
+        proxyRelays: Set<NormalizedRelayUrl>,
+    ): IFeedTopNavFilter =
         if (kind3 != null) {
-            AllFollowsByOutboxTopNavFilter(
-                authors = kind3.authors,
-                hashtags = kind3.hashtags,
-                geotags = kind3.geotags,
-                communities = kind3.communities,
-                defaultRelays = followsRelays,
-                blockedRelays = blockedRelays,
-            )
+            if (proxyRelays.isEmpty()) {
+                AllFollowsByOutboxTopNavFilter(
+                    authors = kind3.authors,
+                    hashtags = kind3.hashtags,
+                    geotags = kind3.geotags,
+                    communities = kind3.communities,
+                    defaultRelays = followsRelays,
+                    blockedRelays = blockedRelays,
+                )
+            } else {
+                AllFollowsByProxyTopNavFilter(
+                    authors = kind3.authors,
+                    hashtags = kind3.hashtags,
+                    geotags = kind3.geotags,
+                    communities = kind3.communities,
+                    proxyRelays = proxyRelays,
+                )
+            }
         } else {
             AllFollowsByOutboxTopNavFilter(
                 authors = emptySet(),
@@ -51,9 +65,9 @@ class AllFollowsFeedFlow(
             )
         }
 
-    override fun flow() = allFollows.map(::convert)
+    override fun flow() = combine(allFollows, proxyRelays, ::convert)
 
-    override fun startValue(): AllFollowsByOutboxTopNavFilter = convert(allFollows.value)
+    override fun startValue(): IFeedTopNavFilter = convert(allFollows.value, proxyRelays.value)
 
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
         collector.emit(startValue())

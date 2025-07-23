@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByGeohashes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core.filterHomePostsByHashtags
@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip72Commun
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterHomePostsByAllFollows(
-    followsSet: AllFollowsByOutboxTopNavPerRelayFilterSet,
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     sinceBoundaryNew: Long?,
     sinceBoundaryReply: Long?,

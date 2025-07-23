@@ -73,7 +73,7 @@ fun PrepareViewModelsHashtagScreen(
             factory =
                 HashtagFeedViewModel.Factory(
                     tag.hashtag,
-                    accountViewModel.account.followOutboxes.flow.value,
+                    accountViewModel.account.followOutboxesOrProxy.flow.value,
                     accountViewModel.account,
                 ),
         )

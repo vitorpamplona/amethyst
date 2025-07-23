@@ -68,7 +68,7 @@ fun PrepareViewModelsGeoHashScreen(
             factory =
                 GeoHashFeedViewModel.Factory(
                     tag.geohash,
-                    accountViewModel.account.followOutboxes.flow.value,
+                    accountViewModel.account.followOutboxesOrProxy.flow.value,
                     accountViewModel.account,
                 ),
         )

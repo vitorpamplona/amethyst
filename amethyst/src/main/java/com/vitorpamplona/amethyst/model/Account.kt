@@ -34,7 +34,7 @@ import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.AccountOutboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.NotificationInboxRelayState
 import com.vitorpamplona.amethyst.model.nip01UserMetadata.UserMetadataState
-import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxRelays
+import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxOrProxyRelays
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowsPerOutboxRelay
 import com.vitorpamplona.amethyst.model.nip03Timestamp.OtsState
@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
+import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListDecryptionCache
@@ -246,6 +248,9 @@ class Account(
     val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
     val trustedRelayList = TrustedRelayListState(signer, cache, trustedRelayListDecryptionCache, scope, settings)
 
+    val proxyRelayListDecryptionCache = ProxyRelayListDecryptionCache(signer)
+    val proxyRelayList = ProxyRelayListState(signer, cache, proxyRelayListDecryptionCache, scope, settings)
+
     val broadcastRelayListDecryptionCache = BroadcastRelayListDecryptionCache(signer)
     val broadcastRelayList = BroadcastRelayListState(signer, cache, broadcastRelayListDecryptionCache, scope, settings)
 
@@ -297,11 +302,11 @@ class Account(
     val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, broadcastRelayList, scope)
 
     // Follows Relays
-    val followOutboxes = FollowListOutboxRelays(kind3FollowList, blockedRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, trustedRelayList, broadcastRelayList, indexerRelayList, scope)
+    val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
+    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxesOrProxy, nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, indexerRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
-    val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, cache, scope).flow
+    val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope).flow
 
     // Merges all follow lists to create a single All Follows feed.
     val allFollows = MergedFollowListsState(kind3FollowList, hashtagList, geohashList, communityList, scope)
@@ -341,6 +346,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
@@ -355,6 +361,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
@@ -369,6 +376,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
@@ -383,6 +391,7 @@ class Account(
             locationFlow = geolocationFlow,
             followsRelays = followPlusAllMine.flow,
             blockedRelays = blockedRelayList.flow,
+            proxyRelays = proxyRelayList.flow,
             caches = feedDecryptionCaches,
             signer = signer,
             scope = scope,
@@ -1727,6 +1736,8 @@ class Account(
     suspend fun saveIndexerRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(indexerRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
+
+    suspend fun saveProxyRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(proxyRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
 

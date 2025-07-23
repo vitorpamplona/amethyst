@@ -37,7 +37,7 @@ fun GeoHashFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(tag) {
-            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxes.flow.value)
+            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
         }
 
     KeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)

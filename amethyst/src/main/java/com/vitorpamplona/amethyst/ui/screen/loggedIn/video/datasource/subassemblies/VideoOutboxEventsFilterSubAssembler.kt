@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoQueryState
@@ -61,12 +61,12 @@ class VideoOutboxEventsFilterSubAssembler(
         val defaultSince = key.feedState.videoFeed.lastNoteCreatedAtWhenFullyLoaded.value
         return when (feedSettings) {
             is AllCommunitiesTopNavPerRelayFilterSet -> filterPictureAndVideoByAllCommunities(feedSettings, since, defaultSince)
-            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByFollows(feedSettings, since, defaultSince)
-            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
+            is AllFollowsTopNavPerRelayFilterSet -> filterPictureAndVideoByFollows(feedSettings, since, defaultSince)
+            is AuthorsTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
             is GlobalTopNavPerRelayFilterSet -> filterPictureAndVideoGlobal(feedSettings, since, defaultSince)
             is HashtagTopNavPerRelayFilterSet -> filterPictureAndVideoByHashtag(feedSettings, since, defaultSince)
             is LocationTopNavPerRelayFilterSet -> filterPictureAndVideoByGeohash(feedSettings, since, defaultSince)
-            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
+            is MutedAuthorsTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
             is SingleCommunityTopNavPerRelayFilterSet -> filterPictureAndVideoByCommunity(feedSettings, since, defaultSince)
             else -> emptyList()
         }

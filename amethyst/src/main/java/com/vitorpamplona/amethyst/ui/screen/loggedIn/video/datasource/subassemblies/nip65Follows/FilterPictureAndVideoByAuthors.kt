@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip65Follows
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.LegacyMimeTypeMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.PictureAndVideoKinds
@@ -64,7 +64,7 @@ fun filterPictureAndVideoAuthors(
 }
 
 fun filterPictureAndVideoByAuthors(
-    authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
+    authorSet: AuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
@@ -85,7 +85,7 @@ fun filterPictureAndVideoByAuthors(
 }
 
 fun filterPictureAndVideoByAuthors(
-    authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
+    authorSet: MutedAuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {

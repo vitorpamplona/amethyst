@@ -28,9 +28,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
@@ -53,6 +56,9 @@ val BasicAccountInfoKinds2 =
         TrustedRelayListEvent.KIND,
         BroadcastRelayListEvent.KIND,
         IndexerRelayListEvent.KIND,
+        ProxyRelayListEvent.KIND,
+        HashtagListEvent.KIND,
+        GeohashListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(

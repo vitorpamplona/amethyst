@@ -28,23 +28,32 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlin.collections.associateWith
+import kotlin.collections.isNotEmpty
 
 @Immutable
 class GlobalTopNavFilter(
-    val relays: StateFlow<Set<NormalizedRelayUrl>>,
+    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedTopNavFilter {
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
     override fun match(noteEvent: Event) = true
 
     override fun toPerRelayFlow(cache: LocalCache): Flow<GlobalTopNavPerRelayFilterSet> =
-        relays.map {
-            GlobalTopNavPerRelayFilterSet(it.associateWith { GlobalTopNavPerRelayFilter })
+        combine(outboxRelays, proxyRelays) { outboxRelays, proxyRelays ->
+            if (proxyRelays.isNotEmpty()) {
+                GlobalTopNavPerRelayFilterSet(proxyRelays.associateWith { GlobalTopNavPerRelayFilter })
+            } else {
+                GlobalTopNavPerRelayFilterSet(outboxRelays.associateWith { GlobalTopNavPerRelayFilter })
+            }
         }
 
     override fun startValue(cache: LocalCache): GlobalTopNavPerRelayFilterSet =
-        GlobalTopNavPerRelayFilterSet(
-            relays.value.associateWith { GlobalTopNavPerRelayFilter },
-        )
+        if (proxyRelays.value.isNotEmpty()) {
+            GlobalTopNavPerRelayFilterSet(proxyRelays.value.associateWith { GlobalTopNavPerRelayFilter })
+        } else {
+            GlobalTopNavPerRelayFilterSet(outboxRelays.value.associateWith { GlobalTopNavPerRelayFilter })
+        }
 }

@@ -22,9 +22,7 @@ package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -37,21 +35,18 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlin.collections.associateWith
 
 /**
  * This is a big OR filter on all fields.
  */
 @Immutable
-class AllFollowsByOutboxTopNavFilter(
+class AllFollowsByProxyTopNavFilter(
     val authors: Set<String>? = null,
     val hashtags: Set<String>? = null,
     val geotags: Set<String>? = null,
     val communities: Set<String>? = null,
-    val defaultRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: Set<NormalizedRelayUrl>,
 ) : IFeedTopNavFilter {
     val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf<String>()) { GeohashId.Companion.toScope(it) }
     val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf<String>()) { HashtagId.Companion.toScope(it) }
@@ -79,59 +74,30 @@ class AllFollowsByOutboxTopNavFilter(
                 (communities != null && noteEvent.isTaggedAddressableNotes(communities))
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsTopNavPerRelayFilterSet> {
-        val authorsPerRelay =
-            if (authors != null) {
-                OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache) { it }
-            } else {
-                MutableStateFlow(emptyMap())
-            }
-        val communitiesPerRelay =
-            if (communities != null) {
-                CommunityRelayLoader.toCommunitiesPerRelayFlow(communities, cache) { it }
-            } else {
-                MutableStateFlow(emptyMap())
-            }
-
-        return combine(authorsPerRelay, communitiesPerRelay, defaultRelays, blockedRelays) { perRelayAuthors, perRelayCommunities, default, blockedRelays ->
-            val allRelays = (perRelayAuthors.keys + perRelayCommunities.keys).filter { it !in blockedRelays }.ifEmpty { default }
-
+    // forces the use of the Proxy on all connections, replacing the outbox model.
+    override fun toPerRelayFlow(cache: LocalCache): Flow<AllFollowsTopNavPerRelayFilterSet> =
+        MutableStateFlow(
             AllFollowsTopNavPerRelayFilterSet(
-                allRelays.associateWith {
+                proxyRelays.associateWith {
                     AllFollowsTopNavPerRelayFilter(
-                        authors = perRelayAuthors[it],
+                        authors = authors,
                         hashtags = hashtags,
                         geotags = geotags,
-                        communities = perRelayCommunities[it],
+                        communities = communities,
                     )
                 },
-            )
-        }
-    }
+            ),
+        )
 
     override fun startValue(cache: LocalCache): AllFollowsTopNavPerRelayFilterSet {
-        val authorsPerRelay =
-            if (authors != null) {
-                OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache) { it }
-            } else {
-                emptyMap()
-            }
-        val communitiesPerRelay =
-            if (communities != null) {
-                CommunityRelayLoader.communitiesPerRelaySnapshot(communities, cache) { it }
-            } else {
-                emptyMap()
-            }
-
-        val allRelays = (authorsPerRelay.keys + communitiesPerRelay.keys).filter { it !in blockedRelays.value }.ifEmpty { defaultRelays.value }
-
+        // forces the use of the Proxy on all connections, replacing the outbox model.
         return AllFollowsTopNavPerRelayFilterSet(
-            allRelays.associateWith {
+            proxyRelays.associateWith {
                 AllFollowsTopNavPerRelayFilter(
-                    authors = authorsPerRelay[it],
+                    authors = authors,
                     hashtags = hashtags,
                     geotags = geotags,
-                    communities = communitiesPerRelay[it],
+                    communities = communities,
                 )
             },
         )

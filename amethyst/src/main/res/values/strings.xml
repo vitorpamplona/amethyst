@@ -494,6 +494,7 @@
 
     <string name="follow_list_selection">Follow List</string>
     <string name="follow_list_kind3follows">All Follows</string>
+    <string name="follow_list_kind3follows_proxy">Follows via Proxy</string>
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_mute_list">Mute List</string>
@@ -1091,6 +1092,10 @@
     <string name="trusted_relays_title">Trusted Relays</string>
     <string name="trusted_section">Trusted Relays</string>
     <string name="trusted_section_explainer">Relays you trust to not need a Tor connection for</string>
+
+    <string name="proxy_relays_title">Proxy Relays</string>
+    <string name="proxy_section">Proxy Relays</string>
+    <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>
 
     <string name="broadcast_relays_title">Broadcast Relays</string>
     <string name="broadcast_section">Broadcast Relays</string>

@@ -58,7 +58,7 @@ class BlockedRelayListEvent(
 
     companion object {
         const val KIND = 10006
-        val ALT = "Blocked relays from this author"
+        const val ALT = "Blocked relays from this author"
         val ALT_TAG = arrayOf(AltTag.Companion.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")

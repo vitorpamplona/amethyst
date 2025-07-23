@@ -51,19 +51,20 @@ class FeedTopNavFilterState(
     val locationFlow: StateFlow<LocationState.LocationResult>,
     val followsRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val caches: FeedDecryptionCaches,
     val signer: NostrSigner,
     val scope: CoroutineScope,
 ) {
     fun loadFlowsFor(listName: String): IFeedFlowsType =
         when (listName) {
-            GLOBAL_FOLLOWS -> GlobalFeedFlow(followsRelays)
-            ALL_FOLLOWS -> AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays)
-            AROUND_ME -> AroundMeFeedFlow(locationFlow, followsRelays)
+            GLOBAL_FOLLOWS -> GlobalFeedFlow(followsRelays, proxyRelays)
+            ALL_FOLLOWS -> AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
+            AROUND_ME -> AroundMeFeedFlow(locationFlow, followsRelays, proxyRelays)
             else -> {
                 val note = LocalCache.checkGetOrCreateAddressableNote(listName)
                 if (note != null) {
-                    NoteFeedFlow(note.flow().metadata.stateFlow, signer, followsRelays, blockedRelays, caches)
+                    NoteFeedFlow(note.flow().metadata.stateFlow, signer, followsRelays, blockedRelays, proxyRelays, caches)
                 } else {
                     UnknownFeedFlow(listName)
                 }

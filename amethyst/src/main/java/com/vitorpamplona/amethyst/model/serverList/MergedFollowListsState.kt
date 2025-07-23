@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlin.collections.map
 
@@ -44,14 +45,14 @@ class MergedFollowListsState(
 ) {
     fun mergeLists(
         kind3: FollowListState.Kind3Follows,
-        hashtages: Set<String>,
+        hashtags: Set<String>,
         geohashes: Set<String>,
         community: Set<CommunityTag>,
     ): FollowListState.Kind3Follows =
         FollowListState.Kind3Follows(
             kind3.authors,
             kind3.authorsPlusMe,
-            kind3.hashtags + hashtages,
+            kind3.hashtags + hashtags,
             kind3.geotags + geohashes,
             kind3.communities + community.map { it.address.toValue() },
         )
@@ -73,7 +74,8 @@ class MergedFollowListsState(
                     communityList.flow.value,
                 ),
             )
-        }.flowOn(Dispatchers.Default)
+        }.sample(200)
+            .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,

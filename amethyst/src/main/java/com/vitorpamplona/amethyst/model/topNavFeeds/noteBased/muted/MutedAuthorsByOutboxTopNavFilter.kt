@@ -47,11 +47,11 @@ class MutedAuthorsByOutboxTopNavFilter(
         }
 
     fun convert(map: Map<NormalizedRelayUrl, Set<HexKey>>) =
-        MutedAuthorsByOutboxTopNavPerRelayFilterSet(
-            map.mapValues { MutedAuthorsByOutboxTopNavPerRelayFilter(it.value) },
+        MutedAuthorsTopNavPerRelayFilterSet(
+            map.mapValues { MutedAuthorsTopNavPerRelayFilter(it.value) },
         )
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsByOutboxTopNavPerRelayFilterSet> {
+    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsTopNavPerRelayFilterSet> {
         val authorsPerRelay = OutboxRelayLoader.toAuthorsPerRelayFlow(authors, cache) { it }
 
         return combine(authorsPerRelay, blockedRelays) { authors, blocked ->
@@ -59,7 +59,7 @@ class MutedAuthorsByOutboxTopNavFilter(
         }
     }
 
-    override fun startValue(cache: LocalCache): MutedAuthorsByOutboxTopNavPerRelayFilterSet {
+    override fun startValue(cache: LocalCache): MutedAuthorsTopNavPerRelayFilterSet {
         val authorsPerRelay = OutboxRelayLoader.authorsPerRelaySnapshot(authors, cache) { it }
 
         return convert(authorsPerRelay.minus(blockedRelays.value))

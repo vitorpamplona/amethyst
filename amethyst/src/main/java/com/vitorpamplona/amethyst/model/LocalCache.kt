@@ -140,6 +140,7 @@ import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -955,6 +956,12 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: TrustedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: ProxyRelayListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2790,6 +2797,7 @@ object LocalCache : ILocalCache {
                 is PictureEvent -> consume(event, relay, wasVerified)
                 is PrivateDmEvent -> consume(event, relay, wasVerified)
                 is PrivateOutboxRelayListEvent -> consume(event, relay, wasVerified)
+                is ProxyRelayListEvent -> consume(event, relay, wasVerified)
                 is PinListEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)

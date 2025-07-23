@@ -59,7 +59,7 @@ class BroadcastRelayListEvent(
 
     companion object {
         const val KIND = 10088
-        const val ALT = "Broadcasting relays from this author"
+        const val ALT = "Broadcast relays from this author"
         val TAGS = arrayOf(AltTag.assemble(ALT))
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, "")
@@ -75,9 +75,7 @@ class BroadcastRelayListEvent(
             createdAt: Long = TimeUtils.now(),
         ): BroadcastRelayListEvent {
             val newRelayList = relays.map { RelayTag.assemble(it) }
-            println("AABBCC 1 ${earlierVersion.content}")
             val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-            println("AABBCC 2 ${privateTags.size}")
             val publicTags = earlierVersion.tags.remove(RelayTag::match)
             val newPrivateTags = privateTags.remove(RelayTag::notMatch).plus(newRelayList)
 

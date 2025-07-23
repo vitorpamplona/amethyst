@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -106,7 +106,7 @@ fun filterReplyHomePostsByAuthors(
 }
 
 fun filterHomePostsByAuthors(
-    authorSet: AuthorsByOutboxTopNavPerRelayFilterSet,
+    authorSet: AuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     sinceBoundaryNew: Long?,
     sinceBoundaryReply: Long?,
@@ -133,7 +133,7 @@ fun filterHomePostsByAuthors(
 }
 
 fun filterHomePostsByAuthors(
-    authorSet: MutedAuthorsByOutboxTopNavPerRelayFilterSet,
+    authorSet: MutedAuthorsTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     sinceBoundaryNew: Long?,
     sinceBoundaryReply: Long?,

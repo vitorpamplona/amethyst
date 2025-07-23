@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
+package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -26,37 +26,33 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable
-class HashtagTopNavFilter(
-    val hashtags: Set<String>,
-    val relayList: Set<NormalizedRelayUrl>,
+class MutedAuthorsByProxyTopNavFilter(
+    val authors: Set<String>,
+    val proxyRelays: Set<NormalizedRelayUrl>,
 ) : IFeedTopNavFilter {
-    val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
-
-    override fun matchAuthor(pubkey: HexKey): Boolean = true
+    override fun matchAuthor(pubkey: HexKey) = pubkey in authors
 
     override fun match(noteEvent: Event): Boolean =
-        if (noteEvent is CommentEvent) {
-            noteEvent.isTaggedHashes(hashtags) || noteEvent.isTaggedScopes(hashtagScopes)
+        if (noteEvent is LiveActivitiesEvent) {
+            noteEvent.participantsIntersect(authors)
         } else {
-            noteEvent.isTaggedHashes(hashtags)
+            noteEvent.pubKey in authors
         }
 
-    override fun toPerRelayFlow(cache: LocalCache): Flow<HashtagTopNavPerRelayFilterSet> =
+    override fun toPerRelayFlow(cache: LocalCache): Flow<MutedAuthorsTopNavPerRelayFilterSet> =
         MutableStateFlow(
-            HashtagTopNavPerRelayFilterSet(
-                relayList.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
+            MutedAuthorsTopNavPerRelayFilterSet(
+                proxyRelays.associateWith { MutedAuthorsTopNavPerRelayFilter(authors) },
             ),
         )
 
-    override fun startValue(cache: LocalCache): HashtagTopNavPerRelayFilterSet =
-        HashtagTopNavPerRelayFilterSet(
-            relayList.associateWith { HashtagTopNavPerRelayFilter(hashtags) },
+    override fun startValue(cache: LocalCache): MutedAuthorsTopNavPerRelayFilterSet =
+        MutedAuthorsTopNavPerRelayFilterSet(
+            proxyRelays.associateWith { MutedAuthorsTopNavPerRelayFilter(authors) },
         )
 }

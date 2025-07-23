@@ -18,26 +18,41 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.global
+package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import kotlinx.coroutines.flow.FlowCollector
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
-class GlobalFeedFlow(
-    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
-    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
-) : IFeedFlowsType {
-    val default = GlobalTopNavFilter(outboxRelays, proxyRelays)
+@Immutable
+class AuthorsByProxyTopNavFilter(
+    val authors: Set<String>,
+    val proxyRelays: Set<NormalizedRelayUrl>,
+) : IFeedTopNavFilter {
+    override fun matchAuthor(pubkey: HexKey) = pubkey in authors
 
-    override fun flow() = MutableStateFlow(default)
+    override fun match(noteEvent: Event): Boolean =
+        if (noteEvent is LiveActivitiesEvent) {
+            noteEvent.participantsIntersect(authors)
+        } else {
+            noteEvent.pubKey in authors
+        }
 
-    override fun startValue(): GlobalTopNavFilter = default
+    override fun toPerRelayFlow(cache: LocalCache): Flow<AuthorsTopNavPerRelayFilterSet> =
+        MutableStateFlow(
+            AuthorsTopNavPerRelayFilterSet(
+                proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
+            ),
+        )
 
-    override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
-        collector.emit(startValue())
-    }
+    override fun startValue(cache: LocalCache): AuthorsTopNavPerRelayFilterSet =
+        AuthorsTopNavPerRelayFilterSet(
+            proxyRelays.associateWith { AuthorsTopNavPerRelayFilter(authors) },
+        )
 }

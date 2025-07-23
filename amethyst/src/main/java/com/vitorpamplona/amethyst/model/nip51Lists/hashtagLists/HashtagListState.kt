@@ -48,7 +48,7 @@ class HashtagListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
-    fun getHashtagListAddress() = HashtagListEvent.Companion.createAddress(signer.pubKey)
+    fun getHashtagListAddress() = HashtagListEvent.createAddress(signer.pubKey)
 
     fun getHashtagListNote(): AddressableNote = cache.getOrCreateAddressableNote(getHashtagListAddress())
 

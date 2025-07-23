@@ -28,8 +28,10 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavFilte
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -43,16 +45,20 @@ import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.combineTransform
 
 class NoteFeedFlow(
     val metadataFlow: StateFlow<NoteState?>,
     val signer: NostrSigner,
-    val allFollowRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val blockedRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
     val caches: FeedDecryptionCaches,
 ) : IFeedFlowsType {
-    fun process(noteEvent: Event): IFeedTopNavFilter =
+    fun processByOutbox(
+        noteEvent: Event,
+        outboxRelays: Set<NormalizedRelayUrl>,
+    ): IFeedTopNavFilter =
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
@@ -71,10 +77,10 @@ class NoteFeedFlow(
                 AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
             }
             is HashtagListEvent -> {
-                HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), allFollowRelays)
+                HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), outboxRelays)
             }
             is GeohashListEvent -> {
-                LocationTopNavFilter(caches.geohashCache.cachedGeohashes(noteEvent), allFollowRelays)
+                LocationTopNavFilter(caches.geohashCache.cachedGeohashes(noteEvent), outboxRelays)
             }
             is CommunityDefinitionEvent -> {
                 SingleCommunityTopNavFilter(
@@ -87,7 +93,10 @@ class NoteFeedFlow(
             else -> AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
         }
 
-    suspend fun FlowCollector<IFeedTopNavFilter>.process(noteEvent: Event) {
+    suspend fun FlowCollector<IFeedTopNavFilter>.processByOutbox(
+        noteEvent: Event,
+        outboxRelays: Set<NormalizedRelayUrl>,
+    ) {
         when (noteEvent) {
             is PeopleListEvent -> {
                 if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
@@ -106,10 +115,10 @@ class NoteFeedFlow(
                 emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
             }
             is HashtagListEvent -> {
-                emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), allFollowRelays))
+                emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), outboxRelays))
             }
             is GeohashListEvent -> {
-                emit(LocationTopNavFilter(caches.geohashCache.geohashes(noteEvent), allFollowRelays))
+                emit(LocationTopNavFilter(caches.geohashCache.geohashes(noteEvent), outboxRelays))
             }
             is CommunityDefinitionEvent -> {
                 emit(
@@ -128,23 +137,113 @@ class NoteFeedFlow(
         }
     }
 
+    fun processByProxy(
+        noteEvent: Event,
+        proxyRelays: Set<NormalizedRelayUrl>,
+    ): IFeedTopNavFilter =
+        when (noteEvent) {
+            is PeopleListEvent -> {
+                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                    MutedAuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
+                } else {
+                    AuthorsByProxyTopNavFilter(caches.peopleListCache.cachedUserIdSet(noteEvent), proxyRelays)
+                }
+            }
+            is MuteListEvent -> {
+                MutedAuthorsByProxyTopNavFilter(caches.muteListCache.cachedUserIdSet(noteEvent), proxyRelays)
+            }
+            is FollowListEvent -> {
+                AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays)
+            }
+            is CommunityListEvent -> {
+                AllCommunitiesTopNavFilter(caches.communityListCache.cachedCommunityIdSet(noteEvent), blockedRelays)
+            }
+            is HashtagListEvent -> {
+                HashtagTopNavFilter(caches.hashtagCache.cachedHashtags(noteEvent), proxyRelays)
+            }
+            is GeohashListEvent -> {
+                LocationTopNavFilter(caches.geohashCache.cachedGeohashes(noteEvent), proxyRelays)
+            }
+            is CommunityDefinitionEvent -> {
+                SingleCommunityTopNavFilter(
+                    community = noteEvent.addressTag(),
+                    authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
+                    relays = noteEvent.relayUrls().toSet(),
+                    blockedRelays = blockedRelays,
+                )
+            }
+            else -> AuthorsByProxyTopNavFilter(emptySet(), proxyRelays)
+        }
+
+    suspend fun FlowCollector<IFeedTopNavFilter>.processByProxy(
+        noteEvent: Event,
+        proxyRelays: Set<NormalizedRelayUrl>,
+    ) {
+        when (noteEvent) {
+            is PeopleListEvent -> {
+                if (noteEvent.dTag() == PeopleListEvent.Companion.BLOCK_LIST_D_TAG) {
+                    emit(MutedAuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
+                } else {
+                    emit(AuthorsByProxyTopNavFilter(caches.peopleListCache.userIdSet(noteEvent), proxyRelays))
+                }
+            }
+            is MuteListEvent -> {
+                emit(MutedAuthorsByProxyTopNavFilter(caches.muteListCache.mutedUserIdSet(noteEvent), proxyRelays))
+            }
+            is FollowListEvent -> {
+                emit(AuthorsByProxyTopNavFilter(noteEvent.followIdSet(), proxyRelays))
+            }
+            is CommunityListEvent -> {
+                emit(AllCommunitiesTopNavFilter(caches.communityListCache.communityIdSet(noteEvent), blockedRelays))
+            }
+            is HashtagListEvent -> {
+                emit(HashtagTopNavFilter(caches.hashtagCache.hashtags(noteEvent), proxyRelays))
+            }
+            is GeohashListEvent -> {
+                emit(LocationTopNavFilter(caches.geohashCache.geohashes(noteEvent), proxyRelays))
+            }
+            is CommunityDefinitionEvent -> {
+                emit(
+                    SingleCommunityTopNavFilter(
+                        community = noteEvent.addressTag(),
+                        authors = noteEvent.moderatorKeys().toSet().ifEmpty { null },
+                        relays = noteEvent.relayUrls().toSet(),
+                        blockedRelays = blockedRelays,
+                    ),
+                )
+            }
+            else ->
+                emit(
+                    AuthorsByProxyTopNavFilter(emptySet(), proxyRelays),
+                )
+        }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun flow() =
-        metadataFlow.transformLatest { noteState ->
+        combineTransform(metadataFlow, outboxRelays, proxyRelays) { noteState, outboxRelays, proxyRelays ->
             val noteEvent = noteState?.note?.event
             if (noteEvent == null) {
                 AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
             } else {
-                process(noteEvent)
+                if (proxyRelays.isEmpty()) {
+                    processByOutbox(noteEvent, outboxRelays)
+                } else {
+                    processByProxy(noteEvent, proxyRelays)
+                }
             }
         }
 
     override fun startValue(): IFeedTopNavFilter {
         val noteEvent = metadataFlow.value?.note?.event
-        if (noteEvent == null) {
+        return if (noteEvent == null) {
             return AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays)
         } else {
-            return process(noteEvent)
+            if (proxyRelays.value.isEmpty()) {
+                processByOutbox(noteEvent, outboxRelays.value)
+            } else {
+                processByProxy(noteEvent, proxyRelays.value)
+            }
         }
     }
 
@@ -153,7 +252,11 @@ class NoteFeedFlow(
         if (noteEvent == null) {
             collector.emit(AuthorsByOutboxTopNavFilter(emptySet(), blockedRelays))
         } else {
-            collector.process(noteEvent)
+            if (proxyRelays.value.isEmpty()) {
+                collector.processByOutbox(noteEvent, outboxRelays.value)
+            } else {
+                collector.processByProxy(noteEvent, proxyRelays.value)
+            }
         }
     }
 }

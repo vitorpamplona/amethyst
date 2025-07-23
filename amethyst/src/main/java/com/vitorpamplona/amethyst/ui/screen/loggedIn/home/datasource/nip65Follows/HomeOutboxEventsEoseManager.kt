@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeQueryState
@@ -60,12 +60,12 @@ class HomeOutboxEventsEoseManager(
         val repliesSince = key.feedState.homeReplies.lastNoteCreatedAtIfFilled()
         return when (feedSettings) {
             is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since, newThreadSince)
-            is AllFollowsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since, newThreadSince, repliesSince)
-            is AuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+            is AllFollowsTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since, newThreadSince, repliesSince)
+            is AuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
             is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since, newThreadSince, repliesSince)
             is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since, newThreadSince)
             is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since, newThreadSince)
-            is MutedAuthorsByOutboxTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+            is MutedAuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
             is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
             else -> emptyList()
         }

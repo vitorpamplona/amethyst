@@ -125,6 +125,7 @@ import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
@@ -212,6 +213,7 @@ import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -605,6 +607,8 @@ private fun FullBleedNoteCompose(
                     DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BlockedRelayListEvent) {
                     DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is ProxyRelayListEvent) {
+                    DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is TrustedRelayListEvent) {
                     DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is IndexerRelayListEvent) {

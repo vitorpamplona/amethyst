@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -45,7 +46,9 @@ class HomeNewThreadFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
-    override fun showHiddenKey(): Boolean = account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter
+    override fun showHiddenKey(): Boolean =
+        account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||
+            account.liveHomeFollowLists.value is MutedAuthorsByProxyTopNavFilter
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(

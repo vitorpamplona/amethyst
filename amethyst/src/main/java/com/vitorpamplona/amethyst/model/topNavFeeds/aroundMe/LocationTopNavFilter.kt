@@ -30,15 +30,14 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Immutable
 class LocationTopNavFilter(
     val geotags: Set<String>,
-    val relays: StateFlow<Set<NormalizedRelayUrl>>,
+    val relayList: Set<NormalizedRelayUrl>,
 ) : IFeedTopNavFilter {
-    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.Companion.toScope(it) }
+    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf<String>()) { GeohashId.toScope(it) }
 
     override fun matchAuthor(pubkey: HexKey): Boolean = true
 
@@ -54,9 +53,12 @@ class LocationTopNavFilter(
     }
 
     override fun toPerRelayFlow(cache: LocalCache): Flow<LocationTopNavPerRelayFilterSet> =
-        relays.map {
-            LocationTopNavPerRelayFilterSet(it.associateWith { LocationTopNavPerRelayFilter(geotags) })
-        }
+        MutableStateFlow(
+            LocationTopNavPerRelayFilterSet(relayList.associateWith { LocationTopNavPerRelayFilter(geotags) }),
+        )
 
-    override fun startValue(cache: LocalCache): LocationTopNavPerRelayFilterSet = LocationTopNavPerRelayFilterSet(relays.value.associateWith { LocationTopNavPerRelayFilter(geotags) })
+    override fun startValue(cache: LocalCache): LocationTopNavPerRelayFilterSet =
+        LocationTopNavPerRelayFilterSet(
+            relayList.associateWith { LocationTopNavPerRelayFilter(geotags) },
+        )
 }

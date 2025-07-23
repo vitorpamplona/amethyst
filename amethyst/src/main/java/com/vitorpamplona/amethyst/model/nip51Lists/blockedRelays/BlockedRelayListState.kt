@@ -49,7 +49,7 @@ class BlockedRelayListState(
     val scope: CoroutineScope,
     val settings: AccountSettings,
 ) {
-    fun getBlockedRelayListAddress() = BlockedRelayListEvent.Companion.createAddress(signer.pubKey)
+    fun getBlockedRelayListAddress() = BlockedRelayListEvent.createAddress(signer.pubKey)
 
     fun getBlockedRelayListNote(): AddressableNote = LocalCache.getOrCreateAddressableNote(getBlockedRelayListAddress())
 
@@ -64,12 +64,13 @@ class BlockedRelayListState(
 
     val flow =
         getBlockedRelayListFlow()
-            .map { normalizeBlockedRelayListWithBackup(it.note) }
-            .onStart { emit(normalizeBlockedRelayListWithBackup(getBlockedRelayListNote())) }
+            .map {
+                normalizeBlockedRelayListWithBackup(it.note)
+            }.onStart { emit(normalizeBlockedRelayListWithBackup(getBlockedRelayListNote())) }
             .flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
-                SharingStarted.Companion.Eagerly,
+                SharingStarted.Eagerly,
                 emptySet(),
             )
 
@@ -78,13 +79,13 @@ class BlockedRelayListState(
         val relayListForBlocked = getBlockedRelayList()
 
         return if (relayListForBlocked != null && relayListForBlocked.tags.isNotEmpty()) {
-            BlockedRelayListEvent.Companion.updateRelayList(
+            BlockedRelayListEvent.updateRelayList(
                 earlierVersion = relayListForBlocked,
                 relays = blockedRelays,
                 signer = signer,
             )
         } else {
-            BlockedRelayListEvent.Companion.create(
+            BlockedRelayListEvent.create(
                 relays = blockedRelays,
                 signer = signer,
             )

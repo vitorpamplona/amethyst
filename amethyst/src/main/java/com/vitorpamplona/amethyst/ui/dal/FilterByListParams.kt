@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -62,7 +63,7 @@ class FilterByListParams(
 
     fun isGlobal(comingFrom: List<NormalizedRelayUrl>) =
         followLists is GlobalTopNavFilter &&
-            comingFrom.any { followLists.relays.value.contains(it) }
+            comingFrom.any { followLists.outboxRelays.value.contains(it) }
 
     fun match(
         noteEvent: Event,
@@ -89,7 +90,7 @@ class FilterByListParams(
             hiddenUsers: HiddenUsersState.LiveHiddenUsers,
         ): FilterByListParams =
             FilterByListParams(
-                isHiddenList = followLists is MutedAuthorsByOutboxTopNavFilter,
+                isHiddenList = followLists is MutedAuthorsByOutboxTopNavFilter || followLists is MutedAuthorsByProxyTopNavFilter,
                 followLists = followLists,
                 hiddenLists = hiddenUsers,
             )

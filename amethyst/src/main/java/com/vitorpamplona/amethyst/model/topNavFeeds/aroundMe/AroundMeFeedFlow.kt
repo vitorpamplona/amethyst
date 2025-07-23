@@ -26,30 +26,35 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 class AroundMeFeedFlow(
     val location: StateFlow<LocationState.LocationResult>,
-    val allFollowRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val outboxRelays: StateFlow<Set<NormalizedRelayUrl>>,
+    val proxyRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : IFeedFlowsType {
-    fun convert(result: LocationState.LocationResult): LocationTopNavFilter =
+    fun convert(
+        result: LocationState.LocationResult,
+        outboxRelays: Set<NormalizedRelayUrl>,
+        proxyRelays: Set<NormalizedRelayUrl>,
+    ): LocationTopNavFilter =
         if (result is LocationState.LocationResult.Success) {
             // 2 neighbors deep = 25x25km
             LocationTopNavFilter(
                 geotags = compute50kmRange(result.geoHash).toSet(),
-                relays = allFollowRelays,
+                relayList = proxyRelays.ifEmpty { outboxRelays },
             )
         } else {
             // empty feed until we have a successful geohash
             LocationTopNavFilter(
                 geotags = emptySet(),
-                relays = allFollowRelays,
+                relayList = proxyRelays.ifEmpty { outboxRelays },
             )
         }
 
-    override fun flow() = location.map(::convert)
+    override fun flow() = combine(location, outboxRelays, proxyRelays, ::convert)
 
-    override fun startValue(): LocationTopNavFilter = convert(location.value)
+    override fun startValue(): LocationTopNavFilter = convert(location.value, outboxRelays.value, proxyRelays.value)
 
     override suspend fun startValue(collector: FlowCollector<IFeedTopNavFilter>) {
         collector.emit(startValue())

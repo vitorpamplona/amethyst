@@ -68,7 +68,7 @@ fun filterPostsByGeohash(
                     Filter(
                         tags = geohashesToFollowMap,
                         kinds = PostsByGeohashKinds,
-                        limit = 200,
+                        limit = 100,
                         since = since,
                     ),
             ),
@@ -78,7 +78,7 @@ fun filterPostsByGeohash(
                     Filter(
                         tags = geohashesScoreMap,
                         kinds = CommentKinds,
-                        limit = 200,
+                        limit = 100,
                         since = since,
                     ),
             ),
