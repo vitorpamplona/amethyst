@@ -20,17 +20,26 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.function.BiConsumer
 
-class LargeCache<K, V> {
-    private val cache = ConcurrentSkipListMap<K, V>()
+class LargeSoftCache<K, V> {
+    private val cache = ConcurrentSkipListMap<K, WeakReference<V>>()
 
     fun keys() = cache.keys
 
-    fun values() = cache.values
+    fun get(key: K): V? {
+        val softRef = cache.get(key)
+        val value = softRef?.get()
 
-    fun get(key: K) = cache.get(key)
+        return if (value != null) {
+            value
+        } else {
+            cache.remove(key)
+            null
+        }
+    }
 
     fun remove(key: K) = cache.remove(key)
 
@@ -42,24 +51,41 @@ class LargeCache<K, V> {
 
     fun containsKey(key: K) = cache.containsKey(key)
 
+    /**
+     * Puts an object into the cache with a specified key.
+     * The object is stored as a SoftReference.
+     *
+     * @param key The key to associate with the object.
+     * @param value The object to cache.
+     */
     fun put(
         key: K,
         value: V,
     ) {
-        cache.put(key, value)
+        cache.put(key, WeakReference(value))
     }
 
+    /**
+     * Retrieves an object from the cache using its key.
+     * Returns the object if it's still available (not garbage collected),
+     * otherwise returns null. If the object has been garbage collected,
+     * its entry is also removed from the cache.
+     *
+     * @param key The key of the object to retrieve.
+     * @return The cached object, or null if it's no longer available.
+     */
     fun getOrCreate(
         key: K,
         builder: (key: K) -> V,
     ): V {
-        val value = cache.get(key)
+        val softRef = cache.get(key)
+        val value = softRef?.get()
 
         return if (value != null) {
             value
         } else {
             val newObject = builder(key)
-            cache.putIfAbsent(key, newObject) ?: newObject
+            cache.putIfAbsent(key, WeakReference(newObject))?.get() ?: newObject
         }
     }
 
@@ -67,13 +93,33 @@ class LargeCache<K, V> {
         key: K,
         builder: (key: K) -> V,
     ): Boolean {
-        val value = cache.get(key)
+        val softRef = cache.get(key)
+        val value = softRef?.get()
         return if (value != null) {
             false
         } else {
             val newObject = builder(key)
-            cache.putIfAbsent(key, newObject) == null
+            cache.putIfAbsent(key, WeakReference(newObject)) == null
         }
+    }
+
+    /**
+     * Proactively cleans up the cache by removing entries whose weakly referenced
+     * objects have been garbage collected. While `get` handles cleanup on access,
+     * this method can be called periodically or when memory pressure is high.
+     */
+    fun cleanUp() {
+        val keysToRemove = mutableListOf<K>()
+        forEach { key, softRef ->
+            if (softRef == null) {
+                keysToRemove.add(key)
+            }
+        }
+        keysToRemove.forEach { key ->
+            cache.remove(key)
+            println("Cleaned up entry for key: $key (object was garbage collected)")
+        }
+        println("Cache cleanup completed. Remaining size: ${cache.size}")
     }
 
     fun forEach(consumer: BiConsumer<K, V>) {
@@ -195,7 +241,7 @@ class LargeCache<K, V> {
     }
 
     private fun innerForEach(runner: BiConsumer<K, V>) {
-        cache.forEach(runner)
+        cache.forEach(BiConsumerWrapper(this, runner))
     }
 
     fun joinToString(
@@ -226,6 +272,23 @@ class LargeCache<K, V> {
         if (limit >= 0 && count > limit) buffer.append(truncated)
         buffer.append(postfix)
         return buffer.toString()
+    }
+
+    class BiConsumerWrapper<K, V>(
+        val cache: LargeSoftCache<K, V>,
+        val inner: BiConsumer<K, V>,
+    ) : BiConsumer<K, WeakReference<V>> {
+        override fun accept(
+            k: K,
+            ref: WeakReference<V>,
+        ) {
+            val value = ref.get()
+            if (value == null) {
+                cache.remove(k)
+            } else {
+                inner.accept(k, value)
+            }
+        }
     }
 
     fun interface BiFilter<K, V> {

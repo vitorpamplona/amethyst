@@ -36,6 +36,7 @@ class MemoryTrimmingService(
         account: Account? = null,
         otherAccounts: List<AccountInfo>,
     ) {
+        cache.cleanMemory()
         cache.cleanObservers()
 
         account?.let {

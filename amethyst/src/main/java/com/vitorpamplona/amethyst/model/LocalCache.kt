@@ -179,6 +179,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
+import com.vitorpamplona.quartz.utils.LargeSoftCache
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -208,9 +209,9 @@ interface ILocalCache {
 object LocalCache : ILocalCache {
     val antiSpam = AntiSpamFilter()
 
-    val users = LargeCache<HexKey, User>()
-    val notes = LargeCache<HexKey, Note>()
-    val addressables = LargeCache<Address, AddressableNote>()
+    val users = LargeSoftCache<HexKey, User>()
+    val notes = LargeSoftCache<HexKey, Note>()
+    val addressables = LargeSoftCache<Address, AddressableNote>()
 
     val chatroomList = LargeCache<HexKey, ChatroomList>()
     val publicChatChannels = LargeCache<HexKey, PublicChatChannel>()
@@ -2161,6 +2162,12 @@ object LocalCache : ILocalCache {
         modificationCache.put(note.idHex, newNotes)
 
         return newNotes
+    }
+
+    fun cleanMemory() {
+        notes.cleanUp()
+        addressables.cleanUp()
+        users.cleanUp()
     }
 
     fun cleanObservers() {

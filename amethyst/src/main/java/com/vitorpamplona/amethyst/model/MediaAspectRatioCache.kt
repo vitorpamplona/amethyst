@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 
 interface MutableMediaAspectRatioCache {
-    fun get(url: String): Float
+    fun get(url: String): Float?
 
     fun add(
         url: String,
@@ -35,7 +35,7 @@ interface MutableMediaAspectRatioCache {
 object MediaAspectRatioCache : MutableMediaAspectRatioCache {
     val mediaAspectRatioCacheByUrl = LruCache<String, Float>(1000)
 
-    override fun get(url: String) = mediaAspectRatioCacheByUrl.get(url)
+    override fun get(url: String): Float? = mediaAspectRatioCacheByUrl.get(url)
 
     override fun add(
         url: String,
