@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.serverList
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip02FollowLists.FollowListOutboxRelays
+import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -41,6 +42,7 @@ class MergedFollowPlusMineRelayListsState(
     val privateOutboxRelayList: PrivateStorageRelayListState,
     val localRelayList: LocalRelayListState,
     val trustedRelayList: TrustedRelayListState,
+    val broadcastRelayList: BroadcastRelayListState,
     val scope: CoroutineScope,
 ) {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
@@ -54,6 +56,7 @@ class MergedFollowPlusMineRelayListsState(
                 privateOutboxRelayList.flow,
                 localRelayList.flow,
                 trustedRelayList.flow,
+                broadcastRelayList.flow,
             ),
             ::mergeLists,
         ).onStart {
@@ -66,6 +69,7 @@ class MergedFollowPlusMineRelayListsState(
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
                         trustedRelayList.flow.value,
+                        broadcastRelayList.flow.value,
                     ),
                 ),
             )
@@ -81,6 +85,7 @@ class MergedFollowPlusMineRelayListsState(
                         privateOutboxRelayList.flow.value,
                         localRelayList.flow.value,
                         trustedRelayList.flow.value,
+                        broadcastRelayList.flow.value,
                     ),
                 ),
             )

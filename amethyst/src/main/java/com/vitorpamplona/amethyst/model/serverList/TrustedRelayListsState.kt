@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.serverList
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
@@ -43,6 +44,7 @@ class TrustedRelayListsState(
     val dmRelayList: DmRelayListState,
     val searchRelayListState: SearchRelayListState,
     val trustedRelayList: TrustedRelayListState,
+    val broadcastRelayList: BroadcastRelayListState,
     val scope: CoroutineScope,
 ) {
     fun mergeLists(lists: Array<Set<NormalizedRelayUrl>>): Set<NormalizedRelayUrl> = lists.reduce { acc, set -> acc + set }
@@ -56,6 +58,7 @@ class TrustedRelayListsState(
                 dmRelayList.flow,
                 searchRelayListState.flow,
                 trustedRelayList.flow,
+                broadcastRelayList.flow,
             ),
             ::mergeLists,
         ).onStart {
@@ -68,6 +71,7 @@ class TrustedRelayListsState(
                         dmRelayList.flow.value,
                         searchRelayListState.flow.value,
                         trustedRelayList.flow.value,
+                        broadcastRelayList.flow.value,
                     ),
                 ),
             )
@@ -83,6 +87,7 @@ class TrustedRelayListsState(
                         dmRelayList.flow.value,
                         searchRelayListState.flow.value,
                         trustedRelayList.flow.value,
+                        broadcastRelayList.flow.value,
                     ),
                 ),
             )

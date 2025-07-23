@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip01UserMetadata
 
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,7 @@ class AccountOutboxRelayState(
     nip65: Nip65RelayListState,
     privateStorage: PrivateStorageRelayListState,
     local: LocalRelayListState,
+    broadcast: BroadcastRelayListState,
     scope: CoroutineScope,
 ) {
     val flow =
@@ -41,14 +43,16 @@ class AccountOutboxRelayState(
             nip65.outboxFlow,
             privateStorage.flow,
             local.flow,
-        ) { nip65Inbox, privateOutBox, localRelays ->
-            nip65Inbox + privateOutBox + localRelays
+            broadcast.flow,
+        ) { nip65Inbox, privateOutBox, localRelays, broadcastRelays ->
+            nip65Inbox + privateOutBox + localRelays + broadcastRelays
         }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 nip65.outboxFlow.value +
                     privateStorage.flow.value +
-                    local.flow.value,
+                    local.flow.value +
+                    broadcast.flow.value,
             )
 }

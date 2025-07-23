@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayList
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -55,6 +56,7 @@ val AccountInfoAndListsFromKeyKinds2 =
     listOf(
         BlockedRelayListEvent.KIND,
         TrustedRelayListEvent.KIND,
+        BroadcastRelayListEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)

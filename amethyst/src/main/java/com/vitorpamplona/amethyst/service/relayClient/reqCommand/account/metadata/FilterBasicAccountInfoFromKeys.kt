@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
@@ -43,8 +44,13 @@ val BasicAccountInfoKinds =
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+    )
+
+val BasicAccountInfoKinds2 =
+    listOf(
         BlockedRelayListEvent.KIND,
         TrustedRelayListEvent.KIND,
+        BroadcastRelayListEvent.KIND,
     )
 
 fun filterBasicAccountInfoFromKeys(
@@ -61,7 +67,17 @@ fun filterBasicAccountInfoFromKeys(
                 Filter(
                     kinds = BasicAccountInfoKinds,
                     authors = otherAccounts.toList(),
-                    limit = otherAccounts.size * 8,
+                    limit = otherAccounts.size * BasicAccountInfoKinds.size,
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = BasicAccountInfoKinds2,
+                    authors = otherAccounts.toList(),
+                    limit = otherAccounts.size * BasicAccountInfoKinds2.size,
                     since = since,
                 ),
         ),

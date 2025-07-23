@@ -1064,9 +1064,6 @@
     <string name="search_relays_not_found_editing">Insert between 1–3 relays to use when searching for content or tagging users. Make sure your chosen relays implement NIP-50</string>
     <string name="search_relays_not_found_examples">Good options are:\n - nostr.wine\n - relay.nostr.band\n - relay.noswhere.com</string>
 
-    <string name="blocked_relays_title">Blocked Relays</string>
-    <string name="trusted_relays_title">Trusted Relays</string>
-
     <string name="dm_upload">DM Upload</string>
     <string name="relay_settings">Relay Settings</string>
     <string name="public_home_section">Public Outbox/Home Relays</string>
@@ -1091,9 +1088,15 @@
     <string name="local_section">Local Relays</string>
     <string name="local_section_explainer">List of relays that are running in this device.</string>
 
+    <string name="trusted_relays_title">Trusted Relays</string>
     <string name="trusted_section">Trusted Relays</string>
     <string name="trusted_section_explainer">Relays you trust to not need a Tor connection for</string>
 
+    <string name="broadcast_relays_title">Broadcast Relays</string>
+    <string name="broadcast_section">Broadcast Relays</string>
+    <string name="broadcast_section_explainer">Relays that specialize in pushing your notes to all of the other relays. Amethyst will add this relay to all new events made by you</string>
+
+    <string name="blocked_relays_title">Blocked Relays</string>
     <string name="blocked_section">Blocked Relays</string>
     <string name="blocked_section_explainer">Amethyst will never connect to these relays</string>
 

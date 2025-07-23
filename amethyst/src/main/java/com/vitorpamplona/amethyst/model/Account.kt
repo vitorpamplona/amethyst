@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleLi
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
@@ -242,6 +244,9 @@ class Account(
     val trustedRelayListDecryptionCache = TrustedRelayListDecryptionCache(signer)
     val trustedRelayList = TrustedRelayListState(signer, cache, trustedRelayListDecryptionCache, scope, settings)
 
+    val broadcastRelayListDecryptionCache = BroadcastRelayListDecryptionCache(signer)
+    val broadcastRelayList = BroadcastRelayListState(signer, cache, broadcastRelayListDecryptionCache, scope, settings)
+
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
@@ -280,15 +285,15 @@ class Account(
     val serverLists = MergedServerListState(fileStorageServers, blossomServers, scope)
 
     // Relay settings
-    val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
+    val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
-    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, scope)
+    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, broadcastRelayList, scope)
 
     // Follows Relays
     val followOutboxes = FollowListOutboxRelays(kind3FollowList, blockedRelayList, cache, scope)
-    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, trustedRelayList, scope)
+    val followPlusAllMine = MergedFollowPlusMineRelayListsState(followOutboxes, nip65RelayList, privateStorageRelayList, localRelayList, trustedRelayList, broadcastRelayList, scope)
 
     // keeps a cache of the outbox relays for each author
     val followsPerRelay = FollowsPerOutboxRelay(kind3FollowList, blockedRelayList, cache, scope).flow
@@ -1713,6 +1718,8 @@ class Account(
     suspend fun savePrivateOutboxRelayList(relays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(privateStorageRelayList.saveRelayList(relays))
 
     suspend fun saveSearchRelayList(searchRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(searchRelayList.saveRelayList(searchRelays))
+
+    suspend fun saveBroadcastRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(broadcastRelayList.saveRelayList(trustedRelays))
 
     suspend fun saveTrustedRelayList(trustedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(trustedRelayList.saveRelayList(trustedRelays))
 

@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -953,6 +954,12 @@ object LocalCache : ILocalCache {
 
     private fun consume(
         event: TrustedRelayListEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeBaseReplaceable(event, relay, wasVerified)
+
+    private fun consume(
+        event: BroadcastRelayListEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
@@ -2709,6 +2716,7 @@ object LocalCache : ILocalCache {
                 is BadgeProfilesEvent -> consume(event, relay, wasVerified)
                 is BlockedRelayListEvent -> consume(event, relay, wasVerified)
                 is BlossomServersEvent -> consume(event, relay, wasVerified)
+                is BroadcastRelayListEvent -> consume(event, relay, wasVerified)
                 is BookmarkListEvent -> consume(event, relay, wasVerified)
                 is CalendarEvent -> consume(event, relay, wasVerified)
                 is CalendarDateSlotEvent -> consume(event, relay, wasVerified)

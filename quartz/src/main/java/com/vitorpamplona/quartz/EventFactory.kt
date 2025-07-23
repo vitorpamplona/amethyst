@@ -82,6 +82,7 @@ import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.CalendarDateSlotEvent
@@ -161,6 +162,7 @@ class EventFactory {
                 BlockedRelayListEvent.KIND -> BlockedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 BlossomServersEvent.KIND -> BlossomServersEvent(id, pubKey, createdAt, tags, content, sig)
                 BlossomAuthorizationEvent.KIND -> BlossomAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
+                BroadcastRelayListEvent.KIND -> BroadcastRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 BookmarkListEvent.KIND -> BookmarkListEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarDateSlotEvent.KIND -> CalendarDateSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarEvent.KIND -> CalendarEvent(id, pubKey, createdAt, tags, content, sig)

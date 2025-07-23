@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.BlockedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.blocked.renderBlockedItems
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.BroadcastRelayListViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.broadcast.renderBroadcastItems
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.ConnectedRelayListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected.renderConnectedItems
@@ -83,6 +85,7 @@ fun AllRelayListScreen(
     val trustedViewModel: TrustedRelayListViewModel = viewModel()
     val localViewModel: LocalRelayListViewModel = viewModel()
     val connectedViewModel: ConnectedRelayListViewModel = viewModel()
+    val broadcastViewModel: BroadcastRelayListViewModel = viewModel()
 
     dmViewModel.init(accountViewModel)
     nip65ViewModel.init(accountViewModel)
@@ -92,6 +95,7 @@ fun AllRelayListScreen(
     connectedViewModel.init(accountViewModel)
     blockedViewModel.init(accountViewModel)
     trustedViewModel.init(accountViewModel)
+    broadcastViewModel.init(accountViewModel)
 
     LaunchedEffect(accountViewModel) {
         dmViewModel.load()
@@ -102,6 +106,7 @@ fun AllRelayListScreen(
         connectedViewModel.load()
         blockedViewModel.load()
         trustedViewModel.load()
+        broadcastViewModel.load()
     }
 
     MappedAllRelayListView(
@@ -113,6 +118,7 @@ fun AllRelayListScreen(
         connectedViewModel,
         blockedViewModel,
         trustedViewModel,
+        broadcastViewModel,
         accountViewModel,
         nav,
     )
@@ -129,6 +135,7 @@ fun MappedAllRelayListView(
     connectedViewModel: ConnectedRelayListViewModel,
     blockedViewModel: BlockedRelayListViewModel,
     trustedViewModel: TrustedRelayListViewModel,
+    broadcastViewModel: BroadcastRelayListViewModel,
     accountViewModel: AccountViewModel,
     newNav: INav,
 ) {
@@ -141,6 +148,7 @@ fun MappedAllRelayListView(
     val trustedFeedState by trustedViewModel.relays.collectAsStateWithLifecycle()
     val localFeedState by localViewModel.relays.collectAsStateWithLifecycle()
     val connectedRelays by connectedViewModel.relays.collectAsStateWithLifecycle()
+    val broadcastRelays by broadcastViewModel.relays.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -154,6 +162,7 @@ fun MappedAllRelayListView(
                     privateOutboxViewModel.clear()
                     trustedViewModel.clear()
                     blockedViewModel.clear()
+                    broadcastViewModel.clear()
                     newNav.popBack()
                 },
                 onPost = {
@@ -164,6 +173,7 @@ fun MappedAllRelayListView(
                     privateOutboxViewModel.create()
                     trustedViewModel.create()
                     blockedViewModel.create()
+                    broadcastViewModel.create()
                     newNav.popBack()
                 },
             )
@@ -220,6 +230,15 @@ fun MappedAllRelayListView(
                 )
             }
             renderPrivateOutboxItems(privateOutboxFeedState, privateOutboxViewModel, accountViewModel, newNav)
+
+            item {
+                SettingsCategory(
+                    stringRes(R.string.broadcast_section),
+                    stringRes(R.string.broadcast_section_explainer),
+                    SettingsCategorySpacingModifier,
+                )
+            }
+            renderBroadcastItems(broadcastRelays, broadcastViewModel, accountViewModel, newNav)
 
             item {
                 SettingsCategoryWithButton(
