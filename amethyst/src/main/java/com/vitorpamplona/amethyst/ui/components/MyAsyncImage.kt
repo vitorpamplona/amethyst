@@ -76,13 +76,13 @@ fun MyAsyncImage(
                             }
                         } else {
                             WaitAndDisplay {
-                                Box(contentAlignment = Alignment.Center) {
-                                    if (onLoadingBackground != null) {
+                                if (onLoadingBackground != null) {
+                                    Box(loadedImageModifier, contentAlignment = Alignment.Center) {
                                         onLoadingBackground()
                                         LoadingAnimation(Size40dp, Size6dp)
-                                    } else {
-                                        DisplayUrlWithLoadingSymbol(imageUrl)
                                     }
+                                } else {
+                                    DisplayUrlWithLoadingSymbol(imageUrl)
                                 }
                             }
                         }
