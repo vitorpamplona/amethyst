@@ -27,7 +27,7 @@ import java.net.Proxy
 import java.time.Duration
 
 class OkHttpClientFactory(
-    val keyCache: EncryptionKeyCache,
+    keyCache: EncryptionKeyCache,
 ) {
     companion object {
         // by picking a random proxy port, the connection will fail as it shouold.
