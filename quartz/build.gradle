@@ -57,7 +57,7 @@ dependencies {
 
     // LibSodium for ChaCha encryption (NIP-44)
     // Wait for @aar support in version catalogs
-    implementation "com.goterl:lazysodium-android:5.1.0@aar"
+    implementation 'com.goterl:lazysodium-android:5.2.0@aar'
     implementation 'net.java.dev.jna:jna:5.17.0@aar'
 
     //implementation (libs.lazysodium.android) { artifact { type = "aar" } }
