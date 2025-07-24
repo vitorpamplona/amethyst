@@ -101,7 +101,7 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
