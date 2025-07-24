@@ -10,7 +10,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         maven {
-            url "https://jitpack.io"
+            url = "https://jitpack.io"
             content {
                 includeModule 'com.github.UnifiedPush', 'android-connector'
             }
@@ -23,8 +23,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url "https://jitpack.io" }
-        maven { url "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
+        maven { url = "https://jitpack.io" }
+        maven { url = "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
     }
 }
 
