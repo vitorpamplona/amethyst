@@ -46,6 +46,12 @@ class RelayUrlNormalizer {
 
         fun isRelaySchemePrefixInsecure(url: String) = url[2] == ':' && url[3] == '/' && url[4] == '/' && url[5] != '/'
 
+        fun isHttpPrefix(url: String) = url.length > 8 && url[0] == 'h' && url[1] == 't' && url[2] == 't' && url[3] == 'p'
+
+        fun isHttpSSuffix(url: String) = url[4] == 's' && url[5] == ':' && url[6] == '/' && url[7] == '/'
+
+        fun isHttpSuffix(url: String) = url[4] == ':' && url[5] == '/' && url[6] == '/'
+
         fun isRelayUrl(url: String): Boolean {
             val trimmed = url.trim().ifEmpty { return false }
 
@@ -72,7 +78,7 @@ class RelayUrlNormalizer {
 
         @OptIn(ExperimentalContracts::class)
         fun fix(url: String): String? {
-            val trimmed = url.trim().ifEmpty { return null }
+            val trimmed = url.trim()
 
             if (trimmed.isEmpty()) return null
 
@@ -84,11 +90,11 @@ class RelayUrlNormalizer {
             }
 
             // fast for good https:// urls
-            if (trimmed.length > 8 && trimmed[0] == 'h' && trimmed[1] == 't' && trimmed[2] == 't' && trimmed[3] == 'p') {
-                if (trimmed[4] == 's' && trimmed[5] == ':' && trimmed[6] == '/' && trimmed[7] == '/') {
+            if (isHttpPrefix(trimmed)) {
+                if (isHttpSSuffix(trimmed)) {
                     // https://
                     return "wss://${trimmed.drop(8)}"
-                } else if (trimmed[4] == ':' && trimmed[5] == '/' && trimmed[6] == '/') {
+                } else if (isHttpSuffix(trimmed)) {
                     // http://
                     return "ws://${trimmed.drop(7)}"
                 }
