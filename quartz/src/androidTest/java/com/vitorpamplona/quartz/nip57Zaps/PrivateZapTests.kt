@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEncryption.Companion.createEncryptionPrivateKey
 import com.vitorpamplona.quartz.utils.Hex
@@ -93,7 +94,7 @@ class PrivateZapTests {
             runBlocking {
                 LnZapRequestEvent.create(
                     zappedEvent = poll,
-                    relays = setOf("wss://relay.damus.io/"),
+                    relays = setOf(RelayUrlNormalizer.normalize("wss://relay.damus.io/")),
                     signer = loggedIn,
                     pollOption = 0,
                     message = "",
@@ -153,7 +154,12 @@ class PrivateZapTests {
             runBlocking {
                 LnZapRequestEvent.create(
                     zappedEvent = textNote,
-                    relays = setOf("wss://relay.damus.io/", "wss://relay.damus2.io/", "wss://relay.damus3.io/"),
+                    relays =
+                        setOf(
+                            RelayUrlNormalizer.normalize("wss://relay.damus.io/"),
+                            RelayUrlNormalizer.normalize("wss://relay.damus2.io/"),
+                            RelayUrlNormalizer.normalize("wss://relay.damus3.io/"),
+                        ),
                     signer = loggedIn,
                     pollOption = null,
                     message = "test",

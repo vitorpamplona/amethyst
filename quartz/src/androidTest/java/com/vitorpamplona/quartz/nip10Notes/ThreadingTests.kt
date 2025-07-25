@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
@@ -186,7 +187,7 @@ class ThreadingTests {
 
         val taggedUsers =
             listOf(
-                PTag("4ca4f5533e40da5e0508796d409e6bb35a50b26fc304345617ab017183d83ac0", "wss://goiaba.com"),
+                PTag("4ca4f5533e40da5e0508796d409e6bb35a50b26fc304345617ab017183d83ac0", RelayUrlNormalizer.normalize("wss://goiaba.com")),
                 PTag("534780e44da7b494485e85cd4cca6af4f6caa1627472432b6f2a4ece0e9e54ec"),
                 PTag("77ce56f89d1228f7ff3743ce1ad1b254857b9008564727ebd5a1f317362f6ca7"),
             )
@@ -249,7 +250,7 @@ class ThreadingTests {
 
         val taggedUsers =
             listOf(
-                PTag("534780e44da7b494485e85cd4cca6af4f6caa1627472432b6f2a4ece0e9e54ec", "wss://banana.com"),
+                PTag("534780e44da7b494485e85cd4cca6af4f6caa1627472432b6f2a4ece0e9e54ec", RelayUrlNormalizer.normalize("wss://banana.com")),
             )
 
         assertEquals(taggedUsers, note.taggedUsers())
@@ -302,7 +303,7 @@ class ThreadingTests {
 
         val taggedUsers =
             listOf(
-                PTag("534780e44da7b494485e85cd4cca6af4f6caa1627472432b6f2a4ece0e9e54ec", "wss://banana.com"),
+                PTag("534780e44da7b494485e85cd4cca6af4f6caa1627472432b6f2a4ece0e9e54ec", RelayUrlNormalizer.normalize("wss://banana.com")),
             )
 
         assertEquals(taggedUsers, note.taggedUsers())

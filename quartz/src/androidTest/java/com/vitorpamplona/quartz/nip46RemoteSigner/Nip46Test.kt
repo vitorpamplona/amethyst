@@ -23,8 +23,10 @@ package com.vitorpamplona.quartz.nip46RemoteSigner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
@@ -39,11 +41,18 @@ internal class Nip46Test {
     val peer = NostrSignerInternal(KeyPair())
 
     val dummyEvent =
-        Event(
+        EventTemplate<Event>(
+            createdAt = TimeUtils.now(),
+            kind = 1,
+            tags = emptyArray(),
+            content = "test",
+        )
+
+    val dummyEventSigned =
+        TextNoteEvent(
             id = "",
             pubKey = "",
             createdAt = TimeUtils.now(),
-            kind = 1,
             tags = emptyArray(),
             content = "test",
             sig = "",
@@ -63,7 +72,7 @@ internal class Nip46Test {
 
             assertEquals(BunkerRequestSign.METHOD_NAME, actual.method)
             assertEquals(expected.id, actual.id)
-            assertEquals(dummyEvent.id, actual.event.id)
+            assertEquals(dummyEvent.createdAt, actual.event.createdAt)
         }
 
     @Test
@@ -192,13 +201,13 @@ internal class Nip46Test {
     @Test
     fun testEventResponse() =
         runBlocking {
-            val expected = BunkerResponseEvent(event = dummyEvent)
+            val expected = BunkerResponseEvent(event = dummyEventSigned)
             val actual = encodeDecodeEvent(expected)
 
             assertEquals(expected.id, actual.id)
             assertEquals(expected.result, actual.result)
             assertEquals(expected.error, actual.error)
-            assertEquals(dummyEvent.id, actual.event.id)
+            assertEquals(dummyEventSigned.id, actual.event.id)
         }
 
     @Test
