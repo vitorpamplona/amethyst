@@ -94,10 +94,18 @@ class AccountStateViewModel : ViewModel() {
         }
     }
 
-    private suspend fun tryLoginExistingAccount(route: Route? = null) =
-        withContext(Dispatchers.IO) {
-            LocalPreferences.loadCurrentAccountFromEncryptedStorage()
-        }?.let { startUI(it, route) } ?: run { requestLoginUI() }
+    private suspend fun tryLoginExistingAccount(route: Route? = null) {
+        val accountSettings =
+            withContext(Dispatchers.IO) {
+                LocalPreferences.loadCurrentAccountFromEncryptedStorage()
+            }
+
+        if (accountSettings != null) {
+            startUI(accountSettings, route)
+        } else {
+            requestLoginUI()
+        }
+    }
 
     private suspend fun requestLoginUI() {
         _accountContent.update { AccountState.LoggedOff }
