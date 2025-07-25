@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip02FollowList
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -44,7 +44,7 @@ class ContactListEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     AddressHintProvider,
     PubKeyHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
