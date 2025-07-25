@@ -34,7 +34,7 @@ open class Event(
     val id: HexKey,
     val pubKey: HexKey,
     val createdAt: Long,
-    val kind: Int,
+    val kind: Kind,
     val tags: TagArray,
     val content: String,
     val sig: HexKey,
