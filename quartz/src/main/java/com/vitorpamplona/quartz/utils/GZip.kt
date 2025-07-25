@@ -18,23 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32.entities
+package com.vitorpamplona.quartz.utils
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip19Bech32.toNEmbed
-import com.vitorpamplona.quartz.utils.GZip
+import java.io.ByteArrayOutputStream
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 
-@Immutable
-data class NEmbed(
-    val event: Event,
-) : Entity {
+class GZip {
     companion object {
-        fun parse(bytes: ByteArray): NEmbed? {
-            if (bytes.isEmpty()) return null
-            return NEmbed(Event.fromJson(GZip.decompress(bytes)))
+        fun compress(content: String): ByteArray {
+            val bos = ByteArrayOutputStream()
+            GZIPOutputStream(bos).bufferedWriter(Charsets.UTF_8).use { it.write(content) }
+            return bos.toByteArray()
         }
 
-        fun create(event: Event): String = GZip.compress(event.toJson()).toNEmbed()
+        fun decompress(content: ByteArray): String = GZIPInputStream(content.inputStream()).bufferedReader(Charsets.UTF_8).use { it.readText() }
     }
 }
