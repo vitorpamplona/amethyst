@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.verify
 import com.vitorpamplona.quartz.nip01Core.verifyId
 import com.vitorpamplona.quartz.nip01Core.verifySignature
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import junit.framework.TestCase.assertTrue
 import org.junit.Rule
@@ -90,7 +91,7 @@ class EventBenchmark {
         val now = TimeUtils.now()
         val tags = arrayOf(arrayOf(""))
         benchmarkRule.measureRepeated {
-            EventFactory.create("id", "pubkey", now, 1, tags, "content", "sig")
+            EventFactory.create<TextNoteEvent>("id", "pubkey", now, 1, tags, "content", "sig")
         }
     }
 
@@ -99,7 +100,7 @@ class EventBenchmark {
         val now = TimeUtils.now()
         val tags = arrayOf(arrayOf(""))
         benchmarkRule.measureRepeated {
-            EventFactory.create("id", "pubkey", now, 30818, tags, "content", "sig")
+            EventFactory.create<TextNoteEvent>("id", "pubkey", now, 30818, tags, "content", "sig")
         }
     }
 }
