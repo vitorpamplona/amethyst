@@ -21,8 +21,10 @@
 package com.vitorpamplona.quartz.nip47WalletConnect
 
 import androidx.core.net.toUri
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
@@ -71,6 +73,12 @@ class Nip47WalletConnect {
                     secret,
                 )
             }
+
+        companion object {
+            fun parser(json: String) = JsonMapper.mapper.readValue<Nip47WalletConnect.Nip47URI>(json)
+
+            fun serializer(value: Nip47URI) = JsonMapper.mapper.writeValueAsString(value)
+        }
     }
 
     data class Nip47URINorm(
