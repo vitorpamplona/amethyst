@@ -31,22 +31,22 @@ import java.util.function.Consumer
 import java.util.zip.GZIPInputStream
 
 open class BaseLargeCacheBenchmark {
-    fun getEventDB(): List<Event> {
-        // This file includes duplicates
-        val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_startup_data.json")
+    companion object {
+        fun getEventDB(): List<Event> {
+            // This file includes duplicates
+            val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_startup_data.json")
 
-        return JsonMapper.mapper.readValue<ArrayList<Event>>(
-            GZIPInputStream(fullDBInputStream),
-        )
+            return JsonMapper.mapper.readValue<ArrayList<Event>>(
+                GZIPInputStream(fullDBInputStream),
+            )
+        }
     }
 
     fun getLargeCache(db: List<Event>): LargeCache<HexKey, Event> {
         val cache = LargeCache<HexKey, Event>()
 
-        db.forEach {
-            cache.getOrCreate(it.id) { key ->
-                it
-            }
+        db.forEach { event ->
+            cache.getOrCreate(event.id) { key -> event }
         }
 
         return cache
