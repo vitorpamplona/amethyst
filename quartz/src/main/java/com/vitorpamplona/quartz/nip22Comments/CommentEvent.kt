@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.nip22Comments.tags.RootEventTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootIdentifierTag
 import com.vitorpamplona.quartz.nip22Comments.tags.RootKindTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -71,7 +72,10 @@ class CommentEvent(
     RootScope,
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun pubKeyHints(): List<PubKeyHint> {
         val pHints =
             tags.mapNotNull(RootAuthorTag::parseAsHint) +

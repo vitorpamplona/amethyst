@@ -46,6 +46,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -61,7 +62,10 @@ class LiveActivitiesChatMessageEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
-    ExposeInDraft {
+    ExposeInDraft,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

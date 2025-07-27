@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.base.channel
 import com.vitorpamplona.quartz.nip28PublicChat.base.reply
 import com.vitorpamplona.quartz.nip37Drafts.ExposeInDraft
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -65,7 +66,10 @@ class ChannelMessageEvent(
     ExposeInDraft,
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

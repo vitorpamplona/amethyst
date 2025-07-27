@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.UUID
 
@@ -67,7 +68,10 @@ class LongTextNoteEvent(
     EventHintProvider,
     PubKeyHintProvider,
     AddressHintProvider,
-    RootScope {
+    RootScope,
+    SearchableEvent {
+    override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
+
     override fun eventHints(): List<EventIdHint> {
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
         val nip19Hints = citedNIP19().eventHints()

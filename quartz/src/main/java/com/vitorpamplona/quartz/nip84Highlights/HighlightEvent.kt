@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip22Comments.RootScope
 import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip84Highlights.tags.CommentTag
 import com.vitorpamplona.quartz.nip84Highlights.tags.ContextTag
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -63,7 +64,10 @@ class HighlightEvent(
     RootScope,
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = "comment: " + comment() + "\ncontext: " + context() + "\n" + content
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip10Notes.tags.markedETags
 import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
+import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip19Bech32.addressHints
 import com.vitorpamplona.quartz.nip19Bech32.addressIds
@@ -44,6 +45,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -57,7 +59,10 @@ class TextNoteEvent(
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = "Subject: " + subject() + "\n" + content
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
@@ -108,7 +113,7 @@ class TextNoteEvent(
         const val KIND = 1
         const val ALT = "A short note: "
 
-        fun shortedMessageForAlt(msg: String): String {
+        private fun shortedMessageForAlt(msg: String): String {
             if (msg.length < 50) return ALT + msg
             return ALT + msg.take(50) + "..."
         }

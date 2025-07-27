@@ -45,6 +45,8 @@ open class Event(
      */
     open fun isContentEncoded() = false
 
+    open fun extraIndexableTagNames() = emptySet<String>()
+
     open fun countMemory(): Long =
         7 * pointerSizeInBytes + // 7 fields, 4 bytes each reference (32bit)
             12L + // createdAt + kind

@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -60,7 +61,10 @@ class PollNoteEvent(
 ) : BaseThreadedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     AddressHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = content + pollOptionsArray().map { "\nOption: " + it.descriptor }
+
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)
