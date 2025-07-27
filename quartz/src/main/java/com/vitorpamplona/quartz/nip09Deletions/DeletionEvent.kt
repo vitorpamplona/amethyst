@@ -93,6 +93,25 @@ class DeletionEvent(
             initializer()
         }
 
+        fun buildAddressOnly(
+            deleteEvents: List<Event>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<DeletionEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT)
+
+            deleteEvents.forEach {
+                if (it is AddressableEvent) {
+                    aTag(it.aTag())
+                }
+            }
+
+            pTagIds(deleteEvents.mapTo(HashSet()) { it.pubKey })
+            kinds(deleteEvents.mapTo(HashSet()) { it.kind })
+
+            initializer()
+        }
+
         fun buildForVersionOnly(
             deleteEvents: List<Event>,
             createdAt: Long = TimeUtils.now(),
