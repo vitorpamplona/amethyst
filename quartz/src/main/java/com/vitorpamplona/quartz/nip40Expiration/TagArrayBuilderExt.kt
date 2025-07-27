@@ -23,4 +23,4 @@ package com.vitorpamplona.quartz.nip40Expiration
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
-fun TagArrayBuilder<Event>.expiration(time: Long) = addUnique(ExpirationTag.assemble(time))
+fun <T : Event> TagArrayBuilder<T>.expiration(time: Long) = addUnique(ExpirationTag.assemble(time))
