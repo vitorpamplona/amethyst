@@ -80,10 +80,6 @@ class Filter(
             (search != null && search.isNotEmpty())
 
     init {
-        if (!isFilledFilter()) {
-            Log.e("FilterError", "Filter is empty: ${toJson()}")
-        }
-
         ids?.forEach {
             if (it.length != 64) Log.e("FilterError", "Invalid id length $it on ${toJson()}")
         }
