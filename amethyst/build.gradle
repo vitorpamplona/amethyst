@@ -237,6 +237,7 @@ dependencies {
 
     // Encrypted Key Storage
     implementation libs.androidx.security.crypto.ktx
+    implementation libs.androidx.datastore.preferences
 
     // view videos
     implementation libs.androidx.media3.exoplayer

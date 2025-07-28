@@ -15,6 +15,7 @@ biometricKtx = "1.2.0-alpha05"
 coil = "3.3.0"
 composeBom = "2025.07.00"
 coreKtx = "1.16.0"
+datastore = "1.1.7"
 espressoCore = "3.6.1"
 firebaseBom = "34.0.0"
 fragmentKtx = "1.8.8"
@@ -69,6 +70,7 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "androidxCamera" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
