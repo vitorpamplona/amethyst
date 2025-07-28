@@ -71,7 +71,8 @@ class JsonMapper {
                         .addSerializer(Permission::class.java, PermissionSerializer())
                         .addDeserializer(IntentResult::class.java, IntentResultJsonDeserializer())
                         .addSerializer(IntentResult::class.java, IntentResultJsonSerializer())
-                        .addDeserializer(Array<Array<String>>::class.java, TagArrayDeserializer()),
+                        .addDeserializer(Array<Array<String>>::class.java, TagArrayDeserializer())
+                        .addSerializer(Array<Array<String>>::class.java, TagArraySerializer()),
                 )
 
         fun fromJson(json: String): Event = mapper.readValue(json, Event::class.java)
