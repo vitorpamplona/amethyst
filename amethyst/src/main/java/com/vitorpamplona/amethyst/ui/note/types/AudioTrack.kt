@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -183,7 +184,7 @@ fun AudioHeader(
     nav: INav,
 ) {
     val media = remember { noteEvent.stream() ?: noteEvent.download() }
-    val waveform = remember { noteEvent.wavefrom() }
+    val waveform = remember { noteEvent.wavefrom()?.let { WaveformData(it.wave) } }
     val content = remember { noteEvent.content.ifBlank { null } }
 
     val defaultBackground = MaterialTheme.colorScheme.background

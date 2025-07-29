@@ -154,6 +154,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -551,7 +552,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is PictureEvent) {
                     PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
                 } else if (noteEvent is BaseVoiceEvent) {
-                    VoiceEventDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
+                    VoiceHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
                     FileHeaderDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, accountViewModel = accountViewModel)
                 } else if (noteEvent is FileStorageHeaderEvent) {
