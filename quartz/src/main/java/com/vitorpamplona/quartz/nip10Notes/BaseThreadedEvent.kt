@@ -21,21 +21,10 @@
 package com.vitorpamplona.quartz.nip10Notes
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedATags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
-import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithEventsOrAddresses
-import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithPeople
-import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
-import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
-import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
@@ -49,16 +38,7 @@ open class BaseThreadedEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
-    @Transient
-    private var citedUsersCache: Set<String>? = null
-
-    @Transient
-    private var citedNotesCache: Set<String>? = null
-
-    @Transient
-    private var citedNIP19Cache: List<Entity>? = null
-
+) : BaseNoteEvent(id, pubKey, createdAt, kind, tags, content, sig) {
     fun mentions() = taggedUsers()
 
     fun markedRoot() = tags.firstNotNullOfOrNull(MarkedETag::parseRoot)
@@ -90,54 +70,6 @@ open class BaseThreadedEvent(
         val newStyleRoot = tags.lastOrNull { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "root" }?.get(1)
 
         return newStyleReply ?: newStyleRoot ?: oldStylePositional
-    }
-
-    fun citedNIP19(): List<Entity> {
-        citedNIP19Cache?.let {
-            return it
-        }
-
-        return findNostrUris(content).also { citedNIP19Cache = it }
-    }
-
-    fun citedUsers(): Set<HexKey> {
-        citedUsersCache?.let {
-            return it
-        }
-
-        val citedUsers = mutableSetOf<String>()
-
-        findIndexTagsWithPeople(content, tags, citedUsers)
-        citedNIP19().forEach { parsed ->
-            when (parsed) {
-                is NProfile -> citedUsers.add(parsed.hex)
-                is NPub -> citedUsers.add(parsed.hex)
-            }
-        }
-
-        citedUsersCache = citedUsers
-        return citedUsers
-    }
-
-    fun findCitations(): Set<HexKey> {
-        citedNotesCache?.let {
-            return it
-        }
-
-        val citations = mutableSetOf<String>()
-
-        findIndexTagsWithEventsOrAddresses(content, tags, citations).toMutableSet()
-        citedNIP19().forEach { entity ->
-            when (entity) {
-                is NEvent -> citations.add(entity.hex)
-                is NAddress -> citations.add(entity.aTag())
-                is NNote -> citations.add(entity.hex)
-                is NEmbed -> citations.add(entity.event.id)
-            }
-        }
-
-        citedNotesCache = citations
-        return citations
     }
 
     fun tagsWithoutCitations(): List<String> {

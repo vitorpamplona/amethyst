@@ -1214,6 +1214,7 @@
 
     <string name="temporary_account">Log off on device lock</string>
     <string name="private_message">Private Message</string>
+    <string name="public_message">Public Message</string>
 
     <string name="group_relay">Chat Relay</string>
     <string name="group_relay_explanation">The relay that all users of this chat connect to</string>

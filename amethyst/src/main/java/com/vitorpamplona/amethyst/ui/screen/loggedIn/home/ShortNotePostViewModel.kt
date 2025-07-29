@@ -136,6 +136,9 @@ open class ShortNotePostViewModel :
     IZapRaiser {
     val draftTag = DraftTagState()
 
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
@@ -147,9 +150,6 @@ open class ShortNotePostViewModel :
         }
     }
 
-    var accountViewModel: AccountViewModel? = null
-    var account: Account? = null
-
     var originalNote: Note? by mutableStateOf(null)
     var forkedFromNote: Note? by mutableStateOf(null)
 
@@ -157,8 +157,7 @@ open class ShortNotePostViewModel :
     var eTags by mutableStateOf<List<Note>?>(null)
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by
-        mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
+    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     override var message by mutableStateOf(TextFieldValue(""))
 
@@ -213,11 +212,11 @@ open class ShortNotePostViewModel :
     var wantsZapRaiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
 
-    fun hasLnAddress(): Boolean = account?.userProfile()?.info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
 
-    fun user(): User? = account?.userProfile()
+    fun user(): User? = account.userProfile()
 
     open fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -239,7 +238,6 @@ open class ShortNotePostViewModel :
         version: Note?,
         draft: Note?,
     ) {
-        val accountViewModel = accountViewModel ?: return
         val noteEvent = draft?.event
         val noteAuthor = draft?.author
 
@@ -369,8 +367,8 @@ open class ShortNotePostViewModel :
     }
 
     private fun loadFromDraft(draftEvent: TextNoteEvent) {
-        canAddInvoice = accountViewModel?.userProfile()?.info?.lnAddress() != null
-        canAddZapRaiser = accountViewModel?.userProfile()?.info?.lnAddress() != null
+        canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
+        canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
         multiOrchestrator = null
 
         val localForwardZapTo = draftEvent.tags.filter { it.size > 1 && it[0] == "zap" }
@@ -475,15 +473,15 @@ open class ShortNotePostViewModel :
             }
         }
 
-        accountViewModel?.account?.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
 
-        accountViewModel?.deleteDraft(draftTag.current)
+        accountViewModel.deleteDraft(draftTag.current)
 
         cancel()
     }
 
     suspend fun sendDraftSync() {
-        val accountViewModel = accountViewModel ?: return
+        val accountViewModel = accountViewModel
 
         if (message.text.isBlank()) {
             accountViewModel.account.deleteDraft(draftTag.current)
@@ -492,24 +490,19 @@ open class ShortNotePostViewModel :
             accountViewModel.account.createAndSendDraft(draftTag.current, template)
 
             nip95attachments.forEach {
-                account?.sendToPrivateOutboxAndLocal(it.first)
-                account?.sendToPrivateOutboxAndLocal(it.second)
+                account.sendToPrivateOutboxAndLocal(it.first)
+                account.sendToPrivateOutboxAndLocal(it.second)
             }
         }
     }
 
     private suspend fun createTemplate(): EventTemplate<out Event>? {
-        if (accountViewModel == null) {
-            cancel()
-            return null
-        }
-
         val tagger =
             NewMessageTagger(
                 message.text,
                 pTags,
                 eTags,
-                accountViewModel!!,
+                accountViewModel,
             )
         tagger.run()
 
@@ -518,7 +511,7 @@ open class ShortNotePostViewModel :
         val geoHash = (location?.value as? LocationState.LocationResult.Success)?.geoHash?.toString()
         val localZapRaiserAmount = if (wantsZapRaiser) zapRaiserAmount.value else null
 
-        val emojis = findEmoji(tagger.message, account?.emoji?.myEmojis?.value)
+        val emojis = findEmoji(tagger.message, account.emoji.myEmojis.value)
         val urls = findURLs(tagger.message)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
 
@@ -607,8 +600,6 @@ open class ShortNotePostViewModel :
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
-            val myAccount = account ?: return@launch
-
             val myMultiOrchestrator = multiOrchestrator ?: return@launch
 
             isUploadingImage = true
@@ -619,16 +610,16 @@ open class ShortNotePostViewModel :
                     contentWarningReason,
                     MediaCompressor.intToCompressorQuality(mediaQuality),
                     server,
-                    myAccount,
+                    account,
                     context,
                 )
 
             if (results.allGood) {
                 results.successful.forEach { state ->
                     if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        val nip95 = myAccount.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
+                        val nip95 = account.createNip95(state.result.bytes, headerInfo = state.result.fileHeader, alt, contentWarningReason)
                         nip95attachments = nip95attachments + nip95
-                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
                         note?.let {
                             message = message.insertUrlAtCursor("nostr:" + it.toNEvent())
@@ -786,8 +777,7 @@ open class ShortNotePostViewModel :
                 item.link.url,
             ) {
                 Amethyst.instance.okHttpClients.getHttpClient(
-                    accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url)
-                        ?: false,
+                    accountViewModel.account.privacyState.shouldUseTorForImageDownload(item.link.url),
                 )
             }
         }
@@ -870,7 +860,7 @@ open class ShortNotePostViewModel :
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
             val tagger =
-                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
+                NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

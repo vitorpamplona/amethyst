@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01N
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -63,6 +64,7 @@ val NotificationsPerKeyKinds =
         EphemeralChatEvent.KIND,
         BadgeAwardEvent.KIND,
         PollNoteEvent.KIND,
+        PublicMessageEvent.KIND,
     )
 
 val NotificationsPerKeyKinds2 =

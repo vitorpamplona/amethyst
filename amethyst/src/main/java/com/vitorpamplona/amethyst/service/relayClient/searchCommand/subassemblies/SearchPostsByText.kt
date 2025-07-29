@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -69,7 +70,7 @@ val SearchPostsByTextKinds2 =
         EmojiPackEvent.KIND,
         HighlightEvent.KIND,
         LiveActivitiesEvent.KIND,
-        PollNoteEvent.KIND,
+        PublicMessageEvent.KIND,
         NNSEvent.KIND,
         WikiNoteEvent.KIND,
         CommentEvent.KIND,

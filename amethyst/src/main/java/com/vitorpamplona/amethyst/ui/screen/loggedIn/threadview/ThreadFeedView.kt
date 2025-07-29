@@ -148,6 +148,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
@@ -184,6 +185,7 @@ import com.vitorpamplona.quartz.experimental.forks.forkFromAddress
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
@@ -642,6 +644,8 @@ private fun FullBleedNoteCompose(
                     RenderDraft(baseNote, 3, true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {
                     RenderHighlight(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is PublicMessageEvent) {
+                    RenderPublicMessage(baseNote, false, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CommentEvent) {
                     RenderTextEvent(
                         baseNote,

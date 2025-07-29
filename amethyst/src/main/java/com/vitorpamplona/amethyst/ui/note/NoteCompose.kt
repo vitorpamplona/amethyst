@@ -119,12 +119,14 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -160,6 +162,7 @@ import com.vitorpamplona.quartz.experimental.forks.isAFork
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -214,6 +217,7 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.coroutines.delay
 
 @Composable
@@ -790,7 +794,7 @@ private fun RenderNoteRow(
         is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
-
+        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(
@@ -865,7 +869,16 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
-
+        is PublicMessageEvent ->
+            RenderPublicMessage(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
         else -> {
             RenderTextEvent(
                 baseNote,

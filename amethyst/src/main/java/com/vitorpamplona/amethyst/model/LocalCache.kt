@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.checkSignature
@@ -84,7 +85,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.VerificationState
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
-import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -536,6 +537,12 @@ object LocalCache : ILocalCache {
     ) = consumeRegularEvent(event, relay, wasVerified)
 
     fun consume(
+        event: PublicMessageEvent,
+        relay: NormalizedRelayUrl? = null,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
         event: TorrentEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
@@ -575,7 +582,7 @@ object LocalCache : ILocalCache {
         // Already processed this event.
         if (note.event != null) return false
 
-        if (event is BaseThreadedEvent && antiSpam.isSpam(event, relay)) {
+        if (event is BaseNoteEvent && antiSpam.isSpam(event, relay)) {
             return false
         }
 
@@ -2813,6 +2820,7 @@ object LocalCache : ILocalCache {
                 is PrivateOutboxRelayListEvent -> consume(event, relay, wasVerified)
                 is ProxyRelayListEvent -> consume(event, relay, wasVerified)
                 is PinListEvent -> consume(event, relay, wasVerified)
+                is PublicMessageEvent -> consume(event, relay, wasVerified)
                 is PeopleListEvent -> consume(event, relay, wasVerified)
                 is PollNoteEvent -> consume(event, relay, wasVerified)
                 is ReactionEvent -> consume(event, relay, wasVerified)

@@ -52,7 +52,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.util.Consumer
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -173,7 +172,7 @@ private fun NewPostScreenInner(
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.runIOCatching {
                         postViewModel.sendPostSync()
                         delay(100)
                         nav.popBack()
@@ -182,7 +181,7 @@ private fun NewPostScreenInner(
                 onCancel = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
-                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    accountViewModel.runIOCatching {
                         postViewModel.sendDraftSync()
                         nav.popBack()
                         postViewModel.cancel()
