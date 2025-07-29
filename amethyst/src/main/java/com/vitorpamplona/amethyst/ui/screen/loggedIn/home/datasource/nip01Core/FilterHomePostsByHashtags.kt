@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 val HomePostsBuHashtagsKinds =
     listOf(
@@ -50,6 +52,8 @@ val HomePostsBuHashtagsKinds =
         InteractiveStoryPrologueEvent.KIND,
         CommentEvent.KIND,
         WikiNoteEvent.KIND,
+        VoiceEvent.KIND,
+        VoiceReplyEvent.KIND,
     )
 
 fun filterHomePostsByHashtags(

@@ -179,6 +179,8 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90UserDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.LargeCache
@@ -595,6 +597,18 @@ object LocalCache : ILocalCache {
 
     fun consume(
         event: PictureEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: VoiceEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ) = consumeRegularEvent(event, relay, wasVerified)
+
+    fun consume(
+        event: VoiceReplyEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ) = consumeRegularEvent(event, relay, wasVerified)
@@ -2816,6 +2830,8 @@ object LocalCache : ILocalCache {
                 is TrustedRelayListEvent -> consume(event, relay, wasVerified)
                 is VideoHorizontalEvent -> consume(event, relay, wasVerified)
                 is VideoVerticalEvent -> consume(event, relay, wasVerified)
+                is VoiceEvent -> consume(event, relay, wasVerified)
+                is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 else -> {
                     Log.w("Event Not Supported", event.toJson())

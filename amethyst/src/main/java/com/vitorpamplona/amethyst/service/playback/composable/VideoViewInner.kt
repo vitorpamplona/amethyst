@@ -29,7 +29,6 @@ import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.service.playback.composable.mainVideo.VideoPlayerActiveMutex
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 
 public val DEFAULT_MUTED_SETTING = mutableStateOf(true)
 
@@ -43,7 +42,7 @@ fun VideoViewInner(
     showControls: Boolean = true,
     contentScale: ContentScale,
     borderModifier: Modifier,
-    waveform: WaveformTag? = null,
+    waveform: WaveformData? = null,
     artworkUri: String? = null,
     authorName: String? = null,
     nostrUriCallback: String? = null,

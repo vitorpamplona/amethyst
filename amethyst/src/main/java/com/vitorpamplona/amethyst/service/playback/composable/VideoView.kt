@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -42,8 +43,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.videoGalleryModifier
-import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+
+@Immutable
+class WaveformData(
+    val wave: List<Int>,
+)
 
 @Composable
 fun VideoView(
@@ -54,7 +59,7 @@ fun VideoView(
     roundedCorner: Boolean,
     gallery: Boolean = false,
     contentScale: ContentScale,
-    waveform: WaveformTag? = null,
+    waveform: WaveformData? = null,
     artworkUri: String? = null,
     authorName: String? = null,
     dimensions: DimensionTag? = null,
@@ -85,7 +90,7 @@ fun VideoView(
     thumb: VideoThumb? = null,
     borderModifier: Modifier,
     contentScale: ContentScale,
-    waveform: WaveformTag? = null,
+    waveform: WaveformData? = null,
     artworkUri: String? = null,
     authorName: String? = null,
     dimensions: DimensionTag? = null,

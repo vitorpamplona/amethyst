@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
@@ -79,6 +80,7 @@ class HomeConversationsFeedFilter(
                 event is PollNoteEvent ||
                 event is ChannelMessageEvent ||
                 event is CommentEvent ||
+                event is VoiceReplyEvent ||
                 event is LiveActivitiesChatMessageEvent
         ) &&
             filterParams.match(event)

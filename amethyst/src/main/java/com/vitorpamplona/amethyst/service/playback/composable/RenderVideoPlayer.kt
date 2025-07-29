@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCon
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 
 @Composable
 @OptIn(UnstableApi::class)
@@ -50,7 +49,7 @@ fun RenderVideoPlayer(
     thumbData: VideoThumb?,
     showControls: Boolean = true,
     contentScale: ContentScale,
-    waveform: WaveformTag? = null,
+    waveform: WaveformData? = null,
     borderModifier: Modifier,
     videoModifier: Modifier,
     onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,

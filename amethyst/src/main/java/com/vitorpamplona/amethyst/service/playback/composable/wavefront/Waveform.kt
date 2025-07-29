@@ -38,15 +38,15 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.linc.audiowaveform.infiniteLinearGradient
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.ui.components.AudioWaveformReadOnly
-import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
 
 @Composable
 fun Waveform(
-    waveform: WaveformTag,
+    waveform: WaveformData,
     mediaControllerState: MediaControllerState,
     modifier: Modifier,
 ) {
@@ -94,7 +94,7 @@ private fun pollCurrentDuration(controller: MediaController) =
 
 @Composable
 fun DrawWaveform(
-    waveform: WaveformTag,
+    waveform: WaveformData,
     waveformProgress: MutableFloatState,
     modifier: Modifier,
 ) {
