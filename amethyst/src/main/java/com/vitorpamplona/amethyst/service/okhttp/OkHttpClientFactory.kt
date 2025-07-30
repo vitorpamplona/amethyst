@@ -30,7 +30,7 @@ class OkHttpClientFactory(
     keyCache: EncryptionKeyCache,
 ) {
     companion object {
-        // by picking a random proxy port, the connection will fail as it shouold.
+        // by picking a random proxy port, the connection will fail as it should.
         const val DEFAULT_SOCKS_PORT: Int = 9050
         const val DEFAULT_IS_MOBILE: Boolean = false
         const val DEFAULT_TIMEOUT_ON_WIFI_SECS: Int = 10

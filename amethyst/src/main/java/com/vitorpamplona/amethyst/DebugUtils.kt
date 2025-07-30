@@ -152,11 +152,14 @@ fun debugState(context: Context) {
 
 inline fun <T> logTime(
     debugMessage: String,
+    minToReportMs: Int = 0,
     block: () -> T,
 ): T =
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
-        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+        if (elapsed.inWholeMilliseconds > minToReportMs) {
+            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+        }
         result
     } else {
         block()
