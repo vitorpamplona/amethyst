@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
@@ -167,6 +168,14 @@ fun AppNavigation(
                     reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.NewPublicMessage> {
+                NewPublicMessageScreen(
+                    to = it.toKey(),
                     accountViewModel,
                     nav,
                 )

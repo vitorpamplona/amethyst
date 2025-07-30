@@ -159,6 +159,10 @@
     <string name="video_saved_to_the_gallery">Video saved to the phone\'s video gallery</string>
     <string name="failed_to_save_the_video">Failed to save the video</string>
     <string name="upload_image">Upload Image</string>
+    <string name="take_a_picture">Take a picture</string>
+    <string name="record_a_message">Record a message</string>
+    <string name="record_a_message_title">Record a message</string>
+    <string name="record_a_message_description">Click and hold to record a message</string>
     <string name="uploading">Uploading…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
     <string name="reply_here">"reply here.. "</string>

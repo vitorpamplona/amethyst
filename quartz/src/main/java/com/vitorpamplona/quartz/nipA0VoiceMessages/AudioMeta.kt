@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 
 data class AudioMeta(
     val url: String,
+    val mimeType: String? = null,
     val hash: String? = null,
     val duration: Int? = null,
     val waveform: List<Int>? = null,
@@ -33,6 +34,7 @@ data class AudioMeta(
     fun toIMetaArray(): Array<String> =
         IMetaTagBuilder(url)
             .apply {
+                mimeType?.let { mimeType(it) }
                 hash?.let { hash(it) }
                 duration?.let { duration(it) }
                 waveform?.let { waveform(it) }
@@ -42,10 +44,11 @@ data class AudioMeta(
     companion object {
         fun parse(iMeta: IMetaTag): AudioMeta =
             AudioMeta(
-                iMeta.url,
-                iMeta.hash()?.firstOrNull(),
-                iMeta.duration()?.firstOrNull()?.toIntOrNull(),
-                iMeta.waveform()?.firstOrNull()?.let { WaveformTag.parseWave(it) },
+                url = iMeta.url,
+                mimeType = iMeta.mimeType()?.firstOrNull(),
+                hash = iMeta.hash()?.firstOrNull(),
+                duration = iMeta.duration()?.firstOrNull()?.toIntOrNull(),
+                waveform = iMeta.waveform()?.firstOrNull()?.let { WaveformTag.parseWave(it) },
             )
     }
 }

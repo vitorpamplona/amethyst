@@ -129,7 +129,7 @@ fun PictureButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.CameraAlt,
-            contentDescription = stringRes(id = R.string.upload_image),
+            contentDescription = stringRes(id = R.string.take_a_picture),
             modifier = Modifier.height(22.dp),
             tint = MaterialTheme.colorScheme.onBackground,
         )

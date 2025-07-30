@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipA0VoiceMessages
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.DurationTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 
 fun IMetaTag.hash() = properties.get(HashSha256Tag.TAG_NAME)
@@ -30,3 +31,5 @@ fun IMetaTag.hash() = properties.get(HashSha256Tag.TAG_NAME)
 fun IMetaTag.duration() = properties.get(DurationTag.TAG_NAME)
 
 fun IMetaTag.waveform() = properties.get(WaveformTag.TAG_NAME)
+
+fun IMetaTag.mimeType() = properties.get(MimeTypeTag.TAG_NAME)

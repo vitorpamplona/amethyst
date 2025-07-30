@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.DurationTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 
 /**
@@ -34,3 +35,5 @@ fun IMetaTagBuilder.hash(hash: HexKey) = add(HashSha256Tag.TAG_NAME, hash)
 fun IMetaTagBuilder.duration(size: Int) = add(DurationTag.TAG_NAME, size.toString())
 
 fun IMetaTagBuilder.waveform(wave: List<Int>) = add(WaveformTag.TAG_NAME, WaveformTag.assembleWave(wave))
+
+fun IMetaTagBuilder.mimeType(mime: String) = add(MimeTypeTag.TAG_NAME, mime)

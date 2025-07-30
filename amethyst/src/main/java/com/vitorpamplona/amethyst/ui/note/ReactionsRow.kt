@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -109,6 +110,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -156,6 +158,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -578,8 +581,37 @@ private fun ReplyReactionWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ReplyReaction(baseNote, grayTint, accountViewModel) {
-        nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
+    if (baseNote.event is BaseVoiceEvent) {
+        ReplyViaVoiceReaction(baseNote, grayTint, accountViewModel)
+    } else {
+        ReplyReaction(baseNote, grayTint, accountViewModel) {
+            nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun ReplyViaVoiceReaction(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    showCounter: Boolean = true,
+    iconSizeModifier: Modifier = Size19Modifier,
+) {
+    val context = LocalContext.current
+
+    RecordAudioBox(
+        modifier = iconSizeModifier,
+        onRecordTaken = { audio ->
+            accountViewModel.sendVoiceReply(baseNote, audio, context)
+        },
+    ) {
+        VoiceReplyIcon(iconSizeModifier, grayTint)
+    }
+
+    if (showCounter) {
+        ReplyCounter(baseNote, grayTint, accountViewModel)
     }
 }
 

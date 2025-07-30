@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -311,6 +312,19 @@ fun ExpandMoreIcon(
         contentDescription = stringRes(id = contentDescriptor),
         modifier = modifier,
         tint = MaterialTheme.colorScheme.subtleButton,
+    )
+}
+
+@Composable
+fun VoiceReplyIcon(
+    iconSizeModifier: Modifier,
+    tint: Color,
+) {
+    Icon(
+        imageVector = Icons.Outlined.Mic,
+        contentDescription = stringRes(id = R.string.record_a_message),
+        tint = tint,
+        modifier = iconSizeModifier,
     )
 }
 

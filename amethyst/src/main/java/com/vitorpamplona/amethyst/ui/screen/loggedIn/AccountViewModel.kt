@@ -28,6 +28,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -65,8 +66,12 @@ import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
@@ -104,6 +109,7 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
@@ -123,6 +129,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
@@ -1249,6 +1256,54 @@ class AccountViewModel(
         super.onCleared()
     }
 
+    fun sendVoiceReply(
+        note: Note,
+        recording: RecordingResult,
+        context: Context,
+    ) {
+        if (isWriteable()) {
+            val hint = note.toEventHint<VoiceEvent>()
+            if (hint == null) return
+
+            runIOCatching {
+                val uploader = UploadOrchestrator()
+                val result =
+                    uploader.upload(
+                        uri = recording.file.toUri(),
+                        mimeType = recording.mimeType,
+                        alt = null,
+                        contentWarningReason = null,
+                        compressionQuality = CompressorQuality.UNCOMPRESSED,
+                        server = account.settings.defaultFileServer,
+                        account = account,
+                        context = context,
+                    )
+
+                if (result is UploadingState.Finished && result.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                    account.sendVoiceReplyMessage(
+                        result.result.url,
+                        result.result.fileHeader.mimeType ?: recording.mimeType,
+                        result.result.fileHeader.hash,
+                        recording.duration,
+                        recording.amplitudes,
+                        hint,
+                    )
+                } else if (result is UploadingState.Error) {
+                    toastManager.toast(
+                        R.string.failed_to_upload_media_no_details,
+                        result.errorResource,
+                        *result.params,
+                    )
+                }
+            }
+        } else {
+            toastManager.toast(
+                R.string.read_only_user,
+                R.string.login_with_a_private_key_to_be_able_to_reply,
+            )
+        }
+    }
+
     fun loadThumb(
         context: Context,
         thumbUri: String,
@@ -1673,7 +1728,7 @@ class AccountViewModel(
                         is NSec -> {}
                         is NPub -> {}
                         is NProfile -> {}
-                        is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
+                        is NNote -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }

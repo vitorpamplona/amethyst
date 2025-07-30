@@ -20,15 +20,21 @@
  */
 package com.vitorpamplona.quartz.nipA0VoiceMessages
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyAuthorTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyEventTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.ReplyKindTag
 
 fun <T : BaseVoiceEvent> TagArrayBuilder<T>.audioIMeta(
     url: String,
+    mimeType: String? = null,
     hash: String? = null,
     duration: Int? = null,
     waveform: List<Int>? = null,
-) = audioIMeta(AudioMeta(url, hash, duration, waveform))
+) = audioIMeta(AudioMeta(url, mimeType, hash, duration, waveform))
 
 fun <T : BaseVoiceEvent> TagArrayBuilder<T>.audioIMeta(imeta: AudioMeta): TagArrayBuilder<T> {
     add(imeta.toIMetaArray())
@@ -40,3 +46,18 @@ fun <T : BaseVoiceEvent> TagArrayBuilder<T>.audioIMeta(audioUrls: List<AudioMeta
     audioUrls.forEach { audioIMeta(it) }
     return this
 }
+
+fun TagArrayBuilder<VoiceReplyEvent>.replyEvent(
+    eventId: String,
+    relayHint: NormalizedRelayUrl?,
+    pubkey: String?,
+) = addUnique(ReplyEventTag.assemble(eventId, relayHint, pubkey))
+
+fun TagArrayBuilder<VoiceReplyEvent>.replyKind(kind: String) = addUnique(ReplyKindTag.assemble(kind))
+
+fun TagArrayBuilder<VoiceReplyEvent>.replyKind(kind: Int) = addUnique(ReplyKindTag.assemble(kind))
+
+fun TagArrayBuilder<VoiceReplyEvent>.replyAuthor(
+    pubKey: HexKey,
+    relay: NormalizedRelayUrl?,
+) = add(ReplyAuthorTag.assemble(pubKey, relay))

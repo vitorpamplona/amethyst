@@ -50,6 +50,7 @@ open class BaseVoiceEvent(
             initializer: TagArrayBuilder<T>.() -> Unit = {},
         ) = eventTemplate(kind, voiceMessage.url, createdAt) {
             alt(alt)
+            audioIMeta(voiceMessage)
             initializer()
         }
     }

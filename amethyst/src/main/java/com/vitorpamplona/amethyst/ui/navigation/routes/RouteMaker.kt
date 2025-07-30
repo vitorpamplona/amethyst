@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -200,6 +201,7 @@ fun routeReplyTo(
 ): Route? {
     val noteEvent = note.event
     return when (noteEvent) {
+        is PublicMessageEvent -> Route.NewPublicMessage(noteEvent.groupKeySet() - account.userProfile().pubkeyHex)
         is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
         is PrivateDmEvent ->
             routeToMessage(

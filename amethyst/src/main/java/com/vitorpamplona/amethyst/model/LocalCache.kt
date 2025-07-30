@@ -782,6 +782,8 @@ object LocalCache : ILocalCache {
             is TextNoteEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             is CommentEvent -> event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
+            is VoiceReplyEvent -> event.markedReplyTos().mapNotNull { checkGetOrCreateNote(it) }
+
             is ChatMessageEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             is ChatMessageEncryptedFileHeaderEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
 

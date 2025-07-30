@@ -138,6 +138,16 @@ sealed class Route {
         fun toKey(): ChatroomKey = ChatroomKey(id.split(",").toSet())
     }
 
+    @Serializable data class NewPublicMessage(
+        val to: String,
+    ) : Route() {
+        constructor(users: Set<HexKey>) : this(
+            to = users.joinToString(","),
+        )
+
+        fun toKey(): Set<HexKey> = to.split(",").toSet()
+    }
+
     @Serializable data class RoomByAuthor(
         val id: String,
     ) : Route()

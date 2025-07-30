@@ -204,6 +204,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -958,6 +960,27 @@ class Account(
         cache.justConsumeMyOwnEvent(signedEvent)
 
         cache.getNoteIfExists(signedEvent.id)?.let { onReady(it) }
+    }
+
+    suspend fun sendVoiceMessage(
+        url: String,
+        mimeType: String?,
+        hash: String,
+        duration: Int,
+        waveform: List<Int>,
+    ) {
+        signAndComputeBroadcast(VoiceEvent.build(url, mimeType, hash, duration, waveform))
+    }
+
+    suspend fun sendVoiceReplyMessage(
+        url: String,
+        mimeType: String?,
+        hash: String,
+        duration: Int,
+        waveform: List<Int>,
+        replyTo: EventHintBundle<VoiceEvent>,
+    ) {
+        signAndComputeBroadcast(VoiceReplyEvent.build(url, mimeType, hash, duration, waveform, replyTo))
     }
 
     suspend fun sendAllAsOnePictureEvent(

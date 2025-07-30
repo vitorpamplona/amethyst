@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 val UserProfilePostKinds1 =
     listOf(
@@ -47,6 +49,7 @@ val UserProfilePostKinds1 =
         PollNoteEvent.KIND,
         HighlightEvent.KIND,
         WikiNoteEvent.KIND,
+        VoiceEvent.KIND,
     )
 
 val UserProfilePostKinds2 =
@@ -55,6 +58,7 @@ val UserProfilePostKinds2 =
         TorrentCommentEvent.KIND,
         InteractiveStoryPrologueEvent.KIND,
         CommentEvent.KIND,
+        VoiceReplyEvent.KIND,
     )
 
 fun filterUserProfilePosts(
