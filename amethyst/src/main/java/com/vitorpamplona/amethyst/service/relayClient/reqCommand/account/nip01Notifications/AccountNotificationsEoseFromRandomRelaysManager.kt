@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
 class AccountNotificationsEoseFromRandomRelaysManager(
@@ -61,7 +62,8 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.followsPerRelay.collectLatest {
+                    // no need to hurry here. we can wait the app stabilize
+                    key.account.followsPerRelay.debounce(5000).collectLatest {
                         invalidateFilters()
                     }
                 },
