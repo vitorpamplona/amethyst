@@ -21,15 +21,18 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.LocalCache.markAsSeen
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CoroutineScope
 
 class CacheClientConnector(
     val client: NostrClient,
     val cache: LocalCache,
+    val scope: CoroutineScope,
 ) {
     val receiver =
         EventCollector(client) { event, relay ->

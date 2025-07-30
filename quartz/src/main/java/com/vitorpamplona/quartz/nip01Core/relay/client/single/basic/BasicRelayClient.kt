@@ -50,6 +50,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -76,11 +79,13 @@ open class BasicRelayClient(
     val socketBuilder: WebsocketBuilder,
     val listener: IRelayClientListener,
     val stats: RelayStat = RelayStat(),
+    val scope: CoroutineScope,
     val defaultOnConnect: (BasicRelayClient) -> Unit = { },
 ) : IRelayClient {
     companion object {
         // waits 3 minutes to reconnect once things fail
         const val DELAY_TO_RECONNECT_IN_MSECS = 500L
+        const val EVENT_MESSAGE_PREFIX = "[\"${EventMessage.LABEL}\""
     }
 
     private val logTag = "Relay ${url.displayUrl()}"
@@ -160,31 +165,21 @@ open class BasicRelayClient(
 
             markConnectionAsReady(pingMillis, compression)
 
-            onConnected()
+            scope.launch(Dispatchers.Default) {
+                onConnected()
+            }
 
             listener.onRelayStateChange(this@BasicRelayClient, RelayState.CONNECTED)
         }
 
         override fun onMessage(text: String) {
-            // Log.d(logTag, "Receiving: $text")
-            stats.addBytesReceived(text.bytesUsedInMemory())
-
-            try {
-                when (val msg = parser.parse(text)) {
-                    is EventMessage -> processEvent(msg)
-                    is EoseMessage -> processEose(msg)
-                    is NoticeMessage -> processNotice(msg)
-                    is OkMessage -> processOk(msg, onConnected)
-                    is AuthMessage -> processAuth(msg)
-                    is NotifyMessage -> processNotify(msg)
-                    is ClosedMessage -> processClosed(msg)
-                    else -> processUnkownMessage(text)
+            if (text.startsWith(EVENT_MESSAGE_PREFIX)) {
+                // defers the parsing of ["EVENTS" to avoid blocking the HTTP thread
+                scope.launch(Dispatchers.Default) {
+                    consumeIncomingCommand(text, onConnected)
                 }
-            } catch (e: Throwable) {
-                if (e is CancellationException) throw e
-                stats.newError("Error processing: $text")
-                Log.e(logTag, "Error processing: $text")
-                listener.onError(this@BasicRelayClient, "", Error("Error processing $text"))
+            } else {
+                consumeIncomingCommand(text, onConnected)
             }
         }
 
@@ -228,6 +223,32 @@ open class BasicRelayClient(
                 "",
                 Error("WebSocket Failure. Response: $code $response. Exception: ${t.message}", t),
             )
+        }
+    }
+
+    fun consumeIncomingCommand(
+        text: String,
+        onConnected: () -> Unit,
+    ) {
+        // Log.d(logTag, "Receiving: $text")
+        stats.addBytesReceived(text.bytesUsedInMemory())
+
+        try {
+            when (val msg = parser.parse(text)) {
+                is EventMessage -> processEvent(msg)
+                is EoseMessage -> processEose(msg)
+                is NoticeMessage -> processNotice(msg)
+                is OkMessage -> processOk(msg, onConnected)
+                is AuthMessage -> processAuth(msg)
+                is NotifyMessage -> processNotify(msg)
+                is ClosedMessage -> processClosed(msg)
+                else -> processUnknownMessage(text)
+            }
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            stats.newError("Error processing: $text")
+            Log.e(logTag, "Error processing: $text")
+            listener.onError(this@BasicRelayClient, "", Error("Error processing $text"))
         }
     }
 
@@ -315,7 +336,7 @@ open class BasicRelayClient(
         listener.onClosed(this@BasicRelayClient, msg.subscriptionId, msg.message)
     }
 
-    private fun processUnkownMessage(newMessage: String) {
+    private fun processUnknownMessage(newMessage: String) {
         stats.newError("Unsupported message: $newMessage")
         Log.w(logTag, "Unsupported message: $newMessage")
         listener.onError(this, "", Error("Unsupported message: $newMessage"))

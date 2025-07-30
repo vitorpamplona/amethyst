@@ -114,6 +114,7 @@ class NostrClient(
             socketBuilder = websocketBuilder,
             listener = relayPool,
             stats = RelayStats.get(relay),
+            scope = scope,
         ) { liveRelay ->
             activeRequests.forEachSub(relay, liveRelay::sendRequest)
             activeCounts.forEachSub(relay, liveRelay::sendCount)
