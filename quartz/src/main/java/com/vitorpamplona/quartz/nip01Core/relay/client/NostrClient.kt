@@ -115,9 +115,11 @@ class NostrClient(
             stats = RelayStats.get(relay),
             scope = scope,
         ) { liveRelay ->
-            activeRequests.forEachSub(relay, liveRelay::sendRequest)
-            activeCounts.forEachSub(relay, liveRelay::sendCount)
-            eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
+            if (isActive) {
+                activeRequests.forEachSub(relay, liveRelay::sendRequest)
+                activeCounts.forEachSub(relay, liveRelay::sendCount)
+                eventOutbox.forEachUnsentEvent(relay, liveRelay::send)
+            }
         }
 
     fun allAvailableRelays() = relayPool.getAll()
