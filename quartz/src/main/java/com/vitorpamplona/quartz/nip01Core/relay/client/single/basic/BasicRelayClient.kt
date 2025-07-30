@@ -442,7 +442,7 @@ open class BasicRelayClient(
     override fun close(subscriptionId: String) {
         // avoids sending closes for subscriptions that were never sent to this relay.
         if (afterEOSEPerSubscription.containsKey(subscriptionId)) {
-            writeToSocket(CloseCmd.Companion.toJson(subscriptionId))
+            writeToSocket(CloseCmd.toJson(subscriptionId))
             afterEOSEPerSubscription[subscriptionId] = false
         }
     }

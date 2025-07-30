@@ -37,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
@@ -80,6 +81,11 @@ class NostrClient(
 
     private var listeners = setOf<IRelayClientListener>()
 
+    // controls the state of the client in such a way that if it is active
+    // new filters will be sent to the relays and a potential reconnect can
+    // be triggered.
+    private var isActive = false
+
     /**
      * Whatches for any changes in the relay list from subscriptions or outbox
      * and updates the relayPool as needed.
@@ -117,10 +123,15 @@ class NostrClient(
     fun allAvailableRelays() = relayPool.getAll()
 
     // Reconnects all relays that may have disconnected
-    fun connect() = relayPool.connect()
+    fun connect() {
+        isActive = true
+        relayPool.connect()
+    }
 
-    // Reconnects all relays that may have disconnected
-    fun disconnect() = relayPool.disconnect()
+    fun disconnect() {
+        isActive = false
+        relayPool.disconnect()
+    }
 
     @Synchronized
     fun reconnect(onlyIfChanged: Boolean = false) {
@@ -200,26 +211,28 @@ class NostrClient(
         val oldFilters = activeRequests.getSubscriptionFiltersOrNull(subId) ?: emptyMap()
         activeRequests.addOrUpdate(subId, filters)
 
-        val allRelays = filters.keys + oldFilters.keys
+        if (isActive) {
+            val allRelays = filters.keys + oldFilters.keys
 
-        allRelays.forEach { relay ->
-            val oldFilters = oldFilters[relay]
-            val newFilters = filters[relay]
+            allRelays.forEach { relay ->
+                val oldFilters = oldFilters[relay]
+                val newFilters = filters[relay]
 
-            if (newFilters.isNullOrEmpty()) {
-                // some relays are not in this sub anymore. Stop their subscriptions
-                relayPool.close(relay, subId)
-            } else if (oldFilters.isNullOrEmpty()) {
-                // new relays were added. Start a new sub in them
-                relayPool.sendRequest(relay, subId, newFilters)
-            } else if (needsToResendRequest(oldFilters, newFilters)) {
-                // filters were changed enough (not only an update in since) to warn a new update
-                relayPool.sendRequest(relay, subId, newFilters)
-            } else {
-                // makes sure the relay wakes up if it was disconnected by the server
-                // upon connection, the relay will run the default Sync and update all
-                // filters, including this one.
-                relayPool.connectIfDisconnected(relay)
+                if (newFilters.isNullOrEmpty()) {
+                    // some relays are not in this sub anymore. Stop their subscriptions
+                    relayPool.close(relay, subId)
+                } else if (oldFilters.isNullOrEmpty()) {
+                    // new relays were added. Start a new sub in them
+                    relayPool.sendRequest(relay, subId, newFilters)
+                } else if (needsToResendRequest(oldFilters, newFilters)) {
+                    // filters were changed enough (not only an update in since) to warn a new update
+                    relayPool.sendRequest(relay, subId, newFilters)
+                } else {
+                    // makes sure the relay wakes up if it was disconnected by the server
+                    // upon connection, the relay will run the default Sync and update all
+                    // filters, including this one.
+                    relayPool.connectIfDisconnected(relay)
+                }
             }
         }
     }
@@ -231,26 +244,28 @@ class NostrClient(
         val oldFilters = activeCounts.getSubscriptionFiltersOrNull(subId) ?: emptyMap()
         activeCounts.addOrUpdate(subId, filters)
 
-        val allRelays = filters.keys + oldFilters.keys
+        if (isActive) {
+            val allRelays = filters.keys + oldFilters.keys
 
-        allRelays.forEach { relay ->
-            val oldFilters = oldFilters[relay]
-            val newFilters = filters[relay]
+            allRelays.forEach { relay ->
+                val oldFilters = oldFilters[relay]
+                val newFilters = filters[relay]
 
-            if (newFilters.isNullOrEmpty()) {
-                // some relays are not in this sub anymore. Stop their subscriptions
-                relayPool.close(relay, subId)
-            } else if (oldFilters.isNullOrEmpty()) {
-                // new relays were added. Start a new sub in them
-                relayPool.sendCount(relay, subId, newFilters)
-            } else if (needsToResendRequest(oldFilters, newFilters)) {
-                // filters were changed enough (not only an update in since) to warn a new update
-                relayPool.sendCount(relay, subId, newFilters)
-            } else {
-                // makes sure the relay wakes up if it was disconnected by the server
-                // upon connection, the relay will run the default Sync and update all
-                // filters, including this one.
-                relayPool.connectIfDisconnected(relay)
+                if (newFilters.isNullOrEmpty()) {
+                    // some relays are not in this sub anymore. Stop their subscriptions
+                    relayPool.close(relay, subId)
+                } else if (oldFilters.isNullOrEmpty()) {
+                    // new relays were added. Start a new sub in them
+                    relayPool.sendCount(relay, subId, newFilters)
+                } else if (needsToResendRequest(oldFilters, newFilters)) {
+                    // filters were changed enough (not only an update in since) to warn a new update
+                    relayPool.sendCount(relay, subId, newFilters)
+                } else {
+                    // makes sure the relay wakes up if it was disconnected by the server
+                    // upon connection, the relay will run the default Sync and update all
+                    // filters, including this one.
+                    relayPool.connectIfDisconnected(relay)
+                }
             }
         }
     }
@@ -259,7 +274,9 @@ class NostrClient(
         event: Event,
         connectedRelay: NormalizedRelayUrl,
     ) {
-        relayPool.getRelay(connectedRelay)?.send(event)
+        if (isActive) {
+            relayPool.getRelay(connectedRelay)?.send(event)
+        }
     }
 
     fun send(
@@ -267,7 +284,9 @@ class NostrClient(
         relayList: Set<NormalizedRelayUrl>,
     ) {
         eventOutbox.markAsSending(event, relayList)
-        relayPool.send(event, relayList)
+        if (isActive) {
+            relayPool.send(event, relayList)
+        }
     }
 
     fun close(subscriptionId: String) {
