@@ -261,7 +261,6 @@ class RelayPool(
         arrivalTime: Long,
     ) {
         listener.onEOSE(relay, subId, arrivalTime)
-        updateStatus()
     }
 
     override fun onRelayStateChange(
