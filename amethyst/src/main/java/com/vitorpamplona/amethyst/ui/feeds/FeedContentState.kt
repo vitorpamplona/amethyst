@@ -108,7 +108,10 @@ class FeedContentState(
 
     private fun updateFeed(notes: ImmutableList<Note>) {
         if (notes.size >= localFilter.limit()) {
-            lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull { it.event != null }?.createdAt())
+            val lastNomeTime = notes.lastOrNull { it.event != null }?.createdAt()
+            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(lastNomeTime)
+            }
         }
 
         val currentState = _feedContent.value

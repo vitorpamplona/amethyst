@@ -305,7 +305,10 @@ class CardFeedContentState(
 
     private fun updateFeed(notes: ImmutableList<Card>) {
         if (notes.size >= localFilter.limit()) {
-            lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull()?.createdAt())
+            val lastNomeTime = notes.lastOrNull()?.createdAt()
+            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull()?.createdAt())
+            }
         }
 
         val currentState = _feedContent.value
