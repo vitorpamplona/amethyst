@@ -24,7 +24,6 @@ import android.util.Log
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
 import org.czeal.rfc3986.URIReference
-import java.lang.RuntimeException
 import kotlin.contracts.ExperimentalContracts
 
 val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
@@ -134,9 +133,6 @@ class RelayUrlNormalizer {
                 return null
             }
 
-            Log.w("RelayUrlNormalizer", "Rejected relay URL: $url")
-            throw RuntimeException("RelayError $trimmed")
-
             return if (isOnion(trimmed) || isLocalHost(trimmed)) {
                 "ws://$trimmed"
             } else {
@@ -173,7 +169,6 @@ class RelayUrlNormalizer {
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                e.printStackTrace()
                 Log.w("NormalizedRelayUrl", "Rejected Error $url")
                 null
             }
