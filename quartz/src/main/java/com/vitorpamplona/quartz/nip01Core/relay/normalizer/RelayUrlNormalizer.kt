@@ -24,6 +24,7 @@ import android.util.Log
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
 import org.czeal.rfc3986.URIReference
+import java.lang.RuntimeException
 import kotlin.contracts.ExperimentalContracts
 
 val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
@@ -53,7 +54,14 @@ class RelayUrlNormalizer {
         fun isHttpSuffix(url: String) = url[4] == ':' && url[5] == '/' && url[6] == '/'
 
         fun isRelayUrl(url: String): Boolean {
-            val trimmed = url.trim().ifEmpty { return false }
+            if (url.length < 3) return false
+
+            val trimmed =
+                if (url[0].isWhitespace() || url[url.length - 1].isWhitespace()) {
+                    url.trim()
+                } else {
+                    url
+                }
 
             // fast
             if (isRelaySchemePrefix(trimmed)) {
@@ -78,9 +86,14 @@ class RelayUrlNormalizer {
 
         @OptIn(ExperimentalContracts::class)
         fun fix(url: String): String? {
-            val trimmed = url.trim()
+            if (url.length < 3) return null
 
-            if (trimmed.isEmpty()) return null
+            val trimmed =
+                if (url[0].isWhitespace() || url[url.length - 1].isWhitespace()) {
+                    url.trim()
+                } else {
+                    url
+                }
 
             // fast for good wss:// urls
             if (isRelaySchemePrefix(trimmed)) {
@@ -100,11 +113,29 @@ class RelayUrlNormalizer {
                 }
             }
 
+            // fast for good ww:// urls
+            if (trimmed.startsWith("ww://")) {
+                return "wss://${trimmed.drop(5)}"
+            }
+
+            // fast for good ww:// urls
+            if (trimmed.startsWith("was://")) {
+                return "wss://${trimmed.drop(6)}"
+            }
+
+            // fast for good ww:// urls
+            if (trimmed.startsWith("Wws://")) {
+                return "wss://${trimmed.drop(6)}"
+            }
+
             if (trimmed.contains("://")) {
                 // some other scheme we cannot connect to.
                 Log.w("RelayUrlNormalizer", "Rejected relay URL: $url")
                 return null
             }
+
+            Log.w("RelayUrlNormalizer", "Rejected relay URL: $url")
+            throw RuntimeException("RelayError $trimmed")
 
             return if (isOnion(trimmed) || isLocalHost(trimmed)) {
                 "ws://$trimmed"
@@ -114,7 +145,7 @@ class RelayUrlNormalizer {
         }
 
         fun normalize(url: String): NormalizedRelayUrl {
-            normalizedUrls.get(url)?.let { return it }
+            normalizedUrls[url]?.let { return it }
 
             return try {
                 val fixed = fix(url) ?: return NormalizedRelayUrl(url)
@@ -142,6 +173,7 @@ class RelayUrlNormalizer {
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                e.printStackTrace()
                 Log.w("NormalizedRelayUrl", "Rejected Error $url")
                 null
             }
