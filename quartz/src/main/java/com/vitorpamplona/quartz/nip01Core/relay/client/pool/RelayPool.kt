@@ -125,7 +125,7 @@ class RelayPool(
         subId: String,
         filters: List<Filter>,
     ) {
-        relays.get(relay)?.sendRequest(subId, filters)
+        relays.get(relay)?.sendCount(subId, filters)
     }
 
     fun sendCount(
