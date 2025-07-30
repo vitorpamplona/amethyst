@@ -43,6 +43,13 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 class VideoFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
+    val videoFeedSupport =
+        SupportedContent(
+            blockedUrls = listOf("youtu.be", "youtube.com"),
+            mimeTypes = SUPPORTED_VIDEO_FEED_MIME_TYPES_SET,
+            supportedFileExtensions = (RichTextParser.videoExtensions + RichTextParser.imageExtensions).toSet(),
+        )
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultStoriesFollowList.value
 
     override fun limit() = 300
@@ -76,24 +83,11 @@ class VideoFeedFilter(
     fun acceptableUrls(
         baseUrls: List<String>,
         mimeType: String?,
-    ): Boolean {
-        // we don't have an youtube player
-        val urls = baseUrls.filter { !(it.contains("youtu.be") || it.contains("youtube.com")) }
+    ) = baseUrls.any { videoFeedSupport.acceptableUrl(it, mimeType) }
 
-        val isSupportedMimeType = mimeType?.let { SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it) } == true
+    fun acceptableVideoiMetas(iMetas: List<VideoMeta>): Boolean = iMetas.any { videoFeedSupport.acceptableUrl(it.url, it.mimeType) }
 
-        return urls.isNotEmpty() && (urls.any { RichTextParser.Companion.isImageOrVideoUrl(it) } || isSupportedMimeType)
-    }
-
-    fun acceptableVideoiMetas(iMetas: List<VideoMeta>): Boolean =
-        iMetas.any {
-            !it.url.contains("youtu.be") && !it.url.contains("youtube.com") && (RichTextParser.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
-        }
-
-    fun acceptablePictureiMetas(iMetas: List<PictureMeta>): Boolean =
-        iMetas.any {
-            !it.url.contains("youtu.be") && !it.url.contains("youtube.com") && (RichTextParser.isImageOrVideoUrl(it.url) || (it.mimeType == null || SUPPORTED_VIDEO_FEED_MIME_TYPES_SET.contains(it.mimeType)))
-        }
+    fun acceptablePictureiMetas(iMetas: List<PictureMeta>): Boolean = iMetas.any { videoFeedSupport.acceptableUrl(it.url, it.mimeType) }
 
     fun acceptanceEvent(noteEvent: PictureEvent) = acceptablePictureiMetas(noteEvent.imetaTags())
 
@@ -117,14 +111,8 @@ class VideoFeedFilter(
             (noteEvent is FileHeaderEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoVerticalEvent && acceptanceEvent(noteEvent)) ||
                 (noteEvent is VideoHorizontalEvent && acceptanceEvent(noteEvent)) ||
-                (
-                    noteEvent is FileStorageHeaderEvent &&
-                        noteEvent.isOneOf(
-                            SUPPORTED_VIDEO_FEED_MIME_TYPES_SET,
-                        )
-                ) ||
-                noteEvent is PictureEvent &&
-                acceptanceEvent(noteEvent)
+                (noteEvent is FileStorageHeaderEvent && noteEvent.isOneOf(SUPPORTED_VIDEO_FEED_MIME_TYPES_SET)) ||
+                (noteEvent is PictureEvent && acceptanceEvent(noteEvent))
         ) &&
             params.match(noteEvent) &&
             (params.isHiddenList || account.isAcceptable(note))
