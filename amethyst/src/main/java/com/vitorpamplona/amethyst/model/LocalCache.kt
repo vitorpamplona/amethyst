@@ -2844,7 +2844,7 @@ object LocalCache : ILocalCache {
                 is VoiceReplyEvent -> consume(event, relay, wasVerified)
                 is WikiNoteEvent -> consume(event, relay, wasVerified)
                 else -> {
-                    Log.w("Event Not Supported", event.toJson())
+                    Log.w("Event Not Supported", "From ${relay?.url}: ${event.toJson()}")
                     false
                 }
             }
