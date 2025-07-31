@@ -89,9 +89,9 @@ class LnZapEvent(
         zapRequest = containedPost()
     }
 
-    override fun zappedPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    override fun zappedPost() = tags.mapNotNull(ETag::parseId)
 
-    override fun zappedAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    override fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
     override fun zappedPollOption(): Int? =
         try {
