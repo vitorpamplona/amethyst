@@ -270,7 +270,7 @@ object LocalPreferences {
      * deleted
      */
     @SuppressLint("ApplySharedPref")
-    suspend fun updatePrefsForLogout(accountInfo: AccountInfo) {
+    suspend fun deleteAccount(accountInfo: AccountInfo) {
         Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}")
         withContext(Dispatchers.IO) {
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
@@ -285,7 +285,7 @@ object LocalPreferences {
         }
     }
 
-    suspend fun updatePrefsForLogin(accountSettings: AccountSettings) {
+    suspend fun setDefaultAccount(accountSettings: AccountSettings) {
         setCurrentAccount(accountSettings)
         saveToEncryptedStorage(accountSettings)
     }

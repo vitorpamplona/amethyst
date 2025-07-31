@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
                 val accountStateViewModel: AccountStateViewModel = viewModel()
 
                 LaunchedEffect(key1 = Unit) {
-                    accountStateViewModel.tryLoginExistingAccountAsync()
+                    accountStateViewModel.loginWithDefaultAccountIfLoggedOff()
                 }
 
                 AccountScreen(accountStateViewModel, sharedPreferencesViewModel)

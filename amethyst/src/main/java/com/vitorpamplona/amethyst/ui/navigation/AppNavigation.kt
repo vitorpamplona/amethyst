@@ -297,8 +297,8 @@ private fun NavigateIfIntentRequested(
                 if (actionableNextPage != null) {
                     actionableNextPage?.let { nextRoute ->
                         val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                        if (npub != null && accountStateViewModel.currentAccount() != npub) {
-                            accountStateViewModel.switchUserSync(npub, nextRoute)
+                        if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
+                            accountStateViewModel.checkAndSwitchUserSync(npub, nextRoute)
                         } else {
                             val currentRoute = getRouteWithArguments(nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
@@ -353,8 +353,8 @@ private fun NavigateIfIntentRequested(
                             if (newPage != null) {
                                 scope.launch {
                                     val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                                    if (npub != null && accountStateViewModel.currentAccount() != npub) {
-                                        accountStateViewModel.switchUserSync(npub, newPage)
+                                    if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
+                                        accountStateViewModel.checkAndSwitchUserSync(npub, newPage)
                                     } else {
                                         val currentRoute = getRouteWithArguments(nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {
