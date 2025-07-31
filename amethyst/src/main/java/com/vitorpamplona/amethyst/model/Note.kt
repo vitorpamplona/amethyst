@@ -67,7 +67,6 @@ import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
@@ -155,8 +154,6 @@ open class Note(
 
     var relays = listOf<NormalizedRelayUrl>()
         private set
-
-    fun id() = Hex.decode(idHex)
 
     open fun idNote() = toNEvent()
 
@@ -955,7 +952,6 @@ class NoteFlowSet(
         metadata.hasObservers() ||
             reports.hasObservers() ||
             relays.hasObservers() ||
-            metadata.hasObservers() ||
             reactions.hasObservers() ||
             boosts.hasObservers() ||
             replies.hasObservers() ||
