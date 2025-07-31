@@ -109,7 +109,8 @@ class OkHttpWebSocket(
     }
 
     override fun disconnect() {
-        socket?.close(1000, "Normal closure")
+        // uses cancel to kill the SEND stack that might be waiting
+        socket?.cancel()
     }
 
     override fun send(msg: String): Boolean = socket?.send(msg) ?: false
