@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import org.junit.Assert.assertEquals
@@ -43,9 +44,9 @@ class NewMessageTaggerKeyParseTest {
                 com.vitorpamplona.amethyst.model
                     .Note(hex)
 
-            override suspend fun checkGetOrCreateAddressableNote(hex: String) =
+            override suspend fun getOrCreateAddressableNote(address: Address) =
                 com.vitorpamplona.amethyst.model
-                    .Note(hex)
+                    .AddressableNote(address)
         }
 
     @Test
