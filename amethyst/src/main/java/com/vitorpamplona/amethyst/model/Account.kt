@@ -317,7 +317,7 @@ class Account(
     val privateZapsDecryptionCache = PrivateZapCache(signer)
     val draftsDecryptionCache = DraftEventCache(signer)
 
-    val chatroomList = LocalCache.getOrCreateChatroomList(signer.pubKey)
+    val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
 
     val privacyState = PrivacyState(settings)
     val torRelayState = TorRelayState(trustedRelays, dmRelayList, settings, scope)

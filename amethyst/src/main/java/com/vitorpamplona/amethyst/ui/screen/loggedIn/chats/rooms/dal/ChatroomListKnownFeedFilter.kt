@@ -43,7 +43,7 @@ class ChatroomListKnownFeedFilter(
         val followingKeySet = account.followingKeySet()
 
         val privateMessages =
-            chatList.chatrooms.mapNotNull { key, chatroom ->
+            chatList.rooms.mapNotNull { key, chatroom ->
                 if ((chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
                     !account.isAllHidden(key.users)
                 ) {
@@ -229,7 +229,7 @@ class ChatroomListKnownFeedFilter(
             .forEach { newNote ->
                 val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
                 if (roomKey != null) {
-                    val room = account.chatroomList.chatrooms.get(roomKey)
+                    val room = account.chatroomList.rooms.get(roomKey)
                     if (room != null) {
                         if (
                             (

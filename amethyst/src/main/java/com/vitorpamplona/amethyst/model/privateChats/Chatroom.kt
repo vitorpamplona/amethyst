@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Stable
 class Chatroom {
     var activeSenders: Set<User> = setOf()
-    var roomMessages: Set<Note> = setOf()
+    var messages: Set<Note> = setOf()
     var subject = MutableStateFlow<String?>(null)
     var subjectCreatedAt: Long? = null
     var ownerSentMessage: Boolean = false
@@ -42,8 +42,8 @@ class Chatroom {
 
     @Synchronized
     fun addMessageSync(msg: Note) {
-        if (msg !in roomMessages) {
-            roomMessages = roomMessages + msg
+        if (msg !in messages) {
+            messages = messages + msg
 
             msg.author?.let { author ->
                 if (author !in activeSenders) {
@@ -69,10 +69,10 @@ class Chatroom {
     fun removeMessageSync(msg: Note) {
         checkNotInMainThread()
 
-        if (msg in roomMessages) {
-            roomMessages = roomMessages - msg
+        if (msg in messages) {
+            messages = messages - msg
 
-            roomMessages
+            messages
                 .filter { it.event?.subject() != null }
                 .sortedBy { it.createdAt() }
                 .lastOrNull()
@@ -86,7 +86,7 @@ class Chatroom {
     fun senderIntersects(keySet: Set<HexKey>): Boolean = activeSenders.any { it.pubkeyHex in keySet }
 
     fun pruneMessagesToTheLatestOnly(): Set<Note> {
-        val sorted = roomMessages.sortedWith(DefaultFeedOrder)
+        val sorted = messages.sortedWith(DefaultFeedOrder)
 
         val toKeep =
             if ((sorted.firstOrNull()?.createdAt() ?: 0) > TimeUtils.oneWeekAgo()) {
@@ -97,8 +97,8 @@ class Chatroom {
                 sorted.take(1).toSet()
             } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent }
 
-        val toRemove = roomMessages.minus(toKeep)
-        roomMessages = toKeep
+        val toRemove = messages.minus(toKeep)
+        messages = toKeep
         return toRemove
     }
 }

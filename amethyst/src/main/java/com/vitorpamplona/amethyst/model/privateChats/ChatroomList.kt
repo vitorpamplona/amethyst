@@ -30,10 +30,10 @@ import kotlinx.collections.immutable.persistentSetOf
 class ChatroomList(
     val ownerPubKey: HexKey,
 ) {
-    var chatrooms = LargeCache<ChatroomKey, Chatroom>()
+    var rooms = LargeCache<ChatroomKey, Chatroom>()
         private set
 
-    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom = chatrooms.getOrCreate(key) { Chatroom() }
+    private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom = rooms.getOrCreate(key) { Chatroom() }
 
     fun getOrCreatePrivateChatroom(user: User): Chatroom {
         val key = ChatroomKey(persistentSetOf(user.pubkeyHex))
@@ -47,7 +47,7 @@ class ChatroomList(
         msg: Note,
     ) {
         val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg !in privateChatroom.roomMessages) {
+        if (msg !in privateChatroom.messages) {
             privateChatroom.addMessageSync(msg)
         }
     }
@@ -57,7 +57,7 @@ class ChatroomList(
         msg: Note,
     ) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg !in privateChatroom.roomMessages) {
+        if (msg !in privateChatroom.messages) {
             privateChatroom.addMessageSync(msg)
             if (msg.author?.pubkeyHex == ownerPubKey) {
                 privateChatroom.ownerSentMessage = true
@@ -70,7 +70,7 @@ class ChatroomList(
         msg: Note,
     ) {
         val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg in privateChatroom.roomMessages) {
+        if (msg in privateChatroom.messages) {
             privateChatroom.removeMessageSync(msg)
         }
     }
@@ -80,13 +80,13 @@ class ChatroomList(
         msg: Note,
     ) {
         val privateChatroom = getOrCreatePrivateChatroom(room)
-        if (msg in privateChatroom.roomMessages) {
+        if (msg in privateChatroom.messages) {
             privateChatroom.removeMessageSync(msg)
         }
     }
 
     fun hasSentMessagesTo(key: ChatroomKey?): Boolean {
         if (key == null) return false
-        return chatrooms.get(key)?.ownerSentMessage == true
+        return rooms.get(key)?.ownerSentMessage == true
     }
 }

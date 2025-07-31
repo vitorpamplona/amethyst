@@ -34,18 +34,18 @@ class ChatroomFeedFilter(
     override fun feedKey(): String = withUser.hashCode().toString()
 
     override fun feed(): List<Note> {
-        val messages = account.chatroomList.getOrCreatePrivateChatroom(withUser)
+        val chatroom = account.chatroomList.getOrCreatePrivateChatroom(withUser)
 
-        return messages.roomMessages
+        return chatroom.messages
             .filter { account.isAcceptable(it) }
             .sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
             .reversed()
     }
 
     override fun applyFilter(collection: Set<Note>): Set<Note> {
-        val messages = account.chatroomList.getOrCreatePrivateChatroom(withUser)
+        val chatroom = account.chatroomList.getOrCreatePrivateChatroom(withUser)
 
-        return collection.filter { it in messages.roomMessages && account.isAcceptable(it) }.toSet()
+        return collection.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
     }
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)

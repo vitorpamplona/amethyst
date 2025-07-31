@@ -203,7 +203,7 @@ class EventNotificationConsumer(
 
             val isKnownRoom =
                 (
-                    chatroomList.chatrooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
+                    chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
                 )
 
             if (isKnownRoom) {
@@ -246,7 +246,7 @@ class EventNotificationConsumer(
 
             val followingKeySet = acc.backupContactList?.unverifiedFollowKeySet()?.toSet() ?: return
 
-            val isKnownRoom = chatroomList.chatrooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
+            val isKnownRoom = chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
 
             if (isKnownRoom) {
                 val content = chatNote.event?.content ?: ""
@@ -284,7 +284,7 @@ class EventNotificationConsumer(
 
             val chatRoom = event.chatroomKey(signer.pubKey)
 
-            val isKnownRoom = chatroomList.chatrooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
+            val isKnownRoom = chatroomList.rooms.get(chatRoom)?.senderIntersects(followingKeySet) == true || chatroomList.hasSentMessagesTo(chatRoom)
 
             if (isKnownRoom) {
                 note.author?.let {

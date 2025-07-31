@@ -74,7 +74,7 @@ fun NewChatroomSubjectDialog(
             val groupName =
                 remember {
                     mutableStateOf<String>(
-                        accountViewModel.account.chatroomList.chatrooms
+                        accountViewModel.account.chatroomList.rooms
                             .get(room)
                             ?.subject
                             ?.value ?: "",

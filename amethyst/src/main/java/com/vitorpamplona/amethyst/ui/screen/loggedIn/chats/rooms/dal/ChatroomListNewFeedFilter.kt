@@ -39,7 +39,7 @@ class ChatroomListNewFeedFilter(
         val followingKeySet = account.followingKeySet()
 
         val privateMessages =
-            chatList.chatrooms.mapNotNull { key, chatroom ->
+            chatList.rooms.mapNotNull { key, chatroom ->
                 if (!chatroom.senderIntersects(followingKeySet) && !chatList.hasSentMessagesTo(key) && !account.isAllHidden(key.users)) {
                     chatroom.lastMessage
                 } else {
@@ -108,7 +108,7 @@ class ChatroomListNewFeedFilter(
             val noteEvent = newNote.event
             if (noteEvent is ChatroomKeyable) {
                 val roomKey = noteEvent.chatroomKey(me.pubkeyHex)
-                val room = account.chatroomList.chatrooms.get(roomKey)
+                val room = account.chatroomList.rooms.get(roomKey)
 
                 if (room != null &&
                     (

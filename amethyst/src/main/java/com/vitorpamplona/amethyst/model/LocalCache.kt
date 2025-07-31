@@ -389,8 +389,6 @@ object LocalCache : ILocalCache {
         idHex: String,
         note: Note,
     ): Note {
-        checkNotInMainThread()
-
         require(isValidHex(idHex)) { "$idHex is not a valid hex" }
 
         return notes.getOrCreate(idHex) {
@@ -399,8 +397,6 @@ object LocalCache : ILocalCache {
     }
 
     fun getOrCreateNote(idHex: String): Note {
-        checkNotInMainThread()
-
         require(isValidHex(idHex)) { "$idHex is not a valid hex" }
 
         return notes.getOrCreate(idHex) {
@@ -2313,7 +2309,7 @@ object LocalCache : ILocalCache {
         }
 
         chatroomList.forEach { userHex, room ->
-            room.chatrooms.map { key, chatroom ->
+            room.rooms.map { key, chatroom ->
                 val toBeRemoved = chatroom.pruneMessagesToTheLatestOnly()
 
                 val childrenToBeRemoved = mutableListOf<Note>()
@@ -2330,7 +2326,7 @@ object LocalCache : ILocalCache {
 
                 if (toBeRemoved.size > 1) {
                     println(
-                        "PRUNE: ${toBeRemoved.size} private messages from $userHex to ${key.users.joinToString()} removed. ${chatroom.roomMessages.size} kept",
+                        "PRUNE: ${toBeRemoved.size} private messages from $userHex to ${key.users.joinToString()} removed. ${chatroom.messages.size} kept",
                     )
                 }
             }
