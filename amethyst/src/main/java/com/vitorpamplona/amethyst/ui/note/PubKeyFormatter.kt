@@ -27,7 +27,7 @@ fun ByteArray.toHexShortDisplay(): String = toHexKey().toShortDisplay()
 
 fun String.toShortDisplay(): String {
     if (length <= 16) return this
-    return replaceRange(8, length - 8, ":")
+    return replaceRange(8, length - 8, "…")
 }
 
 fun HexKey.toDisplayHexKey(): String = this.toShortDisplay()

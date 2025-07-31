@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.model.HashtagIcon
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -100,10 +102,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip02FollowList.EmptyTagList
 import com.vitorpamplona.quartz.nip02FollowList.ImmutableListOfLists
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -742,6 +746,32 @@ fun TagLink(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun DisplayNoteFromTagPreview() {
+    val dummyPost =
+        TextNoteEvent(
+            id = "0b6d941c46411a95edb1c93da7ad6ca26370497d8c7b7d621f5cb59f48841bad",
+            pubKey = "6dd3b72e325da7383b275eef1c66131ba4664326e162bc060527509b4e33ae43",
+            createdAt = 1753988264,
+            tags = emptyArray(),
+            content = "test",
+            sig = "ec39e60722a083cccbd2d82d2827e13f5499fa7cbcedac5b76011a844c077473adb629d50d01fab147835ac6c8a3d5ba9aaddd87d6723f0c3c864b9119fc4356",
+        )
+
+    LocalCache.justConsume(dummyPost, null, true)
+    val note = LocalCache.getOrCreateNote(dummyPost.id)
+
+    ThemeComparisonColumn(
+        toPreview = {
+            ClickableTextPrimary(
+                text = "@${note.idNote().toShortDisplay()}",
+                onClick = { },
+            )
+        },
+    )
 }
 
 @Composable
