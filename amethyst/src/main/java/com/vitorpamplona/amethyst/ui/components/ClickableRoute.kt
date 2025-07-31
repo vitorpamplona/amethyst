@@ -205,7 +205,7 @@ private fun DisplayAddress(
 
     if (noteBase == null) {
         LaunchedEffect(key1 = nip19) {
-            accountViewModel.checkGetOrCreateAddressableNote(nip19.aTag()) { noteBase = it }
+            noteBase = accountViewModel.getOrCreateAddressableNote(nip19.address())
         }
     }
 

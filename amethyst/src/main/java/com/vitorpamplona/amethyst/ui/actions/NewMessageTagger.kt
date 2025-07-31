@@ -21,10 +21,12 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
@@ -77,7 +79,7 @@ class NewMessageTagger(
                     is NEmbed -> addNoteToReplyTos(dao.getOrCreateNote(entity.event.id))
 
                     is NAddress -> {
-                        val note = dao.checkGetOrCreateAddressableNote(entity.aTag())
+                        val note = dao.getOrCreateAddressableNote(entity.address())
                         if (note != null) {
                             addNoteToReplyTos(note)
                         }
@@ -114,9 +116,9 @@ class NewMessageTagger(
                                 }
 
                                 is NAddress -> {
-                                    val note = dao.checkGetOrCreateAddressableNote(entity.aTag())
+                                    val note = dao.getOrCreateAddressableNote(entity.address())
                                     if (note != null) {
-                                        getNostrAddress(note.idNote(), results.restOfWord)
+                                        getNostrAddress(note.toNAddr(), results.restOfWord)
                                     } else {
                                         word
                                     }
@@ -234,5 +236,5 @@ interface Dao {
 
     suspend fun getOrCreateNote(hex: String): Note
 
-    suspend fun checkGetOrCreateAddressableNote(hex: String): Note?
+    suspend fun getOrCreateAddressableNote(address: Address): AddressableNote?
 }

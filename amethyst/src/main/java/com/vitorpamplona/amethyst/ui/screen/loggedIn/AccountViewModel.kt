@@ -1056,16 +1056,7 @@ class AccountViewModel(
 
     fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
-    override suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? = LocalCache.checkGetOrCreateAddressableNote(key)
-
-    fun checkGetOrCreateAddressableNote(
-        key: HexKey,
-        onResult: (AddressableNote?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
-    }
-
-    suspend fun getOrCreateAddressableNote(key: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
+    override suspend fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
     fun getOrCreateAddressableNote(
         key: Address,
