@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -50,7 +51,8 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
-            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since?.get(it)?.time)
+            val since = since?.get(it)?.time ?: TimeUtils.oneDayAgo()
+            filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
         }
 
     val userJobMap = mutableMapOf<User, List<Job>>()
