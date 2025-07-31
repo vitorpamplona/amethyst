@@ -95,21 +95,6 @@ class ContactListEvent(
         fun blockListFor(pubKeyHex: HexKey): String = "3:$pubKeyHex:"
 
         suspend fun createFromScratch(
-            followUsers: List<ContactTag> = emptyList(),
-            relayUse: Map<String, ReadWrite>? = emptyMap(),
-            signer: NostrSignerSync,
-            createdAt: Long = TimeUtils.now(),
-        ): ContactListEvent {
-            val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
-
-            val tags =
-                listOf(AltTag.assemble(ALT)) +
-                    followUsers.map { it.toTagArray() }
-
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
-        }
-
-        suspend fun createFromScratch(
             followUsers: List<ContactTag>,
             relayUse: Map<String, ReadWrite>?,
             signer: NostrSigner,
@@ -188,6 +173,21 @@ class ContactListEvent(
                 }
 
             return signer.sign(createdAt, KIND, newTags, content)
+        }
+
+        fun createFromScratch(
+            followUsers: List<ContactTag> = emptyList(),
+            relayUse: Map<String, ReadWrite>? = emptyMap(),
+            signer: NostrSignerSync,
+            createdAt: Long = TimeUtils.now(),
+        ): ContactListEvent {
+            val content = relayUse?.let { RelaySet.assemble(it) } ?: ""
+
+            val tags =
+                listOf(AltTag.assemble(ALT)) +
+                    followUsers.map { it.toTagArray() }
+
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
     }
 }
