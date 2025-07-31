@@ -281,8 +281,10 @@ open class ShortNotePostViewModel :
                     pTags = null
                 }
 
-            canAddInvoice = accountViewModel.userProfile().info?.lnAddress() != null
-            canAddZapRaiser = accountViewModel.userProfile().info?.lnAddress() != null
+            val user = account.userProfile()
+
+            canAddInvoice = user.info?.lnAddress() != null
+            canAddZapRaiser = user.info?.lnAddress() != null
             canUsePoll = originalNote == null
             multiOrchestrator = null
 
@@ -290,12 +292,12 @@ open class ShortNotePostViewModel :
                 message = TextFieldValue(message.text + "\nnostr:${quotedNote.toNEvent()}")
 
                 quotedNote.author?.let { quotedUser ->
-                    if (quotedUser.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
+                    if (quotedUser.pubkeyHex != user.pubkeyHex) {
                         if (forwardZapTo.value.items.none { it.key.pubkeyHex == quotedUser.pubkeyHex }) {
                             forwardZapTo.value.addItem(quotedUser)
                         }
-                        if (forwardZapTo.value.items.none { it.key.pubkeyHex == accountViewModel.userProfile().pubkeyHex }) {
-                            forwardZapTo.value.addItem(accountViewModel.userProfile())
+                        if (forwardZapTo.value.items.none { it.key.pubkeyHex == user.pubkeyHex }) {
+                            forwardZapTo.value.addItem(user)
                         }
 
                         val pos = forwardZapTo.value.items.indexOfFirst { it.key.pubkeyHex == quotedUser.pubkeyHex }
