@@ -43,7 +43,7 @@ fun filterPictureAndVideoGlobal(
                 filter =
                     Filter(
                         kinds = PictureAndVideoKinds,
-                        limit = if (since == null) 50 else null,
+                        limit = 50,
                         since = since,
                     ),
             ),
@@ -53,7 +53,7 @@ fun filterPictureAndVideoGlobal(
                     Filter(
                         kinds = PictureAndVideoLegacyKinds,
                         tags = LegacyMimeTypeMap,
-                        limit = if (since == null) 50 else null,
+                        limit = 50,
                         since = since,
                     ),
             ),

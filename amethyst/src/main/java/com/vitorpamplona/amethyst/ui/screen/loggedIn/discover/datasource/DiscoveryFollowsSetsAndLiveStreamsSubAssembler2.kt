@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.makePublicChatsFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.makeCommunitiesFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.makeFollowSetsFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.makeLiveActivitiesFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
-class DiscoveryFollowsDiscoverySubAssembler3(
+class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
     client: NostrClient,
     allKeys: () -> Set<DiscoveryQueryState>,
 ) : PerUserAndFollowListEoseManager<DiscoveryQueryState, String>(client, allKeys) {
@@ -45,8 +45,9 @@ class DiscoveryFollowsDiscoverySubAssembler3(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
-        return makePublicChatsFilter(feedSettings, since, key.feedStates.discoverPublicChats.lastNoteCreatedAtIfFilled()) +
-            makeCommunitiesFilter(feedSettings, since, key.feedStates.discoverCommunities.lastNoteCreatedAtIfFilled())
+
+        return makeFollowSetsFilter(feedSettings, since, key.feedStates.discoverFollowSets.lastNoteCreatedAtIfFilled()) +
+            makeLiveActivitiesFilter(feedSettings, since, key.feedStates.discoverLive.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: DiscoveryQueryState) = key.account.userProfile()
@@ -75,14 +76,14 @@ class DiscoveryFollowsDiscoverySubAssembler3(
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followsPerRelayFlow().sample(500).collectLatest {
+                    key.followsPerRelayFlow().sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.account.scope.launch(Dispatchers.Default) {
                     combine(
-                        key.feedStates.discoverPublicChats.lastNoteCreatedAtWhenFullyLoaded,
-                        key.feedStates.discoverCommunities.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverFollowSets.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverLive.lastNoteCreatedAtWhenFullyLoaded,
                     ) {
                         Any()
                     }.sample(1000).collectLatest {

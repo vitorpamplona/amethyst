@@ -95,7 +95,7 @@ fun filterSummaryNotificationsToPubkey(
                 Filter(
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = if (since == null) 2000 else null,
+                    limit = 2000,
                     since = since,
                 ),
         ),
@@ -116,7 +116,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = if (since == null) 50 else null,
+                    limit = 50,
                     since = since,
                 ),
         ),
@@ -126,7 +126,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = if (since == null) 100 else null,
+                    limit = 100,
                     since = since,
                 ),
         ),

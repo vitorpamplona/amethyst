@@ -23,8 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.makeFollowSetsFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.makeLiveActivitiesFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.makeLongFormFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.makeContentDVMsFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.makeClassifiedsFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -36,7 +37,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
-class DiscoveryFollowsDiscoverySubAssembler2(
+class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
     client: NostrClient,
     allKeys: () -> Set<DiscoveryQueryState>,
 ) : PerUserAndFollowListEoseManager<DiscoveryQueryState, String>(client, allKeys) {
@@ -46,8 +47,9 @@ class DiscoveryFollowsDiscoverySubAssembler2(
     ): List<RelayBasedFilter>? {
         val feedSettings = key.followsPerRelay()
 
-        return makeFollowSetsFilter(feedSettings, since, key.feedStates.discoverFollowSets.lastNoteCreatedAtIfFilled()) +
-            makeLiveActivitiesFilter(feedSettings, since, key.feedStates.discoverLive.lastNoteCreatedAtIfFilled())
+        return makeLongFormFilter(feedSettings, since, key.feedStates.discoverReads.lastNoteCreatedAtIfFilled()) +
+            makeClassifiedsFilter(feedSettings, since, key.feedStates.discoverMarketplace.lastNoteCreatedAtIfFilled()) +
+            makeContentDVMsFilter(feedSettings, since, key.feedStates.discoverDVMs.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: DiscoveryQueryState) = key.account.userProfile()
@@ -76,14 +78,15 @@ class DiscoveryFollowsDiscoverySubAssembler2(
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followsPerRelayFlow().sample(1000).collectLatest {
+                    key.followsPerRelayFlow().sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.account.scope.launch(Dispatchers.Default) {
                     combine(
-                        key.feedStates.discoverFollowSets.lastNoteCreatedAtWhenFullyLoaded,
-                        key.feedStates.discoverLive.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverReads.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverDVMs.lastNoteCreatedAtWhenFullyLoaded,
+                        key.feedStates.discoverMarketplace.lastNoteCreatedAtWhenFullyLoaded,
                     ) {
                         Any()
                     }.sample(1000).collectLatest {

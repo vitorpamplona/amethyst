@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterPublicChatsGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -35,21 +36,34 @@ fun filterPublicChatsGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
-    return relays.set.map {
+    return relays.set.flatMap {
         val since = since?.get(it.key)?.time ?: defaultSince
-        RelayBasedFilter(
-            relay = it.key,
-            filter =
-                Filter(
-                    kinds =
-                        listOf(
-                            ChannelCreateEvent.KIND,
-                            ChannelMetadataEvent.KIND,
-                            ChannelMessageEvent.KIND,
-                        ),
-                    limit = 30,
-                    since = since,
-                ),
+        listOf(
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds =
+                            listOf(
+                                ChannelCreateEvent.KIND,
+                                ChannelMetadataEvent.KIND,
+                            ),
+                        limit = 30,
+                        since = since,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds =
+                            listOf(
+                                ChannelMessageEvent.KIND,
+                            ),
+                        limit = 50,
+                        since = since ?: TimeUtils.oneWeekAgo(),
+                    ),
+            ),
         )
     }
 }

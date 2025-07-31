@@ -38,9 +38,9 @@ class DiscoveryFilterAssembler(
 ) : ComposeSubscriptionManager<DiscoveryQueryState>() {
     val group =
         listOf(
-            DiscoveryFollowsDiscoverySubAssembler1(client, ::allKeys),
-            DiscoveryFollowsDiscoverySubAssembler2(client, ::allKeys),
-            DiscoveryFollowsDiscoverySubAssembler3(client, ::allKeys),
+            DiscoveryLongFormClassifiedsAndDVMSubAssembler1(client, ::allKeys),
+            DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(client, ::allKeys),
+            DiscoveryPublicChatsAndCommunitiesSubAssembler3(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

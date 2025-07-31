@@ -42,7 +42,7 @@ fun filterClassifiedsAuthors(
                 Filter(
                     authors = authorList,
                     kinds = listOf(ClassifiedsEvent.KIND),
-                    limit = 300,
+                    limit = authorList.size * 10,
                     since = since,
                 ),
         ),

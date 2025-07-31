@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterLiveActivitiesGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -34,16 +35,28 @@ fun filterLiveActivitiesGlobal(
 ): List<RelayBasedFilter> {
     if (relays.set.isEmpty()) return emptyList()
 
-    return relays.set.map {
-        val since = since?.get(it.key)?.time ?: defaultSince
-        RelayBasedFilter(
-            relay = it.key,
-            filter =
-                Filter(
-                    kinds = listOf(LiveActivitiesChatMessageEvent.KIND, LiveActivitiesEvent.KIND),
-                    limit = 30,
-                    since = since,
+    return relays.set
+        .map {
+            val since = since?.get(it.key)?.time ?: defaultSince
+            listOf(
+                RelayBasedFilter(
+                    relay = it.key,
+                    filter =
+                        Filter(
+                            kinds = listOf(LiveActivitiesEvent.KIND),
+                            limit = 30,
+                            since = since ?: TimeUtils.oneWeekAgo(),
+                        ),
                 ),
-        )
-    }
+                RelayBasedFilter(
+                    relay = it.key,
+                    filter =
+                        Filter(
+                            kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+                            limit = 50,
+                            since = since ?: TimeUtils.oneDayAgo(),
+                        ),
+                ),
+            )
+        }.flatten()
 }

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterCommunitiesGlobal(
     relays: GlobalTopNavPerRelayFilterSet,
@@ -51,8 +52,8 @@ fun filterCommunitiesGlobal(
                 filter =
                     Filter(
                         kinds = listOf(CommunityPostApprovalEvent.KIND),
-                        limit = 30,
-                        since = since,
+                        limit = 100,
+                        since = since ?: TimeUtils.oneWeekAgo(),
                     ),
             ),
         )

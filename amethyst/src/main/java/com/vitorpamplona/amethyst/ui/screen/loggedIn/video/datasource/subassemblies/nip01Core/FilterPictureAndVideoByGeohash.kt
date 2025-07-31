@@ -43,7 +43,7 @@ fun filterPictureAndVideoGeohash(
                 Filter(
                     kinds = PictureAndVideoKinds,
                     tags = mapOf("g" to geoHashes),
-                    limit = if (since == null) 200 else null,
+                    limit = 200,
                     since = since,
                 ),
         ),
@@ -57,7 +57,7 @@ fun filterPictureAndVideoGeohash(
                             "g" to geoHashes,
                             "m" to LegacyMimeTypes,
                         ),
-                    limit = if (since == null) 200 else null,
+                    limit = 200,
                     since = since,
                 ),
         ),
