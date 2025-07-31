@@ -800,11 +800,15 @@ object LocalCache : ILocalCache {
             is BadgeAwardEvent -> event.awardDefinition().map { getOrCreateAddressableNote(it) }
             is PrivateDmEvent -> event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             is RepostEvent ->
-                event.boostedEventIds().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.boostedAddresses().map { getOrCreateAddressableNote(it) }
+                listOfNotNull(
+                    event.boostedEventId()?.let { checkGetOrCreateNote(it) },
+                    event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
+                )
             is GenericRepostEvent ->
-                event.boostedEventIds().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.boostedAddresses().map { getOrCreateAddressableNote(it) }
+                listOfNotNull(
+                    event.boostedEventId()?.let { checkGetOrCreateNote(it) },
+                    event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
+                )
             is CommunityPostApprovalEvent ->
                 event.approvedEvents().mapNotNull { checkGetOrCreateNote(it) } +
                     event.approvedAddresses().map { getOrCreateAddressableNote(it) }

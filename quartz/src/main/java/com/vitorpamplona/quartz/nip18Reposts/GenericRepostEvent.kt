@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.lastNotNullOfOrNull
 
 @Immutable
 class GenericRepostEvent(
@@ -66,17 +67,17 @@ class GenericRepostEvent(
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
-    fun boostedEvents() = tags.mapNotNull(ETag::parse)
+    fun boostedEvent() = tags.lastNotNullOfOrNull(ETag::parse)
 
-    fun boostedATags() = tags.mapNotNull(ATag::parse)
+    fun boostedATag() = tags.lastNotNullOfOrNull(ATag::parse)
 
-    fun boostedAddresses() = tags.mapNotNull(ATag::parseAddress)
+    fun boostedAddress() = tags.lastNotNullOfOrNull(ATag::parseAddress)
+
+    fun boostedEventId() = tags.lastNotNullOfOrNull(ETag::parseId)
+
+    fun boostedAddressIds() = tags.lastNotNullOfOrNull(ATag::parseAddressId)
 
     fun originalAuthors() = tags.mapNotNull(PTag::parse)
-
-    fun boostedEventIds() = tags.mapNotNull(ETag::parseId)
-
-    fun boostedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     fun originalAuthorKeys() = tags.mapNotNull(PTag::parseKey)
 
