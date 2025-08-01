@@ -92,8 +92,6 @@ class User(
 
     fun toNostrUri() = "nostr:${toNProfile()}"
 
-    override fun toString(): String = pubkeyHex
-
     fun toBestShortFirstName(): String {
         val fullName = toBestDisplayName()
 

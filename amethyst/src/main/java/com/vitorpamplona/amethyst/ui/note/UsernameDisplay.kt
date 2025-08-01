@@ -88,7 +88,7 @@ fun WatchAuthorWithBlank(
         inner(noteAuthor)
     } else {
         val authorState by observeNote(baseNote, accountViewModel)
-        CrossfadeIfEnabled(targetState = authorState?.note?.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
+        CrossfadeIfEnabled(targetState = authorState.note.author, modifier = modifier, label = "WatchAuthorWithBlank", accountViewModel = accountViewModel) { newAuthor ->
             inner(newAuthor)
         }
     }
