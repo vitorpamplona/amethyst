@@ -38,11 +38,10 @@ class NostrSignerInternal(
     inline fun <T> runWrapErrors(action: () -> T): T =
         try {
             action()
-        } catch (e: SignerExceptions) {
-            throw e
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            throw SignerExceptions.CouldNotPerformException("Could not sign event.", e)
+            if (e is SignerExceptions) throw e
+            throw SignerExceptions.CouldNotPerformException("Could not perform the operation", e)
         }
 
     override suspend fun <T : Event> sign(

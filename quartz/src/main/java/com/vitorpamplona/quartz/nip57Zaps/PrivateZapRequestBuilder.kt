@@ -101,7 +101,7 @@ class PrivateZapRequestBuilder {
                             event.createdAt,
                         )
                     } else {
-                        throw IllegalArgumentException("Couldn't find a secret to use. The private zap is neither a post nor an author zap")
+                        throw SignerExceptions.CouldNotPerformException("Couldn't find a secret to use. The private zap is neither a post nor an author zap")
                     }
 
                 try {
@@ -112,13 +112,13 @@ class PrivateZapRequestBuilder {
                             // the sender is logged in.
                             decryptAnonTag(event.getAnonTag(), myPrivateKeyForThisEvent, altPubkeyToUse)
                         } else {
-                            throw IllegalArgumentException("This private zap cannot be decrypted by this key.")
+                            throw SignerExceptions.CouldNotPerformException("This private zap cannot be decrypted by this key.")
                         }
                     } else {
-                        throw IllegalArgumentException("Recipient pubkey not found.")
+                        throw SignerExceptions.CouldNotPerformException("Recipient pubkey not found.")
                     }
                 } catch (e: Exception) {
-                    throw IllegalArgumentException("Failed to create pubkey for ZapRequest ${event.id}. ${e.message}")
+                    throw SignerExceptions.CouldNotPerformException("Failed to create pubkey for ZapRequest ${event.id}. ${e.message}")
                 }
             }
 

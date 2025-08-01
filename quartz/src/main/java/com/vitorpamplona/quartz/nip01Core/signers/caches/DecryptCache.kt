@@ -62,7 +62,7 @@ abstract class DecryptCache<I : Any, T : Any>(
             // User has did not reply to the approval request. Ignore until later time.
             cache = CacheResults.CanTryAgain<T>(TimeUtils.tenSecondsFromNow())
         } catch (e: SignerExceptions.CouldNotPerformException) {
-            Log.w("DecryptCache", "CouldNotPerformException", e)
+            // Log.w("DecryptCache", "CouldNotPerformException", e)
             // Decryption failed. This key might not be able to decrypt anything. Don't try again.
             cache = CacheResults.DontTryAgain<T>()
         } catch (e: SignerExceptions.SignerNotFoundException) {
