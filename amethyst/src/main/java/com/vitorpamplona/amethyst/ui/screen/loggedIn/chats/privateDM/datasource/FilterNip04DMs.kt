@@ -20,41 +20,73 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import kotlin.collections.toList
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
 fun filterNip04DMs(
     group: Set<HexKey>?,
-    user: HexKey?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (group == null || group.isEmpty() || user == null || user.isEmpty()) return null
+    account: Account?,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? {
+    if (group == null || group.isEmpty() || account == null) return null
 
-    return listOf(
-        TypedFilter(
-            types = setOf(FeedType.PRIVATE_DMS),
+    val userOutboxRelays = account.outboxRelays.flow.value
+    val userInboxRelays = account.dmRelays.flow.value
+
+    val groupOutboxRelays = mutableSetOf<NormalizedRelayUrl>()
+    val groupInboxRelays = mutableSetOf<NormalizedRelayUrl>()
+
+    group.forEach {
+        val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
+        val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
+
+        val outbox =
+            authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
+                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+
+        groupOutboxRelays.addAll(outbox)
+
+        val inbox =
+            authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
+                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+
+        groupInboxRelays.addAll(inbox)
+    }
+
+    val toMeRelays = (userInboxRelays + groupOutboxRelays)
+    val fromMeRelays = (userOutboxRelays + groupInboxRelays)
+
+    return toMeRelays.map {
+        RelayBasedFilter(
+            relay = it,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(PrivateDmEvent.KIND),
                     authors = group.toList(),
-                    tags = mapOf("p" to listOf(user)),
-                    since = since,
+                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+                    since = since?.get(it)?.time,
                 ),
-        ),
-        TypedFilter(
-            types = setOf(FeedType.PRIVATE_DMS),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(PrivateDmEvent.KIND),
-                    authors = listOf(user),
-                    tags = mapOf("p" to group.toList()),
-                    since = since,
-                ),
-        ),
-    )
+        )
+    } +
+        fromMeRelays.map {
+            RelayBasedFilter(
+                relay = it,
+                filter =
+                    Filter(
+                        kinds = listOf(PrivateDmEvent.KIND),
+                        authors = listOf(account.userProfile().pubkeyHex),
+                        tags = mapOf("p" to group.toList()),
+                        since = since?.get(it)?.time,
+                    ),
+            )
+        }
 }

@@ -20,26 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 fun filterClassifiedsByHashtag(
-    hashToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (hashToLoad == null || hashToLoad.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    hashtags: Set<String>?,
+    since: Long?,
+): List<RelayBasedFilter>? {
+    if (hashtags == null || hashtags.isEmpty()) return null
 
-    val hashtags = hashtagAlts(hashToLoad).toList()
+    val hashtags = hashtags.flatMap(::hashtagAlts).distinct().sorted()
 
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.GLOBAL),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(ClassifiedsEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 300,
@@ -47,4 +49,25 @@ fun filterClassifiedsByHashtag(
                 ),
         ),
     )
+}
+
+fun filterClassifiedsByHashtag(
+    hashSet: HashtagTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (hashSet.set.isEmpty()) return emptyList()
+
+    return hashSet.set
+        .mapNotNull { relayHashSet ->
+            if (relayHashSet.value.hashtags.isEmpty()) {
+                null
+            } else {
+                filterClassifiedsByHashtag(
+                    relay = relayHashSet.key,
+                    hashtags = relayHashSet.value.hashtags,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

@@ -37,7 +37,7 @@ fun observeAccountIsHiddenWord(
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(account, word) {
-            account.flowHiddenUsers
+            account.hiddenUsers.flow
                 .map { word in it.hiddenWords }
                 .distinctUntilChanged()
         }
@@ -53,7 +53,7 @@ fun observeAccountIsHiddenUser(
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(account, user) {
-            account.flowHiddenUsers
+            account.hiddenUsers.flow
                 .map { it.hiddenUsers.contains(user.pubkeyHex) || it.spammers.contains(user.pubkeyHex) }
                 .distinctUntilChanged()
         }

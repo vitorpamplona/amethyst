@@ -26,4 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 @Stable
 data class ChatroomKey(
     val users: Set<HexKey>,
-)
+) : Comparable<ChatroomKey> {
+    override fun compareTo(other: ChatroomKey): Int = users.hashCode().compareTo(other.users.hashCode())
+}

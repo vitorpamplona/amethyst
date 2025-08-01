@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive.ChannelMetadataAndLiveActivityWatcherSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.ChannelLoaderSubAssembler
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class ChannelFinderQueryState(
@@ -43,10 +43,6 @@ class ChannelFinderFilterAssemblyGroup(
             // LiveActivityWatcherSubAssembly(client, ::allKeys)
             ChannelMetadataAndLiveActivityWatcherSubAssembler(client, ::allKeys),
         )
-
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 

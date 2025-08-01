@@ -53,8 +53,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

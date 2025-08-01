@@ -60,14 +60,16 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.SearchIcon
 import com.vitorpamplona.amethyst.ui.note.UserCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.header.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChannelName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -75,7 +77,9 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
@@ -140,9 +144,19 @@ private fun SearchBar(
     TextSearchDataSourceSubscription(searchBarViewModel, accountViewModel)
 
     LaunchedEffect(Unit) {
-        LocalCache.live.newEventBundles.collect {
-            if (searchBarViewModel.isSearchingFun()) {
-                searchBarViewModel.invalidateData()
+        launch(Dispatchers.Default) {
+            LocalCache.live.newEventBundles.collect {
+                if (searchBarViewModel.isSearchingFun()) {
+                    searchBarViewModel.invalidateData()
+                }
+            }
+        }
+
+        launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect {
+                if (searchBarViewModel.isSearchingFun()) {
+                    searchBarViewModel.invalidateData()
+                }
             }
         }
     }
@@ -230,7 +244,9 @@ private fun DisplaySearchResults(
 
     val hashTags by searchBarViewModel.hashtagResults.collectAsStateWithLifecycle()
     val users by searchBarViewModel.searchResultsUsers.collectAsStateWithLifecycle()
-    val channels by searchBarViewModel.searchResultsChannels.collectAsStateWithLifecycle()
+    val publicChatChannels by searchBarViewModel.searchResultsPublicChatChannels.collectAsStateWithLifecycle()
+    val ephemeralChannels by searchBarViewModel.searchResultsEphemeralChannels.collectAsStateWithLifecycle()
+    val liveActivityChannels by searchBarViewModel.searchResultsLiveActivityChannels.collectAsStateWithLifecycle()
     val notes by searchBarViewModel.searchResultsNotes.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -262,8 +278,8 @@ private fun DisplaySearchResults(
         }
 
         itemsIndexed(
-            channels,
-            key = { _, item -> "c" + item.idHex },
+            publicChatChannels,
+            key = { _, item -> "public" + item.idHex },
         ) { _, item ->
             ChannelName(
                 channelIdHex = item.idHex,
@@ -279,7 +295,63 @@ private fun DisplaySearchResults(
                 hasNewMessages = false,
                 loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
                 loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
-                onClick = { nav.nav(Route.Channel(item.idHex)) },
+                onClick = { nav.nav(routeFor(item)) },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            ephemeralChannels,
+            key = { _, item -> "ephem" + item.roomId.toKey() },
+        ) { _, item ->
+            val relayInfo by loadRelayInfo(item.roomId.relayUrl, accountViewModel)
+
+            ChannelName(
+                channelIdHex = item.roomId.toKey(),
+                channelPicture = relayInfo.icon,
+                channelTitle = {
+                    Text(
+                        item.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = stringRes(R.string.ephemeral_relay_chat),
+                hasNewMessages = false,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                onClick = { nav.nav(routeFor(item)) },
+            )
+
+            HorizontalDivider(
+                modifier = StdTopPadding,
+                thickness = DividerThickness,
+            )
+        }
+
+        itemsIndexed(
+            liveActivityChannels,
+            key = { _, item -> "live" + item.address.toValue() },
+        ) { _, item ->
+            ChannelName(
+                channelIdHex = item.address.toValue(),
+                channelPicture = item.profilePicture(),
+                channelTitle = {
+                    Text(
+                        item.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                channelLastTime = null,
+                channelLastContent = item.summary(),
+                hasNewMessages = false,
+                loadProfilePicture = accountViewModel.settings.showProfilePictures.value,
+                loadRobohash = accountViewModel.settings.featureSet != FeatureSetType.PERFORMANCE,
+                onClick = { nav.nav(routeFor(item)) },
             )
 
             HorizontalDivider(

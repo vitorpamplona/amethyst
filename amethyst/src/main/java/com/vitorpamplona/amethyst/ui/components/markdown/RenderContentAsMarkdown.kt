@@ -41,8 +41,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.service.previews.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MarkdownTextStyle
@@ -73,7 +73,7 @@ fun RenderContentAsMarkdown(
     val onClick =
         remember {
             { link: String ->
-                val route = uriToRoute(link)
+                val route = uriToRoute(link, accountViewModel.account)
                 if (route != null) {
                     nav.nav(route)
                 } else {

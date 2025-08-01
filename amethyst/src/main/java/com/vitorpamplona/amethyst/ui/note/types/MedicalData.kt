@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.model.Resource
 import com.vitorpamplona.amethyst.model.VisionPrescription
 import com.vitorpamplona.amethyst.model.findReferenceInDb
 import com.vitorpamplona.amethyst.model.parseResourceBundleOrNull
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer

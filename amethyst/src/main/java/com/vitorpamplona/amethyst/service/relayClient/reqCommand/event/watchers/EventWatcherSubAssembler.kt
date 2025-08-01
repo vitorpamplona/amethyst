@@ -25,9 +25,11 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.ammolite.relays.filters.MutableTime
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class EventWatcherSubAssembler(
     client: NostrClient,
@@ -37,24 +39,24 @@ class EventWatcherSubAssembler(
     var latestEOSEs: EOSEAccountFast<Note> = EOSEAccountFast<Note>(10000)
 
     override fun newEose(
-        relayUrl: String,
+        relay: NormalizedRelayUrl,
         time: Long,
     ) {
         lastNotesOnFilter.forEach {
-            latestEOSEs.newEose(it, relayUrl, time)
+            latestEOSEs.newEose(it, relay, time)
         }
-        super.newEose(relayUrl, time)
+        super.newEose(relay, time)
     }
 
     override fun updateFilter(
-        keys: List<EventFinderQueryState>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? {
-        if (keys.isEmpty()) {
+        key: List<EventFinderQueryState>,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
+        if (key.isEmpty()) {
             return null
         }
 
-        lastNotesOnFilter = keys.map { it.note }
+        lastNotesOnFilter = key.map { it.note }
 
         return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)
             .map { group ->
@@ -65,7 +67,6 @@ class EventWatcherSubAssembler(
                     listOfNotNull(
                         filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs)),
                         filterRepliesAndReactionsToAddresses(addressables, findMinimumEOSEs(addressables, latestEOSEs)),
-                        filterQuotesToNotes(group, findMinimumEOSEs(group, latestEOSEs)),
                     ).flatten()
                 } else {
                     emptyList()
@@ -79,8 +80,10 @@ class EventWatcherSubAssembler(
         notes: Iterable<Note>,
         eoseCache: EOSEAccountFast<Note>,
     ): Collection<List<Note>> =
-        notes.groupBy { eoseCache.since(it)?.keys?.hashCode() }
-            .values.map {
+        notes
+            .groupBy { eoseCache.since(it)?.keys?.hashCode() }
+            .values
+            .map {
                 // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
                 it.sortedBy { it.idHex }
             }
@@ -88,16 +91,16 @@ class EventWatcherSubAssembler(
     fun findMinimumEOSEs(
         notes: List<Note>,
         eoseCache: EOSEAccountFast<Note>,
-    ): Map<String, EOSETime> {
-        val minLatestEOSEs = mutableMapOf<String, EOSETime>()
+    ): SincePerRelayMap {
+        val minLatestEOSEs = mutableMapOf<NormalizedRelayUrl, MutableTime>()
 
         notes.forEach { note ->
             eoseCache.since(note)?.forEach {
                 val minEose = minLatestEOSEs[it.key]
                 if (minEose == null) {
-                    minLatestEOSEs.put(it.key, EOSETime(it.value.time))
-                } else if (it.value.time < minEose.time) {
-                    minEose.time = it.value.time
+                    minLatestEOSEs.put(it.key, it.value.copy())
+                } else {
+                    minEose.updateIfOlder(it.value.time)
                 }
             }
         }

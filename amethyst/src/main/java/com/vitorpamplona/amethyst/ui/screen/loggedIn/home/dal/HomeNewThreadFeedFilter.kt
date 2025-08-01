@@ -20,27 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
-import androidx.compose.ui.util.fastAny
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 
 class HomeNewThreadFeedFilter(
     val account: Account,
@@ -48,30 +49,27 @@ class HomeNewThreadFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.settings.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||
+            account.liveHomeFollowLists.value is MutedAuthorsByProxyTopNavFilter
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     override fun feed(): List<Note> {
-        val gRelays = account.activeGlobalRelays().toSet()
         val filterParams = buildFilterParams(account)
 
         val notes =
             LocalCache.notes.filterIntoSet { _, note ->
                 // Avoids processing addressables twice.
-                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, gRelays, filterParams)
+                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams)
             }
 
         val longFormNotes =
             LocalCache.addressables.filterIntoSet { _, note ->
-                acceptableEvent(note, gRelays, filterParams)
+                acceptableEvent(note, filterParams)
             }
 
         return sort(notes + longFormNotes)
@@ -80,21 +78,18 @@ class HomeNewThreadFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
-        val gRelays = account.activeGlobalRelays().toSet()
         val filterParams = buildFilterParams(account)
 
         return collection.filterTo(HashSet()) {
-            acceptableEvent(it, gRelays, filterParams)
+            acceptableEvent(it, filterParams)
         }
     }
 
     private fun acceptableEvent(
         it: Note,
-        globalRelays: Set<String>,
         filterParams: FilterByListParams,
     ): Boolean {
         val noteEvent = it.event
-        val isGlobalRelay = it.relays.fastAny { globalRelays.contains(it.url) }
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
@@ -104,12 +99,14 @@ class HomeNewThreadFeedFilter(
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is PollNoteEvent ||
                 noteEvent is HighlightEvent ||
+                (noteEvent is PublicMessageEvent && noteEvent.content.isNotEmpty() && noteEvent.isIncluded(account.signer.pubKey)) ||
                 noteEvent is InteractiveStoryPrologueEvent ||
                 noteEvent is CommentEvent ||
                 noteEvent is AudioTrackEvent ||
+                noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent
         ) &&
-            filterParams.match(noteEvent, isGlobalRelay) &&
+            filterParams.match(noteEvent, it.relays) &&
             it.isNewThread()
     }
 

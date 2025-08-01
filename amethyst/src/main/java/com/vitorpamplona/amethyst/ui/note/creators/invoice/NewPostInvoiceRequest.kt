@@ -30,15 +30,21 @@ fun NewPostInvoiceRequest(
     onSuccess: (String) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    accountViewModel.account.userProfile().info?.lnAddress()?.let { lud16 ->
+    val lnAddress =
+        accountViewModel.account
+            .userProfile()
+            .info
+            ?.lnAddress()
+
+    if (lnAddress != null) {
         InvoiceRequest(
-            lud16,
-            accountViewModel.account.userProfile().pubkeyHex,
-            accountViewModel,
-            stringRes(id = R.string.lightning_invoice),
-            stringRes(id = R.string.lightning_create_and_add_invoice),
-            onSuccess = onSuccess,
-            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
+            lud16 = lnAddress,
+            user = accountViewModel.account.userProfile(),
+            accountViewModel = accountViewModel,
+            titleText = stringRes(id = R.string.lightning_invoice),
+            buttonText = stringRes(id = R.string.lightning_create_and_add_invoice),
+            onNewInvoice = onSuccess,
+            onError = accountViewModel.toastManager::toast,
         )
     }
 }

@@ -29,7 +29,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
@@ -68,39 +67,61 @@ class SearchBarViewModel(
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
-    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue))
+    val searchDataSourceState = SearchQueryState(MutableStateFlow(searchValue), account)
 
     val searchResultsUsers =
-        combine(searchValueFlow.debounce(100), invalidations.debounce(100)) { term, version ->
-            logTime("SearchBarViewModel findUsersStartingWith") {
-                LocalCache.findUsersStartingWith(term, account)
-            }
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations.debounce(100),
+        ) { term, version ->
+            LocalCache.findUsersStartingWith(term, account)
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val searchResultsNotes =
-        combine(searchValueFlow.debounce(100), invalidations) { term, version ->
-            logTime("SearchBarViewModel findNotesStartingWith") {
-                LocalCache
-                    .findNotesStartingWith(term, account)
-                    .sortedWith(DefaultFeedOrder)
-            }
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache
+                .findNotesStartingWith(term, account.hiddenUsers)
+                .sortedWith(DefaultFeedOrder)
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
-    val searchResultsChannels =
-        combine(searchValueFlow.debounce(100), invalidations) { term, version ->
-            logTime("SearchBarViewModel findChannelsStartingWith") {
-                LocalCache.findChannelsStartingWith(term)
-            }
+    val searchResultsPublicChatChannels =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache.findPublicChatChannelsStartingWith(term)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val searchResultsEphemeralChannels =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache.findEphemeralChatChannelsStartingWith(term)
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
+
+    val searchResultsLiveActivityChannels =
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            LocalCache.findLiveActivityChannelsStartingWith(term)
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
     val hashtagResults =
-        combine(searchValueFlow.debounce(100), invalidations) { term, version ->
-            logTime("SearchBarViewModel findHashtags") {
-                findHashtags(term)
-            }
+        combine(
+            searchValueFlow.debounce(100),
+            invalidations,
+        ) { term, version ->
+            findHashtags(term)
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 

@@ -22,17 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.VideoMixGeohashHashtagsFilterSubAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.VideoOutboxEventsFilterSubAssembler
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
-
-val SUPPORTED_VIDEO_FEED_MIME_TYPES = listOf("image/jpeg", "image/gif", "image/png", "image/webp", "video/mp4", "video/mpeg", "video/webm", "audio/aac", "audio/mpeg", "audio/webm", "audio/wav", "image/avif")
-val SUPPORTED_VIDEO_FEED_MIME_TYPES_SET = SUPPORTED_VIDEO_FEED_MIME_TYPES.toSet()
 
 // This allows multiple screen to be listening to tags, even the same tag
 class VideoQueryState(
     val account: Account,
+    val feedState: AccountFeedContentStates,
     val scope: CoroutineScope,
 )
 
@@ -42,18 +40,13 @@ class VideoFilterAssembler(
     val group =
         listOf(
             VideoOutboxEventsFilterSubAssembler(client, ::allKeys),
-            VideoMixGeohashHashtagsFilterSubAssembler(client, ::allKeys),
         )
-
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
 
     override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    override fun destroy() = group.forEach { it.start() }
+    override fun destroy() = group.forEach { it.destroy() }
 
     override fun printStats() = group.forEach { it.printStats() }
 }

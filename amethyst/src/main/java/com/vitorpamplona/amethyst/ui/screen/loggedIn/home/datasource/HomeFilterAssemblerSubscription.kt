@@ -43,7 +43,11 @@ fun HomeFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel.account) {
-            HomeQueryState(accountViewModel.account, accountViewModel.viewModelScope)
+            HomeQueryState(
+                accountViewModel.account,
+                accountViewModel.feedStates,
+                accountViewModel.viewModelScope,
+            )
         }
 
     KeyDataSourceSubscription(state, dataSource)

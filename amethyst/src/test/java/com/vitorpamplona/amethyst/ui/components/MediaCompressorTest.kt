@@ -81,7 +81,7 @@ class MediaCompressorTest {
             )
 
             // Verify
-            verify(exactly = 0) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
+            verify(exactly = 0) { VideoCompressor.start(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
         }
 
@@ -102,7 +102,7 @@ class MediaCompressorTest {
             )
 
             // Verify
-            verify(exactly = 0) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
+            verify(exactly = 0) { VideoCompressor.start(any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
         }
 
@@ -115,7 +115,7 @@ class MediaCompressorTest {
             val uri = mockk<Uri>()
             val contentType = "video"
 
-            every { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) } returns Unit
+            every { VideoCompressor.start(any(), any(), any(), any(), any(), any()) } returns Unit
 
             // Execution
             MediaCompressor().compress(
@@ -126,7 +126,7 @@ class MediaCompressorTest {
             )
 
             // Verify
-            verify(exactly = 1) { VideoCompressor.start(any(), any(), any(), any(), any(), any(), any()) }
+            verify(exactly = 1) { VideoCompressor.start(any(), any(), any(), any(), any(), any()) }
         }
 
     @Test

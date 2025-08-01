@@ -30,8 +30,8 @@ import com.vitorpamplona.amethyst.model.RelayInfo
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
 import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -49,7 +49,7 @@ class RelayFeedViewModel :
     val order =
         compareByDescending<RelayInfo> { it.lastEvent }
             .thenByDescending { it.counter }
-            .thenBy { it.url }
+            .thenBy { it.url.url }
 
     private val _feedContent = MutableStateFlow<List<RelayInfo>>(emptyList())
     val feedContent = _feedContent.asStateFlow()
@@ -79,14 +79,14 @@ class RelayFeedViewModel :
     }
 
     fun mergeRelays(
-        relaysBeingUsed: Map<String, RelayInfo>,
-        relays: Map<String, ReadWrite>?,
+        relaysBeingUsed: Map<NormalizedRelayUrl, RelayInfo>,
+        relays: Map<NormalizedRelayUrl, ReadWrite>?,
     ): List<RelayInfo> {
         val userRelaysBeingUsed = relaysBeingUsed.map { it.value }
 
         val currentUserRelays =
             relays?.mapNotNull {
-                val url = RelayUrlFormatter.normalize(it.key)
+                val url = it.key
                 if (url !in relaysBeingUsed) {
                     RelayInfo(url, 0, 0)
                 } else {

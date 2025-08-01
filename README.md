@@ -175,7 +175,7 @@ Lastly, the user's account information (private key/pub key) is stored in the An
 ## Setup
 
 Make sure to have the following pre-requisites installed:
-1. Java 17+
+1. Java 21+
 2. Android Studio
 3. Android 8.0+ Phone or Emulation setup
 

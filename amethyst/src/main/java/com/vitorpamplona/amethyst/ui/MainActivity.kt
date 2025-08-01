@@ -34,29 +34,26 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.prepareSharedViewModel
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +76,7 @@ class MainActivity : AppCompatActivity() {
                 val accountStateViewModel: AccountStateViewModel = viewModel()
 
                 LaunchedEffect(key1 = Unit) {
-                    accountStateViewModel.tryLoginExistingAccountAsync()
+                    accountStateViewModel.loginWithDefaultAccountIfLoggedOff()
                 }
 
                 AccountScreen(accountStateViewModel, sharedPreferencesViewModel)
@@ -145,7 +142,10 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun uriToRoute(uri: String?): Route? =
+fun uriToRoute(
+    uri: String?,
+    account: Account,
+): Route? =
     if (uri?.startsWith("notifications", true) == true || uri?.startsWith("nostr:notifications", true) == true) {
         Route.Notification
     } else {
@@ -153,39 +153,40 @@ fun uriToRoute(uri: String?): Route? =
             Route.Hashtag(uri.removePrefix("nostr:").removePrefix("hashtag?id="))
         } else {
             val nip19 = Nip19Parser.uriToRoute(uri)?.entity
+            if (nip19 != null) {
+                LocalCache.consume(nip19)
+            }
             when (nip19) {
                 is NPub -> Route.Profile(nip19.hex)
                 is NProfile -> Route.Profile(nip19.hex)
-                is Note -> Route.Note(nip19.hex)
+                is NNote -> Route.Note(nip19.hex)
                 is NEvent -> {
-                    if (nip19.kind == PrivateDmEvent.KIND) {
-                        nip19.author?.let { Route.RoomByAuthor(it) }
-                    } else if (
-                        nip19.kind == ChannelMessageEvent.KIND ||
-                        nip19.kind == ChannelCreateEvent.KIND ||
-                        nip19.kind == ChannelMetadataEvent.KIND
-                    ) {
-                        Route.Channel(nip19.hex)
-                    } else {
-                        Route.EventRedirect(nip19.hex)
-                    }
+                    routeFor(
+                        note = LocalCache.getOrCreateNote(nip19.hex),
+                        loggedIn = account,
+                    ) ?: Route.EventRedirect(nip19.hex)
                 }
 
                 is NAddress -> {
-                    if (nip19.kind == CommunityDefinitionEvent.KIND) {
-                        Route.Community(nip19.aTag())
-                    } else if (nip19.kind == LiveActivitiesEvent.KIND) {
-                        Route.Channel(nip19.aTag())
-                    } else {
-                        Route.EventRedirect(nip19.aTag())
-                    }
+                    routeFor(
+                        note = LocalCache.getOrCreateAddressableNote(nip19.address()),
+                        loggedIn = account,
+                    ) ?: Route.EventRedirect(nip19.aTag())
                 }
 
                 is NEmbed -> {
-                    if (LocalCache.getNoteIfExists(nip19.event.id) == null) {
-                        LocalCache.justConsume(nip19.event, null, false)
+                    val noteEvent = nip19.event
+                    if (noteEvent is AddressableEvent) {
+                        routeFor(
+                            note = LocalCache.getOrCreateAddressableNote(noteEvent.address()),
+                            loggedIn = account,
+                        ) ?: Route.EventRedirect(noteEvent.addressTag())
+                    } else {
+                        routeFor(
+                            note = LocalCache.getOrCreateNote(nip19.event.id),
+                            loggedIn = account,
+                        ) ?: Route.EventRedirect(nip19.event.id)
                     }
-                    Route.EventRedirect(nip19.event.id)
                 }
 
                 else -> null

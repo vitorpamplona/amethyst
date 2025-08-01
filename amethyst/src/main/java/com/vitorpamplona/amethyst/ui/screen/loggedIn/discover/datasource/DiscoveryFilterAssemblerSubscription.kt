@@ -43,7 +43,7 @@ fun DiscoveryFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(accountViewModel.account) {
-            DiscoveryQueryState(accountViewModel.account, accountViewModel.viewModelScope)
+            DiscoveryQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
         }
 
     KeyDataSourceSubscription(state, dataSource)

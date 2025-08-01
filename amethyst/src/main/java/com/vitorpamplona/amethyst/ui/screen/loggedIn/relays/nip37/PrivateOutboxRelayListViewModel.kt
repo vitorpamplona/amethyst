@@ -21,11 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip37
 
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class PrivateOutboxRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? = account.getPrivateOutboxRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? =
+        account.privateStorageRelayList.flow.value
+            .toList()
 
-    override fun saveRelayList(urlList: List<String>) {
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.savePrivateOutboxRelayList(urlList)
     }
 }

@@ -42,17 +42,16 @@ class PinListEvent(
         const val KIND = 33888
         const val ALT = "Pinned Posts"
 
-        fun create(
+        suspend fun create(
             pins: List<String>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (PinListEvent) -> Unit,
-        ) {
+        ): PinListEvent {
             val tags = mutableListOf<Array<String>>()
             pins.forEach { tags.add(arrayOf("pin", it)) }
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), "", onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), "")
         }
     }
 }

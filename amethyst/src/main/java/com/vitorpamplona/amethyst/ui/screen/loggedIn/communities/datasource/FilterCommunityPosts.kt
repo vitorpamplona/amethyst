@@ -20,24 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 fun filterCommunityPosts(
+    relay: NormalizedRelayUrl,
     community: CommunityDefinitionEvent,
-    since: Map<String, EOSETime>?,
-): TypedFilter =
-    TypedFilter(
-        types = COMMON_FEED_TYPES,
+    since: Long?,
+): RelayBasedFilter =
+    RelayBasedFilter(
+        relay = relay,
         filter =
-            SincePerRelayFilter(
+            Filter(
                 authors = community.moderators().map { it.pubKey }.plus(community.pubKey),
                 tags = mapOf("a" to listOf(community.addressTag())),
-                kinds = listOf(CommunityPostApprovalEvent.KIND),
+                kinds = CommunityPostApprovalEvent.KIND_LIST,
                 limit = 500,
                 since = since,
             ),

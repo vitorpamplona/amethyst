@@ -21,11 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 // This allows multiple screen to be listening to tags, even the same tag
 class HashtagQueryState(
     val hashtag: String,
+    val relays: Set<NormalizedRelayUrl>,
 ) {
     val lowercaseHashtag = hashtag.lowercase()
 }
@@ -38,15 +40,11 @@ class HashtagFilterAssembler(
             HashtagFeedFilterSubAssembler(client, ::allKeys),
         )
 
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
-
     override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    override fun destroy() = group.forEach { it.start() }
+    override fun destroy() = group.forEach { it.destroy() }
 
     override fun printStats() = group.forEach { it.printStats() }
 }

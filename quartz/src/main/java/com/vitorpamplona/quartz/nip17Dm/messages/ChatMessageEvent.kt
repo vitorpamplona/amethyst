@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
-import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent.Companion.ALT_DESCRIPTION
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -45,7 +44,7 @@ class ChatMessageEvent(
 
     companion object {
         const val KIND = 14
-        const val ALT = "Direct message"
+        const val ALT_DESCRIPTION = "Direct message"
 
         fun build(
             msg: String,

@@ -21,15 +21,18 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.datasources.EventCollector
-import com.vitorpamplona.ammolite.relays.datasources.RelayInsertConfirmationCollector
+import com.vitorpamplona.amethyst.model.LocalCache.markAsSeen
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CoroutineScope
 
 class CacheClientConnector(
     val client: NostrClient,
     val cache: LocalCache,
+    val scope: CoroutineScope,
 ) {
     val receiver =
         EventCollector(client) { event, relay ->
@@ -38,8 +41,8 @@ class CacheClientConnector(
 
     val confirmationWatcher =
         RelayInsertConfirmationCollector(client) { eventId, relay ->
-            cache.markAsSeen(eventId, relay.brief)
-            markAsSeen(eventId, relay.brief)
+            cache.markAsSeen(eventId, relay.url)
+            markAsSeen(eventId, relay.url)
         }
 
     fun destroy() {
@@ -49,6 +52,6 @@ class CacheClientConnector(
 
     private fun markAsSeen(
         eventId: HexKey,
-        relay: RelayBriefInfoCache.RelayBriefInfo,
-    ) = LocalCache.getNoteIfExists(eventId)?.addRelay(relay)
+        info: NormalizedRelayUrl,
+    ) = LocalCache.getNoteIfExists(eventId)?.addRelay(info)
 }

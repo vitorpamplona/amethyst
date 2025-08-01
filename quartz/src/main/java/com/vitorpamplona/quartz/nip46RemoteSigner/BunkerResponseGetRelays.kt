@@ -21,19 +21,19 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip02FollowList.ReadWrite
 import java.util.UUID
 
 class BunkerResponseGetRelays(
     id: String = UUID.randomUUID().toString(),
     val relays: Map<String, ReadWrite>,
-) : BunkerResponse(id, EventMapper.mapper.writeValueAsString(relays), null) {
+) : BunkerResponse(id, JsonMapper.mapper.writeValueAsString(relays), null) {
     companion object {
         fun parse(
             id: String,
             result: String,
             error: String? = null,
-        ) = BunkerResponseGetRelays(id, EventMapper.mapper.readValue(result, object : TypeReference<Map<String, ReadWrite>>() {}))
+        ) = BunkerResponseGetRelays(id, JsonMapper.mapper.readValue(result, object : TypeReference<Map<String, ReadWrite>>() {}))
     }
 }

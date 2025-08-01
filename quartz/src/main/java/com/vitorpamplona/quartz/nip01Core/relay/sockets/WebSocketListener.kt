@@ -40,6 +40,7 @@ interface WebSocketListener {
 
     fun onFailure(
         t: Throwable,
+        code: Int?,
         response: String?,
     )
 }

@@ -46,7 +46,7 @@ fun AccountScreen(
 ) {
     val accountState by accountStateViewModel.accountContent.collectAsStateWithLifecycle()
 
-    Log.d("ManageRelayServices", "AccountScreen $accountState $accountStateViewModel")
+    Log.d("ActivityLifecycle", "AccountScreen $accountState $accountStateViewModel")
 
     Crossfade(
         targetState = accountState,

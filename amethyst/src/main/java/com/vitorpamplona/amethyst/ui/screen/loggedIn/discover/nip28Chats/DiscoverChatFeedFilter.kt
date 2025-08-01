@@ -23,18 +23,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 
 open class DiscoverChatFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultDiscoveryFollowList.value
+
+    override fun limit() = 100
 
     override fun showHiddenKey(): Boolean =
         account.settings.defaultDiscoveryFollowList.value ==
@@ -46,16 +47,12 @@ open class DiscoverChatFeedFilter(
         val params = buildFilterParams(account)
 
         val allChannelNotes =
-            LocalCache.channels.mapNotNullIntoSet { _, channel ->
-                if (channel is PublicChatChannel) {
-                    val note = LocalCache.getNoteIfExists(channel.idHex)
-                    val noteEvent = note?.event
+            LocalCache.publicChatChannels.mapNotNullIntoSet { _, channel ->
+                val note = LocalCache.getNoteIfExists(channel.idHex)
+                val noteEvent = note?.event
 
-                    if (noteEvent == null || params.match(noteEvent)) {
-                        note
-                    } else {
-                        null
-                    }
+                if (noteEvent == null || params.match(noteEvent)) {
+                    note
                 } else {
                     null
                 }
@@ -67,11 +64,9 @@ open class DiscoverChatFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultDiscoveryFollowList.value,
+        FilterByListParams.create(
             followLists = account.liveDiscoveryFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
@@ -81,7 +76,7 @@ open class DiscoverChatFeedFilter(
             // note event here will never be null
             val noteEvent = note.event
             if (noteEvent is ChannelCreateEvent && params.match(noteEvent)) {
-                if ((LocalCache.getChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
+                if ((LocalCache.getPublicChatChannelIfExists(noteEvent.id)?.notes?.size() ?: 0) > 0) {
                     note
                 } else {
                     null
@@ -93,7 +88,7 @@ open class DiscoverChatFeedFilter(
                 if (channel != null &&
                     (channelEvent == null || (channelEvent is ChannelCreateEvent && params.match(channelEvent)))
                 ) {
-                    if ((LocalCache.getChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
+                    if ((LocalCache.getPublicChatChannelIfExists(channel.idHex)?.notes?.size() ?: 0) > 0) {
                         channel
                     } else {
                         null
@@ -110,7 +105,7 @@ open class DiscoverChatFeedFilter(
     override fun sort(collection: Set<Note>): List<Note> {
         val lastNote =
             collection.associateWith { note ->
-                LocalCache.getChannelIfExists(note.idHex)?.lastNoteCreatedAt ?: 0
+                LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0
             }
 
         return collection

@@ -22,15 +22,15 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.mixGeohashHashtagsCommunities.MixGeohashHashtagsCommunityEoseManager
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomeOutboxEventsEoseManager
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomeOutboxUsersEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to tags, even the same tag
 class HomeQueryState(
     val account: Account,
+    val feedState: AccountFeedContentStates,
     val scope: CoroutineScope,
 )
 
@@ -40,23 +40,19 @@ class HomeFilterAssembler(
     val group =
         listOf(
             HomeOutboxEventsEoseManager(client, ::allKeys),
-            HomeOutboxUsersEoseManager(client, ::allKeys),
+            // HomeOutboxUsersEoseManager(client, ::allKeys),
             // We can break it down, one for each sub if needed.
             // HashtagEventsFilterSubAssembler(client, ::allKeys),
             // GeohashEventsFilterSubAssembler(client, ::allKeys),
             // CommunityEventsFilterSubAssembler(client, ::allKeys),
-            MixGeohashHashtagsCommunityEoseManager(client, ::allKeys),
+            // MixGeohashHashtagsCommunityEoseManager(client, ::allKeys),
         )
-
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
 
     override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    override fun destroy() = group.forEach { it.start() }
+    override fun destroy() = group.forEach { it.destroy() }
 
     override fun printStats() = group.forEach { it.printStats() }
 }

@@ -176,9 +176,9 @@ fun observeNoteReplyCount(
         remember(note) {
             note
                 .flow()
-                .reactions.stateFlow
+                .replies.stateFlow
+                .sample(200)
                 .mapLatest { it.note.replies.size }
-                .sample(1000)
                 .distinctUntilChanged()
         }
 
@@ -215,8 +215,8 @@ fun observeNoteReactionCount(
             note
                 .flow()
                 .reactions.stateFlow
+                .sample(200)
                 .mapLatest { it.note.countReactions() }
-                .sample(1000)
                 .distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
@@ -294,7 +294,7 @@ fun observeNoteRepostCount(
             note
                 .flow()
                 .boosts.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { note.boosts.size }
                 .distinctUntilChanged()
         }

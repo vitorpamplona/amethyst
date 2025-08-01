@@ -23,6 +23,9 @@
     <!-- To take pictures -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- To record audio messages -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- To read NFCs that contain nostr:<NIP19> -->
     <uses-permission android:name="android.permission.NFC" />
 

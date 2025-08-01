@@ -20,15 +20,16 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive
 
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.filterChannelMetadataUpdatesById
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities.filterLiveStreamUpdatesByAddress
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 /**
  * This assembler observes modifications to the LiveActivity root events
@@ -43,18 +44,37 @@ class ChannelMetadataAndLiveActivityWatcherSubAssembler(
 ) : SingleSubEoseManager<ChannelFinderQueryState>(client, allKeys) {
     override fun updateFilter(
         keys: List<ChannelFinderQueryState>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
-        keys
-            .mapNotNull { key ->
-                if (key.channel is PublicChatChannel) {
-                    filterChannelMetadataUpdatesById(key.channel, since)
-                } else if (key.channel is LiveActivitiesChannel) {
-                    filterLiveStreamUpdatesByAddress(key.channel, since)
-                } else {
-                    null
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> {
+        val perRelayPublicChannelFilter =
+            mapOfSet {
+                keys.forEach { key ->
+                    if (key.channel is PublicChatChannel) {
+                        key.channel.relays().forEach {
+                            add(it, key.channel)
+                        }
+                    }
                 }
-            }.flatten()
+            }
 
-    override fun distinct(key: ChannelFinderQueryState) = key.channel.idHex
+        val perRelayLiveActivityFilter =
+            mapOfSet {
+                keys.forEach { key ->
+                    if (key.channel is LiveActivitiesChannel) {
+                        key.channel.relays().forEach {
+                            add(it, key.channel)
+                        }
+                    }
+                }
+            }
+
+        return perRelayPublicChannelFilter.flatMap { (relay, channels) ->
+            filterChannelMetadataUpdatesById(relay, channels.toList(), since?.get(relay)?.time)
+        } +
+            perRelayLiveActivityFilter.flatMap { (relay, channels) ->
+                filterLiveStreamUpdatesByAddress(relay, channels.toList(), since?.get(relay)?.time)
+            }
+    }
+
+    override fun distinct(key: ChannelFinderQueryState) = key.channel
 }

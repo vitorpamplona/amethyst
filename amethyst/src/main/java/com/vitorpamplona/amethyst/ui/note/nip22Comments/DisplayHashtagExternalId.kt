@@ -34,13 +34,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -49,7 +51,18 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 @Composable
 fun DisplayHashtagExternalId(
     externalId: HashtagId,
+    accountViewModel: AccountViewModel,
     nav: INav,
+) {
+    DisplayHashtagExternalId(externalId.topic) {
+        nav.nav(Route.Hashtag(externalId.topic))
+    }
+}
+
+@Composable
+fun DisplayHashtagExternalId(
+    topic: String,
+    linkInteractionListener: LinkInteractionListener,
 ) {
     Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
@@ -65,9 +78,9 @@ fun DisplayHashtagExternalId(
             text =
                 buildAnnotatedString {
                     withLink(
-                        LinkAnnotation.Clickable("hashtag") { nav.nav(Route.Hashtag(externalId.topic)) },
+                        LinkAnnotation.Clickable("hashtag", null, linkInteractionListener),
                     ) {
-                        append(externalId.topic)
+                        append(topic)
                     }
                 },
             style =

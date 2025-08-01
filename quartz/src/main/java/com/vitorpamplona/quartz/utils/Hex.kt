@@ -43,6 +43,7 @@ object Hex {
 
         try {
             for (c in hex.indices) {
+                if (c < 0 || c > 255) return false
                 if (hexToByte[hex[c].code] < 0) return false
             }
         } catch (e: IllegalArgumentException) {

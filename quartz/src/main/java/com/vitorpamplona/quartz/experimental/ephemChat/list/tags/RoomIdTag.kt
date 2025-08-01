@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.experimental.ephemChat.list.tags
 
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
 class RoomIdTag {
@@ -30,11 +32,13 @@ class RoomIdTag {
 
         @JvmStatic
         fun parse(tag: Array<String>): RoomId? {
-            ensure(tag.has(1)) { return null }
+            ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
             ensure(tag[2].isNotEmpty()) { return null }
-            return RoomId(tag[1], tag[2])
+
+            val relay = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
+            return RoomId(tag[1], relay)
         }
 
         @JvmStatic
@@ -44,6 +48,12 @@ class RoomIdTag {
         ) = arrayOf(TAG_NAME, id, relayUrl)
 
         @JvmStatic
-        fun assemble(id: RoomId) = arrayOf(TAG_NAME, id.id, id.relayUrl)
+        fun assemble(
+            id: String,
+            relay: NormalizedRelayUrl,
+        ) = assemble(id, relay.url)
+
+        @JvmStatic
+        fun assemble(id: RoomId) = arrayOf(TAG_NAME, id.id, id.relayUrl.url)
     }
 }

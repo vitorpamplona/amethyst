@@ -56,7 +56,7 @@ fun ChannelNamePreview() {
         ChatHeaderLayout(
             channelPicture = {
                 Image(
-                    painter = painterRes(R.drawable.github),
+                    painter = painterRes(R.drawable.github, 1),
                     contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                 )
@@ -89,7 +89,7 @@ fun ChannelNamePreview() {
             },
             leadingContent = {
                 Image(
-                    painter = painterRes(R.drawable.github),
+                    painter = painterRes(R.drawable.github, 2),
                     contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier = Size55Modifier,

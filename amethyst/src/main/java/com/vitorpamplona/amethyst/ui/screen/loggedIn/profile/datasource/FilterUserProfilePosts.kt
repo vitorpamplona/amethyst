@@ -20,13 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -37,49 +36,58 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+
+val UserProfilePostKinds1 =
+    listOf(
+        TextNoteEvent.KIND,
+        GenericRepostEvent.KIND,
+        RepostEvent.KIND,
+        LongTextNoteEvent.KIND,
+        PinListEvent.KIND,
+        PollNoteEvent.KIND,
+        HighlightEvent.KIND,
+        WikiNoteEvent.KIND,
+        VoiceEvent.KIND,
+    )
+
+val UserProfilePostKinds2 =
+    listOf(
+        TorrentEvent.KIND,
+        TorrentCommentEvent.KIND,
+        InteractiveStoryPrologueEvent.KIND,
+        CommentEvent.KIND,
+        VoiceReplyEvent.KIND,
+    )
 
 fun filterUserProfilePosts(
-    key: HexKey,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    if (key.isEmpty()) return emptyList()
-
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            GenericRepostEvent.KIND,
-                            RepostEvent.KIND,
-                            LongTextNoteEvent.KIND,
-                            PinListEvent.KIND,
-                            PollNoteEvent.KIND,
-                            HighlightEvent.KIND,
-                            WikiNoteEvent.KIND,
+    user: User,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> =
+    user
+        .outboxRelays()
+        .map { relay ->
+            listOf(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = UserProfilePostKinds1,
+                            authors = listOf(user.pubkeyHex),
+                            limit = 200,
+                            since = since?.get(relay)?.time,
                         ),
-                    authors = listOf(key),
-                    limit = 200,
-                    since = since,
                 ),
-        ),
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            TorrentEvent.KIND,
-                            TorrentCommentEvent.KIND,
-                            InteractiveStoryPrologueEvent.KIND,
-                            CommentEvent.KIND,
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = UserProfilePostKinds2,
+                            authors = listOf(user.pubkeyHex),
+                            limit = 50,
+                            since = since?.get(relay)?.time,
                         ),
-                    authors = listOf(key),
-                    limit = 50,
-                    since = since,
                 ),
-        ),
-    )
-}
+            )
+        }.flatten()

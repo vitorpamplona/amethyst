@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.quartz.experimental.ephemChat.chat.tags
 
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 class RoomTag {
     companion object {
         const val TAG_NAME = "d"
+
+        @JvmStatic
+        fun match(tag: Tag) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
         @JvmStatic
         fun parse(tag: Array<String>): String? {
@@ -36,6 +40,6 @@ class RoomTag {
         }
 
         @JvmStatic
-        fun assemble(url: String) = arrayOf(TAG_NAME, url)
+        fun assemble(room: String) = arrayOf(TAG_NAME, room)
     }
 }

@@ -28,8 +28,8 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
 
@@ -78,10 +78,8 @@ class UserProfileGalleryFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultStoriesFollowList.value,
             followLists = account.liveStoriesFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)

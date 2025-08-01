@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import kotlin.collections.distinctBy
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 
 /**
  * This query type creates only ONE relay subscription and does not
@@ -35,7 +35,7 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
     val sub =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             if (invalidateAfterEose) {
                 invalidateFilters()
             }
@@ -43,11 +43,11 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
-
-        sub.typedFilters = updateFilter(uniqueSubscribedAccounts)?.ifEmpty { null }
+        val newFilters = updateFilter(uniqueSubscribedAccounts)?.ifEmpty { null }
+        sub.updateFilters(newFilters?.groupByRelay())
     }
 
-    abstract fun updateFilter(key: List<T>): List<TypedFilter>?
+    abstract fun updateFilter(keys: List<T>): List<RelayBasedFilter>?
 
     abstract fun distinct(key: T): Any
 }

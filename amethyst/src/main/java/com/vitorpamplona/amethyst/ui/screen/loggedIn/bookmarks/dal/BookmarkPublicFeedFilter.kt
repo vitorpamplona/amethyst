@@ -21,28 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.dal
 
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
 class BookmarkPublicFeedFilter(
     val account: Account,
 ) : FeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().latestBookmarkList?.id ?: ""
+    override fun feedKey(): String =
+        account.bookmarkState.bookmarks.value
+            .hashCode()
+            .toString()
 
-    override fun feed(): List<Note> {
-        val bookmarks = account.userProfile().latestBookmarkList
-
-        return bookmarks
-            ?.tags
-            ?.mapNotNull {
-                if (it.size > 1 && it[0] == "e") {
-                    LocalCache.checkGetOrCreateNote(it[1])
-                } else if (it.size > 1 && it[0] == "a") {
-                    LocalCache.checkGetOrCreateAddressableNote(it[1])
-                } else {
-                    null
-                }
-            }?.reversed() ?: emptyList()
-    }
+    override fun feed(): List<Note> = account.bookmarkState.bookmarks.value.public
 }

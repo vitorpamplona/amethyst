@@ -503,7 +503,7 @@ private fun QrCodeButtonBase(
         },
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_qrcode),
+            painter = painterRes(R.drawable.ic_qrcode, 4),
             contentDescription = stringRes(id = contentDescription),
             modifier = Modifier.size(24.dp),
             tint = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,

@@ -42,12 +42,11 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.DisplayDraftChat
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.NoteQuickActionMenu
@@ -60,7 +59,6 @@ import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayLocation
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayPoW
-import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.ChatBubbleLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChangeChannelMetadataNote
@@ -99,29 +97,25 @@ fun ChatroomMessageCompose(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
 ) {
-    logTime(
-        debugMessage = { "ChatroomMessageCompose " + externalLinkForNote(baseNote) },
-    ) {
-        WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
-            WatchBlockAndReport(
-                note = baseNote,
-                showHiddenWarning = false,
-                modifier = Modifier.fillMaxWidth(),
-                accountViewModel = accountViewModel,
-                nav = nav,
-            ) { canPreview ->
-                NormalChatNote(
-                    baseNote,
-                    routeForLastRead,
-                    innerQuote,
-                    canPreview,
-                    parentBackgroundColor,
-                    accountViewModel,
-                    nav,
-                    onWantsToReply,
-                    onWantsToEditDraft,
-                )
-            }
+    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel) {
+        WatchBlockAndReport(
+            note = baseNote,
+            showHiddenWarning = false,
+            modifier = Modifier.fillMaxWidth(),
+            accountViewModel = accountViewModel,
+            nav = nav,
+        ) { canPreview ->
+            NormalChatNote(
+                baseNote,
+                routeForLastRead,
+                innerQuote,
+                canPreview,
+                parentBackgroundColor,
+                accountViewModel,
+                nav,
+                onWantsToReply,
+                onWantsToEditDraft,
+            )
         }
     }
 }
@@ -176,7 +170,7 @@ fun NormalChatNote(
         parentBackgroundColor = parentBackgroundColor,
         onClick = {
             if (note.event is ChannelCreateEvent) {
-                nav.nav(Route.Channel(note.idHex))
+                nav.nav(Route.PublicChatChannel(note.idHex))
                 true
             } else {
                 false
@@ -233,7 +227,7 @@ fun NormalChatNote(
                             val geo = remember(note) { note.event?.geoHashOrScope() }
                             if (geo != null) {
                                 Spacer(StdHorzSpacer)
-                                DisplayLocation(geo, nav)
+                                DisplayLocation(geo, accountViewModel, nav)
                             }
 
                             val pow = remember(note) { note.event?.strongPoWOrNull() }

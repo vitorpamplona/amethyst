@@ -20,29 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterFollowSetsByFollows(
-    follows: Map<String, List<HexKey>>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (follows != null && follows.isEmpty()) return null
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = setOf(FeedType.FOLLOWS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    authors = follows,
-                    kinds = listOf(FollowListEvent.KIND),
-                    limit = 300,
-                    since = since,
-                ),
-        ),
-    )
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
+
+        listOfNotNull(
+            it.value.authors?.let {
+                filterFollowSetsAuthors(relay, it, since)
+            },
+            it.value.geotags?.let {
+                filterFollowSetsByGeohash(relay, it, since)
+            },
+            it.value.hashtags?.let {
+                filterFollowSetsByHashtag(relay, it, since)
+            },
+            it.value.communities?.let {
+                filterFollowSetsAllCommunities(relay, it, since)
+            },
+        ).flatten()
+    }
 }

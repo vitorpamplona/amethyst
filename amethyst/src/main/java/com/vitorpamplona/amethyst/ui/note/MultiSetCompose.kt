@@ -74,9 +74,9 @@ import com.vitorpamplona.amethyst.ui.components.CoreSecretMessage
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.authorRouteFor
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
@@ -134,7 +134,7 @@ fun MultiSetCompose(
                 .background(backgroundColor.value)
                 .combinedClickable(
                     onClick = {
-                        scope.launch { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } }
+                        scope.launch { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } }
                     },
                     onLongClick = { popupExpanded.value = true },
                 ).padding(

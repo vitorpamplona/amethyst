@@ -22,16 +22,24 @@ package com.vitorpamplona.quartz.experimental.ephemChat.list
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.experimental.ephemChat.list.rooms
 import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
+import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag.Companion.parse
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip31Alts.AltTag
-import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayBuilder
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
+import com.vitorpamplona.quartz.nip51Lists.removeParsing
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.collections.plus
+import java.lang.reflect.Modifier.isPrivate
 
 @Immutable
 class EphemeralChatListEvent(
@@ -42,30 +50,9 @@ class EphemeralChatListEvent(
     content: String,
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient var publicAndPrivateEventCache: Set<RoomId>? = null
+    fun publicRooms() = tags.rooms()
 
-    fun publicAndPrivateRoomIds(
-        signer: NostrSigner,
-        onReady: (Set<RoomId>) -> Unit,
-    ) {
-        publicAndPrivateEventCache?.let { eventList ->
-            onReady(eventList)
-            return
-        }
-
-        privateTags(signer) {
-            val set = filterRooms(it)
-            publicAndPrivateEventCache = set
-            onReady(set)
-        }
-    }
-
-    fun filterRooms(privateTags: Array<Array<String>>): Set<RoomId> {
-        val privateRooms = privateTags.mapNotNull(RoomIdTag::parse)
-        val publicRooms = tags.mapNotNull(RoomIdTag::parse)
-
-        return (privateRooms + publicRooms).toSet()
-    }
+    fun publicRoomSet() = tags.roomSet()
 
     companion object {
         const val KIND = 10023
@@ -74,76 +61,120 @@ class EphemeralChatListEvent(
 
         fun createAddress(pubKey: HexKey) = Address(KIND, pubKey, FIXED_D_TAG)
 
-        fun createRoom(
+        suspend fun create(
             room: RoomId,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (EphemeralChatListEvent) -> Unit,
-        ) {
-            val tags = arrayOf(RoomIdTag.Companion.assemble(room))
+        ): EphemeralChatListEvent =
             if (isPrivate) {
-                PrivateTagsInContent.Companion.encryptNip04(
-                    privateTags = tags,
+                create(
+                    publicRooms = emptyList(),
+                    privateRooms = listOf(room),
                     signer = signer,
-                ) { encryptedTags ->
-                    create(encryptedTags, emptyArray(), signer, createdAt, onReady)
-                }
+                    createdAt = createdAt,
+                )
             } else {
-                create("", tags, signer, createdAt, onReady)
+                create(
+                    publicRooms = listOf(room),
+                    privateRooms = emptyList(),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
             }
-        }
 
-        fun removeRoom(
+        suspend fun add(
             earlierVersion: EphemeralChatListEvent,
             room: RoomId,
             isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (EphemeralChatListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.removeAll(
-                earlierVersion,
-                RoomIdTag.Companion.assemble(room.id, room.relayUrl),
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
+        ): EphemeralChatListEvent =
+            if (isPrivate) {
+                val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                resign(
+                    tags = earlierVersion.tags,
+                    privateTags = privateTags.plus(room.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
+            } else {
+                resign(
+                    content = earlierVersion.content,
+                    tags = earlierVersion.tags.plus(room.toTagArray()),
+                    signer = signer,
+                    createdAt = createdAt,
+                )
             }
-        }
 
-        fun addRoom(
+        suspend fun remove(
             earlierVersion: EphemeralChatListEvent,
             room: RoomId,
-            isPrivate: Boolean,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (EphemeralChatListEvent) -> Unit,
-        ) {
-            PrivateTagArrayBuilder.add(
-                earlierVersion,
-                RoomIdTag.Companion.assemble(room.id, room.relayUrl),
-                isPrivate,
-                signer,
-            ) { encryptedContent, newTags ->
-                create(encryptedContent, newTags, signer, createdAt, onReady)
-            }
+        ): EphemeralChatListEvent {
+            val privateTags = earlierVersion.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+            return resign(
+                privateTags = privateTags.removeParsing(RoomIdTag::parse, room),
+                tags = earlierVersion.tags.removeParsing(RoomIdTag::parse, room),
+                signer = signer,
+                createdAt = createdAt,
+            )
         }
 
-        fun create(
+        suspend fun resign(
+            tags: TagArray,
+            privateTags: TagArray,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ) = resign(
+            content = PrivateTagsInContent.encryptNip04(privateTags, signer),
+            tags = tags,
+            signer = signer,
+            createdAt = createdAt,
+        )
+
+        suspend fun resign(
             content: String,
-            tags: Array<Array<String>>,
+            tags: TagArray,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (EphemeralChatListEvent) -> Unit,
-        ) {
+        ): EphemeralChatListEvent {
             val newTags =
-                if (tags.any { it.size > 1 && it[0] == "alt" }) {
+                if (tags.fastAny(AltTag::match)) {
                     tags
                 } else {
-                    tags + AltTag.Companion.assemble(ALT)
+                    tags + AltTag.assemble(ALT)
                 }
 
-            signer.sign(createdAt, KIND, newTags, content, onReady)
+            return signer.sign(createdAt, KIND, newTags, content)
+        }
+
+        suspend fun create(
+            publicRooms: List<RoomId> = emptyList(),
+            privateRooms: List<RoomId> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): EphemeralChatListEvent {
+            val template = build(publicRooms, privateRooms, signer, createdAt)
+            return signer.sign(template)
+        }
+
+        suspend fun build(
+            publicRooms: List<RoomId> = emptyList(),
+            privateRooms: List<RoomId> = emptyList(),
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<EphemeralChatListEvent>.() -> Unit = {},
+        ) = eventTemplate<EphemeralChatListEvent>(
+            kind = KIND,
+            description = PrivateTagsInContent.encryptNip04(privateRooms.map { it.toTagArray() }.toTypedArray(), signer),
+            createdAt = createdAt,
+        ) {
+            alt(ALT)
+            rooms(publicRooms)
+
+            initializer()
         }
     }
 }

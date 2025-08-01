@@ -36,8 +36,11 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -86,13 +89,12 @@ import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.note.BlankNote
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
-import com.vitorpamplona.amethyst.ui.note.HashCheckFailedIcon
-import com.vitorpamplona.amethyst.ui.note.HashCheckIcon
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
-import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.Size75dp
@@ -837,7 +839,12 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
                 openDialogMsg.value = stringRes(localContext, R.string.hash_verification_passed)
             },
         ) {
-            HashCheckIcon(Size30dp)
+            Icon(
+                painter = painterRes(R.drawable.original, 1),
+                contentDescription = stringRes(id = R.string.hash_verification_passed),
+                modifier = Size30Modifier,
+                tint = Color.Unspecified,
+            )
         }
     } else {
         IconButton(
@@ -846,7 +853,12 @@ private fun HashVerificationSymbol(verifiedHash: Boolean) {
                 openDialogMsg.value = stringRes(localContext, R.string.hash_verification_failed)
             },
         ) {
-            HashCheckFailedIcon(Size30dp)
+            Icon(
+                imageVector = Icons.Default.Report,
+                contentDescription = stringRes(id = R.string.hash_verification_failed),
+                modifier = Size30Modifier,
+                tint = Color.Red,
+            )
         }
     }
 }

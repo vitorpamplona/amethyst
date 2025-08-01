@@ -27,15 +27,17 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.PublicChatChannel
+import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.UserState
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import java.math.BigDecimal
 
@@ -247,9 +250,37 @@ fun observeUserFollowCount(
             user
                 .flow()
                 .followers.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { userState ->
                     userState.user.transientFollowCount() ?: 0
+                }.distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+        }
+
+    return flow.collectAsStateWithLifecycle(0)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@Composable
+fun observeUserTagFollowCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+): State<Int> {
+    // Subscribe in the relay for changes in the metadata of this user.
+    UserFinderFilterAssemblerSubscription(user, accountViewModel)
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val flow =
+        remember(user) {
+            accountViewModel
+                .hashtagFollows(user)
+                .flow()
+                .metadata.stateFlow
+                .sample(1000)
+                .mapLatest { noteState ->
+                    (noteState.note.event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.size ?: 0
+                }.onStart {
+                    emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.size ?: 0)
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
@@ -262,39 +293,48 @@ fun observeUserFollowCount(
 fun observeUserTagFollows(
     user: User,
     accountViewModel: AccountViewModel,
-): State<Int> {
+): State<List<String>> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(user) {
-            user
+            accountViewModel
+                .hashtagFollows(user)
                 .flow()
-                .follows.stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.latestContactList?.countFollowTags() ?: 0
+                .metadata.stateFlow
+                .sample(200)
+                .mapLatest { noteState ->
+                    (noteState.note.event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList()
+                }.onStart {
+                    emit((accountViewModel.hashtagFollows(user).event as? HashtagListEvent)?.let { accountViewModel.account.hashtagListDecryptionCache.hashtags(it) }?.sorted() ?: emptyList())
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
 
-    return flow.collectAsStateWithLifecycle(0)
+    return flow.collectAsStateWithLifecycle(emptyList())
 }
 
 @Composable
 fun observeUserBookmarks(
     user: User,
     accountViewModel: AccountViewModel,
-): State<UserState?> {
+): State<NoteState> {
     // Subscribe in the relay for changes in the metadata of this user.
     UserFinderFilterAssemblerSubscription(user, accountViewModel)
 
     // Subscribe in the LocalCache for changes that arrive in the device
-    return user
-        .flow()
-        .bookmarks.stateFlow
-        .collectAsStateWithLifecycle()
+    val flow =
+        remember(user) {
+            accountViewModel
+                .bookmarks(user)
+                .flow()
+                .metadata.stateFlow
+        }
+
+    // Subscribe in the LocalCache for changes that arrive in the device
+    return flow.collectAsStateWithLifecycle()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -309,12 +349,13 @@ fun observeUserBookmarkCount(
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
         remember(user) {
-            user
+            accountViewModel
+                .bookmarks(user)
                 .flow()
-                .followers.stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.latestBookmarkList?.countBookmarks() ?: 0
+                .metadata.stateFlow
+                .sample(200)
+                .mapLatest { noteState ->
+                    (noteState.note.event as? BookmarkListEvent)?.countBookmarks() ?: 0
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
@@ -352,7 +393,7 @@ fun observeUserFollowerCount(
             user
                 .flow()
                 .followers.stateFlow
-                .sample(1000)
+                .sample(200)
                 .mapLatest { userState ->
                     userState.user.transientFollowerCount()
                 }.distinctUntilChanged()
@@ -455,7 +496,7 @@ fun observeUserIsFollowingChannel(
         remember(account) {
             account
                 .publicChatList
-                .livePublicChatEventIdSet
+                .flowSet
                 .mapLatest { followingChannels ->
                     channel.idHex in followingChannels
                 }.distinctUntilChanged()
@@ -463,7 +504,7 @@ fun observeUserIsFollowingChannel(
         }
 
     @SuppressLint("StateFlowValueCalledInComposition")
-    return flow.collectAsStateWithLifecycle(channel.idHex in account.publicChatList.livePublicChatEventIdSet.value)
+    return flow.collectAsStateWithLifecycle(channel.idHex in account.publicChatList.flowSet.value)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -603,7 +644,7 @@ fun observeUserStatuses(
 @Composable
 fun observeUserRelayIntoList(
     user: User,
-    relayUrl: String,
+    relayUrl: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -628,36 +669,9 @@ fun observeUserRelayIntoList(
     return flow.collectAsStateWithLifecycle(false)
 }
 
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-@Composable
-fun observeUserRoomSubject(
-    user: User,
-    room: ChatroomKey,
-    accountViewModel: AccountViewModel,
-): State<String?> {
-    // Subscribe in the relay for changes in the metadata of this user.
-    UserFinderFilterAssemblerSubscription(user, accountViewModel)
-
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(user) {
-            user
-                .flow()
-                .messages
-                .stateFlow
-                .sample(1000)
-                .mapLatest { userState ->
-                    userState.user.privateChatrooms[room]?.subject
-                }.distinctUntilChanged()
-                .flowOn(Dispatchers.Default)
-        }
-
-    return flow.collectAsStateWithLifecycle(user.privateChatrooms[room]?.subject)
-}
-
 data class RelayUsage(
-    val relays: List<String> = emptyList(),
-    val userRelayList: List<String> = emptyList(),
+    val relays: List<NormalizedRelayUrl> = emptyList(),
+    val userRelayList: List<NormalizedRelayUrl> = emptyList(),
 )
 
 @OptIn(FlowPreview::class)
@@ -677,7 +691,7 @@ fun observeUserRelaysUsing(
                 val currentUserRelays =
                     relayInfo.user.latestContactList
                         ?.relays()
-                        ?.map { RelayUrlFormatter.normalize(it.key) } ?: emptyList()
+                        ?.map { it.key } ?: emptyList()
 
                 RelayUsage(userRelaysBeingUsed, currentUserRelays)
             }.sample(1000)

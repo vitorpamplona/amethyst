@@ -20,21 +20,25 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun GeoHashFilterAssemblerSubscription(
-    tag: String,
-    dataSource: GeoHashFilterAssembler,
+    tag: Route.Geohash,
+    accountViewModel: AccountViewModel,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
         remember(tag) {
-            GeohashQueryState(tag)
+            GeohashQueryState(tag.geohash, accountViewModel.account.followOutboxesOrProxy.flow.value)
         }
 
-    KeyDataSourceSubscription(state, dataSource)
+    KeyDataSourceSubscription(state, accountViewModel.dataSources().geohashes)
 }

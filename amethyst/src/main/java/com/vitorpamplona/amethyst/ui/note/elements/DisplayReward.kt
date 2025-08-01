@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplies
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -181,7 +180,6 @@ class AddBountyAmountViewModel : ViewModel() {
                             newValue,
                             bountyInner,
                             draftTag = null,
-                            relayList = myAccount.activeWriteRelays().toImmutableList(),
                         )
                     }
                 }

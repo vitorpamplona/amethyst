@@ -21,12 +21,27 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip01Core.filterPictureAndVideoByGeohash
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip01Core.filterPictureAndVideoByHashtag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip01Core.filterPictureAndVideoGlobal
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip65Follows.filterPictureAndVideoByAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip65Follows.filterPictureAndVideoByFollows
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip72Communities.filterPictureAndVideoByAllCommunities
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip72Communities.filterPictureAndVideoByCommunity
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -37,11 +52,25 @@ import kotlinx.coroutines.launch
 class VideoOutboxEventsFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<VideoQueryState>,
-) : PerUserAndFollowListEoseManager<VideoQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<VideoQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: VideoQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? = filterPictureAndVideoByFollows(key.followsPerRelay(), since)
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
+        val feedSettings = key.followsPerRelay()
+        val defaultSince = key.feedState.videoFeed.lastNoteCreatedAtWhenFullyLoaded.value
+        return when (feedSettings) {
+            is AllCommunitiesTopNavPerRelayFilterSet -> filterPictureAndVideoByAllCommunities(feedSettings, since, defaultSince)
+            is AllFollowsTopNavPerRelayFilterSet -> filterPictureAndVideoByFollows(feedSettings, since, defaultSince)
+            is AuthorsTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
+            is GlobalTopNavPerRelayFilterSet -> filterPictureAndVideoGlobal(feedSettings, since, defaultSince)
+            is HashtagTopNavPerRelayFilterSet -> filterPictureAndVideoByHashtag(feedSettings, since, defaultSince)
+            is LocationTopNavPerRelayFilterSet -> filterPictureAndVideoByGeohash(feedSettings, since, defaultSince)
+            is MutedAuthorsTopNavPerRelayFilterSet -> filterPictureAndVideoByAuthors(feedSettings, since, defaultSince)
+            is SingleCommunityTopNavPerRelayFilterSet -> filterPictureAndVideoByCommunity(feedSettings, since, defaultSince)
+            else -> emptyList()
+        }
+    }
 
     override fun user(key: VideoQueryState) = key.account.userProfile()
 
@@ -51,11 +80,7 @@ class VideoOutboxEventsFilterSubAssembler(
 
     fun VideoQueryState.listName() = listNameFlow().value
 
-    fun VideoQueryState.followListsFlow() = account.liveStoriesFollowLists
-
-    fun VideoQueryState.followLists() = followListsFlow().value
-
-    fun VideoQueryState.followsPerRelayFlow() = account.liveStoriesListAuthorsPerRelay
+    fun VideoQueryState.followsPerRelayFlow() = account.liveStoriesFollowListsPerRelay
 
     fun VideoQueryState.followsPerRelay() = followsPerRelayFlow().value
 
@@ -68,12 +93,12 @@ class VideoOutboxEventsFilterSubAssembler(
         userJobMap[user] =
             listOf(
                 key.scope.launch(Dispatchers.Default) {
-                    key.listNameFlow().collectLatest {
+                    key.followsPerRelayFlow().sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.scope.launch(Dispatchers.Default) {
-                    key.followsPerRelayFlow().sample(5000).collectLatest {
+                    key.feedState.videoFeed.lastNoteCreatedAtWhenFullyLoaded.sample(1000).collectLatest {
                         invalidateFilters()
                     }
                 },
@@ -86,7 +111,7 @@ class VideoOutboxEventsFilterSubAssembler(
         key: User,
         subId: String,
     ) {
-        return super.endSub(key, subId)
+        super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
     }
 }

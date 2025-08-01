@@ -50,9 +50,9 @@ import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -228,7 +228,7 @@ fun ShortTorrentHeader(
     ShortTorrentHeader(
         title = noteEvent?.title() ?: TorrentEvent.ALT_DESCRIPTION,
         size = noteEvent?.totalSizeBytes()?.let { countToHumanReadableBytes(it) } ?: "--",
-        modifier.clickable { routeFor(baseNote, accountViewModel.userProfile())?.let { nav.nav(it) } },
+        modifier.clickable { routeFor(baseNote, accountViewModel.account)?.let { nav.nav(it) } },
         accountViewModel,
         nav,
     )

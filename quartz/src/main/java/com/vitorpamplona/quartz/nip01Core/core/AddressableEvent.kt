@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 
@@ -28,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 interface AddressableEvent : IEvent {
     fun dTag(): String
 
-    fun aTag(relayHint: String? = null): ATag
+    fun aTag(relayHint: NormalizedRelayUrl? = null): ATag
 
     fun address(): Address
 

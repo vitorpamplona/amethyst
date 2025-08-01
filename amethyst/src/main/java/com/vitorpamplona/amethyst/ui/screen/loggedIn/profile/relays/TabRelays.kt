@@ -30,7 +30,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -64,8 +64,6 @@ fun TabRelays(
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
-            println("Profile Relay Dispose")
-            feedViewModel.unsubscribeTo(user)
         }
     }
 

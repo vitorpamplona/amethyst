@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.UserSuggestionAnchor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -164,7 +165,7 @@ open class NewProductViewModel :
     var wantsZapraiser by mutableStateOf(false)
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
-    var relayList by mutableStateOf<ImmutableList<String>?>(null)
+    var relayList by mutableStateOf<ImmutableList<NormalizedRelayUrl>?>(null)
 
     fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
 
@@ -193,14 +194,12 @@ open class NewProductViewModel :
 
         if (noteEvent is DraftEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel.createTempDraftNote(noteEvent) { innerNote ->
-                    if (innerNote != null) {
-                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                        if (oldTag != null) {
-                            draftTag.set(oldTag)
-                        }
-                        loadFromDraft(innerNote)
+                accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
                     }
+                    loadFromDraft(innerNote)
                 }
             }
         }
@@ -386,7 +385,6 @@ open class NewProductViewModel :
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     alt,
                     contentWarningReason,
                     MediaCompressor.intToCompressorQuality(mediaQuality),
@@ -474,17 +472,9 @@ open class NewProductViewModel :
     fun reloadRelaySet() {
         val account = accountViewModel?.account ?: return
 
-        val nip65 = account.normalizedNIP65WriteRelayList.value
-        val private = account.normalizedPrivateOutBoxRelaySet.value
-        val local = account.settings.localRelayServers
-
         relayList =
-            if (nip65.isEmpty()) {
-                account.activeWriteRelays().map { it.url }.toImmutableList()
-            } else {
-                val combined: Set<String> = (nip65 + private + local)
-                combined.toImmutableList()
-            }
+            account.outboxRelays.flow.value
+                .toImmutableList()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
@@ -551,7 +541,7 @@ open class NewProductViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaDescription.downloadAndPrepare(
                 item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
         }
 
@@ -603,7 +593,7 @@ open class NewProductViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

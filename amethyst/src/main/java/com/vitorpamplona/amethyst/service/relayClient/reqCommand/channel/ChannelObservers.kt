@@ -26,8 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.ChannelState
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -73,10 +74,12 @@ fun observeChannelNoteAuthors(
                         .toSet()
                         .toImmutableList()
                 }.onStart {
-                    baseChannel.notes
-                        .mapNotNull { key, value -> value.author }
-                        .toSet()
-                        .toImmutableList()
+                    emit(
+                        baseChannel.notes
+                            .mapNotNull { key, value -> value.author }
+                            .toSet()
+                            .toImmutableList(),
+                    )
                 }.distinctUntilChanged()
                 .flowOn(Dispatchers.Default)
         }
@@ -87,7 +90,7 @@ fun observeChannelNoteAuthors(
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun observeChannelPicture(
-    baseChannel: Channel,
+    baseChannel: PublicChatChannel,
     accountViewModel: AccountViewModel,
 ): State<String?> {
     // Subscribe in the relay for changes in the metadata of this user.
@@ -99,7 +102,7 @@ fun observeChannelPicture(
             baseChannel
                 .flow()
                 .metadata.stateFlow
-                .mapLatest { it.channel.profilePicture() }
+                .mapLatest { (it.channel as? PublicChatChannel)?.profilePicture() }
                 .distinctUntilChanged()
         }
 

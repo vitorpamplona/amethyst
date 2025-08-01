@@ -23,18 +23,20 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun HashtagFilterAssemblerSubscription(
-    tag: String,
-    dataSource: HashtagFilterAssembler,
+    tag: Route.Hashtag,
+    accountViewModel: AccountViewModel,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
         remember(tag) {
-            HashtagQueryState(tag)
+            HashtagQueryState(tag.hashtag, accountViewModel.account.followOutboxesOrProxy.flow.value)
         }
 
-    KeyDataSourceSubscription(state, dataSource)
+    KeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
 }

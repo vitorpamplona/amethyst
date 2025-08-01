@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -31,9 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
@@ -41,8 +42,8 @@ class HomeConversationsFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
-        account.settings.defaultHomeFollowList.value == PeopleListEvent.blockListFor(account.userProfile().pubkeyHex) ||
-            account.settings.defaultHomeFollowList.value == MuteListEvent.blockListFor(account.userProfile().pubkeyHex)
+        account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||
+            account.liveHomeFollowLists.value is MutedAuthorsByProxyTopNavFilter
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
@@ -58,10 +59,8 @@ class HomeConversationsFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultHomeFollowList.value,
             followLists = account.liveHomeFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
@@ -81,6 +80,7 @@ class HomeConversationsFeedFilter(
                 event is PollNoteEvent ||
                 event is ChannelMessageEvent ||
                 event is CommentEvent ||
+                event is VoiceReplyEvent ||
                 event is LiveActivitiesChatMessageEvent
         ) &&
             filterParams.match(event)

@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip18Reposts.quotes
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
@@ -33,11 +35,11 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class QAddressableTag(
     val address: Address,
 ) : QTag {
-    var relay: String? = null
+    var relay: NormalizedRelayUrl? = null
 
     constructor(
         address: Address,
-        relayHint: String?,
+        relayHint: NormalizedRelayUrl?,
     ) : this(address) {
         this.relay = relayHint
     }
@@ -46,7 +48,7 @@ data class QAddressableTag(
         kind: Int,
         pubKeyHex: HexKey,
         dTag: String,
-        relayHint: String?,
+        relayHint: NormalizedRelayUrl?,
     ) : this(Address(kind, pubKeyHex, dTag)) {
         this.relay = relayHint
     }
@@ -54,7 +56,7 @@ data class QAddressableTag(
     fun countMemory(): Long =
         2 * pointerSizeInBytes +
             address.countMemory() +
-            (relay?.bytesUsedInMemory() ?: 0)
+            (relay?.url?.bytesUsedInMemory() ?: 0)
 
     override fun toTagArray() = assemble(address, relay)
 
@@ -67,7 +69,8 @@ data class QAddressableTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length != 64) { return null }
             val address = Address.parse(tag[1]) ?: return null
-            return QAddressableTag(address, tag.getOrNull(2))
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+            return QAddressableTag(address, hint)
         }
 
         @JvmStatic
@@ -75,13 +78,13 @@ data class QAddressableTag(
             kind: Int,
             pubKeyHex: HexKey,
             dTag: String,
-            relay: String?,
-        ) = arrayOfNotNull(TAG_NAME, Address.assemble(kind, pubKeyHex, dTag), relay)
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, Address.assemble(kind, pubKeyHex, dTag), relay?.url)
 
         @JvmStatic
         fun assemble(
             address: Address,
-            relay: String?,
-        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay)
+            relay: NormalizedRelayUrl?,
+        ) = arrayOfNotNull(TAG_NAME, address.toValue(), relay?.url)
     }
 }

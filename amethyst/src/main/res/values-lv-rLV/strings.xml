@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <string name="profile_image">Profila attēls</string>
     <string name="your_profile_image">Jūsu profila attēls</string>
     <string name="post_not_found_short">👀</string>

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.sha256.sha256
 
 class EventHasher {
@@ -61,7 +61,7 @@ class EventHasher {
             kind: Int,
             tags: Array<Array<String>>,
             content: String,
-        ): String = EventMapper.toJson(makeJsonObjectForId(pubKey, createdAt, kind, tags, content))
+        ): String = JsonMapper.toJson(makeJsonObjectForId(pubKey, createdAt, kind, tags, content))
 
         fun hashIdBytes(
             pubKey: HexKey,

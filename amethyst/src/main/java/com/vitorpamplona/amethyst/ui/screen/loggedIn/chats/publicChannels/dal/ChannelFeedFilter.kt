@@ -30,7 +30,7 @@ class ChannelFeedFilter(
     val channel: Channel,
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = channel.idHex
+    override fun feedKey() = channel
 
     // returns the last Note of each user.
     override fun feed(): List<Note> =

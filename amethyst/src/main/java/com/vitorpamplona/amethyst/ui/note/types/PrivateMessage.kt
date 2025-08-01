@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -77,7 +77,7 @@ fun RenderPrivateMessage(
     userRoom?.let {
         if (it.users.size > 1 || (it.users.size == 1 && note.author == accountViewModel.account.userProfile())) {
             ChatroomHeader(it, MaterialTheme.colorScheme.replyModifier.padding(10.dp), accountViewModel) {
-                routeFor(note, accountViewModel.userProfile())?.let {
+                routeFor(note, accountViewModel.account)?.let {
                     nav.nav(it)
                 }
             }
@@ -124,7 +124,7 @@ fun RenderPrivateMessage(
                 }
 
                 if (noteEvent.hasHashtags()) {
-                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, nav)
+                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
                 }
             }
         }

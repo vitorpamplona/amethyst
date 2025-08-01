@@ -20,44 +20,61 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import kotlin.collections.toList
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun filterLastMessageFollowingPublicChats(
-    followingChannels: Set<HexKey>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (followingChannels == null || followingChannels.isEmpty()) return null
+    followingChannels: Set<HexKey>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? {
+    if (followingChannels.isEmpty()) return null
 
-    return listOf(
-        TypedFilter(
-            // Metadata comes from any relay
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ChannelMetadataEvent.KIND),
-                    tags = mapOf("e" to followingChannels.toList()),
-                    since = since,
-                    limit = 1,
+    val relayRoomDTags =
+        mapOfSet {
+            followingChannels.forEach { channelId ->
+                val relays =
+                    LocalCache.getPublicChatChannelIfExists(channelId)?.relays()
+                        ?: LocalCache.relayHints.hintsForEvent(channelId).ifEmpty { null }
+                        ?: Constants.eventFinderRelays
+
+                relays.forEach { relayUrl ->
+                    add(relayUrl, channelId)
+                }
+            }
+        }
+
+    return relayRoomDTags
+        .map {
+            listOf(
+                RelayBasedFilter(
+                    // Metadata comes from any relay
+                    relay = it.key,
+                    filter =
+                        Filter(
+                            kinds = listOf(ChannelMetadataEvent.KIND),
+                            tags = mapOf("e" to it.value.sorted()),
+                            since = since?.get(it.key)?.time,
+                            limit = 1,
+                        ),
                 ),
-        ),
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ChannelMessageEvent.KIND),
-                    tags = mapOf("e" to followingChannels.toList()),
-                    since = since,
-                    // Remember to consider spam that is being removed from the UI
-                    limit = 100,
+                RelayBasedFilter(
+                    relay = it.key,
+                    filter =
+                        Filter(
+                            kinds = listOf(ChannelMessageEvent.KIND),
+                            tags = mapOf("e" to it.value.sorted()),
+                            since = since?.get(it.key)?.time,
+                            // Remember to consider spam that is being removed from the UI
+                            limit = 100,
+                        ),
                 ),
-        ),
-    )
+            )
+        }.flatten()
 }

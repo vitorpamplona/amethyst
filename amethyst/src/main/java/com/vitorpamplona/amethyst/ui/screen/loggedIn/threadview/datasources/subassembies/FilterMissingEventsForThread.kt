@@ -24,33 +24,52 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.ThreadAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindAddress
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun filterMissingEventsForThread(threadInfo: ThreadAssembler.ThreadInfo): List<TypedFilter> {
-    val missingEvents = mutableSetOf<String>()
-    val missingAddresses = mutableSetOf<Address>()
+fun filterMissingEventsForThread(
+    threadInfo: ThreadAssembler.ThreadInfo,
+    defaultRelays: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> {
+    val missingEvents =
+        mapOfSet {
+            if (threadInfo.root.event == null && threadInfo.root !is AddressableNote) {
+                potentialRelaysToFindEvent(threadInfo.root).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    add(relayUrl, threadInfo.root.idHex)
+                }
+            }
 
-    if (threadInfo.root.event == null) {
-        if (threadInfo.root is AddressableNote) {
-            missingAddresses.add(threadInfo.root.address)
-        } else {
-            missingEvents.add(threadInfo.root.idHex)
-        }
-    }
-
-    threadInfo.allNotes.forEach {
-        if (it.event == null) {
-            if (it is AddressableNote) {
-                missingAddresses.add(it.address)
-            } else {
-                missingEvents.add(it.idHex)
+            threadInfo.allNotes.forEach {
+                if (it !is AddressableNote && it.event == null) {
+                    potentialRelaysToFindEvent(it).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                        add(relayUrl, it.idHex)
+                    }
+                }
             }
         }
-    }
 
-    val missingEventsFilter = filterMissingEvents(missingEvents) ?: emptyList()
-    val missingAddressFilter = filterMissingAddressables(missingAddresses) ?: emptyList()
+    val missingAddresses =
+        mapOfSet {
+            if (threadInfo.root.event == null && threadInfo.root is AddressableNote) {
+                potentialRelaysToFindEvent(threadInfo.root).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    add(relayUrl, threadInfo.root.address)
+                }
+            }
+
+            threadInfo.allNotes.forEach {
+                if (it is AddressableNote && it.event == null) {
+                    potentialRelaysToFindAddress(it).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                        add(relayUrl, it.address)
+                    }
+                }
+            }
+        }
+
+    val missingEventsFilter = filterMissingEvents(missingEvents)
+    val missingAddressFilter = filterMissingAddressables(missingAddresses)
 
     return missingEventsFilter + missingAddressFilter
 }

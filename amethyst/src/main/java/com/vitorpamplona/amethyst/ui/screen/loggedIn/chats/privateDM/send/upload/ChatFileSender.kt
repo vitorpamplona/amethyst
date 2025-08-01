@@ -34,7 +34,7 @@ class ChatFileSender(
     val chatroom: ChatroomKey,
     val account: Account,
 ) {
-    fun sendNIP17(uploads: List<SuccessfulUploads>) {
+    suspend fun sendNIP17(uploads: List<SuccessfulUploads>) {
         uploads.forEach {
             if (it.cipher != null) {
                 sendNIP17(it.result, it.caption, it.contentWarningReason, it.cipher)
@@ -42,7 +42,7 @@ class ChatFileSender(
         }
     }
 
-    fun sendNIP17(
+    suspend fun sendNIP17(
         result: UploadOrchestrator.OrchestratorResult.ServerResult,
         caption: String?,
         contentWarningReason: String?,
@@ -73,7 +73,7 @@ class ChatFileSender(
     // NIP 04
     // ------
 
-    fun sendNIP04(uploads: List<SuccessfulUploads>) {
+    suspend fun sendNIP04(uploads: List<SuccessfulUploads>) {
         uploads.forEach {
             if (it.cipher == null) {
                 sendNIP04(it.result, it.caption, it.contentWarningReason)
@@ -81,7 +81,7 @@ class ChatFileSender(
         }
     }
 
-    fun sendNIP04(
+    suspend fun sendNIP04(
         result: UploadOrchestrator.OrchestratorResult.ServerResult,
         caption: String?,
         contentWarningReason: String?,
@@ -103,7 +103,7 @@ class ChatFileSender(
         )
     }
 
-    fun sendAll(uploads: List<SuccessfulUploads>) {
+    suspend fun sendAll(uploads: List<SuccessfulUploads>) {
         uploads.forEach {
             if (it.cipher != null) {
                 sendNIP17(it.result, it.caption, it.contentWarningReason, it.cipher)

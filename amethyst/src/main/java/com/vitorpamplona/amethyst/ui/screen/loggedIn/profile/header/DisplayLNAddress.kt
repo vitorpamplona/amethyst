@@ -26,17 +26,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequestCard
@@ -51,12 +51,11 @@ import com.vitorpamplona.quartz.nip47WalletConnect.PayInvoiceSuccessResponse
 @Composable
 fun DisplayLNAddress(
     lud16: String?,
-    userHex: String,
+    user: User,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var zapExpanded by remember { mutableStateOf(false) }
 
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
@@ -67,7 +66,7 @@ fun DisplayLNAddress(
             textContent = showErrorMessageDialog ?: "",
             onClickStartMessage = {
                 nav.nav {
-                    routeToMessage(userHex, showErrorMessageDialog, accountViewModel = accountViewModel)
+                    routeToMessage(user, showErrorMessageDialog, accountViewModel = accountViewModel)
                 }
             },
             onDismiss = { showErrorMessageDialog = null },
@@ -105,13 +104,13 @@ fun DisplayLNAddress(
             ) {
                 InvoiceRequestCard(
                     lud16,
-                    userHex,
+                    user,
                     accountViewModel,
                     onSuccess = {
                         zapExpanded = false
                         // pay directly
-                        if (accountViewModel.account.hasWalletConnectSetup()) {
-                            accountViewModel.sendZapPaymentRequestFor(it, null, onSent = {}) { response ->
+                        if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
+                            accountViewModel.sendZapPaymentRequestFor(it, null) { response ->
                                 if (response is PayInvoiceSuccessResponse) {
                                     showInfoMessageDialog = stringRes(context, R.string.payment_successful)
                                 } else if (response is PayInvoiceErrorResponse) {

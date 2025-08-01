@@ -58,7 +58,6 @@ class DMFileDecryptionTest {
         val request =
             Request
                 .Builder()
-                .header("User-Agent", "Amethyst/${BuildConfig.VERSION_NAME}")
                 .url(url)
                 .get()
                 .build()

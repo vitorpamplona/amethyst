@@ -27,13 +27,15 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 
 open class DiscoverLongFormFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
+
+    override fun limit() = 100
 
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
@@ -56,11 +58,9 @@ open class DiscoverLongFormFeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
-            account.userProfile().pubkeyHex,
-            account.settings.defaultDiscoveryFollowList.value,
+        FilterByListParams.create(
             account.liveDiscoveryFollowLists.value,
-            account.flowHiddenUsers.value,
+            account.hiddenUsers.flow.value,
         )
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {

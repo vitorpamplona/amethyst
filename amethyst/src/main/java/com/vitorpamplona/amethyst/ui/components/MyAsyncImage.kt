@@ -53,7 +53,8 @@ fun MyAsyncImage(
     mainImageModifier: Modifier,
     loadedImageModifier: Modifier,
     accountViewModel: AccountViewModel,
-    onError: @Composable () -> Unit,
+    onLoadingBackground: (@Composable () -> Unit)?,
+    onError: (@Composable () -> Unit)?,
 ) {
     val ratio = MediaAspectRatioCache.get(imageUrl)
     val showImage = remember { mutableStateOf(accountViewModel.settings.showImages.value) }
@@ -75,12 +76,31 @@ fun MyAsyncImage(
                             }
                         } else {
                             WaitAndDisplay {
-                                DisplayUrlWithLoadingSymbol(imageUrl)
+                                if (onLoadingBackground != null) {
+                                    Box(loadedImageModifier, contentAlignment = Alignment.Center) {
+                                        onLoadingBackground()
+                                        LoadingAnimation(Size40dp, Size6dp)
+                                    }
+                                } else {
+                                    DisplayUrlWithLoadingSymbol(imageUrl)
+                                }
                             }
                         }
                     }
                     is AsyncImagePainter.State.Error -> {
-                        onError()
+                        if (onError != null) {
+                            if (ratio != null) {
+                                Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
+                                    onError()
+                                }
+                            } else {
+                                Box(loadedImageModifier, contentAlignment = Alignment.Center) {
+                                    onError()
+                                }
+                            }
+                        } else {
+                            ClickableUrl(urlText = imageUrl, url = imageUrl)
+                        }
                     }
                     is AsyncImagePainter.State.Success -> {
                         SubcomposeAsyncImageContent(loadedImageModifier)

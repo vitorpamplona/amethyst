@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage

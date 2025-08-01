@@ -24,7 +24,13 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
@@ -47,7 +53,22 @@ class LiveActivitiesEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId) + tags.mapNotNull(QTag::parseEventId)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint) + tags.mapNotNull(QTag::parseAddressAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId) + tags.mapNotNull(QTag::parseAddressId)
+
+    override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
@@ -60,7 +81,9 @@ class LiveActivitiesEvent(
 
     fun ends() = tags.firstNotNullOfOrNull(EndsTag::parse)
 
-    fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parse))
+    fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
+
+    fun isLive() = status() == StatusTag.STATUS.LIVE
 
     fun currentParticipants() = tags.firstNotNullOfOrNull(CurrentParticipantsTag::parse)
 
@@ -70,7 +93,7 @@ class LiveActivitiesEvent(
 
     fun relays() = tags.mapNotNull(RelayListTag::parse)
 
-    fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).map { it.relayUrls }.flatten()
+    fun allRelayUrls() = tags.mapNotNull(RelayListTag::parse).flatten()
 
     fun hasHost() = tags.any(ParticipantTag::isHost)
 
@@ -78,9 +101,19 @@ class LiveActivitiesEvent(
 
     fun hosts() = tags.mapNotNull(ParticipantTag::parseHost)
 
-    fun checkStatus(eventStatus: String?): String? =
-        if (eventStatus == StatusTag.STATUS.LIVE.code && createdAt < TimeUtils.eightHoursAgo()) {
-            StatusTag.STATUS.ENDED.code
+    fun checkStatus(eventStatus: StatusTag.STATUS?): StatusTag.STATUS? =
+        if (eventStatus == StatusTag.STATUS.LIVE && createdAt < TimeUtils.eightHoursAgo()) {
+            StatusTag.STATUS.ENDED
+        } else if (eventStatus == StatusTag.STATUS.PLANNED) {
+            val starts = starts()
+            val ends = ends()
+            if (starts != null && starts < TimeUtils.oneHourAgo()) {
+                StatusTag.STATUS.ENDED
+            } else if (ends != null && ends < TimeUtils.oneHourAgo()) {
+                StatusTag.STATUS.ENDED
+            } else {
+                eventStatus
+            }
         } else {
             eventStatus
         }
@@ -91,13 +124,12 @@ class LiveActivitiesEvent(
         const val KIND = 30311
         const val ALT = "Live activity event"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (LiveActivitiesEvent) -> Unit,
-        ) {
+        ): LiveActivitiesEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

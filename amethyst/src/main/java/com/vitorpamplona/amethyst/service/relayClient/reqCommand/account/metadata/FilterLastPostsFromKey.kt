@@ -20,23 +20,23 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun filterLastPostsFromKey(
-    pubkey: HexKey?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (pubkey == null || pubkey.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    pubkey: HexKey,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey.isEmpty()) return emptyList()
 
     return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     authors = listOf(pubkey),
                     limit = 100,
                     since = since,

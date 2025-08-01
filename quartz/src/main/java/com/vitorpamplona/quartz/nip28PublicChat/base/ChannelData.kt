@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip28PublicChat.base
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 @Immutable
 data class ChannelData(
@@ -34,15 +35,22 @@ data class ChannelData(
 ) {
     fun toContent() = assemble(this)
 
-    companion object {
-        fun parse(content: String): ChannelData? =
-            try {
-                EventMapper.mapper.readValue(content)
-            } catch (e: Exception) {
-                Log.e("ChannelMetadataEvent", "Can't parse channel info $content", e)
-                ChannelData(null, null, null, null)
-            }
+    fun normalize() = ChannelDataNorm(name, about, picture, relays?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) })
 
-        fun assemble(data: ChannelData) = EventMapper.mapper.writeValueAsString(data)
+    companion object {
+        fun parse(content: String): ChannelData? = JsonMapper.mapper.readValue(content)
+
+        fun assemble(data: ChannelData) = JsonMapper.mapper.writeValueAsString(data)
     }
+}
+
+data class ChannelDataNorm(
+    val name: String? = null,
+    val about: String? = null,
+    val picture: String? = null,
+    val relays: List<NormalizedRelayUrl>? = null,
+) {
+    fun denormalize() = ChannelData(name, about, picture, relays?.mapNotNull { it.url })
+
+    fun toContent() = denormalize().toContent()
 }

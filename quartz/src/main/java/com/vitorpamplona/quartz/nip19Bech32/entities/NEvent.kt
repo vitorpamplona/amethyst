@@ -25,6 +25,8 @@ import addHexIfNotNull
 import addIntIfNotNull
 import addStringIfNotNull
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
 import com.vitorpamplona.quartz.nip19Bech32.asStringList
 import com.vitorpamplona.quartz.nip19Bech32.firstAsHex
@@ -35,7 +37,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNEvent
 @Immutable
 data class NEvent(
     val hex: String,
-    val relay: List<String>,
+    val relay: List<NormalizedRelayUrl>,
     val author: String?,
     val kind: Int?,
 ) : Entity {
@@ -52,20 +54,42 @@ data class NEvent(
 
             if (hex.isBlank()) return null
 
-            return NEvent(hex, relay, author, kind)
+            return NEvent(
+                hex,
+                relay.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) },
+                author,
+                kind,
+            )
         }
 
         fun create(
             idHex: String,
             author: String?,
             kind: Int?,
-            vararg relays: String?,
+            relay: NormalizedRelayUrl?,
+        ): String =
+            TlvBuilder()
+                .apply {
+                    addHex(TlvTypes.SPECIAL, idHex)
+                    if (relay != null) {
+                        addStringIfNotNull(TlvTypes.RELAY, relay.url)
+                    }
+                    addHexIfNotNull(TlvTypes.AUTHOR, author)
+                    addIntIfNotNull(TlvTypes.KIND, kind)
+                }.build()
+                .toNEvent()
+
+        fun create(
+            idHex: String,
+            author: String?,
+            kind: Int?,
+            relays: List<NormalizedRelayUrl>,
         ): String =
             TlvBuilder()
                 .apply {
                     addHex(TlvTypes.SPECIAL, idHex)
                     relays.forEach {
-                        addStringIfNotNull(TlvTypes.RELAY, it)
+                        addStringIfNotNull(TlvTypes.RELAY, it.url)
                     }
                     addHexIfNotNull(TlvTypes.AUTHOR, author)
                     addIntIfNotNull(TlvTypes.KIND, kind)

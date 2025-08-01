@@ -48,7 +48,7 @@ class IMetaTag(
             ensure(tag[1].isNotEmpty()) { return null }
 
             val allTags = parseIMeta(tag)
-            val url = allTags.get(ANCHOR_PROPERTY)?.firstOrNull()
+            val url = allTags[ANCHOR_PROPERTY]?.firstOrNull()
 
             return if (url != null) {
                 IMetaTag(url, allTags.minus(ANCHOR_PROPERTY))

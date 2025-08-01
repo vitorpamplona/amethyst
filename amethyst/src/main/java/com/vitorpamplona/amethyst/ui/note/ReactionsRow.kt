@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.model.FeatureSetType
@@ -107,14 +108,16 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReposts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox
 import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeReplyTo
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -155,6 +158,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -350,10 +354,9 @@ fun RenderZapRaiser(
 
     LaunchedEffect(key1 = zapsState) {
         zapsState?.note?.let {
-            accountViewModel.calculateZapraiser(baseNote) { newStatus ->
-                if (zapraiserStatus != newStatus) {
-                    zapraiserStatus = newStatus
-                }
+            val newStatus = accountViewModel.calculateZapraiser(baseNote)
+            if (zapraiserStatus != newStatus) {
+                zapraiserStatus = newStatus
             }
         }
     }
@@ -578,8 +581,37 @@ private fun ReplyReactionWithDialog(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ReplyReaction(baseNote, grayTint, accountViewModel) {
-        nav.nav { routeReplyTo(baseNote, accountViewModel.userProfile()) }
+    if (baseNote.event is BaseVoiceEvent) {
+        ReplyViaVoiceReaction(baseNote, grayTint, accountViewModel)
+    } else {
+        ReplyReaction(baseNote, grayTint, accountViewModel) {
+            nav.nav { routeReplyTo(baseNote, accountViewModel.account) }
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun ReplyViaVoiceReaction(
+    baseNote: Note,
+    grayTint: Color,
+    accountViewModel: AccountViewModel,
+    showCounter: Boolean = true,
+    iconSizeModifier: Modifier = Size19Modifier,
+) {
+    val context = LocalContext.current
+
+    RecordAudioBox(
+        modifier = iconSizeModifier,
+        onRecordTaken = { audio ->
+            accountViewModel.sendVoiceReply(baseNote, audio, context)
+        },
+    ) {
+        VoiceReplyIcon(iconSizeModifier, grayTint)
+    }
+
+    if (showCounter) {
+        ReplyCounter(baseNote, grayTint, accountViewModel)
     }
 }
 
@@ -1156,6 +1188,12 @@ fun ObserveZapIcon(
     if (!wasZappedByLoggedInUser.value) {
         val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
+
         LaunchedEffect(key1 = zapsState) {
             if (zapsState?.note?.zapPayments?.isNotEmpty() == true || zapsState?.note?.zaps?.isNotEmpty() == true) {
                 accountViewModel.calculateIfNoteWasZappedByAccount(baseNote) { newWasZapped ->
@@ -1179,14 +1217,19 @@ fun ObserveZapAmountText(
     val zapsState by observeNoteZaps(baseNote, accountViewModel)
 
     if (zapsState?.note?.zapPayments?.isNotEmpty() == true) {
+        zapsState?.note?.zapPayments?.forEach {
+            if (it.value == null) {
+                NWCFinderFilterAssemblerSubscription(it.key, accountViewModel)
+            }
+        }
+
         @Suppress("ProduceStateDoesNotAssignValue")
         val zapAmountTxt by
             produceState(initialValue = showAmount(baseNote.zapsAmount), key1 = zapsState) {
                 zapsState?.note?.let {
-                    accountViewModel.calculateZapAmount(it) { newZapAmount ->
-                        if (value != newZapAmount) {
-                            value = newZapAmount
-                        }
+                    val newZapAmount = accountViewModel.calculateZapAmount(it)
+                    if (value != newZapAmount) {
+                        value = newZapAmount
                     }
                 }
             }
@@ -1344,7 +1387,7 @@ fun ReactionChoicePopup(
     val iconSizePx = with(LocalDensity.current) { -iconSize.toPx().toInt() }
 
     val reactions by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
-    val toRemove = remember { baseNote.reactedBy(accountViewModel.userProfile()).toImmutableSet() }
+    val toRemove = remember { baseNote.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet() }
 
     Popup(
         alignment = Alignment.BottomCenter,

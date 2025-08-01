@@ -38,9 +38,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 

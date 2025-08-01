@@ -24,7 +24,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -68,10 +67,10 @@ import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.BoostReaction
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
@@ -90,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilte
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AuthorInfoVideoFeed
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.HalfFeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
@@ -164,7 +164,9 @@ fun WatchAccountForVideoScreen(
     accountViewModel: AccountViewModel,
 ) {
     val listState by accountViewModel.account.liveStoriesFollowLists.collectAsStateWithLifecycle()
-    val hiddenUsers = accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
+    val hiddenUsers =
+        accountViewModel.account.hiddenUsers.flow
+            .collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         videoFeedContentState.checkKeysInvalidateDataAndSendToTop()
@@ -279,8 +281,7 @@ private fun RenderVideoOrPictureNote(
             val noteEvent = remember { note.event }
             if (noteEvent is PictureEvent) {
                 val backgroundColor = remember { mutableStateOf(Color.Transparent) }
-
-                PictureDisplay(note, false, ContentScale.Fit, PaddingValues(5.dp), backgroundColor, accountViewModel, nav)
+                PictureDisplay(note, false, ContentScale.Fit, HalfFeedPadding, backgroundColor, accountViewModel, nav)
             } else if (noteEvent is FileHeaderEvent) {
                 FileHeaderDisplay(note, false, ContentScale.Fit, accountViewModel)
             } else if (noteEvent is FileStorageHeaderEvent) {
@@ -420,7 +421,7 @@ fun ReactionsColumn(
         ) {
             routeFor(
                 baseNote,
-                accountViewModel.userProfile(),
+                accountViewModel.account,
             )?.let { nav.nav(it) }
         }
         BoostReaction(

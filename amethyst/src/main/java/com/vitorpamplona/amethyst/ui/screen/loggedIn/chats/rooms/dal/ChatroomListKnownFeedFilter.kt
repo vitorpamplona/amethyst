@@ -39,28 +39,27 @@ class ChatroomListKnownFeedFilter(
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
-        val me = account.userProfile()
+        val chatList = account.chatroomList
         val followingKeySet = account.followingKeySet()
 
-        val knownChatrooms =
-            me.privateChatrooms.filter {
-                (it.value.senderIntersects(followingKeySet) || me.hasSentMessagesTo(it.key)) &&
-                    !account.isAllHidden(it.key.users)
-            }
-
         val privateMessages =
-            knownChatrooms.mapNotNull { it ->
-                it.value.roomMessages.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).lastOrNull {
-                    it.event != null
+            chatList.rooms.mapNotNull { key, chatroom ->
+                if ((chatroom.senderIntersects(followingKeySet) || chatList.hasSentMessagesTo(key)) &&
+                    !account.isAllHidden(key.users)
+                ) {
+                    chatroom.lastMessage
+                } else {
+                    null
                 }
             }
 
         val publicChannels =
             account
-                .publicChatList.livePublicChatList.value
-                .mapNotNull { LocalCache.getChannelIfExists(it.eventId) }
+                .publicChatList.flow.value
                 .mapNotNull { it ->
-                    it.notes
+                    LocalCache
+                        .getOrCreatePublicChatChannel(it.eventId)
+                        .notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
@@ -69,9 +68,10 @@ class ChatroomListKnownFeedFilter(
         val ephemeralChats =
             account
                 .ephemeralChatList.liveEphemeralChatList.value
-                .mapNotNull { LocalCache.getChannelIfExists(it) }
                 .mapNotNull { it ->
-                    it.notes
+                    LocalCache
+                        .getOrCreateEphemeralChannel(it)
+                        .notes
                         .filter { key, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
                         .firstOrNull()
@@ -102,7 +102,8 @@ class ChatroomListKnownFeedFilter(
         newRelevantPublicMessages.forEach { newNotePair ->
             var hasUpdated = false
             oldList.forEach { oldNote ->
-                if (newNotePair.key == oldNote.channelHex()) {
+                val channelId = (oldNote.event as? ChannelMessageEvent)?.channelId()
+                if (newNotePair.key == channelId) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
@@ -117,7 +118,8 @@ class ChatroomListKnownFeedFilter(
         newRelevantEphemeralChats.forEach { newNotePair ->
             var hasUpdated = false
             oldList.forEach { oldNote ->
-                if (newNotePair.key.toKey() == oldNote.channelHex()) {
+                val noteEvent = (oldNote.event as? EphemeralChatEvent)?.roomId()
+                if (newNotePair.key == noteEvent) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0) > (oldNote.createdAt() ?: 0)) {
                         myNewList = myNewList.replace(oldNote, newNotePair.value)
@@ -168,20 +170,20 @@ class ChatroomListKnownFeedFilter(
         newItems: Set<Note>,
         account: Account,
     ): MutableMap<String, Note> {
-        val followingChannels = account.publicChatList.livePublicChatEventIdSet.value
+        val followingChannels = account.publicChatList.flowSet.value
         val newRelevantPublicMessages = mutableMapOf<String, Note>()
         newItems
-            .filter { it.event is ChannelMessageEvent }
             .forEach { newNote ->
-                newNote.channelHex()?.let { channelHex ->
-                    if (channelHex in followingChannels && account.isAcceptable(newNote)) {
-                        val lastNote = newRelevantPublicMessages.get(channelHex)
+                val channelId = (newNote.event as? ChannelMessageEvent)?.channelId()
+                if (channelId != null) {
+                    if (channelId in followingChannels && account.isAcceptable(newNote)) {
+                        val lastNote = newRelevantPublicMessages.get(channelId)
                         if (lastNote != null) {
                             if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
-                                newRelevantPublicMessages.put(channelHex, newNote)
+                                newRelevantPublicMessages.put(channelId, newNote)
                             }
                         } else {
-                            newRelevantPublicMessages.put(channelHex, newNote)
+                            newRelevantPublicMessages.put(channelId, newNote)
                         }
                     }
                 }
@@ -198,10 +200,9 @@ class ChatroomListKnownFeedFilter(
         newItems
             .forEach { newNote ->
                 val noteEvent = newNote.event as? EphemeralChatEvent
-
                 if (noteEvent != null) {
                     val room = noteEvent.roomId()
-                    if (room in followingEphemeralChats && account.isAcceptable(newNote)) {
+                    if (room != null && room in followingEphemeralChats && account.isAcceptable(newNote)) {
                         val lastNote = newRelevantEphemeralChats.get(room)
                         if (lastNote != null) {
                             if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
@@ -225,27 +226,27 @@ class ChatroomListKnownFeedFilter(
 
         val newRelevantPrivateMessages = mutableMapOf<ChatroomKey, Note>()
         newItems
-            .filter { it.event is ChatroomKeyable }
             .forEach { newNote ->
                 val roomKey = (newNote.event as? ChatroomKeyable)?.chatroomKey(me.pubkeyHex)
-                val room = account.userProfile().privateChatrooms[roomKey]
-
-                if (roomKey != null && room != null) {
-                    if (
-                        (
-                            newNote.author?.pubkeyHex == me.pubkeyHex ||
-                                room.senderIntersects(followingKeySet) ||
-                                me.hasSentMessagesTo(roomKey)
-                        ) &&
-                        !account.isAllHidden(roomKey.users)
-                    ) {
-                        val lastNote = newRelevantPrivateMessages.get(roomKey)
-                        if (lastNote != null) {
-                            if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                if (roomKey != null) {
+                    val room = account.chatroomList.rooms.get(roomKey)
+                    if (room != null) {
+                        if (
+                            (
+                                newNote.author?.pubkeyHex == me.pubkeyHex ||
+                                    room.senderIntersects(followingKeySet) ||
+                                    account.chatroomList.hasSentMessagesTo(roomKey)
+                            ) &&
+                            !account.isAllHidden(roomKey.users)
+                        ) {
+                            val lastNote = newRelevantPrivateMessages.get(roomKey)
+                            if (lastNote != null) {
+                                if ((newNote.createdAt() ?: 0) > (lastNote.createdAt() ?: 0)) {
+                                    newRelevantPrivateMessages.put(roomKey, newNote)
+                                }
+                            } else {
                                 newRelevantPrivateMessages.put(roomKey, newNote)
                             }
-                        } else {
-                            newRelevantPrivateMessages.put(roomKey, newNote)
                         }
                     }
                 }

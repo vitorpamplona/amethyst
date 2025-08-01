@@ -21,9 +21,10 @@
 package com.vitorpamplona.quartz.nip01Core.tags.events
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class EventReference(
     val eventId: HexKey,
     val author: HexKey?,
-    val relayHint: String?,
+    val relayHint: NormalizedRelayUrl?,
 )

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,8 +38,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingHashtag
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.dal.HashtagFeedViewModel
@@ -49,27 +51,29 @@ import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
 fun HashtagScreen(
-    tag: String?,
+    tag: Route.Hashtag,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (tag == null) return
+    if (tag.hashtag.isEmpty()) return
 
     PrepareViewModelsHashtagScreen(tag, accountViewModel, nav)
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsHashtagScreen(
-    tag: String,
+    tag: Route.Hashtag,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val hashtagFeedViewModel: HashtagFeedViewModel =
         viewModel(
-            key = tag + "HashtagFeedViewModel",
+            key = tag.hashtag + "HashtagFeedViewModel",
             factory =
                 HashtagFeedViewModel.Factory(
-                    tag,
+                    tag.hashtag,
+                    accountViewModel.account.followOutboxesOrProxy.flow.value,
                     accountViewModel.account,
                 ),
         )
@@ -79,27 +83,27 @@ fun PrepareViewModelsHashtagScreen(
 
 @Composable
 fun HashtagScreen(
-    tag: String,
+    tag: Route.Hashtag,
     feedViewModel: HashtagFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    HashtagFilterAssemblerSubscription(tag, accountViewModel.dataSources().hashtags)
+    HashtagFilterAssemblerSubscription(tag, accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {
-                    Text("#$tag", modifier = Modifier.weight(1f))
-                    HashtagActionOptions(tag, accountViewModel)
+                    Text("#${tag.hashtag}", modifier = Modifier.weight(1f))
+                    HashtagActionOptions(tag.hashtag, accountViewModel)
                 },
                 popBack = nav::popBack,
             )
         },
         floatingButton = {
-            NewHashtagPostButton(tag, accountViewModel, nav)
+            NewHashtagPostButton(tag.hashtag, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
     ) {

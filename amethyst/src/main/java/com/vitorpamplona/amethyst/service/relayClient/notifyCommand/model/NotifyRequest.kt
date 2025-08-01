@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
 data class NotifyRequest(
-    val relayUrl: String,
+    val relayUrl: NormalizedRelayUrl,
     val description: String,
 )

@@ -20,31 +20,28 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 fun filterGiftWrapsToPubkey(
+    relay: NormalizedRelayUrl,
     pubkey: HexKey?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (pubkey == null || pubkey.isEmpty()) return null
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (pubkey == null || pubkey.isEmpty()) return emptyList()
 
     return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(GiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(pubkey)),
-                    since =
-                        since?.mapValues {
-                            EOSETime(it.value.time - TimeUtils.twoDays())
-                        },
+                    since = since?.minus(TimeUtils.twoDays()),
                 ),
         ),
     )

@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
 class EventCmd(
     val event: Event,
@@ -36,7 +36,7 @@ class EventCmd(
         @JvmStatic
         fun parse(msgArray: JsonNode): EventCmd =
             EventCmd(
-                EventMapper.fromJson(msgArray.get(1)),
+                JsonMapper.fromJson(msgArray.get(1)),
             )
     }
 }

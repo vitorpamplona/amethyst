@@ -50,7 +50,7 @@ data class PollOption(
 
 @Stable
 class PollNoteViewModel : ViewModel() {
-    private var account: Account? = null
+    private lateinit var account: Account
     private var pollNote: Note? = null
 
     private var pollEvent: PollNoteEvent? = null
@@ -69,12 +69,12 @@ class PollNoteViewModel : ViewModel() {
     var canZap = mutableStateOf(false)
     var tallies: List<PollOption> = emptyList()
 
-    fun load(
-        acc: Account,
-        note: Note?,
-    ) {
-        if (acc != account || pollNote != note) {
-            account = acc
+    fun init(acc: Account) {
+        account = acc
+    }
+
+    fun load(note: Note?) {
+        if (pollNote != note) {
             pollNote = note
             pollEvent = pollNote?.event as PollNoteEvent
             pollOptions = pollEvent?.pollOptions()
@@ -221,7 +221,10 @@ class PollNoteViewModel : ViewModel() {
     ): Boolean =
         pollNote!!.zaps.any {
             val zapEvent = it.value?.event as? LnZapEvent
-            val privateZapAuthor = (it.key.event as? LnZapRequestEvent)?.cachedPrivateZap()
+            val privateZapAuthor =
+                (it.key.event as? LnZapRequestEvent)?.let {
+                    account.privateZapsDecryptionCache.cachedPrivateZap(it)
+                }
             zapEvent?.zappedPollOption() == option &&
                 (it.key.author?.pubkeyHex == user.pubkeyHex || privateZapAuthor?.pubKey == user.pubkeyHex)
         }

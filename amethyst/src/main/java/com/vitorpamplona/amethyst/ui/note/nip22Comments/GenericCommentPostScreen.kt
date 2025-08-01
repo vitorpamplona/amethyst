@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,16 +35,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,16 +49,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.actions.RelaySelectionDialogEasy
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
-import com.vitorpamplona.amethyst.ui.navigation.Nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -85,13 +76,11 @@ import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapTo
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.ForwardZapToButton
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import kotlinx.collections.immutable.persistentListOf
@@ -116,7 +105,6 @@ fun ReplyCommentPostScreen(
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        postViewModel.reloadRelaySet()
         reply?.let {
             postViewModel.reply(it)
         }
@@ -151,73 +139,28 @@ fun GenericCommentPostScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = CenterVertically,
-                    ) {
-                        Spacer(modifier = StdHorzSpacer)
-
-                        Box {
-                            IconButton(
-                                modifier = Modifier.align(Alignment.Center),
-                                onClick = { postViewModel.showRelaysDialog = true },
-                            ) {
-                                Icon(
-                                    painter = painterRes(R.drawable.relays),
-                                    contentDescription = stringRes(id = R.string.relay_list_selector),
-                                    modifier = Modifier.height(25.dp),
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                )
-                            }
-                        }
-                        PostButton(
-                            onPost = {
-                                // uses the accountViewModel scope to avoid cancelling this
-                                // function when the postViewModel is released
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    postViewModel.sendPostSync()
-                                    nav.popBack()
-                                }
-                            },
-                            isActive = postViewModel.canPost(),
-                        )
+            PostingTopBar(
+                isActive = postViewModel::canPost,
+                onCancel = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        postViewModel.sendDraftSync()
+                        nav.popBack()
+                        postViewModel.cancel()
                     }
                 },
-                navigationIcon = {
-                    Row {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                // uses the accountViewModel scope to avoid cancelling this
-                                // function when the postViewModel is released
-                                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                    postViewModel.sendDraftSync()
-                                    nav.popBack()
-                                    postViewModel.cancel()
-                                }
-                            },
-                        )
+                onPost = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                        postViewModel.sendPostSync()
+                        nav.popBack()
                     }
                 },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->
-        if (postViewModel.showRelaysDialog) {
-            RelaySelectionDialogEasy(
-                preSelectedList = postViewModel.relayList ?: persistentListOf(),
-                onClose = { postViewModel.showRelaysDialog = false },
-                onPost = { postViewModel.relayList = it.map { it.url }.toImmutableList() },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
         Surface(
             modifier =
                 Modifier
@@ -255,7 +198,7 @@ private fun GenericCommentPostBody(
             Column(Modifier.fillMaxWidth().verticalScroll(scrollState)) {
                 postViewModel.externalIdentity?.let {
                     Row {
-                        DisplayExternalId(it, nav)
+                        DisplayExternalId(it, accountViewModel, nav)
                         Spacer(modifier = StdVertSpacer)
                     }
                 }
@@ -351,11 +294,11 @@ private fun GenericCommentPostBody(
                     postViewModel.lnAddress()?.let { lud16 ->
                         InvoiceRequest(
                             lud16,
-                            accountViewModel.account.userProfile().pubkeyHex,
+                            accountViewModel.account.userProfile(),
                             accountViewModel,
                             stringRes(id = R.string.lightning_invoice),
                             stringRes(id = R.string.lightning_create_and_add_invoice),
-                            onSuccess = {
+                            onNewInvoice = {
                                 postViewModel.insertAtCursor(it)
                                 postViewModel.wantsInvoice = false
                             },

@@ -20,27 +20,65 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class AccountMetadataEoseManager(
     client: NostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(query: AccountQueryState) = query.account.userProfile()
+    override fun user(key: AccountQueryState) = key.account.userProfile()
+
+    fun relayFlow(query: AccountQueryState) = query.account.outboxRelays.flow
 
     override fun updateFilter(
         key: AccountQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
-        listOfNotNull(
-            filterAccountInfoAndListsFromKey(user(key).pubkeyHex, since),
-            filterFollowsAndMutesFromKey(user(key).pubkeyHex, since),
-            filterDraftsAndReportsFromKey(user(key).pubkeyHex, since),
-            filterLastPostsFromKey(user(key).pubkeyHex, since),
-            filterBasicAccountInfoFromKeys(key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
-        ).flatten()
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> =
+        relayFlow(key).value.flatMap {
+            val since = since?.get(it)?.time
+            listOf(
+                filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
+                filterFollowsAndMutesFromKey(it, user(key).pubkeyHex, since),
+                filterDraftsAndReportsFromKey(it, user(key).pubkeyHex, since),
+                filterLastPostsFromKey(it, user(key).pubkeyHex, since),
+                filterBasicAccountInfoFromKeys(it, key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
+            ).flatten()
+        }
+
+    val userJobMap = mutableMapOf<User, List<Job>>()
+
+    @OptIn(FlowPreview::class)
+    override fun newSub(key: AccountQueryState): Subscription {
+        val user = user(key)
+        userJobMap[user]?.forEach { it.cancel() }
+        userJobMap[user] =
+            listOf(
+                key.account.scope.launch(Dispatchers.Default) {
+                    relayFlow(key).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+            )
+
+        return super.newSub(key)
+    }
+
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        userJobMap[key]?.forEach { it.cancel() }
+    }
 }

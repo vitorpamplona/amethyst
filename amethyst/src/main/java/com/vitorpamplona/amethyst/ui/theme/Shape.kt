@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Shapes
@@ -84,8 +86,6 @@ val DoubleVertSpacer = Modifier.height(10.dp)
 val Height100Modifier = Modifier.height(100.dp)
 
 val HalfDoubleVertSpacer = Modifier.height(7.dp)
-
-val TopBarSize = 50.dp - 64.dp
 
 val Size0dp = 0.dp
 val Size5dp = 5.dp
@@ -218,6 +218,7 @@ val EditFieldModifier =
 val EditFieldTrailingIconModifier = Modifier.padding(start = 5.dp, end = 0.dp)
 
 val ZeroPadding = PaddingValues(0.dp)
+val HalfFeedPadding = PaddingValues(5.dp)
 val FeedPadding = PaddingValues(top = 10.dp, bottom = 10.dp)
 val ButtonPadding = PaddingValues(vertical = 6.dp, horizontal = 16.dp)
 
@@ -284,10 +285,8 @@ val inlinePlaceholder =
         placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
     )
 
-val incognitoIconModifier =
-    Modifier
-        .padding(top = 1.dp)
-        .size(14.dp)
+val IncognitoIconModifier = Modifier.padding(top = 1.dp).size(14.dp)
+val IncognitoIconButtonModifier = Modifier.padding(top = 2.dp).size(20.dp)
 
 val hashVerifierMark = Modifier.width(40.dp).height(40.dp).padding(10.dp)
 
@@ -333,3 +332,18 @@ val LargeRelayIconModifier =
     Modifier
         .size(Size55dp)
         .clip(shape = CircleShape)
+
+val FollowSetImageModifier =
+    Modifier
+        .fillMaxWidth()
+        .clip(QuoteBorder)
+        .aspectRatio(ratio = 21f / 9f)
+
+val SimpleImage75Modifier = Modifier.size(Size75dp).clip(QuoteBorder)
+val SimpleImage35Modifier = Modifier.size(Size34dp).clip(shape = CircleShape)
+
+val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
+
+val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
+
+val BadgePictureModifier = Modifier.size(35.dp).clip(shape = CutCornerShape(20))

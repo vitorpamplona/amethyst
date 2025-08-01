@@ -20,28 +20,30 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 fun filterPublicChatsByHashtag(
-    hashToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (hashToLoad == null || hashToLoad.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    hashtags: Set<String>,
+    since: Long?,
+): List<RelayBasedFilter> {
+    if (hashtags.isEmpty()) return emptyList()
 
-    val hashtags = hashtagAlts(hashToLoad).toList()
+    val hashtags = hashtags.flatMap(::hashtagAlts).distinct().sorted()
 
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds =
                         listOf(
                             ChannelCreateEvent.KIND,
@@ -54,4 +56,25 @@ fun filterPublicChatsByHashtag(
                 ),
         ),
     )
+}
+
+fun filterPublicChatsByHashtag(
+    hashSet: HashtagTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (hashSet.set.isEmpty()) return emptyList()
+
+    return hashSet.set
+        .mapNotNull { relayHashSet ->
+            if (relayHashSet.value.hashtags.isEmpty()) {
+                null
+            } else {
+                filterPublicChatsByHashtag(
+                    relay = relayHashSet.key,
+                    hashtags = relayHashSet.value.hashtags,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

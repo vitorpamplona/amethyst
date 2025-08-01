@@ -20,28 +20,36 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun UserFinderFilterAssemblerSubscription(
     user: User,
     accountViewModel: AccountViewModel,
-) = UserFinderFilterAssemblerSubscription(user, accountViewModel.dataSources().userFinder)
+) = UserFinderFilterAssemblerSubscription(
+    user,
+    accountViewModel.account,
+    accountViewModel.dataSources().userFinder,
+)
 
 @Composable
 fun UserFinderFilterAssemblerSubscription(
     user: User,
+    forAccount: Account,
     dataSource: UserFinderFilterAssembler,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
         remember(user) {
-            UserFinderQueryState(user)
+            UserFinderQueryState(user, forAccount)
         }
 
     KeyDataSourceSubscription(state, dataSource)

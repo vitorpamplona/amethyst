@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -39,48 +39,15 @@ class AdvertisedRelayListEvent(
     content: String,
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    fun relays(): List<AdvertisedRelayInfo> =
-        tags.mapNotNull {
-            if (it.size > 1 && it[0] == "r") {
-                val type =
-                    when (it.getOrNull(2)) {
-                        "read" -> AdvertisedRelayType.READ
-                        "write" -> AdvertisedRelayType.WRITE
-                        else -> AdvertisedRelayType.BOTH
-                    }
+    fun relays() = tags.mapNotNull(AdvertisedRelayInfo::parse)
 
-                AdvertisedRelayInfo(it[1], type)
-            } else {
-                null
-            }
-        }
+    fun readRelays() = tags.mapNotNull(AdvertisedRelayInfo::parseRead).ifEmpty { null }
 
-    fun readRelays(): List<String>? =
-        tags
-            .mapNotNull {
-                if (it.size > 1 && it[0] == "r") {
-                    when (it.getOrNull(2)) {
-                        "read" -> it[1]
-                        "write" -> null
-                        else -> it[1]
-                    }
-                } else {
-                    null
-                }
-            }.ifEmpty { null }
+    fun readRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseReadNorm).ifEmpty { null }
 
-    fun writeRelays(): List<String> =
-        tags.mapNotNull {
-            if (it.size > 1 && it[0] == "r") {
-                when (it.getOrNull(2)) {
-                    "read" -> null
-                    "write" -> it[1]
-                    else -> it[1]
-                }
-            } else {
-                null
-            }
-        }
+    fun writeRelays() = tags.mapNotNull(AdvertisedRelayInfo::parseWrite).ifEmpty { null }
+
+    fun writeRelaysNorm() = tags.mapNotNull(AdvertisedRelayInfo::parseWriteNorm).ifEmpty { null }
 
     companion object {
         const val KIND = 10002
@@ -92,80 +59,42 @@ class AdvertisedRelayListEvent(
 
         fun createAddressTag(pubKey: HexKey): String = Address.assemble(KIND, pubKey, FIXED_D_TAG)
 
-        fun updateRelayList(
+        suspend fun replaceRelayListWith(
             earlierVersion: AdvertisedRelayListEvent,
+            newRelays: List<AdvertisedRelayInfo>,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): AdvertisedRelayListEvent {
+            val tags = earlierVersion.tags.filter(AdvertisedRelayInfo::notMatch)
+            val relayTags = newRelays.map { it.toTagArray() }
+
+            return signer.sign(createdAt, KIND, (tags + relayTags).toTypedArray(), earlierVersion.content)
+        }
+
+        suspend fun createFromScratch(
             relays: List<AdvertisedRelayInfo>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AdvertisedRelayListEvent) -> Unit,
-        ) {
-            val tags =
-                earlierVersion.tags
-                    .filter { it[0] != "r" }
-                    .plus(
-                        relays.map(Companion::createRelayTag),
-                    ).toTypedArray()
+        ) = create(relays, signer, createdAt)
 
-            signer.sign(createdAt, KIND, tags, earlierVersion.content, onReady)
-        }
-
-        fun createFromScratch(
-            relays: List<AdvertisedRelayInfo>,
-            signer: NostrSigner,
-            createdAt: Long = TimeUtils.now(),
-            onReady: (AdvertisedRelayListEvent) -> Unit,
-        ) {
-            create(relays, signer, createdAt, onReady)
-        }
-
-        fun createRelayTag(relay: AdvertisedRelayInfo): Array<String> =
-            if (relay.type == AdvertisedRelayType.BOTH) {
-                arrayOf("r", relay.relayUrl)
-            } else {
-                arrayOf("r", relay.relayUrl, relay.type.code)
-            }
-
-        fun createTagArray(relays: List<AdvertisedRelayInfo>): Array<Array<String>> =
-            relays
-                .map(Companion::createRelayTag)
-                .plusElement(AltTag.assemble(ALT))
-                .toTypedArray()
-
-        fun create(
+        suspend fun create(
             list: List<AdvertisedRelayInfo>,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (AdvertisedRelayListEvent) -> Unit,
-        ) {
-            val tags = createTagArray(list)
-            val msg = ""
+        ): AdvertisedRelayListEvent {
+            val tags = list.map { it.toTagArray() }.toTypedArray()
 
-            signer.sign(createdAt, KIND, tags, msg, onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
 
         fun create(
             list: List<AdvertisedRelayInfo>,
             signer: NostrSignerSync,
             createdAt: Long = TimeUtils.now(),
-        ): AdvertisedRelayListEvent? {
-            val tags = createTagArray(list)
-            val msg = ""
+        ): AdvertisedRelayListEvent {
+            val tags = list.map { it.toTagArray() }.toTypedArray()
 
-            return signer.sign(createdAt, KIND, tags, msg)
+            return signer.sign(createdAt, KIND, tags, "")
         }
-    }
-
-    @Immutable data class AdvertisedRelayInfo(
-        val relayUrl: String,
-        val type: AdvertisedRelayType,
-    )
-
-    @Immutable
-    enum class AdvertisedRelayType(
-        val code: String,
-    ) {
-        BOTH(""),
-        READ("read"),
-        WRITE("write"),
     }
 }

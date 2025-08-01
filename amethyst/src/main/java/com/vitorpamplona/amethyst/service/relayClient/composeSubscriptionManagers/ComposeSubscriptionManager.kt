@@ -34,13 +34,7 @@ abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControl
     fun subscribe(query: T?) {
         if (query == null) return
 
-        val wasEmpty = composeSubscriptions.isEmpty()
-
         composeSubscriptions.put(query, query)
-
-        if (wasEmpty) {
-            start()
-        }
 
         invalidateKeys()
     }
@@ -52,15 +46,7 @@ abstract class ComposeSubscriptionManager<T> : ComposeSubscriptionManagerControl
         composeSubscriptions.remove(query)
 
         invalidateKeys()
-
-        if (composeSubscriptions.isEmpty()) {
-            stop()
-        }
     }
 
     fun allKeys() = composeSubscriptions.keys
-
-    fun forEachSubscriber(action: (T) -> Unit) {
-        composeSubscriptions.keys.forEach(action)
-    }
 }

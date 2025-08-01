@@ -40,7 +40,6 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.EmojiSuggestionState
@@ -105,6 +104,9 @@ class ChatNewMessageViewModel :
     IZapRaiser {
     val draftTag = DraftTagState()
 
+    lateinit var accountViewModel: AccountViewModel
+    lateinit var account: Account
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             draftTag.versions.collectLatest {
@@ -116,8 +118,6 @@ class ChatNewMessageViewModel :
         }
     }
 
-    var accountViewModel: AccountViewModel? = null
-    var account: Account? = null
     var room: ChatroomKey? by mutableStateOf(null)
 
     var requiresNIP17: Boolean = false
@@ -127,7 +127,7 @@ class ChatNewMessageViewModel :
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
     val iMetaAttachments = IMetaAttachments()
 
-    var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList<SuccessfulUploads>())
+    var uploadsWaitingToBeSent by mutableStateOf<List<SuccessfulUploads>>(emptyList())
 
     override var message by mutableStateOf(TextFieldValue(""))
 
@@ -169,11 +169,11 @@ class ChatNewMessageViewModel :
     // NIP17 Wrapped DMs / Group messages
     var nip17 by mutableStateOf(false)
 
-    fun lnAddress(): String? = account?.userProfile()?.info?.lnAddress()
+    fun lnAddress(): String? = account.userProfile().info?.lnAddress()
 
-    fun hasLnAddress(): Boolean = account?.userProfile()?.info?.lnAddress() != null
+    fun hasLnAddress(): Boolean = account.userProfile().info?.lnAddress() != null
 
-    fun user(): User? = account?.userProfile()
+    fun user(): User? = account.userProfile()
 
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
@@ -189,7 +189,7 @@ class ChatNewMessageViewModel :
 
         this.uploadState =
             ChatFileUploadState(
-                account?.settings?.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0],
+                account.settings.defaultFileServer,
             )
     }
 
@@ -231,7 +231,6 @@ class ChatNewMessageViewModel :
         urlPreviews.update(message)
 
         // creates a split with that author.
-        val accountViewModel = accountViewModel ?: return
         val quotedAuthor = quote.author ?: return
 
         if (quotedAuthor.pubkeyHex != accountViewModel.userProfile().pubkeyHex) {
@@ -255,14 +254,12 @@ class ChatNewMessageViewModel :
 
         if (noteEvent is DraftEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel?.createTempDraftNote(noteEvent) { innerNote ->
-                    if (innerNote != null) {
-                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                        if (oldTag != null) {
-                            draftTag.set(oldTag)
-                        }
-                        loadFromDraft(innerNote)
+                accountViewModel.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
                     }
+                    loadFromDraft(innerNote)
                 }
             }
         }
@@ -270,20 +267,19 @@ class ChatNewMessageViewModel :
 
     private fun loadFromDraft(draft: Note) {
         val draftEvent = draft.event ?: return
-        val accountViewModel = accountViewModel ?: return
 
-        val localfowardZapTo = draftEvent.tags.zapSplitSetup()
-        val totalWeight = localfowardZapTo.sumOf { it.weight }
+        val localForwardZapTo = draftEvent.tags.zapSplitSetup()
+        val totalWeight = localForwardZapTo.sumOf { it.weight }
         forwardZapTo.value = SplitBuilder()
-        localfowardZapTo.forEach {
+        localForwardZapTo.forEach {
             if (it is ZapSplitSetup) {
                 val user = LocalCache.getOrCreateUser(it.pubKeyHex)
                 forwardZapTo.value.addItem(user, (it.weight / totalWeight).toFloat())
             }
-            // don't support edditing old-style splits.
+            // don't support editing old-style splits.
         }
         forwardZapToEditting.value = TextFieldValue("")
-        wantsForwardZapTo = localfowardZapTo.isNotEmpty()
+        wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
 
@@ -324,8 +320,8 @@ class ChatNewMessageViewModel :
                 }
             }
         } else if (draftEvent is PrivateDmEvent) {
-            val recepientNpub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
-            toUsers = TextFieldValue("@$recepientNpub")
+            val recipientNPub = draftEvent.verifiedRecipientPubKey()?.let { Hex.decode(it).toNpub() }
+            toUsers = TextFieldValue("@$recipientNPub")
 
             val replyId = draftEvent.replyTo()
             if (replyId != null) {
@@ -337,7 +333,7 @@ class ChatNewMessageViewModel :
 
         message =
             if (draftEvent is PrivateDmEvent) {
-                TextFieldValue(draftEvent.cachedContentFor(accountViewModel.account.signer) ?: "")
+                TextFieldValue(accountViewModel.account.privateDMDecryptionCache.cachedDM(draftEvent) ?: "")
             } else {
                 TextFieldValue(draftEvent.content)
             }
@@ -349,22 +345,15 @@ class ChatNewMessageViewModel :
         nip17 = draftEvent is NIP17Group
     }
 
-    fun sendPost(onDone: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            sendPostSync()
-            onDone()
-        }
-    }
-
     suspend fun sendPostSync() {
         innerSendPost(null)
-        accountViewModel?.deleteDraft(draftTag.current)
+        accountViewModel.deleteDraft(draftTag.current)
         cancel()
     }
 
     suspend fun sendDraftSync() {
         if (message.text.isBlank()) {
-            account?.deleteDraft(draftTag.current)
+            account.deleteDraft(draftTag.current)
         } else {
             innerSendPost(draftTag.current)
         }
@@ -387,20 +376,21 @@ class ChatNewMessageViewModel :
         context: Context,
         onceUploaded: () -> Unit,
     ) {
-        val account = account ?: return
         val uploadState = uploadState ?: return
 
-        if (nip17) {
-            ChatFileUploader(account).justUploadNIP17(uploadState, viewModelScope, onError, context) {
-                uploadsWaitingToBeSent += it
-                draftTag.newVersion()
-                onceUploaded()
-            }
-        } else {
-            ChatFileUploader(account).justUploadNIP04(uploadState, viewModelScope, onError, context) {
-                uploadsWaitingToBeSent += it
-                draftTag.newVersion()
-                onceUploaded()
+        accountViewModel.runIOCatching {
+            if (nip17) {
+                ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
+                    uploadsWaitingToBeSent += it
+                    draftTag.newVersion()
+                    onceUploaded()
+                }
+            } else {
+                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context) {
+                    uploadsWaitingToBeSent += it
+                    draftTag.newVersion()
+                    onceUploaded()
+                }
             }
         }
     }
@@ -411,27 +401,27 @@ class ChatNewMessageViewModel :
         onceUploaded: () -> Unit,
     ) {
         val room = room ?: return
-        val account = account ?: return
         val uploadState = uploadState ?: return
 
-        if (nip17) {
-            ChatFileUploader(account).justUploadNIP17(uploadState, viewModelScope, onError, context) {
-                ChatFileSender(room, account).sendNIP17(it)
-                draftTag.newVersion()
-                onceUploaded()
-            }
-        } else {
-            ChatFileUploader(account).justUploadNIP04(uploadState, viewModelScope, onError, context) {
-                ChatFileSender(room, account).sendNIP04(it)
-                draftTag.newVersion()
-                onceUploaded()
+        accountViewModel.runIOCatching {
+            if (nip17) {
+                ChatFileUploader(account).justUploadNIP17(uploadState, onError, context) {
+                    ChatFileSender(room, account).sendNIP17(it)
+                    draftTag.newVersion()
+                    onceUploaded()
+                }
+            } else {
+                ChatFileUploader(account).justUploadNIP04(uploadState, onError, context) {
+                    ChatFileSender(room, account).sendNIP04(it)
+                    draftTag.newVersion()
+                    onceUploaded()
+                }
             }
         }
     }
 
-    private fun innerSendPost(dTag: String?) {
+    private suspend fun innerSendPost(dTag: String?) {
         val room = room ?: return
-        val accountViewModel = accountViewModel ?: return
 
         val urls = findURLs(message.text)
         val usedAttachments = iMetaAttachments.filterIsIn(urls.toSet())
@@ -536,12 +526,6 @@ class ChatNewMessageViewModel :
         draftTag.rotate()
     }
 
-    fun deleteDraft() {
-        viewModelScope.launch(Dispatchers.IO) {
-            accountViewModel?.deleteDraft(draftTag.current)
-        }
-    }
-
     fun addToMessage(it: String) {
         updateMessage(TextFieldValue(message.text + " " + it))
     }
@@ -578,7 +562,7 @@ class ChatNewMessageViewModel :
     fun updateRoomFromUsersInput() {
         viewModelScope.launch(Dispatchers.Default) {
             delay(300)
-            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, null, accountViewModel!!)
+            val toUsersTagger = NewMessageTagger(toUsers.text, null, null, accountViewModel)
             toUsersTagger.run()
 
             val users = toUsersTagger.pTags?.mapTo(mutableSetOf()) { it.pubkeyHex }
@@ -622,7 +606,7 @@ class ChatNewMessageViewModel :
                 toUsers = userSuggestions.replaceCurrentWord(toUsers, lastWord, item)
                 updateRoomFromUsersInput()
 
-                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelays()
+                val relayList = (LocalCache.getAddressableNoteIfExists(AdvertisedRelayListEvent.createAddressTag(item.pubkeyHex))?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()
                 nip17 = relayList != null
             }
 
@@ -648,10 +632,9 @@ class ChatNewMessageViewModel :
         val wordToInsert = item.link.url + " "
 
         viewModelScope.launch(Dispatchers.IO) {
-            iMetaAttachments.downloadAndPrepare(
-                item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
-            )
+            iMetaAttachments.downloadAndPrepare(item.link.url) {
+                Amethyst.instance.okHttpClients.getHttpClient(accountViewModel.account.privacyState.shouldUseTorForImageDownload(item.link.url))
+            }
         }
 
         message = message.replaceCurrentWord(wordToInsert)
@@ -701,7 +684,7 @@ class ChatNewMessageViewModel :
 
     override fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.value.items.any { it.key == taggedUser }) {

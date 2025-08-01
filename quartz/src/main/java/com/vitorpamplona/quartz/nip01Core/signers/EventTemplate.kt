@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.core.tagArray
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class EventTemplate<T : Event>(
@@ -36,10 +36,10 @@ class EventTemplate<T : Event>(
     val tags: TagArray,
     val content: String,
 ) {
-    fun toJson(): String = EventMapper.mapper.writeValueAsString(this)
+    fun toJson(): String = JsonMapper.mapper.writeValueAsString(this)
 
     companion object {
-        fun fromJson(json: String): EventTemplate<Event> = EventTemplateManualDeserializer.fromJson(EventMapper.mapper.readTree(json))
+        fun fromJson(json: String): EventTemplate<Event> = EventTemplateManualDeserializer.fromJson(JsonMapper.mapper.readTree(json))
     }
 }
 

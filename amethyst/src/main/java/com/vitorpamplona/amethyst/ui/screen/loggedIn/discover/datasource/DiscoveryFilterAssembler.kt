@@ -22,12 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
 
 // This allows multiple screen to be listening to tags, even the same tag
 class DiscoveryQueryState(
     val account: Account,
+    val feedStates: AccountFeedContentStates,
     val scope: CoroutineScope,
 )
 
@@ -36,19 +38,16 @@ class DiscoveryFilterAssembler(
 ) : ComposeSubscriptionManager<DiscoveryQueryState>() {
     val group =
         listOf(
-            DiscoveryFollowsDiscoverySubAssembler(client, ::allKeys),
-            MixGeohashHashtagsDiscoverySubAssembler(client, ::allKeys),
+            DiscoveryLongFormClassifiedsAndDVMSubAssembler1(client, ::allKeys),
+            DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(client, ::allKeys),
+            DiscoveryPublicChatsAndCommunitiesSubAssembler3(client, ::allKeys),
         )
-
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
 
     override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    override fun destroy() = group.forEach { it.start() }
+    override fun destroy() = group.forEach { it.destroy() }
 
     override fun printStats() = group.forEach { it.printStats() }
 }

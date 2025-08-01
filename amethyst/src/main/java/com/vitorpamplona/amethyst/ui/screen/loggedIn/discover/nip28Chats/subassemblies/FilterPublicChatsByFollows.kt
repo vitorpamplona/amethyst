@@ -20,29 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterPublicChatsByFollows(
-    follows: Map<String, List<HexKey>>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (follows != null && follows.isEmpty()) return null
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    authors = follows,
-                    kinds = listOf(ChannelMessageEvent.KIND),
-                    limit = 500,
-                    since = since,
-                ),
-        ),
-    )
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
+
+        listOfNotNull(
+            it.value.authors?.let {
+                filterPublicChatsAuthors(relay, it, since)
+            },
+            it.value.geotags?.let {
+                filterPublicChatsByGeohash(relay, it, since)
+            },
+            it.value.hashtags?.let {
+                filterPublicChatsByHashtag(relay, it, since)
+            },
+            it.value.communities?.let {
+                filterPublicChatsAllCommunities(relay, it, since)
+            },
+        ).flatten()
+    }
 }

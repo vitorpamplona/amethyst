@@ -37,9 +37,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
-import com.vitorpamplona.amethyst.ui.navigation.AccountSwitchBottomSheet
-import com.vitorpamplona.amethyst.ui.navigation.DrawerContent
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.drawer.AccountSwitchBottomSheet
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerContent
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import kotlinx.coroutines.launch
 

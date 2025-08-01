@@ -28,10 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelNoteAuthors
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer

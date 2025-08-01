@@ -9,20 +9,20 @@ plugins {
 }
 
 android {
-    namespace 'com.vitorpamplona.amethyst'
-    compileSdk libs.versions.android.compileSdk.get().toInteger()
+    namespace = 'com.vitorpamplona.amethyst'
+    compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
-        applicationId "com.vitorpamplona.amethyst"
-        minSdk libs.versions.android.minSdk.get().toInteger()
-        targetSdk libs.versions.android.targetSdk.get().toInteger()
-        versionCode 418
-        versionName "0.94.3"
+        applicationId = "com.vitorpamplona.amethyst"
+        minSdk = libs.versions.android.minSdk.get().toInteger()
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
+        versionCode = 418
+        versionName = "0.94.3"
         buildConfigField "String", "RELEASE_NOTES_ID", "\"fd42b23b9ef792059b1c1a89555443abbb11578f4b3c8430b452559eec7325f3\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
         resourceConfigurations += [
             'ar',
@@ -107,7 +107,7 @@ android {
     buildTypes {
         release {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), 'proguard-rules.pro'
-            minifyEnabled true
+            minifyEnabled = true
         }
         debug {
             applicationIdSuffix '.debug'
@@ -119,8 +119,8 @@ android {
             applicationIdSuffix '.benchmark'
             versionNameSuffix '-BENCHMARK'
             resValue "string", "app_name", "@string/app_name_benchmark"
-            profileable true
-            signingConfig signingConfigs.debug
+            profileable = true
+            signingConfig = signingConfigs.debug
         }
     }
 
@@ -139,10 +139,10 @@ android {
 
     splits {
         abi {
-            enable true
+            enable = true
             reset()
             include "x86", "x86_64", "arm64-v8a", "armeabi-v7a"
-            universalApk true
+            universalApk = true
         }
     }
 
@@ -152,8 +152,8 @@ android {
     }
 
     buildFeatures {
-        compose true
-        buildConfig true
+        compose = true
+        buildConfig = true
     }
 
     packagingOptions {
@@ -168,6 +168,17 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+    }
+}
+
+// TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
+configurations.all {
+    def tink = "com.google.crypto.tink:tink-android:1.17.0"
+    resolutionStrategy {
+        force(tink)
+        dependencySubstitution {
+            substitute module('com.google.crypto.tink:tink') using module(tink)
+        }
     }
 }
 
@@ -222,9 +233,11 @@ dependencies {
 
     // Websockets API
     implementation libs.okhttp
+    implementation libs.okhttpCoroutines
 
     // Encrypted Key Storage
     implementation libs.androidx.security.crypto.ktx
+    implementation libs.androidx.datastore.preferences
 
     // view videos
     implementation libs.androidx.media3.exoplayer

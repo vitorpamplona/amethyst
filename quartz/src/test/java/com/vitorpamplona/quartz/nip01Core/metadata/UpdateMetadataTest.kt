@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.metadata
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.jackson.EventManualSerializer
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.nsecToSigner
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -35,7 +35,7 @@ class UpdateMetadataTest {
      */
     fun Event.toPrettyJson(): String {
         val obj = EventManualSerializer.assemble(id, pubKey, createdAt, kind, tags, content, sig)
-        return EventMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
+        return JsonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
     }
 
     @Test

@@ -26,6 +26,12 @@ import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
@@ -37,7 +43,22 @@ class LnZapEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    LnZapEventInterface {
+    LnZapEventInterface,
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
     // This event is also kept in LocalCache (same object)
     @Transient val zapRequest: LnZapRequestEvent?
 
@@ -68,9 +89,9 @@ class LnZapEvent(
         zapRequest = containedPost()
     }
 
-    override fun zappedPost() = tags.filter { it.size > 1 && it[0] == "e" }.map { it[1] }
+    override fun zappedPost() = tags.mapNotNull(ETag::parseId)
 
-    override fun zappedAuthor() = tags.filter { it.size > 1 && it[0] == "p" }.map { it[1] }
+    override fun zappedAuthor() = tags.mapNotNull(PTag::parseKey)
 
     override fun zappedPollOption(): Int? =
         try {

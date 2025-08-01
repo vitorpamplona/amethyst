@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip02FollowList
 
 import android.util.Log
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
 data class ReadWrite(
     val read: Boolean,
@@ -31,12 +31,12 @@ data class ReadWrite(
 
 class RelaySet {
     companion object {
-        fun assemble(relayUse: Map<String, ReadWrite>): String = EventMapper.mapper.writeValueAsString(relayUse)
+        fun assemble(relayUse: Map<String, ReadWrite>): String = JsonMapper.mapper.writeValueAsString(relayUse)
 
         fun parse(content: String): Map<String, ReadWrite>? =
             try {
                 if (content.isNotEmpty()) {
-                    EventMapper.mapper.readValue<Map<String, ReadWrite>>(content)
+                    JsonMapper.mapper.readValue<Map<String, ReadWrite>>(content)
                 } else {
                     null
                 }

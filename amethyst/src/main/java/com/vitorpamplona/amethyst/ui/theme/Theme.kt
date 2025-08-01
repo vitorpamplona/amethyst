@@ -167,7 +167,7 @@ val DarkReplyBorderModifier =
 
 val LightReplyBorderModifier =
     Modifier
-        .padding(top = 2.dp, bottom = 0.dp, start = 0.dp, end = 0.dp)
+        .padding(top = 5.dp)
         .fillMaxWidth()
         .clip(shape = QuoteBorder)
         .border(1.dp, LightSubtleBorder, QuoteBorder)
@@ -391,8 +391,14 @@ val ColorScheme.overPictureBackground: Color
 val ColorScheme.bitcoinColor: Color
     get() = if (isLight) BitcoinLight else BitcoinDark
 
+val ColorScheme.redColorOnSecondSurface: Color
+    get() = if (isLight) LightRedColorOnSecondSurface else DarkRedColorOnSecondSurface
+
 val ColorScheme.warningColor: Color
     get() = if (isLight) LightWarningColor else DarkWarningColor
+
+val ColorScheme.warningColorOnSecondSurface: Color
+    get() = if (isLight) LightWarningColorOnSecondSurface else DarkWarningColorOnSecondSurface
 
 val ColorScheme.allGoodColor: Color
     get() = if (isLight) LightAllGoodColor else DarkAllGoodColor

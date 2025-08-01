@@ -28,6 +28,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -35,10 +36,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
+import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.collectSuccessfulOperations
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.isDebug
@@ -47,29 +48,34 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.WarningType
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.observables.CreatedAtComparator
-import com.vitorpamplona.amethyst.service.CashuProcessor
-import com.vitorpamplona.amethyst.service.CashuToken
 import com.vitorpamplona.amethyst.service.Nip05NostrAddressVerifier
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.Nip11Retriever
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.cashu.CashuToken
+import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.Dao
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
+import com.vitorpamplona.amethyst.ui.actions.uploads.RecordingResult
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.navigation.Route
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
 import com.vitorpamplona.amethyst.ui.note.showAmount
@@ -80,7 +86,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
-import com.vitorpamplona.ammolite.relays.BundledInsert
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -90,15 +95,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
-import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -106,14 +109,17 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.GeneralListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -121,11 +127,12 @@ import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentSetOf
@@ -134,7 +141,6 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -143,11 +149,12 @@ import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.util.Locale
 
 @Stable
 class AccountViewModel(
@@ -156,34 +163,19 @@ class AccountViewModel(
     val app: Amethyst,
 ) : ViewModel(),
     Dao {
-    val account = Account(accountSettings, accountSettings.createSigner(), viewModelScope)
+    val account =
+        Account(
+            settings = accountSettings,
+            signer = accountSettings.createSigner(app.contentResolver),
+            geolocationFlow = app.locationManager.geohashStateFlow,
+            cache = LocalCache,
+            client = app.client,
+            scope = viewModelScope,
+        )
 
-    val newNotesPreProcessor = PrecacheNewNotesProcessor(account, LocalCache)
+    val newNotesPreProcessor = DecryptAndIndexProcessor(account, LocalCache)
 
     var firstRoute: Route? = null
-
-    // TODO: contact lists are not notes yet
-    // val kind3Relays: StateFlow<ContactListEvent?> = observeByAuthor(ContactListEvent.KIND, account.signer.pubKey)
-
-    val normalizedKind3RelaySetFlow =
-        account
-            .userProfile()
-            .flow()
-            .relays.stateFlow
-            .map { contactListState ->
-                checkNotInMainThread()
-                contactListState.user.latestContactList?.relays()?.map {
-                    RelayUrlFormatter.normalize(it.key)
-                } ?: emptySet()
-            }.flowOn(Dispatchers.Default)
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(10000, 10000),
-                emptySet(),
-            )
-
-    val dmRelays: StateFlow<ChatMessageRelayListEvent?> = observeByAuthor(ChatMessageRelayListEvent.KIND, account.signer.pubKey)
-    val searchRelays: StateFlow<SearchRelayListEvent?> = observeByAuthor(SearchRelayListEvent.KIND, account.signer.pubKey)
 
     val toastManager = ToastManager()
 
@@ -205,7 +197,10 @@ class AccountViewModel(
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
         }
 
-    val notificationHasNewItemsFlow = notificationHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val notificationHasNewItemsFlow =
+        notificationHasNewItems
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val messagesHasNewItems =
@@ -236,7 +231,10 @@ class AccountViewModel(
                 }
             }
 
-    val messagesHasNewItemsFlow = messagesHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val messagesHasNewItemsFlow =
+        messagesHasNewItems
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val homeHasNewItems =
@@ -256,7 +254,10 @@ class AccountViewModel(
             emit(newestItemCreatedAt != null && newestItemCreatedAt > lastRead)
         }
 
-    val homeHasNewItemsFlow = homeHasNewItems.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val homeHasNewItemsFlow =
+        homeHasNewItems
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val hasNewItems =
         mapOf(
@@ -268,13 +269,6 @@ class AccountViewModel(
     fun isWriteable(): Boolean = account.isWriteable()
 
     fun userProfile(): User = account.userProfile()
-
-    suspend fun reactTo(
-        note: Note,
-        reaction: String,
-    ) {
-        account.reactTo(note, reaction)
-    }
 
     fun <T : Event> observeByETag(
         kind: Int,
@@ -290,8 +284,8 @@ class AccountViewModel(
         note: Note,
         reaction: String,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val currentReactions = account.reactionTo(note, reaction)
+        runIOCatching {
+            val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
                 account.delete(currentReactions)
             } else {
@@ -301,14 +295,8 @@ class AccountViewModel(
     }
 
     fun reactToOrDelete(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val reaction = reactionChoices().first()
-            if (hasReactedTo(note, reaction)) {
-                deleteReactionTo(note, reaction)
-            } else {
-                reactTo(note, reaction)
-            }
-        }
+        val reaction = reactionChoices().first()
+        reactToOrDelete(note, reaction)
     }
 
     @Immutable
@@ -322,7 +310,7 @@ class AccountViewModel(
 
     fun isNoteAcceptable(
         note: Note,
-        accountChoices: Account.LiveHiddenUsers,
+        accountChoices: HiddenUsersState.LiveHiddenUsers,
         followUsers: Set<HexKey>,
     ): NoteComposeReportState {
         checkNotInMainThread()
@@ -363,13 +351,21 @@ class AccountViewModel(
     fun createIsHiddenFlow(note: Note): StateFlow<NoteComposeReportState> =
         noteIsHiddenFlows.get(note)
             ?: combineTransform(
-                account.flowHiddenUsers,
-                account.liveKind3Follows,
+                account.hiddenUsers.flow,
+                account.kind3FollowList.flow,
                 note.flow().author(),
                 note.flow().metadata.stateFlow,
                 note.flow().reports.stateFlow,
             ) { hiddenUsers, followingUsers, autor, metadata, reports ->
                 emit(isNoteAcceptable(metadata.note, hiddenUsers, followingUsers.authors))
+            }.onStart {
+                emit(
+                    isNoteAcceptable(
+                        note,
+                        account.hiddenUsers.flow.value,
+                        account.kind3FollowList.flow.value.authors,
+                    ),
+                )
             }.flowOn(Dispatchers.Default)
                 .stateIn(
                     viewModelScope,
@@ -397,24 +393,6 @@ class AccountViewModel(
                     noteMustShowExpandButtonFlows.put(note, it)
                 }
 
-    fun hasReactedTo(
-        baseNote: Note,
-        reaction: String,
-    ): Boolean = account.hasReacted(baseNote, reaction)
-
-    suspend fun deleteReactionTo(
-        note: Note,
-        reaction: String,
-    ) {
-        account.delete(account.reactionTo(note, reaction))
-    }
-
-    fun hasBoosted(baseNote: Note): Boolean = account.hasBoosted(baseNote)
-
-    fun deleteBoostsTo(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.delete(account.boostsTo(note)) }
-    }
-
     suspend fun calculateIfNoteWasZappedByAccount(
         zappedNote: Note,
         onWasZapped: (Boolean) -> Unit,
@@ -424,42 +402,36 @@ class AccountViewModel(
         }
     }
 
-    suspend fun calculateZapAmount(
-        zappedNote: Note,
-        onZapAmount: (String) -> Unit,
-    ) {
+    suspend fun calculateZapAmount(zappedNote: Note): String =
         if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.Default) {
-                account.calculateZappedAmount(zappedNote) { onZapAmount(showAmount(it)) }
+                val it = account.calculateZappedAmount(zappedNote)
+                showAmount(it)
             }
         } else {
-            onZapAmount(showAmount(zappedNote.zapsAmount))
+            showAmount(zappedNote.zapsAmount)
         }
-    }
 
-    suspend fun calculateZapraiser(
-        zappedNote: Note,
-        onZapraiserStatus: (ZapraiserStatus) -> Unit,
-    ) {
+    suspend fun calculateZapraiser(zappedNote: Note): ZapraiserStatus {
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
-        if (zappedNote.zapPayments.isNotEmpty()) {
+        return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.Default) {
-                account.calculateZappedAmount(zappedNote) { newZapAmount ->
-                    var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
+                val newZapAmount = account.calculateZappedAmount(zappedNote)
+                var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
-                    if (percentage > 1) {
-                        percentage = 1f
+                if (percentage > 1) {
+                    percentage = 1f
+                }
+
+                val newZapraiserProgress = percentage
+                val newZapraiserLeft =
+                    if (percentage > 0.99) {
+                        "0"
+                    } else {
+                        showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
                     }
 
-                    val newZapraiserProgress = percentage
-                    val newZapraiserLeft =
-                        if (percentage > 0.99) {
-                            "0"
-                        } else {
-                            showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
-                        }
-                    onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
-                }
+                ZapraiserStatus(newZapraiserProgress, newZapraiserLeft)
             }
         } else {
             var percentage = zappedNote.zapsAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
@@ -475,7 +447,8 @@ class AccountViewModel(
                 } else {
                     showAmount((zapraiserAmount * (1 - percentage)).toBigDecimal())
                 }
-            onZapraiserStatus(ZapraiserStatus(newZapraiserProgress, newZapraiserLeft))
+
+            ZapraiserStatus(newZapraiserProgress, newZapraiserLeft)
         }
     }
 
@@ -503,22 +476,21 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulOperations<CombinedZap, DecryptedInfo>(
-                items = zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
-                runRequestFor = { next, onReady ->
-                    checkNotInMainThread()
-
-                    innerDecryptAmountMessage(next.request, next.response) {
-                        onReady(DecryptedInfo(next.request, next.response, it))
+            val results =
+                mapNotNullAsync<CombinedZap, DecryptedInfo>(
+                    zaps.filter { (it.request.event as? LnZapRequestEvent)?.isPrivateZap() == true },
+                ) { next ->
+                    val info = innerDecryptAmountMessage(next.request, next.response)
+                    if (info != null) {
+                        DecryptedInfo(next.request, next.response, info)
+                    } else {
+                        null
                     }
-                },
-            ) {
-                checkNotInMainThread()
+                }
 
-                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
 
-                onNewState(initialResults.values.toImmutableList())
-            }
+            onNewState(initialResults.values.toImmutableList())
         }
     }
 
@@ -527,7 +499,7 @@ class AccountViewModel(
             .map {
                 val request = it.request.event as? LnZapRequestEvent
                 if (request?.isPrivateZap() == true) {
-                    val cachedPrivateRequest = request.cachedPrivateZap()
+                    val cachedPrivateRequest = account.privateZapsDecryptionCache.cachedPrivateZap(request)
                     if (cachedPrivateRequest != null) {
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
@@ -561,7 +533,7 @@ class AccountViewModel(
             .map {
                 val request = it.first.event as? LnZapRequestEvent
                 if (request?.isPrivateZap() == true) {
-                    val cachedPrivateRequest = request.cachedPrivateZap()
+                    val cachedPrivateRequest = account.privateZapsDecryptionCache.cachedPrivateZap(request)
                     if (cachedPrivateRequest != null) {
                         ZapAmountCommentNotification(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
@@ -609,18 +581,19 @@ class AccountViewModel(
                             )
                     }.toMutableMap()
 
-            collectSuccessfulOperations<Pair<Note, Note?>, DecryptedInfo>(
-                items = myList,
-                runRequestFor = { next, onReady ->
-                    innerDecryptAmountMessage(next.first, next.second) {
-                        onReady(DecryptedInfo(next.first, next.second, it))
+            val decryptedInfo =
+                mapNotNullAsync(myList) { next ->
+                    val info = innerDecryptAmountMessage(next.first, next.second)
+                    if (info != null) {
+                        DecryptedInfo(next.first, next.second, info)
+                    } else {
+                        null
                     }
-                },
-            ) {
-                it.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+                }
 
-                onNewState(initialResults.values.toImmutableList())
-            }
+            decryptedInfo.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+
+            onNewState(initialResults.values.toImmutableList())
         }
     }
 
@@ -630,44 +603,39 @@ class AccountViewModel(
         onNewState: (ZapAmountCommentNotification?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            innerDecryptAmountMessage(zapRequest, zapEvent, onNewState)
+            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent))
         }
     }
 
-    private fun innerDecryptAmountMessage(
+    private suspend fun innerDecryptAmountMessage(
         zapRequest: Note,
         zapEvent: Note?,
-        onReady: (ZapAmountCommentNotification) -> Unit,
-    ) {
-        checkNotInMainThread()
-
+    ): ZapAmountCommentNotification? =
         (zapRequest.event as? LnZapRequestEvent)?.let {
+            val amount = showAmountInteger((zapEvent?.event as? LnZapEvent)?.amount)
             if (it.isPrivateZap()) {
-                decryptZap(zapRequest) { decryptedContent ->
-                    val amount = (zapEvent?.event as? LnZapEvent)?.amount
-                    val newAuthor = LocalCache.getOrCreateUser(decryptedContent.pubKey)
-                    onReady(
-                        ZapAmountCommentNotification(
-                            newAuthor,
-                            decryptedContent.content.ifBlank { null },
-                            showAmountInteger(amount),
-                        ),
+                val decryptedContent = account.decryptZapOrNull(it)
+                if (decryptedContent != null) {
+                    ZapAmountCommentNotification(
+                        LocalCache.checkGetOrCreateUser(decryptedContent.pubKey),
+                        decryptedContent.content.ifBlank { null },
+                        amount,
+                    )
+                } else {
+                    ZapAmountCommentNotification(
+                        zapRequest.author,
+                        null,
+                        amount,
                     )
                 }
             } else {
-                val amount = (zapEvent?.event as? LnZapEvent)?.amount
-                if (!zapRequest.event?.content.isNullOrBlank() || amount != null) {
-                    onReady(
-                        ZapAmountCommentNotification(
-                            zapRequest.author,
-                            zapRequest.event?.content?.ifBlank { null },
-                            showAmountInteger(amount),
-                        ),
-                    )
-                }
+                ZapAmountCommentNotification(
+                    zapRequest.author,
+                    zapRequest.event?.content?.ifBlank { null },
+                    amount,
+                )
             }
         }
-    }
 
     fun zap(
         note: Note,
@@ -680,25 +648,20 @@ class AccountViewModel(
         onProgress: (percent: Float) -> Unit,
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            ZapPaymentHandler(account)
-                .zap(
-                    note = note,
-                    amountMilliSats = amountInMillisats,
-                    pollOption = pollOption,
-                    message = message,
-                    context = context,
-                    showErrorIfNoLnAddress = showErrorIfNoLnAddress,
-                    okHttpClient = ::okHttpClientForMoney,
-                    onError = onError,
-                    onProgress = {
-                        onProgress(it)
-                    },
-                    onPayViaIntent = onPayViaIntent,
-                    zapType = zapType ?: defaultZapType(),
-                )
-        }
+    ) = runIOCatching {
+        ZapPaymentHandler(account).zap(
+            note = note,
+            amountMilliSats = amountInMillisats,
+            pollOption = pollOption,
+            message = message,
+            context = context,
+            showErrorIfNoLnAddress = showErrorIfNoLnAddress,
+            okHttpClient = ::okHttpClientForMoney,
+            onError = onError,
+            onProgress = { onProgress(it) },
+            onPayViaIntent = onPayViaIntent,
+            zapType = zapType ?: defaultZapType(),
+        )
     }
 
     fun report(
@@ -706,85 +669,62 @@ class AccountViewModel(
         type: ReportType,
         content: String = "",
     ) {
-        viewModelScope.launch(Dispatchers.IO) { account.report(note, type, content) }
+        runIOCatching { account.report(note, type, content) }
     }
 
     fun report(
         user: User,
         type: ReportType,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        runIOCatching {
             account.report(user, type)
             account.hideUser(user.pubkeyHex)
         }
     }
 
     fun boost(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.boost(note) }
+        runIOCatching { account.boost(note) }
     }
 
-    fun removeEmojiPack(
-        usersEmojiList: Note,
-        emojiList: Note,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.removeEmojiPack(usersEmojiList, emojiList) }
+    fun removeEmojiPack(emojiPack: Note) {
+        runIOCatching { account.removeEmojiPack(emojiPack) }
     }
 
-    fun addEmojiPack(
-        usersEmojiList: Note,
-        emojiPack: Note,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addEmojiPack(usersEmojiList, emojiPack) }
+    fun addEmojiPack(emojiPack: Note) {
+        runIOCatching { account.addEmojiPack(emojiPack) }
     }
 
     fun addMediaToGallery(
         hex: String,
         url: String,
-        relay: String?,
+        relay: NormalizedRelayUrl?,
         blurhash: String?,
         dim: DimensionTag?,
         hash: String?,
         mimeType: String?,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
+        runIOCatching { account.addToGallery(hex, url, relay, blurhash, dim, hash, mimeType) }
     }
 
-    fun removefromMediaGallery(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.removeFromGallery(note) }
+    fun removeFromMediaGallery(note: Note) {
+        runIOCatching { account.removeFromGallery(note) }
     }
 
-    fun addPrivateBookmark(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.addBookmark(note, true) }
-    }
+    fun hashtagFollows(user: User): Note = LocalCache.getOrCreateAddressableNote(HashtagListEvent.createAddress(user.pubkeyHex))
 
-    fun addPublicBookmark(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.addBookmark(note, false) }
-    }
+    fun bookmarks(user: User): Note = LocalCache.getOrCreateAddressableNote(BookmarkListEvent.createBookmarkAddress(user.pubkeyHex))
 
-    fun removePrivateBookmark(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.removeBookmark(note, true) }
-    }
+    fun addPrivateBookmark(note: Note) = runIOCatching { account.addBookmark(note, true) }
 
-    fun removePublicBookmark(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.removeBookmark(note, false) }
-    }
+    fun addPublicBookmark(note: Note) = runIOCatching { account.addBookmark(note, false) }
 
-    fun isInPrivateBookmarks(
-        note: Note,
-        onReady: (Boolean) -> Unit,
-    ) {
-        account.isInPrivateBookmarks(note, onReady)
-    }
+    fun removePrivateBookmark(note: Note) = runIOCatching { account.removeBookmark(note, true) }
 
-    fun isInPublicBookmarks(note: Note): Boolean = account.isInPublicBookmarks(note)
+    fun removePublicBookmark(note: Note) = runIOCatching { account.removeBookmark(note, false) }
 
-    fun broadcast(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.broadcast(note) }
-    }
+    fun broadcast(note: Note) = runIOCatching { account.broadcast(note) }
 
-    fun timestamp(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.timestamp(note) }
-    }
+    fun timestamp(note: Note) = runIOCatching { account.otsState.timestamp(note) }
 
     var lastTimeItTriedToUpdateAttestations: Long = 0
 
@@ -793,22 +733,16 @@ class AccountViewModel(
         val now = TimeUtils.now()
         if (now - lastTimeItTriedToUpdateAttestations > TimeUtils.ONE_HOUR) {
             lastTimeItTriedToUpdateAttestations = now
-            viewModelScope.launch(Dispatchers.IO) { account.updateAttestations() }
-        }
-    }
-
-    fun precomputeNewEvents(notes: Set<Note>) {
-        viewModelScope.launch(Dispatchers.Default) {
-            newNotesPreProcessor.run(notes)
+            runIOCatching { account.updateAttestations() }
         }
     }
 
     fun delete(notes: List<Note>) {
-        viewModelScope.launch(Dispatchers.IO) { account.delete(notes) }
+        runIOCatching { account.delete(notes) }
     }
 
     fun delete(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) { account.delete(note) }
+        runIOCatching { account.delete(note) }
     }
 
     fun cachedDecrypt(note: Note): String? = account.cachedDecryptContent(note)
@@ -818,63 +752,99 @@ class AccountViewModel(
     fun decrypt(
         note: Note,
         onReady: (String) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { account.decryptContent(note, onReady) }
+    ) = runIOCatching {
+        account.decryptContent(note)?.let { onReady(it) }
     }
 
-    fun decryptZap(
-        note: Note,
-        onReady: (Event) -> Unit,
-    ) {
-        account.decryptZapContentAuthor(note, onReady)
+    inline fun runIOCatching(crossinline action: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                action()
+            } catch (e: SignerExceptions.ReadOnlyException) {
+                toastManager.toast(
+                    R.string.read_only_user,
+                    R.string.login_with_a_private_key_to_be_able_to_sign_events,
+                )
+            } catch (e: SignerExceptions.UnauthorizedDecryptionException) {
+                toastManager.toast(
+                    R.string.unauthorized_exception,
+                    R.string.unauthorized_exception_description,
+                )
+            } catch (e: SignerExceptions.SignerNotFoundException) {
+                toastManager.toast(
+                    R.string.signer_not_found_exception,
+                    R.string.signer_not_found_exception_description,
+                )
+            } catch (e: SignerExceptions.TimedOutException) {
+                Log.w("AccountViewModel", "TimedOutException", e)
+            } catch (e: SignerExceptions.NothingToDecrypt) {
+                Log.w("AccountViewModel", "NothingToDecrypt", e)
+            } catch (e: SignerExceptions.CouldNotPerformException) {
+                Log.w("AccountViewModel", "CouldNotPerformException", e)
+            } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
+                Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
+            } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
+                Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
+            } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
+                Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
+            }
+        }
+    }
+
+    fun follow(community: AddressableNote) {
+        runIOCatching { account.follow(community) }
     }
 
     fun follow(channel: PublicChatChannel) {
-        viewModelScope.launch(Dispatchers.IO) { account.follow(channel) }
+        runIOCatching { account.follow(channel) }
     }
 
     fun follow(channel: EphemeralChatChannel) {
-        viewModelScope.launch(Dispatchers.IO) { account.follow(channel) }
+        runIOCatching { account.follow(channel) }
+    }
+
+    fun unfollow(community: AddressableNote) {
+        runIOCatching { account.unfollow(community) }
     }
 
     fun unfollow(channel: PublicChatChannel) {
-        viewModelScope.launch(Dispatchers.IO) { account.unfollow(channel) }
+        runIOCatching { account.unfollow(channel) }
     }
 
     fun unfollow(channel: EphemeralChatChannel) {
-        viewModelScope.launch(Dispatchers.IO) { account.unfollow(channel) }
+        runIOCatching { account.unfollow(channel) }
     }
 
     fun follow(user: User) {
-        viewModelScope.launch(Dispatchers.IO) { account.follow(user) }
+        runIOCatching { account.follow(user) }
     }
 
     fun unfollow(user: User) {
-        viewModelScope.launch(Dispatchers.IO) { account.unfollow(user) }
+        runIOCatching { account.unfollow(user) }
     }
 
     fun followGeohash(tag: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.followGeohash(tag) }
+        runIOCatching { account.followGeohash(tag) }
     }
 
     fun unfollowGeohash(tag: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.unfollowGeohash(tag) }
+        runIOCatching { account.unfollowGeohash(tag) }
     }
 
     fun followHashtag(tag: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.followHashtag(tag) }
+        runIOCatching { account.followHashtag(tag) }
     }
 
     fun unfollowHashtag(tag: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.unfollowHashtag(tag) }
+        runIOCatching { account.unfollowHashtag(tag) }
     }
 
     fun showWord(word: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.showWord(word) }
+        runIOCatching { account.showWord(word) }
     }
 
     fun hideWord(word: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.hideWord(word) }
+        runIOCatching { account.hideWord(word) }
     }
 
     fun isLoggedUser(pubkeyHex: HexKey?): Boolean = account.signer.pubKey == pubkeyHex
@@ -888,19 +858,11 @@ class AccountViewModel(
 
     fun isFollowing(user: HexKey): Boolean = account.isFollowing(user)
 
-    fun updateContentWarnings(value: WarningType) {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.updateShowSensitiveContent(value.prefCode)
-        }
-    }
-
     fun markDonatedInThisVersion() = account.markDonatedInThisVersion()
 
     fun dontTranslateFrom() = account.settings.syncedSettings.languages.dontTranslateFrom
 
     fun dontTranslateFromFilteredBySpokenLanguages() = account.settings.syncedSettings.dontTranslateFromFilteredBySpokenLanguages()
-
-    fun toggleDontTranslateFrom(languageCode: String) = account.toggleDontTranslateFrom(languageCode)
 
     fun translateTo() = account.settings.syncedSettings.languages.translateTo
 
@@ -918,65 +880,62 @@ class AccountViewModel(
 
     fun filterSpamFromStrangers() = account.settings.syncedSettings.security.filterSpamFromStrangers
 
-    fun updateWarnReports(warnReports: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.updateWarnReports(warnReports)
-        }
-    }
+    fun updateWarnReports(warnReports: Boolean) = runIOCatching { account.updateWarnReports(warnReports) }
 
-    fun updateFilterSpam(filterSpam: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun updateFilterSpam(filterSpam: Boolean) =
+        runIOCatching {
             if (account.updateFilterSpam(filterSpam)) {
                 LocalCache.antiSpam.active = filterSpamFromStrangers().value
             }
         }
+
+    fun updateShowSensitiveContent(show: Boolean?) = runIOCatching { account.updateShowSensitiveContent(show) }
+
+    fun changeReactionTypes(
+        reactionSet: List<String>,
+        onDone: () -> Unit,
+    ) = runIOCatching {
+        account.changeReactionTypes(reactionSet)
+        onDone()
     }
 
-    fun unwrap(
-        event: GiftWrapEvent,
-        onReady: (Event) -> Unit,
-    ) {
-        account.unwrap(event, onReady)
-    }
+    fun updateZapAmounts(
+        amountSet: List<Long>,
+        selectedZapType: LnZapEvent.ZapType,
+        nip47Update: Nip47WalletConnect.Nip47URINorm?,
+    ) = runIOCatching { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
 
-    fun unseal(
-        event: SealedRumorEvent,
-        onReady: (Event) -> Unit,
-    ) {
-        account.unseal(event, onReady)
-    }
+    fun toggleDontTranslateFrom(languageCode: String) = runIOCatching { account.toggleDontTranslateFrom(languageCode) }
 
-    fun show(user: User) {
-        viewModelScope.launch(Dispatchers.IO) { account.showUser(user.pubkeyHex) }
-    }
+    fun updateTranslateTo(languageCode: Locale) = runIOCatching { account.updateTranslateTo(languageCode) }
 
-    fun hide(user: User) {
-        viewModelScope.launch(Dispatchers.IO) { account.hideUser(user.pubkeyHex) }
-    }
+    fun prefer(
+        source: String,
+        target: String,
+        preference: String,
+    ) = runIOCatching { account.prefer(source, target, preference) }
 
-    fun hide(word: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.hideWord(word) }
-    }
+    fun show(user: User) = runIOCatching { account.showUser(user.pubkeyHex) }
 
-    fun showUser(pubkeyHex: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.showUser(pubkeyHex) }
-    }
+    fun hide(user: User) = runIOCatching { account.hideUser(user.pubkeyHex) }
 
-    fun createStatus(newStatus: String) {
-        viewModelScope.launch(Dispatchers.IO) { account.createStatus(newStatus) }
-    }
+    fun hide(word: String) = runIOCatching { account.hideWord(word) }
+
+    fun showUser(pubkeyHex: String) = runIOCatching { account.showUser(pubkeyHex) }
+
+    fun createStatus(newStatus: String) = runIOCatching { account.createStatus(newStatus) }
 
     fun updateStatus(
         address: Address,
         newStatus: String,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        runIOCatching {
             account.updateStatus(LocalCache.getOrCreateAddressableNote(address), newStatus)
         }
     }
 
     fun deleteStatus(address: Address) {
-        viewModelScope.launch(Dispatchers.IO) {
+        runIOCatching {
             account.deleteStatus(LocalCache.getOrCreateAddressableNote(address))
         }
     }
@@ -1007,8 +966,8 @@ class AccountViewModel(
             Nip05NostrAddressVerifier()
                 .verifyNip05(
                     nip05,
-                    okttpClient = {
-                        app.okHttpClients.getHttpClient(account.shouldUseTorForNIP05(it))
+                    okHttpClient = {
+                        app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForNIP05(it))
                     },
                     onSuccess = {
                         // Marks user as verified
@@ -1036,17 +995,15 @@ class AccountViewModel(
         }
     }
 
-    fun <T : Event> createRumor(template: EventTemplate<T>) = account.signer.assembleRumor<T>(template)
-
     fun retrieveRelayDocument(
-        dirtyUrl: String,
+        relay: NormalizedRelayUrl,
         onInfo: (Nip11RelayInformation) -> Unit,
-        onError: (String, Nip11Retriever.ErrorCode, String?) -> Unit,
+        onError: (NormalizedRelayUrl, Nip11Retriever.ErrorCode, String?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             Nip11CachedRetriever.loadRelayInfo(
-                dirtyUrl,
-                okHttpClient = ::okHttpClientForDirty,
+                relay,
+                okHttpClient = { okHttpClientForClean(relay) },
                 onInfo,
                 onError,
             )
@@ -1099,16 +1056,7 @@ class AccountViewModel(
 
     fun getNoteIfExists(hex: HexKey): Note? = LocalCache.getNoteIfExists(hex)
 
-    override suspend fun checkGetOrCreateAddressableNote(key: HexKey): AddressableNote? = LocalCache.checkGetOrCreateAddressableNote(key)
-
-    fun checkGetOrCreateAddressableNote(
-        key: HexKey,
-        onResult: (AddressableNote?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateAddressableNote(key)) }
-    }
-
-    suspend fun getOrCreateAddressableNote(key: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(key)
+    override suspend fun getOrCreateAddressableNote(address: Address): AddressableNote = LocalCache.getOrCreateAddressableNote(address)
 
     fun getOrCreateAddressableNote(
         key: Address,
@@ -1136,7 +1084,7 @@ class AccountViewModel(
     ) {
         onResult(
             withContext(Dispatchers.Default) {
-                LocalCache.findEarliestOtsForNote(note, account::otsResolver)
+                LocalCache.findEarliestOtsForNote(note, account.otsResolverBuilder)
             },
         )
     }
@@ -1154,20 +1102,24 @@ class AccountViewModel(
         )
     }
 
-    private suspend fun checkGetOrCreateChannel(key: HexKey): Channel? = LocalCache.checkGetOrCreateChannel(key)
+    suspend fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel? = LocalCache.getOrCreatePublicChatChannel(key)
 
-    suspend fun checkGetOrCreateChannel(key: RoomId): Channel? = LocalCache.checkGetOrCreateChannel(key)
+    suspend fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel? = LocalCache.getOrCreateLiveChannel(key)
+
+    suspend fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel? = LocalCache.getOrCreateEphemeralChannel(key)
 
     fun checkGetOrCreateChannel(
         key: HexKey,
         onResult: (Channel?) -> Unit,
     ) {
-        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreateChannel(key)) }
+        viewModelScope.launch(Dispatchers.IO) { onResult(checkGetOrCreatePublicChatChannel(key)) }
     }
 
-    fun getChannelIfExists(hex: HexKey): Channel? = LocalCache.getChannelIfExists(hex)
+    fun getPublicChatChannelIfExists(hex: HexKey) = LocalCache.getPublicChatChannelIfExists(hex)
 
-    fun getChannelIfExists(key: RoomId): Channel? = LocalCache.getChannelIfExists(key.toKey())
+    fun getEphemeralChatChannelIfExists(key: RoomId) = LocalCache.getEphemeralChatChannelIfExists(key)
+
+    fun getLiveActivityChannelIfExists(key: Address) = LocalCache.getLiveActivityChannelIfExists(key)
 
     fun <T : PubKeyReferenceTag> loadParticipants(
         participants: List<T>,
@@ -1204,34 +1156,10 @@ class AccountViewModel(
             .sortedBy { account.isFollowing(it) }
             .reversed()
 
-    fun loadUsers(
-        event: GeneralListEvent,
-        onReady: (ImmutableList<User>) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.Default) {
-            account.decryptPeopleList(event) { privateTagList ->
-                onReady(
-                    (event.taggedUserIds() + event.filterUsers(privateTagList))
-                        .toSet()
-                        .mapNotNull { hex -> checkGetOrCreateUser(hex) }
-                        .sortedBy { account.isFollowing(it) }
-                        .reversed()
-                        .toImmutableList(),
-                )
-            }
+    suspend fun checkVideoIsOnline(videoUrl: String): Boolean =
+        withContext(Dispatchers.IO) {
+            OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo)
         }
-    }
-
-    fun checkVideoIsOnline(
-        videoUrl: String,
-        onDone: (Boolean) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            onDone(
-                OnlineChecker.isOnline(videoUrl, ::okHttpClientForVideo),
-            )
-        }
-    }
 
     fun loadAndMarkAsRead(
         routeForLastRead: String,
@@ -1252,74 +1180,20 @@ class AccountViewModel(
         return onIsNew
     }
 
-    fun markAllAsRead(
-        notes: ImmutableList<Note>,
-        accountViewModel: AccountViewModel,
-        onDone: () -> Unit,
-    ) {
+    fun markAllChatNotesAsRead(notes: List<Note>) {
         viewModelScope.launch(Dispatchers.IO) {
             for (note in notes) {
-                note.event?.createdAt?.let { date ->
-                    val route = routeFor(note, accountViewModel.account.userProfile())
-                    route?.let {
-                        if (route is Route.Room) {
-                            account.markAsRead("Room/${route.id}", date)
-                        } else if (route is Route.Channel) {
-                            account.markAsRead("Channel/${route.id}", date)
-                        }
-                    }
+                val noteEvent = note.event
+                if (noteEvent is IsInPublicChatChannel) {
+                    account.markAsRead("Channel/${noteEvent.channelId()}", noteEvent.createdAt)
+                } else if (noteEvent is ChatroomKeyable) {
+                    account.markAsRead("Room/${noteEvent.chatroomKey(account.signer.pubKey).hashCode()}", noteEvent.createdAt)
                 }
             }
-
-            onDone()
         }
     }
 
-    fun createChatRoomFor(
-        user: User,
-        then: (Int) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val withKey = ChatroomKey(persistentSetOf(user.pubkeyHex))
-            account.userProfile().createChatroom(withKey)
-            then(withKey.hashCode())
-        }
-    }
-
-    fun setTorSettings(newTorSettings: TorSettings) =
-        viewModelScope.launch(Dispatchers.IO) {
-            // Only restart relay connections if port or type changes
-            if (account.settings.setTorSettings(newTorSettings)) {
-                app.serviceManager.forceRestart()
-            }
-        }
-
-    fun forceRestartServices() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.setAccountAndRestart(account)
-        }
-
-    fun justStart() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.justStartIfItHasAccount()
-        }
-
-    fun justPause() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.cleanObservers()
-            app.serviceManager.pauseForGood()
-        }
-
-    fun pauseAndLogOff() =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.cleanObservers()
-            app.serviceManager.pauseAndLogOff()
-        }
-
-    fun changeProxyPort(port: Int) =
-        viewModelScope.launch(Dispatchers.IO) {
-            app.serviceManager.forceRestart()
-        }
+    fun setTorSettings(newTorSettings: TorSettings) = runIOCatching { account.settings.setTorSettings(newTorSettings) }
 
     class Factory(
         val accountSettings: AccountSettings,
@@ -1330,37 +1204,95 @@ class AccountViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T = AccountViewModel(accountSettings, settings, app) as T
     }
 
-    private var collectorJob: Job? = null
-    private val bundlerInsert = BundledInsert<Set<Note>>(3000, Dispatchers.Default)
-
     init {
         Log.d("Init", "AccountViewModel")
-        collectorJob =
-            viewModelScope.launch(Dispatchers.Default) {
-                feedStates.init()
-                // awaits for init to finish before starting to capture new events.
-                LocalCache.live.newEventBundles.collect { newNotes ->
-                    if (isDebug) {
-                        Log.d(
-                            "Rendering Metrics",
-                            "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
-                        )
-                    }
-                    logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
-                        feedStates.updateFeedsWith(newNotes)
-                        upgradeAttestations()
-                        precomputeNewEvents(newNotes)
+        viewModelScope.launch(Dispatchers.Default) {
+            feedStates.init()
+            // awaits for init to finish before starting to capture new events.
+            LocalCache.live.newEventBundles.collect { newNotes ->
+                if (isDebug) {
+                    Log.d(
+                        "Rendering Metrics",
+                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                    )
+                }
+                logTime("AccountViewModel newEventBundle Update with ${newNotes.size} new notes") {
+                    feedStates.updateFeedsWith(newNotes)
+                    upgradeAttestations()
+                    viewModelScope.launch(Dispatchers.Default) {
+                        newNotesPreProcessor.runNew(newNotes)
                     }
                 }
             }
+        }
+
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
+                if (isDebug) {
+                    Log.d(
+                        "Rendering Metrics",
+                        "Update feeds ${this@AccountViewModel} for ${account.userProfile().toBestDisplayName()} with ${newNotes.size} new notes",
+                    )
+                }
+                logTime("AccountViewModel deletedEventBundle Update with ${newNotes.size} new notes") {
+                    newNotesPreProcessor.runDeleted(newNotes)
+                }
+            }
+        }
     }
 
     override fun onCleared() {
         Log.d("Init", "AccountViewModel onCleared")
         feedStates.destroy()
-        bundlerInsert.cancel()
-        collectorJob?.cancel()
         super.onCleared()
+    }
+
+    fun sendVoiceReply(
+        note: Note,
+        recording: RecordingResult,
+        context: Context,
+    ) {
+        if (isWriteable()) {
+            val hint = note.toEventHint<VoiceEvent>()
+            if (hint == null) return
+
+            runIOCatching {
+                val uploader = UploadOrchestrator()
+                val result =
+                    uploader.upload(
+                        uri = recording.file.toUri(),
+                        mimeType = recording.mimeType,
+                        alt = null,
+                        contentWarningReason = null,
+                        compressionQuality = CompressorQuality.UNCOMPRESSED,
+                        server = account.settings.defaultFileServer,
+                        account = account,
+                        context = context,
+                    )
+
+                if (result is UploadingState.Finished && result.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                    account.sendVoiceReplyMessage(
+                        result.result.url,
+                        result.result.fileHeader.mimeType ?: recording.mimeType,
+                        result.result.fileHeader.hash,
+                        recording.duration,
+                        recording.amplitudes,
+                        hint,
+                    )
+                } else if (result is UploadingState.Error) {
+                    toastManager.toast(
+                        R.string.failed_to_upload_media_no_details,
+                        result.errorResource,
+                        *result.params,
+                    )
+                }
+            }
+        } else {
+            toastManager.toast(
+                R.string.read_only_user,
+                R.string.login_with_a_private_key_to_be_able_to_reply,
+            )
+        }
     }
 
     fun loadThumb(
@@ -1415,8 +1347,11 @@ class AccountViewModel(
         }
 
         if (isWriteable()) {
-            if (hasBoosted(baseNote)) {
-                deleteBoostsTo(baseNote)
+            val boosts = baseNote.boostedBy(userProfile())
+            if (boosts.isNotEmpty()) {
+                runIOCatching {
+                    account.delete(boosts)
+                }
             } else {
                 onMore()
             }
@@ -1436,15 +1371,26 @@ class AccountViewModel(
         val lud16 = account.userProfile().info?.lud16
         if (lud16 != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                CashuProcessor()
-                    .melt(
-                        token,
-                        lud16,
-                        okHttpClient = ::okHttpClientForMoney,
-                        onSuccess = { title, message -> onDone(title, message) },
-                        onError = { title, message -> onDone(title, message) },
-                        context,
+                try {
+                    val meltResult = MeltProcessor().melt(token, lud16, ::okHttpClientForMoney, context)
+                    onDone(
+                        stringRes(context, R.string.cashu_successful_redemption),
+                        stringRes(
+                            context,
+                            R.string.cashu_successful_redemption_explainer,
+                            token.totalAmount.toString(),
+                            meltResult.fees.toString(),
+                        ),
                     )
+                } catch (e: LightningAddressResolver.LightningAddressError) {
+                    onDone(e.title, e.msg)
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    onDone(
+                        stringRes(context, R.string.cashu_failed_redemption),
+                        stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
+                    )
+                }
             }
         } else {
             onDone(
@@ -1458,111 +1404,106 @@ class AccountViewModel(
         }
     }
 
-    fun unwrapIfNeeded(
-        event: Event?,
-        onReady: (Note) -> Unit,
-    ) {
-        when (event) {
-            is GiftWrapEvent -> {
-                event.innerEventId?.let {
-                    val existingNote = LocalCache.getNoteIfExists(it)
-                    if (existingNote != null) {
-                        unwrapIfNeeded(existingNote.event, onReady)
-                    } else {
-                        event.unwrap(account.signer) {
-                            // clear the encrypted payload to save memory
-                            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+    private suspend fun unwrapGiftWrap(event: GiftWrapEvent): Note? {
+        val cacheInnerEventId = event.innerEventId
+        return if (cacheInnerEventId != null) {
+            val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
+            if (existingNoteEvent != null) {
+                unwrapIfNeeded(existingNoteEvent)
+            } else {
+                val newEvent = event.unwrapOrNull(account.signer)
 
-                            if (LocalCache.justConsume(it, null, false)) {
-                                unwrapIfNeeded(it, onReady)
-                            }
-                        }
-                    }
-                } ?: run {
-                    event.unwrap(account.signer) {
-                        // clear the encrypted payload to save memory
-                        LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+                if (newEvent == null) return null
 
-                        val existingNote = LocalCache.getNoteIfExists(it.id)
-                        if (existingNote != null) {
-                            unwrapIfNeeded(existingNote.event, onReady)
-                        } else {
-                            if (LocalCache.justConsume(it, null, false)) {
-                                unwrapIfNeeded(it, onReady)
-                            }
-                        }
-                    }
-                }
+                // clear the encrypted payload to save memory
+                LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
+                LocalCache.justConsume(newEvent, null, false)
+
+                unwrapIfNeeded(newEvent)
             }
-            is SealedRumorEvent -> {
-                event.innerEventId?.let {
-                    val existingNote = LocalCache.getNoteIfExists(it)
-                    if (existingNote != null) {
-                        unwrapIfNeeded(existingNote.event, onReady)
-                    } else {
-                        event.unseal(account.signer) {
-                            // clear the encrypted payload to save memory
-                            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+        } else {
+            val newEvent = event.unwrapThrowing(account.signer)
+            // clear the encrypted payload to save memory
+            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
 
-                            // this is not verifiable
-                            if (LocalCache.justConsume(it, null, true)) {
-                                unwrapIfNeeded(it, onReady)
-                            }
-                        }
-                    }
-                } ?: run {
-                    event.unseal(account.signer) {
-                        // clear the encrypted payload to save memory
-                        LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+            val existingNoteEvent = LocalCache.getNoteIfExists(newEvent.id)?.event
 
-                        val existingNote = LocalCache.getNoteIfExists(it.id)
-                        if (existingNote != null) {
-                            unwrapIfNeeded(existingNote.event, onReady)
-                        } else {
-                            // this is not verifiable
-                            if (LocalCache.justConsume(it, null, true)) {
-                                unwrapIfNeeded(it, onReady)
-                            }
-                        }
-                    }
-                }
-            }
-            else -> {
-                event?.id?.let {
-                    LocalCache.getNoteIfExists(it)?.let {
-                        onReady(it)
-                    }
-                }
+            if (existingNoteEvent != null) {
+                unwrapIfNeeded(existingNoteEvent)
+            } else {
+                LocalCache.justConsume(newEvent, null, false)
+                unwrapIfNeeded(newEvent)
             }
         }
     }
+
+    private suspend fun unwrapSeal(event: SealedRumorEvent): Note? {
+        val cacheInnerEventId = event.innerEventId
+        return if (cacheInnerEventId != null) {
+            val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
+            if (existingNoteEvent != null) {
+                unwrapIfNeeded(existingNoteEvent)
+            } else {
+                val newEvent = event.unsealThrowing(account.signer)
+                // clear the encrypted payload to save memory
+                LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
+                // this is not verifiable
+                LocalCache.justConsume(newEvent, null, true)
+                unwrapIfNeeded(newEvent)
+            }
+        } else {
+            val newEvent = event.unsealThrowing(account.signer)
+            // clear the encrypted payload to save memory
+            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
+
+            val existingNoteEvent = LocalCache.getNoteIfExists(newEvent.id)?.event
+            if (existingNoteEvent != null) {
+                unwrapIfNeeded(existingNoteEvent)
+            } else {
+                // this is not verifiable
+                LocalCache.justConsume(newEvent, null, true)
+                unwrapIfNeeded(newEvent)
+            }
+        }
+    }
+
+    private suspend fun unwrapIfNeeded(event: Event): Note? =
+        when (event) {
+            is GiftWrapEvent -> unwrapGiftWrap(event)
+            is SealedRumorEvent -> unwrapSeal(event)
+            else -> LocalCache.getNoteIfExists(event.id)
+        }
 
     fun unwrapIfNeeded(
         note: Note?,
-        onReady: (Note) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            unwrapIfNeeded(note?.event) {
-                onReady(it)
+        onReady: (Note) -> Unit = {},
+    ) = runIOCatching {
+        val noteEvent = note?.event
+        if (noteEvent != null) {
+            val resultingNote = unwrapIfNeeded(noteEvent)
+            if (resultingNote != null && resultingNote != note) {
+                onReady(resultingNote)
             }
         }
     }
 
-    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.shouldUseTorForVideoDownload(url))
+    fun proxyPortFor(url: String): Int? = app.okHttpClients.getCurrentProxyPort(account.privacyState.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForNIP96(url))
+    fun okHttpClientForNip96(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForUploads(url))
 
-    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForImageDownload(url))
+    fun okHttpClientForImage(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForImageDownload(url))
 
-    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForVideoDownload(url))
+    fun okHttpClientForVideo(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForVideoDownload(url))
 
-    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForMoneyOperations(url))
+    fun okHttpClientForMoney(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForMoneyOperations(url))
 
-    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForPreviewUrl(url))
+    fun okHttpClientForPreview(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForPreviewUrl(url))
 
-    fun okHttpClientForDirty(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForDirty(url))
+    fun okHttpClientForClean(url: NormalizedRelayUrl): OkHttpClient = app.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(url))
 
-    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.shouldUseTorForTrustedRelays())
+    fun okHttpClientForTrustedRelays(url: String): OkHttpClient = app.okHttpClients.getHttpClient(account.privacyState.shouldUseTorForTrustedRelays())
 
     fun dataSources() = app.sources
 
@@ -1570,12 +1511,7 @@ class AccountViewModel(
         account.deleteDraft(draftTag)
     }
 
-    suspend fun createTempDraftNote(
-        noteEvent: DraftEvent,
-        onReady: (Note?) -> Unit,
-    ) {
-        draftNoteCache.update(noteEvent, onReady)
-    }
+    suspend fun createTempDraftNote(noteEvent: DraftEvent): Note? = draftNoteCache.update(noteEvent)
 
     fun createTempDraftNote(
         innerEvent: Event,
@@ -1592,7 +1528,7 @@ class AccountViewModel(
     }
 
     fun requestDVMContentDiscovery(
-        dvmPublicKey: String,
+        dvmPublicKey: User,
         onReady: (event: Note) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1627,12 +1563,11 @@ class AccountViewModel(
     fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
-        onSent: () -> Unit,
+        onSent: () -> Unit = {},
         onResponse: (Response?) -> Unit,
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            account.sendZapPaymentRequestFor(bolt11, zappedNote, onSent, onResponse)
-        }
+    ) = runIOCatching {
+        account.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        onSent()
     }
 
     fun getRelayListFor(user: User): AdvertisedRelayListEvent? = (getRelayListNoteFor(user)?.event as? AdvertisedRelayListEvent?)
@@ -1665,46 +1600,63 @@ class AccountViewModel(
     }
 
     fun sendSats(
-        lnaddress: String,
+        lnAddress: String,
+        user: User,
         milliSats: Long,
         message: String,
-        toUserPubKeyHex: HexKey,
-        onSuccess: (String) -> Unit,
+        onNewInvoice: (String) -> Unit,
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (defaultZapType() == LnZapEvent.ZapType.NONZAP) {
-                LightningAddressResolver()
-                    .lnAddressInvoice(
-                        lnaddress,
-                        milliSats,
-                        message,
-                        null,
+            try {
+                val zapRequest =
+                    if (defaultZapType() != LnZapEvent.ZapType.NONZAP) {
+                        account.createZapRequestFor(user, message, defaultZapType())
+                    } else {
+                        null
+                    }
+
+                val invoice =
+                    LightningAddressResolver().lnAddressInvoice(
+                        lnAddress = lnAddress,
+                        milliSats = milliSats,
+                        message = message,
+                        nostrRequest = zapRequest,
                         okHttpClient = ::okHttpClientForMoney,
-                        onSuccess = onSuccess,
-                        onError = onError,
                         onProgress = onProgress,
                         context = context,
                     )
-            } else {
-                account.createZapRequestFor(toUserPubKeyHex, message, defaultZapType()) { zapRequest ->
-                    LocalCache.justConsumeMyOwnEvent(zapRequest)
-                    LightningAddressResolver()
-                        .lnAddressInvoice(
-                            lnaddress,
-                            milliSats,
-                            message,
-                            zapRequest.toJson(),
-                            okHttpClient = ::okHttpClientForMoney,
-                            onSuccess = onSuccess,
-                            onError = onError,
-                            onProgress = onProgress,
-                            context = context,
-                        )
-                }
+
+                onNewInvoice(invoice)
+            } catch (e: LightningAddressResolver.LightningAddressError) {
+                onError(e.title, e.msg)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onError("Error", e.message ?: "Unknown error")
             }
+        }
+    }
+
+    fun saveMediaToGallery(
+        videoUri: String?,
+        mimeType: String?,
+        localContext: Context,
+    ) {
+        viewModelScope.launch {
+            MediaSaverToDisk.saveDownloadingIfNeeded(
+                videoUri = videoUri,
+                okHttpClient = ::okHttpClientForVideo,
+                mimeType = mimeType,
+                localContext = localContext,
+                onSuccess = {
+                    toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
+                },
+                onError = {
+                    toastManager.toast(R.string.failed_to_save_the_video, null, it)
+                },
+            )
         }
     }
 
@@ -1712,33 +1664,45 @@ class AccountViewModel(
 
     fun relayStatusFlow() = app.client.relayStatusFlow()
 
-    fun allAccountsSync(): List<HexKey> =
-        runBlocking {
-            LocalPreferences.allSavedAccounts().mapNotNull {
+    fun convertAccounts(loggedInAccounts: List<AccountInfo>?): Set<HexKey> =
+        loggedInAccounts
+            ?.mapNotNull {
                 try {
                     it.npub.bechToBytes().toHexKey()
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     null
                 }
-            }
-        }
+            }?.toSet() ?: emptySet()
+
+    val trustedAccounts: StateFlow<Set<HexKey>> =
+        LocalPreferences
+            .accountsFlow()
+            .map { loggedInAccounts ->
+                convertAccounts(loggedInAccounts)
+            }.onStart {
+                emit(convertAccounts(LocalPreferences.allSavedAccounts()))
+            }.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptySet<HexKey>(),
+            )
 
     val draftNoteCache = CachedDraftNotes(this)
 
     class CachedDraftNotes(
         val accountViewModel: AccountViewModel,
     ) : GenericBaseCacheAsync<DraftEvent, Note>(20) {
-        override suspend fun compute(
-            key: DraftEvent,
-            onReady: (Note?) -> Unit,
-        ) = withContext(Dispatchers.IO) {
-            key.cachedDraft(accountViewModel.account.signer) {
-                val author = LocalCache.getOrCreateUser(key.pubKey)
-                val note = accountViewModel.createTempDraftNote(it, author)
-                onReady(note)
+        override suspend fun compute(key: DraftEvent): Note? =
+            withContext(Dispatchers.IO) {
+                val decrypted = accountViewModel.account.draftsDecryptionCache.cachedDraft(key)
+                if (decrypted != null) {
+                    val author = LocalCache.getOrCreateUser(key.pubKey)
+                    accountViewModel.createTempDraftNote(decrypted, author)
+                } else {
+                    null
+                }
             }
-        }
     }
 
     val bechLinkCache = CachedLoadedBechLink(this)
@@ -1755,7 +1719,7 @@ class AccountViewModel(
                         is NSec -> {}
                         is NPub -> {}
                         is NProfile -> {}
-                        is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> {
+                        is NNote -> {
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
@@ -1797,9 +1761,13 @@ class AccountViewModel(
     val nip19: Nip19Parser.ParseReturn,
 )
 
+var mockedCache: AccountViewModel? = null
+
 @SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun mockAccountViewModel(): AccountViewModel {
+    mockedCache?.let { return it }
+
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
     sharedPreferencesViewModel.init()
 
@@ -1815,12 +1783,18 @@ fun mockAccountViewModel(): AccountViewModel {
         ),
         sharedPreferencesViewModel.sharedPrefs,
         Amethyst(),
-    )
+    ).also {
+        mockedCache = it
+    }
 }
+
+var vitorCache: AccountViewModel? = null
 
 @SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun mockVitorAccountViewModel(): AccountViewModel {
+    mockedCache?.let { return it }
+
     val sharedPreferencesViewModel: SharedPreferencesViewModel = viewModel()
     sharedPreferencesViewModel.init()
 
@@ -1834,5 +1808,7 @@ fun mockVitorAccountViewModel(): AccountViewModel {
         ),
         sharedPreferencesViewModel.sharedPrefs,
         Amethyst(),
-    )
+    ).also {
+        vitorCache = it
+    }
 }

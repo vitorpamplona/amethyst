@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip51Lists.tags
 
-@Deprecated("Use NameTag Instead")
 class TitleTag {
     companion object {
         const val TAG_NAME = "title"

@@ -20,27 +20,29 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 fun filterPublicChatsByGeohash(
-    hashToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (hashToLoad == null || hashToLoad.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    geotags: Set<String>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    if (geotags.isEmpty()) return emptyList()
 
-    val geoHashes = hashToLoad.toList()
+    val geoHashes = geotags.sorted()
 
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.PUBLIC_CHATS),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds =
                         listOf(
                             ChannelCreateEvent.KIND,
@@ -53,4 +55,25 @@ fun filterPublicChatsByGeohash(
                 ),
         ),
     )
+}
+
+fun filterPublicChatsByGeohash(
+    geoSet: LocationTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (geoSet.set.isEmpty()) return emptyList()
+
+    return geoSet.set
+        .mapNotNull {
+            if (it.value.geotags.isEmpty()) {
+                null
+            } else {
+                filterPublicChatsByGeohash(
+                    relay = it.key,
+                    geotags = it.value.geotags,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

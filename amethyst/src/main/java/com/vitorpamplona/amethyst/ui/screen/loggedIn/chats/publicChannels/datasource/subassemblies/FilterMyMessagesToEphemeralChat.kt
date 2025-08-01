@@ -20,25 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 fun filterMyMessagesToEphemeralChat(
     channel: EphemeralChatChannel,
     pubKey: HexKey,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? =
-    listOf(
-        TypedFilter(
-            types =
-                setOf(FeedType.FOLLOWS, FeedType.PUBLIC_CHATS, FeedType.GLOBAL),
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> =
+    channel.relays().toSet().map {
+        RelayBasedFilter(
+            relay = it,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(EphemeralChatEvent.KIND),
                     tags =
                         if (channel.roomId.id.isBlank()) {
@@ -48,7 +46,7 @@ fun filterMyMessagesToEphemeralChat(
                         },
                     authors = listOf(pubKey),
                     limit = 50,
-                    since = since,
+                    since = since?.get(it)?.time,
                 ),
-        ),
-    )
+        )
+    }

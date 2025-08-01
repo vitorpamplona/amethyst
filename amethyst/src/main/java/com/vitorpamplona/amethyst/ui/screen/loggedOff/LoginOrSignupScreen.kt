@@ -27,6 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginPage
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.signup.SignUpPage
 
 @Composable
 fun LoginOrSignupScreen(

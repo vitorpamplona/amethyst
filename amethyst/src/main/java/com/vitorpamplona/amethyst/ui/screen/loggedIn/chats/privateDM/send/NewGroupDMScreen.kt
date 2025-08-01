@@ -50,14 +50,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,12 +67,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -92,12 +86,11 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Nav
-import com.vitorpamplona.amethyst.ui.navigation.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -122,8 +115,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.upload
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
-import com.vitorpamplona.amethyst.ui.theme.HalfEndPadding
-import com.vitorpamplona.amethyst.ui.theme.HalfStartPadding
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
@@ -134,6 +125,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -159,10 +151,8 @@ fun NewGroupDMScreen(
 
     val context = LocalContext.current
 
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(Unit) {
-        launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             message?.ifBlank { null }?.let {
                 postViewModel.updateMessage(TextFieldValue(it))
             }
@@ -177,39 +167,31 @@ fun NewGroupDMScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                actions = {
-                    ActionButton(postViewModel, accountViewModel, nav)
+            PostingTopBar(
+                titleRes = R.string.private_message,
+                isActive = postViewModel::canPost,
+                onCancel = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.runIOCatching {
+                        postViewModel.sendDraftSync()
+                        delay(100)
+                        nav.popBack()
+                        postViewModel.cancel()
+                    }
                 },
-                title = {
-                    Text(
-                        text = stringRes(R.string.private_message),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.titleLarge,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                    )
+                onPost = {
+                    // uses the accountViewModel scope to avoid cancelling this
+                    // function when the postViewModel is released
+                    accountViewModel.runIOCatching {
+                        postViewModel.sendPostSync()
+                        postViewModel.room?.let {
+                            nav.nav(routeToMessage(it, null, null, null, accountViewModel))
+                        }
+                        postViewModel.cancel()
+                    }
+                    nav.popBack()
                 },
-                navigationIcon = {
-                    CloseButton(
-                        modifier = HalfStartPadding,
-                        onPress = {
-                            // uses the accountViewModel scope to avoid cancelling this
-                            // function when the postViewModel is released
-                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                postViewModel.sendDraftSync()
-                                delay(100)
-                                nav.popBack()
-                                postViewModel.cancel()
-                            }
-                        },
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
             )
         },
     ) { pad ->
@@ -223,30 +205,6 @@ fun NewGroupDMScreen(
             GroupDMScreenContent(postViewModel, accountViewModel, nav)
         }
     }
-}
-
-@Composable
-fun ActionButton(
-    postViewModel: ChatNewMessageViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    PostButton(
-        modifier = HalfEndPadding,
-        onPost = {
-            // uses the accountViewModel scope to avoid cancelling this
-            // function when the postViewModel is released
-            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                postViewModel.sendPostSync()
-                postViewModel.room?.let {
-                    nav.nav(routeToMessage(it, null, null, null, accountViewModel))
-                }
-                postViewModel.cancel()
-            }
-            nav.popBack()
-        },
-        isActive = postViewModel.canPost(),
-    )
 }
 
 @Composable

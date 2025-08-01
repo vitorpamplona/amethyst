@@ -27,6 +27,7 @@ import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.RandomInstance
 import org.junit.Rule
 import org.junit.Test
@@ -52,6 +53,7 @@ class HintIndexerBenchmark {
                 .readBytes()
                 .toString(Charset.forName("utf-8"))
                 .split("\n")
+                .mapNotNull(RelayUrlNormalizer::normalizeOrNull)
     }
 
     @Test
@@ -74,7 +76,7 @@ class HintIndexerBenchmark {
         val key = keys.random()
 
         benchmarkRule.measureRepeated {
-            indexer.getKey(key)
+            indexer.hintsForKey(key)
         }
     }
 

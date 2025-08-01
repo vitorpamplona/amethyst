@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -122,7 +122,7 @@ fun RenderAppDefinition(
                 }
             } else {
                 Image(
-                    painter = painterRes(R.drawable.profile_banner),
+                    painter = painterRes(R.drawable.profile_banner, 6),
                     contentDescription = stringRes(id = R.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =

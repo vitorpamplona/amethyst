@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -30,18 +31,19 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 fun EventFinderFilterAssemblerSubscription(
     note: Note,
     accountViewModel: AccountViewModel,
-) = EventFinderFilterAssemblerSubscription(note, accountViewModel.dataSources().eventFinder)
+) = EventFinderFilterAssemblerSubscription(note, accountViewModel.account, accountViewModel.dataSources().eventFinder)
 
 @Composable
 fun EventFinderFilterAssemblerSubscription(
     note: Note,
+    account: Account,
     dataSource: EventFinderFilterAssembler,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(note) {
-            EventFinderQueryState(note)
+        remember(note, account) {
+            EventFinderQueryState(note, account)
         }
 
     KeyDataSourceSubscription(state, dataSource)

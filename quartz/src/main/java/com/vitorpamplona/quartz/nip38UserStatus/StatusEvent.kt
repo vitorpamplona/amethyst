@@ -41,42 +41,39 @@ class StatusEvent(
     companion object {
         const val KIND = 30315
 
-        fun create(
+        suspend fun create(
             msg: String,
             type: String,
             expiration: Long?,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (StatusEvent) -> Unit,
-        ) {
+        ): StatusEvent {
             val tags = mutableListOf<Array<String>>()
 
             tags.add(arrayOf("d", type))
             expiration?.let { tags.add(arrayOf("expiration", it.toString())) }
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), msg)
         }
 
-        fun update(
+        suspend fun update(
             event: StatusEvent,
             newStatus: String,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (StatusEvent) -> Unit,
-        ) {
+        ): StatusEvent {
             val tags = event.tags
-            signer.sign(createdAt, KIND, tags, newStatus, onReady)
+            return signer.sign(createdAt, KIND, tags, newStatus)
         }
 
-        fun clear(
+        suspend fun clear(
             event: StatusEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (StatusEvent) -> Unit,
-        ) {
+        ): StatusEvent {
             val msg = ""
             val tags = event.tags.filter { it.size > 1 && it[0] == "d" }
-            signer.sign(createdAt, KIND, tags.toTypedArray(), msg, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), msg)
         }
     }
 }

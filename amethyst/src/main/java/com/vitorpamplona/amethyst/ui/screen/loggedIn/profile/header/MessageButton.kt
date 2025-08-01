@@ -24,21 +24,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextFieldDefaults.contentPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
 @Composable
 fun MessageButton(
@@ -46,20 +45,23 @@ fun MessageButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val scope = rememberCoroutineScope()
-
     FilledTonalButton(
         modifier =
             Modifier
                 .padding(horizontal = 3.dp)
                 .width(50.dp),
         onClick = {
-            scope.launch(Dispatchers.IO) { accountViewModel.createChatRoomFor(user) { nav.nav(Route.Room(it)) } }
+            nav.nav {
+                routeToMessage(
+                    room = ChatroomKey(setOf(user.pubkeyHex)),
+                    account = accountViewModel.account,
+                )
+            }
         },
         contentPadding = ZeroPadding,
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_dm),
+            painter = painterRes(R.drawable.ic_dm, 1),
             stringRes(R.string.send_a_direct_message),
             modifier = Size20Modifier,
         )

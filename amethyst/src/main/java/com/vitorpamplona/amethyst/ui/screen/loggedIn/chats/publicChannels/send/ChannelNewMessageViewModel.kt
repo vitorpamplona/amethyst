@@ -37,13 +37,13 @@ import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.PublicChatChannel
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -196,14 +197,12 @@ open class ChannelNewMessageViewModel :
 
         if (noteEvent is DraftEvent && noteAuthor != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                accountViewModel?.createTempDraftNote(noteEvent) { innerNote ->
-                    if (innerNote != null) {
-                        val oldTag = (draft.event as? AddressableEvent)?.dTag()
-                        if (oldTag != null) {
-                            draftTag.set(oldTag)
-                        }
-                        loadFromDraft(innerNote)
+                accountViewModel?.createTempDraftNote(noteEvent)?.let { innerNote ->
+                    val oldTag = (draft.event as? AddressableEvent)?.dTag()
+                    if (oldTag != null) {
+                        draftTag.set(oldTag)
                     }
+                    loadFromDraft(innerNote)
                 }
             }
         }
@@ -273,7 +272,7 @@ open class ChannelNewMessageViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val channelRelays = channel?.relays() ?: emptyList()
+        val channelRelays = channel?.relays() ?: emptySet()
 
         accountViewModel?.account?.signAndSendPrivately(template, channelRelays)
 
@@ -301,6 +300,19 @@ open class ChannelNewMessageViewModel :
         onError: (title: String, message: String) -> Unit,
         context: Context,
         onceUploaded: () -> Unit,
+    ) = try {
+        uploadUnsafe(onError, context, onceUploaded)
+    } catch (e: SignerExceptions.ReadOnlyException) {
+        onError(
+            stringRes(context, R.string.read_only_user),
+            stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
+        )
+    }
+
+    fun uploadUnsafe(
+        onError: (title: String, message: String) -> Unit,
+        context: Context,
+        onceUploaded: () -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             val myAccount = account ?: return@launch
@@ -312,7 +324,6 @@ open class ChannelNewMessageViewModel :
 
             val results =
                 myMultiOrchestrator.upload(
-                    viewModelScope,
                     uploadState.caption,
                     uploadState.contentWarningReason,
                     MediaCompressor.intToCompressorQuality(uploadState.mediaQualitySlider),
@@ -324,16 +335,15 @@ open class ChannelNewMessageViewModel :
             if (results.allGood) {
                 results.successful.forEach {
                     if (it.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                        account?.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, uploadState.caption, uploadState.contentWarningReason) { nip95 ->
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
+                        val nip95 = myAccount.createNip95(it.result.bytes, headerInfo = it.result.fileHeader, uploadState.caption, uploadState.contentWarningReason)
+                        nip95attachments = nip95attachments + nip95
+                        val note = nip95.let { it1 -> account?.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                message = message.insertUrlAtCursor(it.toNostrUri())
-                            }
-
-                            urlPreview = findUrlInMessage()
+                        note?.let {
+                            message = message.insertUrlAtCursor(it.toNostrUri())
                         }
+
+                        urlPreview = findUrlInMessage()
                     } else if (it.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         iMetaAttachments.add(it.result, uploadState.caption, uploadState.contentWarningReason)
 
@@ -364,7 +374,6 @@ open class ChannelNewMessageViewModel :
                 message = message.text,
                 pTags = listOfNotNull(replyTo.value?.author),
                 eTags = listOfNotNull(replyTo.value),
-                channelHex = channel.idHex,
                 dao = accountViewModel,
             )
         tagger.run()
@@ -579,7 +588,7 @@ open class ChannelNewMessageViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             iMetaAttachments.downloadAndPrepare(
                 item.link.url,
-                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.shouldUseTorForImageDownload(item.link.url) ?: false) },
+                { Amethyst.instance.okHttpClients.getHttpClient(accountViewModel?.account?.privacyState?.shouldUseTorForImageDownload(item.link.url) ?: false) },
             )
         }
 
@@ -627,7 +636,7 @@ open class ChannelNewMessageViewModel :
 
     fun updateZapFromText() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), null, accountViewModel!!)
+            val tagger = NewMessageTagger(message.text, emptyList(), emptyList(), accountViewModel!!)
             tagger.run()
             tagger.pTags?.forEach { taggedUser ->
                 if (!forwardZapTo.items.any { it.key == taggedUser }) {

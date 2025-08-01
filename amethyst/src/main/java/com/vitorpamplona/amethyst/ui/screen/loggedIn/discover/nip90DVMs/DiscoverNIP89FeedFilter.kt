@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -37,6 +37,8 @@ open class DiscoverNIP89FeedFilter(
     // TODO better than announced would be last active, as this requires the DVM provider to regularly update the NIP89 announcement
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList()
+
+    override fun limit() = 50
 
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
@@ -56,11 +58,9 @@ open class DiscoverNIP89FeedFilter(
     override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
 
     fun buildFilterParams(account: Account): FilterByListParams =
-        FilterByListParams.Companion.create(
-            account.userProfile().pubkeyHex,
-            account.settings.defaultDiscoveryFollowList.value,
+        FilterByListParams.create(
             account.liveDiscoveryFollowLists.value,
-            account.flowHiddenUsers.value,
+            account.hiddenUsers.flow.value,
         )
 
     fun acceptDVM(note: Note): Boolean {

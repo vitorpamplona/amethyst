@@ -20,29 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterContentDVMsByFollows(
-    follows: Map<String, List<HexKey>>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (follows != null && follows.isEmpty()) return null
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    return listOf(
-        TypedFilter(
-            types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(AppDefinitionEvent.KIND),
-                    limit = 300,
-                    tags = mapOf("k" to listOf("5300")),
-                    since = since,
-                ),
-        ),
-    )
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
+
+        listOfNotNull(
+            it.value.authors?.let {
+                filterContentDVMsAuthors(relay, it, since)
+            },
+            it.value.geotags?.let {
+                filterContentDVMsByGeohash(relay, it, since)
+            },
+            it.value.hashtags?.let {
+                filterContentDVMsByHashtag(relay, it, since)
+            },
+            it.value.communities?.let {
+                filterContentDVMsAllCommunities(relay, it, since)
+            },
+        ).flatten()
+    }
 }

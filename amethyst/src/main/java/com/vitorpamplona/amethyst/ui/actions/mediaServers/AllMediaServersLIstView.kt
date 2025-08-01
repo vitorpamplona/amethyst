@@ -24,10 +24,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -35,32 +32,18 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategory
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.SettingsCategoryWithButton
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -71,103 +54,6 @@ import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
-
-@Composable
-fun MediaServersListView(
-    onClose: () -> Unit,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val nip96ServersViewModel: NIP96ServersViewModel = viewModel()
-    val blossomServersViewModel: BlossomServersViewModel = viewModel()
-
-    LaunchedEffect(key1 = Unit) {
-        nip96ServersViewModel.load(accountViewModel.account)
-        blossomServersViewModel.load(accountViewModel.account)
-    }
-
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
-        SetDialogToEdgeToEdge()
-        DialogContent(nip96ServersViewModel, blossomServersViewModel, onClose)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DialogContent(
-    nip96ServersViewModel: NIP96ServersViewModel,
-    blossomServersViewModel: BlossomServersViewModel,
-    onClose: () -> Unit,
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringRes(id = R.string.media_servers),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    CloseButton(
-                        onPress = {
-                            nip96ServersViewModel.refresh()
-                            blossomServersViewModel.refresh()
-                            onClose()
-                        },
-                    )
-                },
-                actions = {
-                    SaveButton(
-                        onPost = {
-                            nip96ServersViewModel.saveFileServers()
-                            blossomServersViewModel.saveFileServers()
-                            onClose()
-                        },
-                        isActive = true,
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = 16.dp,
-                        top = padding.calculateTopPadding(),
-                        end = 16.dp,
-                        bottom = padding.calculateBottomPadding(),
-                    ).consumeWindowInsets(padding)
-                    .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.Top),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                stringRes(id = R.string.set_preferred_media_servers),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.grayText,
-            )
-
-            AllMediaBody(nip96ServersViewModel, blossomServersViewModel)
-        }
-    }
-}
 
 @Composable
 fun AllMediaBody(
@@ -184,30 +70,9 @@ fun AllMediaBody(
     ) {
         item {
             SettingsCategory(
-                stringRes(R.string.media_servers_nip96_section),
-                stringRes(R.string.media_servers_nip96_explainer),
-                SettingsCategoryFirstModifier,
-            )
-        }
-
-        renderMediaServerList(
-            mediaServersState = nip96ServersState,
-            keyType = "nip96",
-            editLabel = R.string.add_a_nip96_server,
-            emptyLabel = R.string.no_nip96_server_message,
-            onAddServer = { server ->
-                nip96ServersViewModel.addServer(server)
-            },
-            onDeleteServer = {
-                nip96ServersViewModel.removeServer(serverUrl = it)
-            },
-        )
-
-        item {
-            SettingsCategory(
                 stringRes(R.string.media_servers_blossom_section),
                 stringRes(R.string.media_servers_blossom_explainer),
-                SettingsCategorySpacingModifier,
+                SettingsCategoryFirstModifier,
             )
         }
 
@@ -221,6 +86,27 @@ fun AllMediaBody(
             },
             onDeleteServer = {
                 blossomServersViewModel.removeServer(serverUrl = it)
+            },
+        )
+
+        item {
+            SettingsCategory(
+                stringRes(R.string.media_servers_nip96_section),
+                stringRes(R.string.media_servers_nip96_explainer),
+                SettingsCategorySpacingModifier,
+            )
+        }
+
+        renderMediaServerList(
+            mediaServersState = nip96ServersState,
+            keyType = "nip96",
+            editLabel = R.string.add_a_nip96_server,
+            emptyLabel = R.string.no_nip96_server_message,
+            onAddServer = { server ->
+                nip96ServersViewModel.addServer(server)
+            },
+            onDeleteServer = {
+                nip96ServersViewModel.removeServer(serverUrl = it)
             },
         )
 

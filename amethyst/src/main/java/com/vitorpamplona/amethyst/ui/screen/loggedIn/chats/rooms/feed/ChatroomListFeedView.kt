@@ -28,8 +28,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -53,11 +51,10 @@ fun ChatroomListFeedView(
     scrollStateKey: String,
     accountViewModel: AccountViewModel,
     nav: INav,
-    markAsRead: MutableState<Boolean>,
 ) {
     RefresheableBox(feedContentState, true) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
-            CrossFadeState(feedContentState, listState, accountViewModel, nav, markAsRead)
+            CrossFadeState(feedContentState, listState, accountViewModel, nav)
         }
     }
 }
@@ -68,7 +65,6 @@ private fun CrossFadeState(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
-    markAsRead: MutableState<Boolean>,
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
@@ -85,7 +81,7 @@ private fun CrossFadeState(
                 FeedError(state.errorMessage) { feedContentState.invalidateData() }
             }
             is FeedState.Loaded -> {
-                FeedLoaded(state, listState, accountViewModel, nav, markAsRead)
+                FeedLoaded(state, listState, accountViewModel, nav)
             }
             FeedState.Loading -> {
                 LoadingFeed()
@@ -100,15 +96,8 @@ private fun FeedLoaded(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
-    markAsRead: MutableState<Boolean>,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-
-    LaunchedEffect(key1 = markAsRead.value) {
-        if (markAsRead.value) {
-            accountViewModel.markAllAsRead(items.list, accountViewModel) { markAsRead.value = false }
-        }
-    }
 
     LazyColumn(
         contentPadding = FeedPadding,

@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import kotlin.collections.flatten
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 class UserProfileMetadataFilterSubAssembler(
     client: NostrClient,
@@ -32,15 +32,20 @@ class UserProfileMetadataFilterSubAssembler(
 ) : SingleSubEoseManager<UserProfileQueryState>(client, allKeys) {
     override fun updateFilter(
         keys: List<UserProfileQueryState>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? {
-        val keys = keys.mapTo(mutableSetOf()) { key -> key.user.pubkeyHex }
-
-        // TODO: Load outbox for each user.
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
+        val userPerRelay =
+            mapOfSet {
+                keys.mapTo(mutableSetOf()) { key -> key.user }.forEach { user ->
+                    user.outboxRelays().forEach { relay ->
+                        add(relay, user.pubkeyHex)
+                    }
+                }
+            }
 
         return listOfNotNull(
-            filterUserProfileMetadata(keys, since),
-            filterUserProfileLists(keys, since),
+            filterUserProfileMetadata(userPerRelay, since),
+            filterUserProfileLists(userPerRelay, since),
         ).flatten()
     }
 

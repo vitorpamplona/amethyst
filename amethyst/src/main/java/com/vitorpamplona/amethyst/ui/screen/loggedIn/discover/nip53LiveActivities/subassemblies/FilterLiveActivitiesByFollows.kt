@@ -20,48 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SinceAuthorPerRelayFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 fun filterLiveActivitiesByFollows(
-    follows: Map<String, List<HexKey>>?,
-    followKeys: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (follows != null && follows.isEmpty()) return null
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-    return listOfNotNull(
-        TypedFilter(
-            types = if (follows == null) setOf(FeedType.GLOBAL) else setOf(FeedType.FOLLOWS),
-            filter =
-                SinceAuthorPerRelayFilter(
-                    authors = follows,
-                    kinds =
-                        listOf(
-                            LiveActivitiesChatMessageEvent.KIND,
-                            LiveActivitiesEvent.KIND,
-                        ),
-                    limit = 300,
-                    since = since,
-                ),
-        ),
-        followKeys?.let {
-            TypedFilter(
-                types = setOf(FeedType.FOLLOWS),
-                filter =
-                    SincePerRelayFilter(
-                        tags = mapOf("p" to it.toList()),
-                        kinds = listOf(LiveActivitiesEvent.KIND),
-                        limit = 100,
-                        since = since,
-                    ),
-            )
-        },
-    )
+    return followsSet.set.flatMap {
+        val since = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
+
+        listOfNotNull(
+            it.value.authors?.let {
+                filterLiveActivitiesAuthors(relay, it, since)
+            },
+            it.value.geotags?.let {
+                filterLiveActivitiesByGeohash(relay, it, since)
+            },
+            it.value.hashtags?.let {
+                filterLiveActivitiesByHashtag(relay, it, since)
+            },
+            it.value.communities?.let {
+                filterLiveActivitiesAllCommunities(relay, it, since)
+            },
+        ).flatten()
+    }
 }

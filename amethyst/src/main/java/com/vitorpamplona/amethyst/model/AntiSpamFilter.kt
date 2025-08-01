@@ -22,74 +22,113 @@ package com.vitorpamplona.amethyst.model
 
 import android.util.Log
 import android.util.LruCache
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.njumpLink
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStats
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 
 data class Spammer(
     val pubkeyHex: HexKey,
-    var duplicatedMessages: Set<HexKey>,
-)
+    var duplicatedEventIds: Set<HexKey>,
+    var duplicatedEventAddresses: Set<Address>,
+) {
+    fun shouldHide() = duplicatedEventIds.size >= 5 || duplicatedEventAddresses.size >= 5
+}
 
 class AntiSpamFilter {
-    val recentMessages = LruCache<Int, String>(1000)
+    val recentEventIds = LruCache<Int, String>(2000)
+    val recentAddressables = LruCache<Int, Address>(2000)
     val spamMessages = LruCache<Int, Spammer>(1000)
 
     var active: Boolean = true
 
+    fun spamHashCode(event: Event): Int = 31 * event.content.hashCode() + event.tags.contentDeepHashCode()
+
     fun isSpam(
         event: Event,
-        relay: RelayBriefInfoCache.RelayBriefInfo?,
+        relay: NormalizedRelayUrl?,
     ): Boolean {
-        checkNotInMainThread()
-
         if (!active) return false
-
-        val idHex = event.id
 
         // if short message, ok
         // The idea here is to avoid considering repeated "GM" messages spam.
-        if (event.content.length < 50) return false
+        if (event.content.length < 60) return false
 
         // if the message is actually short but because it cites a user/event, the nostr: string is
         // really long, make it ok.
         // The idea here is to avoid considering repeated "@Bot, command" messages spam, while still
         // blocking repeated "lnbc..." invoices or fishing urls
-        if (event.content.length < 180 && Nip19Parser.nip19regex.matcher(event.content).find()) return false
+        if (event.content.length < 180 && event.content.startsWith("nostr:") && Nip19Parser.nip19regex.matcher(event.content).find()) return false
 
         // double list strategy:
         // if duplicated, it goes into spam. 1000 spam messages are saved into the spam list.
 
         // Considers tags so that same replies to different people don't count.
-        val hash = (event.content + event.tags.flatten().joinToString(",")).hashCode()
+        val hash = spamHashCode(event)
 
-        if (
-            (recentMessages[hash] != null && recentMessages[hash] != idHex) || spamMessages[hash] != null
-        ) {
-            Log.w(
-                "Potential SPAM Message",
-                "${event.id} ${recentMessages[hash]} ${spamMessages[hash] != null} ${relay?.url} ${event.content.replace("\n", " | ")}",
-            )
+        // ignores multiple versions of the same addressable.
+        if (event is AddressableEvent) {
+            val address = event.address()
 
-            // Log down offenders
-            logOffender(hash, event)
+            // normal event
+            if (
+                (recentAddressables[hash] != null && recentAddressables[hash] != address) ||
+                (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventAddresses.contains(address))
+            ) {
+                val existingAddress = recentAddressables[hash]
 
-            if (relay != null) {
-                RelayStats.newSpam(relay.url, njumpLink(NEvent.create(event.id, event.pubKey, event.kind, relay.url)))
+                val link1 = njumpLink(NAddress.create(existingAddress.kind, existingAddress.pubKeyHex, existingAddress.dTag, relay))
+                val link2 = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
+
+                Log.w("Duplicated/SPAM", "${relay?.url} $link1 $link2")
+
+                // Log down offenders
+                val spammer = logOffender(hash, event)
+
+                if (spammer.shouldHide() && relay != null) {
+                    RelayStats.newSpam(relay, "$link1 $link2")
+                }
+
+                flowSpam.tryEmit(AntiSpamState(this))
+
+                return true
             }
 
-            flowSpam.tryEmit(AntiSpamState(this))
+            recentAddressables.put(hash, address)
+        } else {
+            // normal event
+            if (
+                (recentEventIds[hash] != null && recentEventIds[hash] != event.id) ||
+                (spamMessages[hash] != null && !spamMessages[hash].duplicatedEventIds.contains(event.id))
+            ) {
+                val existingEvent = recentEventIds[hash]
 
-            return true
+                val link1 = njumpLink(NEvent.create(existingEvent, null, null, relay))
+                val link2 = njumpLink(NEvent.create(event.id, null, null, relay))
+
+                Log.w("Duplicated/SPAM", "${relay?.url} $link1 $link2")
+
+                // Log down offenders
+                val spammer = logOffender(hash, event)
+
+                if (spammer.shouldHide() && relay != null) {
+                    RelayStats.newSpam(relay, "$link1 $link2")
+                }
+
+                flowSpam.tryEmit(AntiSpamState(this))
+
+                return true
+            }
+
+            recentEventIds.put(hash, event.id)
         }
-
-        recentMessages.put(hash, idHex)
 
         return false
     }
@@ -98,12 +137,33 @@ class AntiSpamFilter {
     private fun logOffender(
         hashCode: Int,
         event: Event,
-    ) {
-        if (spamMessages.get(hashCode) == null) {
-            spamMessages.put(hashCode, Spammer(event.pubKey, setOf(recentMessages[hashCode], event.id)))
+    ): Spammer {
+        val spammer = spamMessages.get(hashCode)
+
+        if (spammer == null) {
+            val newSpammer =
+                if (event is AddressableEvent) {
+                    Spammer(
+                        pubkeyHex = event.pubKey,
+                        duplicatedEventIds = setOf(),
+                        duplicatedEventAddresses = setOf(recentAddressables[hashCode], event.address()),
+                    )
+                } else {
+                    Spammer(
+                        pubkeyHex = event.pubKey,
+                        duplicatedEventIds = setOf(recentEventIds[hashCode], event.id),
+                        duplicatedEventAddresses = setOf(),
+                    )
+                }
+            spamMessages.put(hashCode, newSpammer)
+            return newSpammer
         } else {
-            val spammer = spamMessages.get(hashCode)
-            spammer.duplicatedMessages += event.id
+            if (event is AddressableEvent) {
+                spammer.duplicatedEventAddresses += event.address()
+            } else {
+                spammer.duplicatedEventIds += event.id
+            }
+            return spammer
         }
     }
 

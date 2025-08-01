@@ -23,54 +23,14 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
-import com.vitorpamplona.quartz.utils.LargeCache
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Arrays
-import java.util.function.Consumer
-import java.util.zip.GZIPInputStream
-
-open class BaseLargeCacheBenchmark {
-    fun getEventDB(): List<Event> {
-        // This file includes duplicates
-        val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_startup_data.json")
-
-        return EventMapper.mapper.readValue<ArrayList<Event>>(
-            GZIPInputStream(fullDBInputStream),
-        )
-    }
-
-    fun getLargeCache(db: List<Event>): LargeCache<HexKey, Event> {
-        val cache = LargeCache<HexKey, Event>()
-
-        db.forEach {
-            cache.getOrCreate(it.id) { key ->
-                it
-            }
-        }
-
-        return cache
-    }
-
-    fun hasId(event: Event) {
-        assertTrue(event.id.isNotEmpty())
-    }
-
-    val consumer =
-        Consumer<Event> {
-            hasId(it)
-        }
-}
+import kotlin.collections.distinctBy
 
 @RunWith(AndroidJUnit4::class)
-class LargeCacheForEachBenchmark : BaseLargeCacheBenchmark() {
+class LargeCacheBenchmark : BaseLargeCacheBenchmark() {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     // 191,353   ns           0 allocs    Trace    EMULATOR_LargeCacheForEachBenchmark.benchForEachConsumerList

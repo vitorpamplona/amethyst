@@ -23,10 +23,11 @@ package com.vitorpamplona.quartz.nip01Core.tags.people
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun <T : Event> TagArrayBuilder<T>.pTag(
     pubkey: HexKey,
-    relayHint: String? = null,
+    relayHint: NormalizedRelayUrl? = null,
 ) = add(PTag.assemble(pubkey, relayHint))
 
 fun <T : Event> TagArrayBuilder<T>.pTagIds(tag: Set<HexKey>) = addAll(tag.map { PTag.assemble(it, null) })

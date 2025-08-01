@@ -27,7 +27,7 @@ import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.utils.LargeCache
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -44,7 +44,7 @@ open class BaseCacheBenchmark {
         // This file includes duplicates
         val fullDBInputStream = getInstrumentation().context.assets.open("nostr_vitor_startup_data.json")
 
-        return EventMapper.mapper.readValue<ArrayList<Event>>(
+        return JsonMapper.mapper.readValue<ArrayList<Event>>(
             GZIPInputStream(fullDBInputStream),
         )
     }

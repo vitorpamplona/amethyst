@@ -21,12 +21,14 @@
 package com.vitorpamplona.quartz.nip18Reposts.quotes
 
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 
-fun Note.toQuoteTag() = QEventTag(hex, null, null)
+fun NNote.toQuoteTag() = QEventTag(hex, null, null)
 
 fun NEvent.toQuoteTag() = QEventTag(hex, relay.firstOrNull(), author)
 
@@ -39,7 +41,7 @@ fun NEmbed.toQuoteTag() =
         QEventTag(event.id, null, event.pubKey)
     }
 
-fun Note.toQuoteTagArray() = QEventTag.assemble(hex, null, null)
+fun NNote.toQuoteTagArray() = QEventTag.assemble(hex, null, null)
 
 fun NEvent.toQuoteTagArray() = QEventTag.assemble(hex, relay.firstOrNull(), author)
 
@@ -51,3 +53,7 @@ fun NEmbed.toQuoteTagArray() =
     } else {
         QEventTag.assemble(event.id, null, event.pubKey)
     }
+
+fun ETag.toQTagArray() = QEventTag.assemble(eventId, relay, author)
+
+fun ATag.toQTagArray() = QAddressableTag.assemble(kind, pubKeyHex, dTag, relay)

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -63,7 +64,7 @@ import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 @Composable
 fun InvoiceRequestCard(
     lud16: String,
-    toUserPubKeyHex: String,
+    user: User,
     accountViewModel: AccountViewModel,
     titleText: String? = null,
     buttonText: String? = null,
@@ -81,7 +82,7 @@ fun InvoiceRequestCard(
     ) {
         InvoiceRequest(
             lud16,
-            toUserPubKeyHex,
+            user,
             accountViewModel,
             titleText,
             buttonText,
@@ -94,11 +95,11 @@ fun InvoiceRequestCard(
 @Composable
 fun InvoiceRequest(
     lud16: String,
-    toUserPubKeyHex: String,
+    user: User,
     accountViewModel: AccountViewModel,
     titleText: String? = null,
     buttonText: String? = null,
-    onSuccess: (String) -> Unit,
+    onNewInvoice: (String) -> Unit,
     onError: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -176,11 +177,11 @@ fun InvoiceRequest(
             modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             onClick = {
                 accountViewModel.sendSats(
-                    lnaddress = lud16,
+                    lnAddress = lud16,
+                    user = user,
                     milliSats = amount * 1000,
                     message = message,
-                    toUserPubKeyHex = toUserPubKeyHex,
-                    onSuccess = onSuccess,
+                    onNewInvoice = onNewInvoice,
                     onError = onError,
                     onProgress = {},
                     context = context,

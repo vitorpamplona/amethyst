@@ -52,13 +52,12 @@ class CalendarRSVPEvent(
         const val KIND = 31925
         const val ALT = "Calendar event's invitation response"
 
-        fun create(
+        suspend fun create(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (CalendarRSVPEvent) -> Unit,
-        ) {
+        ): CalendarRSVPEvent {
             val tags = arrayOf(AltTag.assemble(ALT))
-            signer.sign(createdAt, KIND, tags, "", onReady)
+            return signer.sign(createdAt, KIND, tags, "")
         }
     }
 }

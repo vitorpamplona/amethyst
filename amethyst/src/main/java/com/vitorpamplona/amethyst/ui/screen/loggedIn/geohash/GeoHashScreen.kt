@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -32,8 +33,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -44,25 +46,31 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton
 
 @Composable
 fun GeoHashScreen(
-    tag: String?,
+    tag: Route.Geohash,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (tag == null) return
+    if (tag.geohash.isEmpty()) return
 
     PrepareViewModelsGeoHashScreen(tag, accountViewModel, nav)
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun PrepareViewModelsGeoHashScreen(
-    tag: String,
+    tag: Route.Geohash,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val geohashViewModel: GeoHashFeedViewModel =
         viewModel(
-            key = tag + "GeoHashFeedViewModel",
-            factory = GeoHashFeedViewModel.Factory(tag, accountViewModel.account),
+            key = tag.geohash + "GeoHashFeedViewModel",
+            factory =
+                GeoHashFeedViewModel.Factory(
+                    tag.geohash,
+                    accountViewModel.account.followOutboxesOrProxy.flow.value,
+                    accountViewModel.account,
+                ),
         )
 
     GeoHashScreen(tag, geohashViewModel, accountViewModel, nav)
@@ -70,27 +78,27 @@ fun PrepareViewModelsGeoHashScreen(
 
 @Composable
 fun GeoHashScreen(
-    tag: String,
+    tag: Route.Geohash,
     feedViewModel: GeoHashFeedViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
-    GeoHashFilterAssemblerSubscription(tag, accountViewModel.dataSources().geohashes)
+    GeoHashFilterAssemblerSubscription(tag, accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {
-                    DisplayGeoTagHeader(tag, Modifier.weight(1f))
-                    GeoHashActionOptions(tag, accountViewModel)
+                    DisplayGeoTagHeader(tag.geohash, Modifier.weight(1f))
+                    GeoHashActionOptions(tag.geohash, accountViewModel)
                 },
                 popBack = nav::popBack,
             )
         },
         floatingButton = {
-            NewGeoPostButton(tag, accountViewModel, nav)
+            NewGeoPostButton(tag.geohash, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
     ) {

@@ -22,11 +22,12 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import kotlin.collections.distinctBy
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * This query type creates a new relay subscription for every distinct
@@ -49,12 +50,12 @@ abstract class PerUserEoseManager<T>(
 
     fun newEose(
         key: T,
-        relayUrl: String,
+        relay: NormalizedRelayUrl,
         time: Long,
-    ) = latestEOSEs.newEose(user(key), relayUrl, time)
+    ) = latestEOSEs.newEose(user(key), relay, time)
 
     open fun newSub(key: T): Subscription =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(key, relayUrl, time)
             if (invalidateAfterEose) {
                 invalidateFilters()
@@ -65,16 +66,17 @@ abstract class PerUserEoseManager<T>(
         key: User,
         subId: String,
     ) {
-        orchestrator.dismissSubscription(subId)
+        dismissSubscription(subId)
+        userSubscriptionMap.remove(key)
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
         val user = user(key)
-        var subId = userSubscriptionMap[user]
+        val subId = userSubscriptionMap[user]
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[user] = it.id }
         } else {
-            orchestrator.getSub(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
+            getSubscription(subId) ?: newSub(key).also { userSubscriptionMap[user] = it.id }
         }
     }
 
@@ -85,22 +87,22 @@ abstract class PerUserEoseManager<T>(
 
         uniqueSubscribedAccounts.forEach {
             val user = user(it)
-            findOrCreateSubFor(it).typedFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            val newFilters = updateFilter(it, since(it))?.ifEmpty { null }
+
+            findOrCreateSubFor(it).updateFilters(newFilters?.groupByRelay())
 
             updated.add(user)
         }
 
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                endSub(it.key, it.value)
-            }
+        userSubscriptionMap.filter { it.key !in updated }.forEach {
+            endSub(it.key, it.value)
         }
     }
 
     abstract fun updateFilter(
         key: T,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>?
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
 
     abstract fun user(key: T): User
 }

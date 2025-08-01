@@ -22,34 +22,33 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.twopane
 
 import androidx.compose.material3.DrawerState
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
 class TwoPaneNav(
     val nav: INav,
-    val scope: CoroutineScope,
+    override val scope: CoroutineScope,
 ) : INav {
     override val drawerState: DrawerState = nav.drawerState
 
     val innerNav = mutableStateOf<Route?>(null)
 
     override fun nav(route: Route) {
-        if (route is Route.Room || route is Route.Channel) {
+        if (route is Route.Room || route is Route.PublicChatChannel) {
             innerNav.value = route
         } else {
             nav.nav(route)
         }
     }
 
-    override fun nav(routeMaker: suspend () -> Route?) {
-        scope.launch(Dispatchers.Default) {
-            val route = routeMaker()
+    override fun nav(computeRoute: suspend () -> Route?) {
+        scope.launch {
+            val route = computeRoute()
             if (route != null) {
-                if (route is Route.Room || route is Route.Channel) {
+                if (route is Route.Room || route is Route.PublicChatChannel) {
                     innerNav.value = route
                 } else {
                     nav.nav(route)
@@ -68,9 +67,9 @@ class TwoPaneNav(
 
     override fun <T : Route> popUpTo(
         route: Route,
-        upToClass: KClass<T>,
+        klass: KClass<T>,
     ) {
-        nav.popUpTo<T>(route, upToClass)
+        nav.popUpTo<T>(route, klass)
     }
 
     override fun closeDrawer() {

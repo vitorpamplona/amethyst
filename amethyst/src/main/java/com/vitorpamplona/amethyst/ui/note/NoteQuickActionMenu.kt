@@ -82,19 +82,19 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import kotlinx.coroutines.launch
 
@@ -480,7 +480,7 @@ private fun BlockAlertDialog(
     buttonText = stringRes(R.string.quick_action_block_dialog_btn),
     buttonColors =
         ButtonDefaults.buttonColors(
-            containerColor = WarningColor,
+            containerColor = LightRedColor,
             contentColor = Color.White,
         ),
     onClickDoOnce = {
@@ -528,6 +528,7 @@ fun QuickActionAlertDialog(
     title: String,
     textContent: String,
     buttonIconResource: Int,
+    buttonIconReference: Int,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -539,7 +540,7 @@ fun QuickActionAlertDialog(
         textContent = textContent,
         icon = {
             Icon(
-                painter = painterRes(buttonIconResource),
+                painter = painterRes(buttonIconResource, buttonIconReference),
                 contentDescription = null,
             )
         },
@@ -626,6 +627,7 @@ fun QuickActionAlertDialogOneButton(
     title: String,
     textContent: String,
     buttonIconResource: Int,
+    buttonIconReference: Int,
     buttonText: String,
     buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
     onClickDoOnce: () -> Unit,
@@ -636,7 +638,7 @@ fun QuickActionAlertDialogOneButton(
         textContent = textContent,
         icon = {
             Icon(
-                painter = painterRes(buttonIconResource),
+                painter = painterRes(buttonIconResource, buttonIconReference),
                 contentDescription = null,
             )
         },

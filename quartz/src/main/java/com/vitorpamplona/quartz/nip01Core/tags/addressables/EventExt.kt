@@ -26,9 +26,9 @@ fun <R> Event.mapTaggedAddress(map: (address: String) -> R) = tags.mapTaggedAddr
 
 fun Event.firstIsTaggedAddressableNote(addressableNotes: Set<String>) = tags.firstIsTaggedAddressableNote(addressableNotes)
 
-fun Event.isTaggedAddressableNote(idHex: String) = tags.isTaggedAddressableNote(idHex)
+fun Event.isTaggedAddressableNote(addressId: String) = tags.isTaggedAddressableNote(addressId)
 
-fun Event.isTaggedAddressableNotes(idHexes: Set<String>) = tags.isTaggedAddressableNotes(idHexes)
+fun Event.isTaggedAddressableNotes(addressIds: Set<String>) = tags.isTaggedAddressableNotes(addressIds)
 
 fun Event.isTaggedAddressableKind(kind: Int) = tags.isTaggedAddressableKind(kind)
 

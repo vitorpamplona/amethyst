@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.experimental.relationshipStatus
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetnameTag
+import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.PetNameTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.RankTag
 import com.vitorpamplona.quartz.experimental.relationshipStatus.tags.SummaryTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -45,7 +45,7 @@ class RelationshipStatusEvent(
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)
 
-    fun petname() = tags.firstNotNullOfOrNull(PetnameTag::parse)
+    fun petName() = tags.firstNotNullOfOrNull(PetNameTag::parse)
 
     fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
@@ -53,16 +53,15 @@ class RelationshipStatusEvent(
         const val KIND = 30382
         const val ALT = "Relationship Status"
 
-        fun create(
+        suspend fun create(
             targetUser: HexKey,
-            petname: String? = null,
+            petName: String? = null,
             summary: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             publicInitializer: TagArrayBuilder<RelationshipStatusEvent>.() -> Unit = {},
             privateInitializer: TagArrayBuilder<RelationshipStatusEvent>.() -> Unit = {},
-            onReady: (RelationshipStatusEvent) -> Unit,
-        ) {
+        ): RelationshipStatusEvent {
             val publicTags =
                 tagArray {
                     alt(ALT)
@@ -72,14 +71,13 @@ class RelationshipStatusEvent(
 
             val privateTags =
                 tagArray {
-                    petname?.let { petname(it) }
+                    petName?.let { petName(it) }
                     summary?.let { summary(it) }
                     privateInitializer()
                 }
 
-            PrivateTagsInContent.encryptNip44(privateTags, signer) { content ->
-                signer.sign(createdAt, KIND, publicTags, content, onReady)
-            }
+            val encryptedContent = PrivateTagsInContent.encryptNip44(privateTags, signer)
+            return signer.sign(createdAt, KIND, publicTags, encryptedContent)
         }
     }
 }

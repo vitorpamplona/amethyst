@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip30CustomEmojis
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
@@ -67,17 +69,18 @@ class EmojiPackState(
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val liveEmojiSelectionPack: StateFlow<List<StateFlow<NoteState>>?> by lazy {
+    val flow: StateFlow<List<StateFlow<NoteState>>?> =
         getEmojiPackSelectionFlow()
             .transformLatest {
                 emit(convertEmojiSelectionPack(it.note.event as? EmojiPackSelectionEvent))
+            }.onStart {
+                emit(convertEmojiSelectionPack(getEmojiPackSelection()))
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                convertEmojiSelectionPack(getEmojiPackSelection()),
+                emptyList(),
             )
-    }
 
     fun convertEmojiPack(pack: EmojiPackEvent): List<EmojiMedia> =
         pack.taggedEmojis().map {
@@ -97,8 +100,8 @@ class EmojiPackState(
             .distinctBy { it.link }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val myEmojis by lazy {
-        liveEmojiSelectionPack
+    val myEmojis =
+        flow
             .transformLatest { emojiList ->
                 if (emojiList != null) {
                     emitAll(
@@ -109,11 +112,44 @@ class EmojiPackState(
                 } else {
                     emit(emptyList())
                 }
+            }.onStart {
+                emit(
+                    mergePack(
+                        convertEmojiSelectionPack(
+                            getEmojiPackSelection(),
+                        )?.map { it.value }?.toTypedArray() ?: emptyArray(),
+                    ),
+                )
             }.flowOn(Dispatchers.Default)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergePack(convertEmojiSelectionPack(getEmojiPackSelection())?.map { it.value }?.toTypedArray() ?: emptyArray()),
+                emptyList(),
             )
+
+    suspend fun addEmojiPack(emojiPack: Note): EmojiPackSelectionEvent {
+        val emojiPackEvent = emojiPack.event
+        if (emojiPackEvent !is EmojiPackEvent) throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
+
+        val eventHint = emojiPack.toEventHint<EmojiPackEvent>() ?: throw IllegalArgumentException("Cannot add an emoji pack to this kind of event.")
+
+        val usersEmojiList = getEmojiPackSelection()
+        return if (usersEmojiList == null) {
+            val template = EmojiPackSelectionEvent.build(listOf(eventHint))
+            signer.sign(template)
+        } else {
+            val template = EmojiPackSelectionEvent.add(usersEmojiList, eventHint)
+            signer.sign(template)
+        }
+    }
+
+    suspend fun removeEmojiPack(emojiPack: Note): EmojiPackSelectionEvent? {
+        val usersEmojiList = getEmojiPackSelection() ?: throw IllegalArgumentException("Cannot remove an emoji pack to this kind of event.")
+
+        val emojiPackEvent = emojiPack.event
+        if (emojiPackEvent !is EmojiPackEvent) return null
+
+        val template = EmojiPackSelectionEvent.remove(usersEmojiList, emojiPackEvent)
+        return signer.sign(template)
     }
 }

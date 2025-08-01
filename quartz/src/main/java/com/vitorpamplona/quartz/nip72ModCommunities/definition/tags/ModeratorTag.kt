@@ -24,6 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -31,7 +34,7 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 data class ModeratorTag(
     override val pubKey: String,
-    override val relayHint: String?,
+    override val relayHint: NormalizedRelayUrl?,
     val role: String?,
 ) : PubKeyReferenceTag {
     fun toTagArray() = assemble(pubKey, relayHint, role)
@@ -44,7 +47,10 @@ data class ModeratorTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            return ModeratorTag(tag[1], tag.getOrNull(2), tag.getOrNull(3))
+
+            val hint = tag.getOrNull(2)?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+
+            return ModeratorTag(tag[1], hint, tag.getOrNull(3))
         }
 
         @JvmStatic
@@ -56,10 +62,23 @@ data class ModeratorTag(
         }
 
         @JvmStatic
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            ensure(tag[2].isNotEmpty()) { return null }
+
+            val hint = RelayUrlNormalizer.normalizeOrNull(tag[2])
+            ensure(hint != null) { return null }
+
+            return PubKeyHint(tag[1], hint)
+        }
+
+        @JvmStatic
         fun assemble(
             pubkey: HexKey,
-            relayHint: String?,
+            relayHint: NormalizedRelayUrl?,
             role: String?,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint, role)
+        ) = arrayOfNotNull(TAG_NAME, pubkey, relayHint?.url, role)
     }
 }

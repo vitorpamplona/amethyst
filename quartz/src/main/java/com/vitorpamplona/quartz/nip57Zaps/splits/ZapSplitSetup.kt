@@ -21,10 +21,11 @@
 package com.vitorpamplona.quartz.nip57Zaps.splits
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 data class ZapSplitSetup(
     val pubKeyHex: HexKey,
-    val relay: String?,
+    val relay: NormalizedRelayUrl?,
     override val weight: Double,
 ) : BaseZapSplitSetup {
     override fun mainId() = pubKeyHex

@@ -20,29 +20,44 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.Constants
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import kotlin.collections.toList
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun filterFollowingPublicChats(
-    followingChannels: Set<HexKey>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (followingChannels == null || followingChannels.isEmpty()) return null
+    followingChannels: Set<HexKey>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? {
+    if (followingChannels.isEmpty()) return null
 
-    return listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
+    val relayRoomDTags =
+        mapOfSet {
+            followingChannels.forEach { channelId ->
+                val relays =
+                    LocalCache.getPublicChatChannelIfExists(channelId)?.relays()
+                        ?: LocalCache.relayHints.hintsForEvent(channelId).ifEmpty { null }
+                        ?: Constants.eventFinderRelays
+
+                relays.forEach { relayUrl ->
+                    add(relayUrl, channelId)
+                }
+            }
+        }
+
+    return relayRoomDTags.map {
+        RelayBasedFilter(
+            relay = it.key,
             filter =
-                SincePerRelayFilter(
+                Filter(
                     kinds = listOf(ChannelCreateEvent.KIND),
-                    ids = followingChannels.toList(),
-                    since = since,
+                    ids = it.value.sorted(),
+                    since = since?.get(it.key)?.time,
                 ),
-        ),
-    )
+        )
+    }
 }

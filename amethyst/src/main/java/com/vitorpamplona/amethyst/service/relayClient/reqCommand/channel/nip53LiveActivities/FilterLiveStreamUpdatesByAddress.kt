@@ -20,25 +20,26 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities
 
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 
 fun filterLiveStreamUpdatesByAddress(
-    channel: LiveActivitiesChannel,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    val stream = channel.address()
+    relay: NormalizedRelayUrl,
+    channels: List<LiveActivitiesChannel>,
+    since: Long?,
+): List<RelayBasedFilter> {
+    // this runs a cross product of all ds and for pubkeys, but we are assuming they are quite unique.
     return listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(stream.kind),
-                    tags = mapOf("d" to listOf(stream.dTag)),
-                    authors = listOf(stream.pubKeyHex),
+                Filter(
+                    kinds = listOf(LiveActivitiesEvent.KIND),
+                    tags = mapOf("d" to channels.map { it.address.dTag }),
+                    authors = channels.map { it.address.pubKeyHex },
                     since = since,
                 ),
         ),

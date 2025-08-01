@@ -20,13 +20,15 @@
  */
 package com.vitorpamplona.quartz.nip19Bech32
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import com.vitorpamplona.quartz.nip19Bech32.entities.Note
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -63,7 +65,7 @@ class NIP19ParserTest {
     @Test()
     fun uri_to_route_note() {
         val result =
-            Nip19Parser.uriToRoute("nostr:note1stqea6wmwezg9x6yyr6qkukw95ewtdukyaztycws65l8wppjmtpscawevv")?.entity as? Note
+            Nip19Parser.uriToRoute("nostr:note1stqea6wmwezg9x6yyr6qkukw95ewtdukyaztycws65l8wppjmtpscawevv")?.entity as? NNote
 
         assertNotNull(result)
         Assert.assertEquals(
@@ -107,7 +109,7 @@ class NIP19ParserTest {
         Assert.assertNotNull(actual)
         Assert.assertTrue(actual?.entity is NProfile)
         Assert.assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", (actual?.entity as? NProfile)?.hex)
-        Assert.assertEquals("wss://vitor.nostr1.com/", (actual?.entity as? NProfile)?.relay?.first())
+        Assert.assertEquals(NormalizedRelayUrl("wss://vitor.nostr1.com/"), (actual?.entity as? NProfile)?.relay?.first())
     }
 
     @Test()
@@ -169,7 +171,7 @@ class NIP19ParserTest {
             "30023:d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193:89de7920",
             (result?.entity as? NAddress)?.aTag(),
         )
-        assertEquals("wss://relay.damus.io", (result?.entity as? NAddress)?.relay?.get(0))
+        assertEquals(NormalizedRelayUrl("wss://relay.damus.io/"), (result?.entity as? NAddress)?.relay?.get(0))
     }
 
     @Test
@@ -177,7 +179,7 @@ class NIP19ParserTest {
         val address =
             ATag.parse(
                 "30023:d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193:89de7920",
-                "wss://relay.damus.io",
+                "relay.damus.io",
             )
         assertEquals(30023, address?.kind)
         assertEquals(
@@ -185,9 +187,9 @@ class NIP19ParserTest {
             address?.pubKeyHex,
         )
         assertEquals("89de7920", address?.dTag)
-        assertEquals("wss://relay.damus.io", address?.relay)
+        assertEquals("wss://relay.damus.io/", address?.relay?.url)
         assertEquals(
-            "naddr1qqyrswtyv5mnjv3sqy28wumn8ghj7un9d3shjtnyv9kh2uewd9hsygx3uczxts4hwue9ayfn7ggq62anzstde2qs749pm9tx2csuthhpjvpsgqqqw4rs8pmj38",
+            "naddr1qqyrswtyv5mnjv3sqy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7q3q68nqgewzkamnyh53x0epqrftkv2pdh9gzr6558v4vetzr3w7uxfsxpqqqp65wmpxfdu",
             address?.toNAddr(),
         )
     }
@@ -229,10 +231,10 @@ class NIP19ParserTest {
                 30023,
                 "d1e60465c2b777325e9133f2100d2bb31416dca810f54a1d95665621c5dee193",
                 "89de7920",
-                "wss://relay.damus.io",
+                RelayUrlNormalizer.normalizeOrNull("wss://relay.damus.io")!!,
             )
         assertEquals(
-            "naddr1qqyrswtyv5mnjv3sqy28wumn8ghj7un9d3shjtnyv9kh2uewd9hsygx3uczxts4hwue9ayfn7ggq62anzstde2qs749pm9tx2csuthhpjvpsgqqqw4rs8pmj38",
+            "naddr1qqyrswtyv5mnjv3sqy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7q3q68nqgewzkamnyh53x0epqrftkv2pdh9gzr6558v4vetzr3w7uxfsxpqqqp65wmpxfdu",
             address.toNAddr(),
         )
     }
@@ -298,7 +300,7 @@ class NIP19ParserTest {
 
         assertNotNull(result)
         assertEquals("d768c1b28eb94c7d90aa6b9152021fb69c8e34b452f870e2e42341ea7f9796ca", result?.hex)
-        assertEquals("wss://relay.nostr.bg/", result?.relay?.firstOrNull())
+        assertEquals("wss://relay.nostr.bg/", result?.relay?.firstOrNull()?.url)
         assertEquals("cac0e43235806da094f0787a5b04e29ad04cb1a3c7ea5cf61edc1c338734082b", result?.author)
         assertEquals(1, result?.kind)
     }
@@ -322,7 +324,7 @@ class NIP19ParserTest {
 
         assertNotNull(result)
         assertEquals("9677aa74676757cafad5910f46a1a35f58f7bae253b03eb8ffa70db2fb4643ea", result?.hex)
-        assertEquals("wss://relay.westernbtc.com", result?.relay?.firstOrNull())
+        assertEquals("wss://relay.westernbtc.com/", result?.relay?.firstOrNull()?.url)
         assertEquals(null, result?.author)
         assertEquals(null, result?.kind)
     }
@@ -337,7 +339,10 @@ class NIP19ParserTest {
 
         assertNotNull(result)
         assertEquals("b60ffa7256d3dd7543d830eb717ae50d05a6c32c5f791ed15b867c2bb0b954ac", result?.hex)
-        assertEquals("wss://nostr.mom", result?.relay?.get(0))
+        assertEquals(
+            NormalizedRelayUrl("wss://nostr.mom/"),
+            result?.relay?.get(0),
+        )
         assertEquals("f8ff11c7a7d3478355d3b4d174e5a473797a906ea4aa61aa9b6bc0652c1ea17a", result?.author)
         assertEquals(1, result?.kind)
     }
@@ -352,7 +357,7 @@ class NIP19ParserTest {
 
         assertNotNull(result)
         assertEquals("1f878e82063d80f41a781d3a2ef7bc336f1beb7942bf3b49b42aee1251eb5cf0", result?.hex)
-        assertEquals("wss://relay.damus.io", result?.relay?.get(0))
+        assertEquals(NormalizedRelayUrl("wss://relay.damus.io/"), result?.relay?.get(0))
         assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result?.author)
         assertEquals(1, result?.kind)
     }
@@ -362,14 +367,14 @@ class NIP19ParserTest {
         val result =
             Nip19Parser
                 .uriToRoute(
-                    "nostr:nevent1qqsg6gechd3dhzx38n4z8a2lylzgsmmgeamhmtzz72m9ummsnf0xjfspsdmhxue69uhkummn9ekx7mpvwaehxw309ahx7um5wghx77r5wghxgetk93mhxue69uhhyetvv9ujumn0wd68ytnzvuk8wumn8ghj7mn0wd68ytn9d9h82mny0fmkzmn6d9njuumsv93k2trhwden5te0wfjkccte9ehx7um5wghxyctwvsk8wumn8ghj7un9d3shjtnyv9kh2uewd9hs3kqsdn",
+                    "nostr:nevent1qqsg6gechd3dhzx38n4z8a2lylzgsmmgeamhmtzz72m9ummsnf0xjfsppemhxue69uhkummn9ekx7mp0qy2hwumn8ghj7mn0wd68ytn00p68ytnyv4mz7qg4waehxw309aex2mrp0yhxummnw3ezucn89uqjqamnwvaz7tmwdaehgu3wv45kuatwv3a8wctw0f5kwtnnwpskxef0qythwumn8ghj7un9d3shjtnwdaehgu3wvfskuep0qy2hwumn8ghj7un9d3shjtnyv9kh2uewd9hj7dyp4wy",
                 )?.entity as? NEvent
 
         assertNotNull(result)
         assertEquals("8d2338bb62db88d13cea23f55f27c4886f68cf777dac42f2b65e6f709a5e6926", result?.hex)
         assertEquals(
-            "wss://nos.lol,wss://nostr.oxtr.dev,wss://relay.nostr.bg,wss://nostr.einundzwanzig.space,wss://relay.nostr.band,wss://relay.damus.io",
-            result?.relay?.joinToString(","),
+            "wss://nos.lol/,wss://nostr.oxtr.dev/,wss://relay.nostr.bg/,wss://nostr.einundzwanzig.space/,wss://relay.nostr.band/,wss://relay.damus.io/",
+            result?.relay?.joinToString(",") { it.url },
         )
     }
 
@@ -383,7 +388,7 @@ class NIP19ParserTest {
 
         assertNotNull(result)
         assertEquals("4300ec7fa2f98a276f033908349651620aa8e282b76030ab22abca63e85e07e6", result?.hex)
-        assertEquals("wss://relay.damus.io", result?.relay?.get(0))
+        assertEquals("wss://relay.damus.io/", result?.relay?.get(0)?.url)
         assertEquals("460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c", result?.author)
         assertEquals(1, result?.kind)
     }
@@ -422,10 +427,10 @@ class NIP19ParserTest {
                 "1f878e82063d80f41a781d3a2ef7bc336f1beb7942bf3b49b42aee1251eb5cf0",
                 "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c",
                 1,
-                "wss://relay.damus.io",
+                RelayUrlNormalizer.normalizeOrNull("wss://relay.damus.io"),
             )
         assertEquals(
-            "nevent1qqsplpuwsgrrmq85rfup6w3w777rxmcmadu590emfx6z4msj2844euqpz3mhxue69uhhyetvv9ujuerpd46hxtnfdupzq3svyhng9ld8sv44950j957j9vchdktj7cxumsep9mvvjthc2pjuqvzqqqqqqye3a70w",
+            "nevent1qqsplpuwsgrrmq85rfup6w3w777rxmcmadu590emfx6z4msj2844euqpz4mhxue69uhhyetvv9ujuerpd46hxtnfduhsygzxpsj7dqha57pjk5k37gkn6g4nzakewtmqmnwryyhd3jfwlpgxtspsgqqqqqqsqvc0ku",
             nevent,
         )
     }

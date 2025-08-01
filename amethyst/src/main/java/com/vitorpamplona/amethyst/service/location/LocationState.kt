@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.content.Context
+import android.util.Log
 import com.fonfon.kgeohash.GeoHash
 import com.fonfon.kgeohash.toGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeohashPrecision
@@ -77,7 +78,7 @@ class LocationState(
                             }.onEach {
                                 latestLocation = it
                             }.catch { e ->
-                                e.printStackTrace()
+                                Log.w("GeohashStateFlow", "Exception in the flow", e)
                                 latestLocation = LocationResult.LackPermission
                                 emit(LocationResult.LackPermission)
                             }

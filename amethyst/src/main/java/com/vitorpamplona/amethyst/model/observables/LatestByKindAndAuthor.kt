@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -51,10 +52,8 @@ class LatestByKindAndAuthor<T : Event>(
             if ((kind in 10000..19999) || (kind in 30000..39999)) {
                 LocalCache.addressables
                     .maxOrNullOf(
-                        filter = { idHex: String, note: AddressableNote ->
-                            note.event?.let {
-                                it.kind == kind && it.pubKey == pubkey
-                            } == true
+                        filter = { address: Address, note: AddressableNote ->
+                            address.kind == kind && address.pubKeyHex == pubkey
                         },
                         comparator = CreatedAtComparatorAddresses,
                     )?.event as? T

@@ -45,6 +45,8 @@ class OtsEvent(
     EventHintProvider {
     override fun eventHints() = tags.mapNotNull(TargetEventTag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(TargetEventTag::parseId)
+
     override fun isContentEncoded() = true
 
     fun digestEventId() = tags.firstNotNullOfOrNull(TargetEventTag::parseId)

@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip19Bech32
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -33,6 +32,7 @@ import com.vitorpamplona.quartz.utils.Hex
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,18 +48,12 @@ class NIP19EmbedTests {
                 KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
             )
 
-        var textNote: Event? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        signer.sign(
-            TextNoteEvent.build("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size."),
-        ) {
-            textNote = it
-            countDownLatch.countDown()
-        }
-
-        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        val textNote: TextNoteEvent =
+            runBlocking {
+                signer.sign(
+                    TextNoteEvent.build("I like this. It could solve the ninvite problem in #1062, and it seems like it could be applied very broadly to limit the spread of events that shouldn't stand on their own or need to be private. The one question I have is how long are these embeds? If it's 50 lines of text, that breaks the human readable (or at least parseable) requirement of kind 1s. Also, encoding json in a tlv is silly, we should at least use the tlv to reduce the payload size."),
+                )
+            }
 
         assertNotNull(textNote)
 
@@ -81,29 +75,23 @@ class NIP19EmbedTests {
                 KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
             )
 
-        var eyeglassesPrescriptionEvent: Event? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        signer.sign(FhirResourceEvent.build(visionPrescriptionFhir)) {
-            eyeglassesPrescriptionEvent = it
-            countDownLatch.countDown()
-        }
-
-        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        val eyeglassesPrescriptionEvent =
+            runBlocking {
+                signer.sign(FhirResourceEvent.build(visionPrescriptionFhir))
+            }
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent!!)
+        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent)
 
-        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(eyeglassesPrescriptionEvent.toJson())
         println(bech32)
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.verify())
 
-        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+        assertEquals(eyeglassesPrescriptionEvent.toJson(), decodedNote.toJson())
     }
 
     @Test
@@ -113,29 +101,27 @@ class NIP19EmbedTests {
                 KeyPair(Hex.decode("e8e7197ccc53c9ed4cf9b1c8dce085475fa1ffdd71f2c14e44fe23d0bdf77598")),
             )
 
-        var eyeglassesPrescriptionEvent: Event? = null
-
         val countDownLatch = CountDownLatch(1)
 
-        signer.sign(FhirResourceEvent.build(visionPrescriptionBundle)) {
-            eyeglassesPrescriptionEvent = it
-            countDownLatch.countDown()
-        }
+        val eyeglassesPrescriptionEvent =
+            runBlocking {
+                signer.sign(FhirResourceEvent.build(visionPrescriptionBundle))
+            }
 
         Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent!!)
+        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent)
 
-        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(eyeglassesPrescriptionEvent.toJson())
         println(bech32)
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.verify())
 
-        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+        assertEquals(eyeglassesPrescriptionEvent.toJson(), decodedNote.toJson())
     }
 
     @Test
@@ -145,29 +131,23 @@ class NIP19EmbedTests {
                 KeyPair(decodePrivateKeyAsHexOrNull("nsec1arn3jlxv20y76n8ek8ydecy9ga06rl7aw8evznjylc3ap00hwkvqx4vvy6")!!.hexToByteArray()),
             )
 
-        var eyeglassesPrescriptionEvent: Event? = null
-
-        val countDownLatch = CountDownLatch(1)
-
-        signer.sign(FhirResourceEvent.build(visionPrescriptionBundle2)) {
-            eyeglassesPrescriptionEvent = it
-            countDownLatch.countDown()
-        }
-
-        Assert.assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        val eyeglassesPrescriptionEvent =
+            runBlocking {
+                signer.sign(FhirResourceEvent.build(visionPrescriptionBundle2))
+            }
 
         assertNotNull(eyeglassesPrescriptionEvent)
 
-        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent!!)
+        val bech32 = NEmbed.create(eyeglassesPrescriptionEvent)
 
-        println(eyeglassesPrescriptionEvent!!.toJson())
+        println(eyeglassesPrescriptionEvent.toJson())
         println(bech32)
 
         val decodedNote = (Nip19Parser.uriToRoute(bech32)?.entity as NEmbed).event
 
         assertTrue(decodedNote.verify())
 
-        assertEquals(eyeglassesPrescriptionEvent!!.toJson(), decodedNote.toJson())
+        assertEquals(eyeglassesPrescriptionEvent.toJson(), decodedNote.toJson())
     }
 
     @Test

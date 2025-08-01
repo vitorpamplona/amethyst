@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm
 
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class DMRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<String>? = account.getDMRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? = account.dmRelayList.getDMRelayList()?.relays()
 
-    override fun saveRelayList(urlList: List<String>) {
+    override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveDMRelayList(urlList)
     }
 }

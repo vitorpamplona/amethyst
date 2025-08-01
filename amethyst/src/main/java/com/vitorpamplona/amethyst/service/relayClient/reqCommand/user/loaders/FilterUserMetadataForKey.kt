@@ -20,25 +20,60 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun filterNewUserMetadataForKey(authors: Set<HexKey>): List<TypedFilter> =
+val MetadataAndRelayListKinds =
     listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            MetadataEvent.KIND,
-                            AdvertisedRelayListEvent.KIND,
-                        ),
-                    authors = authors.toList(),
-                ),
-        ),
+        MetadataEvent.KIND,
+        AdvertisedRelayListEvent.KIND,
     )
+
+fun filterFindUserMetadataForKey(
+    author: HexKey,
+    defaultRelays: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> =
+    LocalCache.checkGetOrCreateUser(author)?.let {
+        filterFindUserMetadataForKey(setOf(it), defaultRelays)
+    } ?: emptyList()
+
+fun filterFindUserMetadataForKey(
+    authors: Set<User>,
+    defaultRelays: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> {
+    val perRelayKeys =
+        mapOfSet {
+            authors.forEach { key ->
+                val relays =
+                    key.authorRelayList()?.writeRelaysNorm()?.ifEmpty { null }
+                        ?: LocalCache.relayHints.hintsForKey(key.pubkeyHex).ifEmpty { null }
+                        ?: (key.relaysBeingUsed.keys + defaultRelays).toList()
+
+                relays.forEach {
+                    add(it, key.pubkeyHex)
+                }
+            }
+        }
+
+    return perRelayKeys.mapNotNull {
+        if (it.value.isNotEmpty()) {
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds = MetadataAndRelayListKinds,
+                        authors = it.value.sorted(),
+                    ),
+            )
+        } else {
+            null
+        }
+    }
+}

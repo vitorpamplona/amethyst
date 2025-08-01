@@ -81,7 +81,7 @@ fun ErrorMessageDialog(
                 onClickStartMessage?.let {
                     TextButton(onClick = onClickStartMessage) {
                         Icon(
-                            painter = painterRes(R.drawable.ic_dm),
+                            painter = painterRes(R.drawable.ic_dm, 3),
                             contentDescription = null,
                         )
                         Spacer(StdHorzSpacer)

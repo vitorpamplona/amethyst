@@ -27,14 +27,16 @@ import androidx.compose.runtime.ProduceStateScope
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteOts
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
@@ -42,10 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 @Composable
@@ -90,48 +89,17 @@ fun LoadDecryptedContentOrNull(
 
 @Composable
 fun LoadAddressableNote(
-    aTagHex: String,
-    accountViewModel: AccountViewModel,
-    content: @Composable (AddressableNote?) -> Unit,
-) {
-    var note by
-        remember(aTagHex) {
-            mutableStateOf<AddressableNote?>(accountViewModel.getAddressableNoteIfExists(aTagHex))
-        }
-
-    if (note == null) {
-        LaunchedEffect(key1 = aTagHex) {
-            accountViewModel.checkGetOrCreateAddressableNote(aTagHex) { newNote ->
-                if (newNote != note) {
-                    note = newNote
-                }
-            }
-        }
-    }
-
-    content(note)
-}
-
-@Composable
-fun LoadAddressableNote(
     address: Address,
     accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
-    var note by
-        remember(address) {
-            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address.toValue()))
-        }
-
-    if (note == null) {
-        LaunchedEffect(key1 = address) {
-            val newNote =
-                withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateAddressableNote(address)
-                }
-            if (note != newNote) {
-                note = newNote
-            }
+    val note by produceState(
+        accountViewModel.getAddressableNoteIfExists(address),
+        address,
+    ) {
+        val newNote = accountViewModel.getOrCreateAddressableNote(address)
+        if (newNote != value) {
+            value = newNote
         }
     }
 
@@ -185,36 +153,42 @@ fun LoadOts(
 }
 
 @Composable
-fun LoadChannel(
-    baseChannelHex: String,
+fun LoadPublicChatChannel(
+    id: String,
     accountViewModel: AccountViewModel,
-    content: @Composable (Channel) -> Unit,
+    content: @Composable (PublicChatChannel) -> Unit,
 ) {
-    var channel by
-        remember(baseChannelHex) {
-            mutableStateOf<Channel?>(accountViewModel.getChannelIfExists(baseChannelHex))
+    val channel =
+        produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
         }
 
-    if (channel == null) {
-        LaunchedEffect(key1 = baseChannelHex) {
-            accountViewModel.checkGetOrCreateChannel(baseChannelHex) { newChannel ->
-                launch(Dispatchers.Main) { channel = newChannel }
-            }
-        }
-    }
-
-    channel?.let { content(it) }
+    channel.value?.let { content(it) }
 }
 
 @Composable
-fun LoadChannel(
+fun LoadEphemeralChatChannel(
     id: RoomId,
     accountViewModel: AccountViewModel,
     content: @Composable (EphemeralChatChannel) -> Unit,
 ) {
-    var channel =
-        produceStateIfNotNull(accountViewModel.getChannelIfExists(id) as? EphemeralChatChannel, id) {
-            value = accountViewModel.checkGetOrCreateChannel(id) as? EphemeralChatChannel
+    val channel =
+        produceStateIfNotNull(accountViewModel.getEphemeralChatChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateEphemeralChatChannel(id)
+        }
+
+    channel.value?.let { content(it) }
+}
+
+@Composable
+fun LoadLiveActivityChannel(
+    id: Address,
+    accountViewModel: AccountViewModel,
+    content: @Composable (LiveActivitiesChannel) -> Unit,
+) {
+    val channel =
+        produceStateIfNotNull(accountViewModel.getLiveActivityChannelIfExists(id), id) {
+            value = accountViewModel.checkGetOrCreateLiveActivityChannel(id)
         }
 
     channel.value?.let { content(it) }

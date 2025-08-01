@@ -51,8 +51,9 @@ import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -142,6 +143,7 @@ fun VideoDisplay(
                             mainImageModifier = Modifier,
                             loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
                             accountViewModel = accountViewModel,
+                            onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
                             onError = { DefaultImageHeader(note, accountViewModel) },
                         )
                     } ?: run {
@@ -189,7 +191,7 @@ fun VideoDisplay(
                     Row(
                         Modifier.fillMaxWidth(),
                     ) {
-                        DisplayUncitedHashtags(event, summary, callbackUri, nav)
+                        DisplayUncitedHashtags(event, summary, callbackUri, accountViewModel, nav)
                     }
                 }
             }

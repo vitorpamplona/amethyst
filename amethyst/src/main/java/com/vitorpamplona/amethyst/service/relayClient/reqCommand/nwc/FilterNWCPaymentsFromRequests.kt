@@ -20,31 +20,21 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 
 fun filterNWCPaymentsFromRequests(
     serviceKeys: Set<HexKey>,
-    paymentRequets: Set<HexKey>,
+    paymentRequests: Set<HexKey>,
     fromUsers: Set<HexKey>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> =
-    listOf(
-        TypedFilter(
-            types = setOf(FeedType.WALLET_CONNECT),
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(LnZapPaymentResponseEvent.KIND),
-                    authors = serviceKeys.toList(),
-                    tags =
-                        mapOf(
-                            "e" to paymentRequets.toList(),
-                            "p" to fromUsers.toList(),
-                        ),
-                ),
-        ),
+): Filter =
+    Filter(
+        kinds = listOf(LnZapPaymentResponseEvent.KIND),
+        authors = serviceKeys.sorted(),
+        tags =
+            mapOf(
+                "e" to paymentRequests.sorted(),
+                "p" to fromUsers.sorted(),
+            ),
     )

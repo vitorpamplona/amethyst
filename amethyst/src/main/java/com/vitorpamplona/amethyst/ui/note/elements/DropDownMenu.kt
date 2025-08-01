@@ -46,8 +46,8 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.actions.EditPostView
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.ui.note.types.EditState
@@ -60,7 +60,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun MoreOptionsButton(
@@ -187,7 +186,9 @@ fun NoteDropDownMenu(
             text = { Text(stringRes(R.string.copy_text)) },
             onClick = {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) { clipboardManager.setText(AnnotatedString(it)) }
+                accountViewModel.decrypt(lastNoteVersion) {
+                    clipboardManager.setText(AnnotatedString(it))
+                }
                 onDismiss()
             },
         )
@@ -272,7 +273,7 @@ fun NoteDropDownMenu(
             },
         )
         HorizontalDivider(thickness = DividerThickness)
-        if (accountViewModel.account.hasPendingAttestations(note)) {
+        if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
             DropdownMenuItem(
                 text = { Text(stringRes(R.string.timestamp_pending)) },
                 onClick = {
@@ -359,24 +360,20 @@ fun WatchBookmarksFollowsAndAccount(
     val showSensitiveContent by accountViewModel.showSensitiveContent().collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = followState, key2 = bookmarkState, key3 = showSensitiveContent) {
-        withContext(Dispatchers.IO) {
-            accountViewModel.isInPrivateBookmarks(note) {
-                val newState =
-                    DropDownParams(
-                        isFollowingAuthor = accountViewModel.isFollowing(note.author),
-                        isPrivateBookmarkNote = it,
-                        isPublicBookmarkNote = accountViewModel.isInPublicBookmarks(note),
-                        isLoggedUser = accountViewModel.isLoggedUser(note.author),
-                        isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
-                        showSensitiveContent = showSensitiveContent,
-                    )
+        val newState =
+            DropDownParams(
+                isFollowingAuthor = accountViewModel.isFollowing(note.author),
+                isPrivateBookmarkNote = accountViewModel.account.bookmarkState.isInPrivateBookmarks(note),
+                isPublicBookmarkNote = accountViewModel.account.bookmarkState.isInPublicBookmarks(note),
+                isLoggedUser = accountViewModel.isLoggedUser(note.author),
+                isSensitive = note.event?.isSensitiveOrNSFW() ?: false,
+                showSensitiveContent = showSensitiveContent,
+            )
 
-                launch(Dispatchers.Main) {
-                    onNew(
-                        newState,
-                    )
-                }
-            }
+        launch(Dispatchers.Main) {
+            onNew(
+                newState,
+            )
         }
     }
 }

@@ -23,22 +23,19 @@ package com.vitorpamplona.amethyst.ui.tor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,8 +45,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -74,14 +71,13 @@ fun ConnectTorDialog(
                 decorFitsSystemWindows = false,
             ),
     ) {
-        Surface {
-            TorDialogContents(
-                torSettings,
-                onClose,
-                onPost,
-                onError,
-            )
-        }
+        SetDialogToEdgeToEdge()
+        TorDialogContents(
+            torSettings,
+            onClose,
+            onPost,
+            onError,
+        )
     }
 }
 
@@ -121,24 +117,12 @@ fun TorDialogContents(
     onPost: (torSettings: TorSettings) -> Unit,
     onError: (String) -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(
-                    rememberScrollState(),
-                ).padding(10.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            CloseButton(onPress = { onClose() })
-
+    Scaffold(
+        topBar = {
             val toastMessage = stringRes(R.string.invalid_port_number)
-
-            SaveButton(
+            SavingTopBar(
+                titleRes = R.string.privacy_options,
+                onCancel = onClose,
                 onPost = {
                     try {
                         onPost(dialogViewModel.save())
@@ -147,11 +131,19 @@ fun TorDialogContents(
                         onError(toastMessage)
                     }
                 },
-                isActive = true,
             )
+        },
+    ) {
+        Column(
+            Modifier
+                .padding(it)
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState(),
+                ).padding(horizontal = 10.dp),
+        ) {
+            PrivacySettingsBody(dialogViewModel)
         }
-
-        PrivacySettingsBody(dialogViewModel)
     }
 }
 

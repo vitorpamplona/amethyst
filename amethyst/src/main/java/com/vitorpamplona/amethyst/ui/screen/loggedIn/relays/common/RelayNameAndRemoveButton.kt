@@ -40,28 +40,30 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RelayNameAndRemoveButton(
     item: BasicRelaySetupInfo,
     onClick: () -> Unit,
-    onDelete: (BasicRelaySetupInfo) -> Unit,
+    onDelete: ((BasicRelaySetupInfo) -> Unit)?,
     modifier: Modifier,
 ) {
     val clipboardManager = LocalClipboardManager.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = item.briefInfo.displayUrl,
+                text = item.relay.displayUrl(),
                 modifier =
                     Modifier.combinedClickable(
                         onClick = onClick,
                         onLongClick = {
-                            clipboardManager.setText(AnnotatedString(item.briefInfo.url))
+                            clipboardManager.setText(AnnotatedString(item.relay.url))
                         },
                     ),
                 maxLines = 1,
@@ -71,29 +73,43 @@ fun RelayNameAndRemoveButton(
             if (item.paidRelay) {
                 Icon(
                     imageVector = Icons.Default.Paid,
-                    null,
+                    contentDescription = stringRes(id = R.string.paid_relay),
                     modifier =
                         Modifier
-                            .padding(start = 5.dp, top = 1.dp)
+                            .padding(start = 5.dp)
+                            .size(14.dp),
+                    tint = MaterialTheme.colorScheme.allGoodColor,
+                )
+            }
+
+            if (item.forcesTor) {
+                Icon(
+                    painter = painterRes(R.drawable.ic_tor, 2),
+                    contentDescription = stringRes(id = R.string.tor_relay),
+                    modifier =
+                        Modifier
+                            .padding(start = 5.dp)
                             .size(14.dp),
                     tint = MaterialTheme.colorScheme.allGoodColor,
                 )
             }
         }
 
-        IconButton(
-            modifier = Modifier.size(30.dp),
-            onClick = { onDelete(item) },
-        ) {
-            Icon(
-                imageVector = Icons.Default.Cancel,
-                contentDescription = stringRes(id = R.string.remove),
-                modifier =
-                    Modifier
-                        .padding(start = 10.dp)
-                        .size(15.dp),
-                tint = WarningColor,
-            )
+        if (onDelete != null) {
+            IconButton(
+                modifier = Modifier.size(30.dp),
+                onClick = { onDelete(item) },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Cancel,
+                    contentDescription = stringRes(id = R.string.remove),
+                    modifier =
+                        Modifier
+                            .padding(start = 10.dp)
+                            .size(15.dp),
+                    tint = LightRedColor,
+                )
+            }
         }
     }
 }

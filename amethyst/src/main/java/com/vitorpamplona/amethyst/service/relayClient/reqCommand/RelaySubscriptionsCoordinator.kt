@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import kotlinx.coroutines.CoroutineScope
 
 class RelaySubscriptionsCoordinator(
@@ -63,7 +63,7 @@ class RelaySubscriptionsCoordinator(
     val userFinder = UserFinderFilterAssembler(client)
 
     // active when searching or tagging users.
-    val search = SearchFilterAssembler(cache, client, scope)
+    val search = SearchFilterAssembler(client, scope, cache)
 
     // active depending on the screen.
     val channel = ChannelFilterAssembler(client)
@@ -97,10 +97,6 @@ class RelaySubscriptionsCoordinator(
             geohashes,
             nwc,
         )
-
-    fun start() = all.forEach { it.start() }
-
-    fun stop() = all.forEach { it.stop() }
 
     fun destroy() = all.forEach { it.destroy() }
 

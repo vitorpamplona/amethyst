@@ -21,30 +21,26 @@
 package com.vitorpamplona.quartz.nip65RelayList
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 class RelayListRecommendationProcessor {
     companion object {
         fun transpose(
-            userList: Map<HexKey, MutableSet<String>>,
-            ignore: Set<String> = setOf(),
-        ): Map<String, MutableSet<HexKey>> {
-            val popularity = mutableMapOf<String, MutableSet<HexKey>>()
-
-            userList.forEach { event ->
-                event.value.forEach { relayUrl ->
-                    if (relayUrl !in ignore) {
-                        val set = popularity[relayUrl]
-                        if (set != null) {
-                            set.add(event.key)
-                        } else {
-                            popularity[relayUrl] = mutableSetOf(event.key)
+            userList: Map<HexKey, Set<NormalizedRelayUrl>>,
+            ignore: Set<NormalizedRelayUrl> = setOf(),
+        ): Map<NormalizedRelayUrl, Set<HexKey>> =
+            mapOfSet {
+                userList.forEach { event ->
+                    event.value.forEach { relay ->
+                        if (relay !in ignore) {
+                            add(relay, event.key)
                         }
                     }
                 }
             }
-
-            return popularity
-        }
 
         /**
          * filter onion and local host from write relays
@@ -53,30 +49,20 @@ class RelayListRecommendationProcessor {
         private fun filterValidRelays(
             userList: List<AdvertisedRelayListEvent>,
             hasOnionConnection: Boolean = false,
-        ): MutableMap<HexKey, MutableSet<String>> {
-            val validWriteRelayUrls = mutableMapOf<HexKey, MutableSet<String>>()
-
-            userList.forEach { event ->
-                event.writeRelays().forEach { relayUrl ->
-                    if (!RelayUrlFormatter.isLocalHost(relayUrl) && (hasOnionConnection || !RelayUrlFormatter.isOnion(relayUrl))) {
-                        RelayUrlFormatter.normalizeOrNull(relayUrl)?.let { normRelayUrl ->
-                            val set = validWriteRelayUrls[event.pubKey]
-                            if (set != null) {
-                                set.add(normRelayUrl)
-                            } else {
-                                validWriteRelayUrls[event.pubKey] = mutableSetOf(normRelayUrl)
-                            }
+        ): Map<HexKey, Set<NormalizedRelayUrl>> =
+            mapOfSet {
+                userList.forEach { event ->
+                    event.writeRelaysNorm()?.forEach { relay ->
+                        if (!relay.isLocalHost() && (hasOnionConnection || !relay.isOnion())) {
+                            add(event.pubKey, relay)
                         }
                     }
                 }
             }
 
-            return validWriteRelayUrls
-        }
-
         fun reliableRelaySetFor(
-            usersAndRelays: MutableMap<HexKey, MutableSet<String>>,
-            relayUrlsToIgnore: Set<String> = emptySet(),
+            usersAndRelays: Map<HexKey, Set<NormalizedRelayUrl>>,
+            relayUrlsToIgnore: Set<NormalizedRelayUrl> = emptySet(),
         ): Set<RelayRecommendation> {
             // ignores users that are already being served by the list.
             val usersToServeInTheFirstRound =
@@ -145,7 +131,7 @@ class RelayListRecommendationProcessor {
 
         fun reliableRelaySetFor(
             userList: List<AdvertisedRelayListEvent>,
-            relayUrlsToIgnore: Set<String> = emptySet(),
+            relayUrlsToIgnore: Set<NormalizedRelayUrl> = emptySet(),
             hasOnionConnection: Boolean = false,
         ): Set<RelayRecommendation> =
             reliableRelaySetFor(
@@ -155,7 +141,7 @@ class RelayListRecommendationProcessor {
     }
 
     class RelayRecommendation(
-        val url: String,
+        val relay: NormalizedRelayUrl,
         val requiredToNotMissEvents: Boolean,
         val users: Set<HexKey>,
     )

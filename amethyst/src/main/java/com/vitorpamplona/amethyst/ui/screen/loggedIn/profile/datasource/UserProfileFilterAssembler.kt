@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
 class UserProfileQueryState(
@@ -41,10 +41,6 @@ class UserProfileFilterAssembler(
             UserProfileFollowersFilterSubAssembler(client, ::allKeys),
             UserProfileZapsFilterSubAssembler(client, ::allKeys),
         )
-
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 

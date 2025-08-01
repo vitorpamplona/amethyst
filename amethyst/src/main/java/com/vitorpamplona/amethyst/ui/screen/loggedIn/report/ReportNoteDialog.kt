@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.TextSpinner
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.TitleExplainer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.WarningColor
+import com.vitorpamplona.amethyst.ui.theme.LightRedColor
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.collections.immutable.toImmutableList
 
@@ -195,7 +195,7 @@ private fun ActionButton(
 ) = Button(
     onClick = onClick,
     enabled = enabled,
-    colors = ButtonDefaults.buttonColors(containerColor = WarningColor),
+    colors = ButtonDefaults.buttonColors(containerColor = LightRedColor),
     modifier = Modifier.fillMaxWidth(),
 ) {
     Row(

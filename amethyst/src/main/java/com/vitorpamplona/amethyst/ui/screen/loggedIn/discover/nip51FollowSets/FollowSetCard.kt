@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -35,33 +34,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.Gallery
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.FollowSetImageModifier
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -84,13 +85,13 @@ fun RenderFollowSetThumb(
         val noteEvent = it.event as? FollowListEvent
 
         FollowSetCard(
-            name = noteEvent?.nameOrTitle()?.ifBlank { null } ?: noteEvent?.dTag() ?: "",
+            name = noteEvent?.title()?.ifBlank { null } ?: noteEvent?.dTag() ?: "",
             media = noteEvent?.image()?.ifBlank { null },
             description = noteEvent?.description(),
             users =
                 accountViewModel
                     .loadUsersSync(
-                        noteEvent?.pubKeys() ?: emptyList(),
+                        noteEvent?.followIds() ?: emptyList(),
                     ).toImmutableList(),
         )
     }
@@ -147,17 +148,21 @@ fun RenderFollowSetThumb(
             contentAlignment = Alignment.BottomStart,
         ) {
             card.media?.let {
-                AsyncImage(
-                    model = it,
-                    contentDescription = null,
+                MyAsyncImage(
+                    imageUrl = it,
+                    contentDescription =
+                        stringRes(
+                            R.string.preview_card_image_for,
+                            it,
+                        ),
                     contentScale = ContentScale.Crop,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(ratio = 21f / 9f)
-                            .clip(QuoteBorder),
+                    mainImageModifier = Modifier,
+                    loadedImageModifier = FollowSetImageModifier,
+                    accountViewModel = accountViewModel,
+                    onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
+                    onError = { DefaultImageHeader(baseNote, accountViewModel) },
                 )
-            } ?: run { DisplayAuthorBanner(baseNote, accountViewModel) }
+            } ?: run { DefaultImageHeader(baseNote, accountViewModel, FollowSetImageModifier) }
 
             Gallery(card.users, Modifier.padding(Size10dp), accountViewModel, nav)
         }

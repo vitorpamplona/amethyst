@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.service.relays.EOSEFollowList
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import kotlin.collections.distinctBy
+import com.vitorpamplona.amethyst.service.relays.EOSEByKey
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * This query type creates a new relay subscription for every SubID.id()
@@ -35,22 +36,22 @@ import kotlin.collections.distinctBy
  * This class keeps EOSEs for each SubID.id() for as long as possible and
  * shares all EOSEs among all users.
  */
-abstract class PerUniqueIdEoseManager<T>(
+abstract class PerUniqueIdEoseManager<T, U : Any>(
     client: NostrClient,
     allKeys: () -> Set<T>,
     val invalidateAfterEose: Boolean = false,
 ) : BaseEoseManager<T>(client, allKeys) {
     // long term EOSE cache
-    private val latestEOSEs = EOSEFollowList()
+    private val latestEOSEs = EOSEByKey<U>()
 
     // map between each query Id and each subscription id
-    private val userSubscriptionMap = mutableMapOf<String, String>()
+    private val userSubscriptionMap = mutableMapOf<U, String>()
 
     fun since(key: T) = latestEOSEs.since(id(key))
 
     fun newEose(
         key: T,
-        relayUrl: String,
+        relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
         latestEOSEs.newEose(id(key), relayUrl, time)
@@ -60,50 +61,50 @@ abstract class PerUniqueIdEoseManager<T>(
     }
 
     open fun newSub(key: T): Subscription =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(key, relayUrl, time)
         }
 
     open fun endSub(
-        key: String,
+        key: U,
         subId: String,
     ) {
-        orchestrator.dismissSubscription(subId)
+        dismissSubscription(subId)
+        userSubscriptionMap.remove(key)
     }
 
     fun findOrCreateSubFor(key: T): Subscription {
         val id = id(key)
-        var subId = userSubscriptionMap[id]
+        val subId = userSubscriptionMap[id]
         return if (subId == null) {
             newSub(key).also { userSubscriptionMap[id] = it.id }
         } else {
-            orchestrator.getSub(subId) ?: newSub(key).also { userSubscriptionMap[id] = it.id }
+            getSubscription(subId) ?: newSub(key).also { userSubscriptionMap[id] = it.id }
         }
     }
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { id(it) }
 
-        val updated = mutableSetOf<String>()
+        val updated = mutableSetOf<U>()
 
         uniqueSubscribedAccounts.forEach {
             val mainKey = id(it)
-            findOrCreateSubFor(it).typedFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            val newFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            findOrCreateSubFor(it).updateFilters(newFilters?.groupByRelay())
 
             updated.add(mainKey)
         }
 
-        userSubscriptionMap.forEach {
-            if (it.key !in updated) {
-                endSub(it.key, it.value)
-            }
+        userSubscriptionMap.filter { it.key !in updated }.forEach {
+            endSub(it.key, it.value)
         }
     }
 
     abstract fun updateFilter(
         key: T,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>?
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
 
-    abstract fun id(key: T): String
+    abstract fun id(key: T): U
 }

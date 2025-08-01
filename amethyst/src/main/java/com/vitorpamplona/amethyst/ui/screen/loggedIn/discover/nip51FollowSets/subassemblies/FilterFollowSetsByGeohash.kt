@@ -20,30 +20,53 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies
 
-import com.vitorpamplona.ammolite.relays.FeedType
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 
 fun filterFollowSetsByGeohash(
-    hashToLoad: Set<String>?,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
-    if (hashToLoad == null || hashToLoad.isEmpty()) return null
+    relay: NormalizedRelayUrl,
+    geotags: Set<String>,
+    since: Long? = null,
+): List<RelayBasedFilter> {
+    if (geotags.isEmpty()) return emptyList()
 
-    val geoHashes = hashToLoad.toList()
+    val geoHashes = geotags.sorted()
 
     return listOf(
-        TypedFilter(
-            types = setOf(FeedType.FOLLOWS),
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(LongTextNoteEvent.KIND),
+                Filter(
+                    kinds = listOf(FollowListEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 300,
                     since = since,
                 ),
         ),
     )
+}
+
+fun filterFollowSetsByGeohash(
+    geoSet: LocationTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (geoSet.set.isEmpty()) return emptyList()
+
+    return geoSet.set
+        .mapNotNull {
+            if (it.value.geotags.isEmpty()) {
+                null
+            } else {
+                filterFollowSetsByGeohash(
+                    relay = it.key,
+                    geotags = it.value.geotags,
+                    since = since?.get(it.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

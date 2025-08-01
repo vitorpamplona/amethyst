@@ -22,11 +22,13 @@ package com.vitorpamplona.quartz.nip01Core.hints
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTags.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 import com.vitorpamplona.quartz.utils.pointerSizeInBytes
@@ -35,10 +37,10 @@ import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 data class EventHintBundle<T : Event>(
     val event: T,
 ) {
-    var relay: String? = null
-    var authorHomeRelay: String? = null
+    var relay: NormalizedRelayUrl? = null
+    var authorHomeRelay: NormalizedRelayUrl? = null
 
-    constructor(event: T, relayHint: String? = null, authorHomeRelay: String? = null) : this(event) {
+    constructor(event: T, relayHint: NormalizedRelayUrl? = null, authorHomeRelay: NormalizedRelayUrl? = null) : this(event) {
         this.relay = relayHint
         this.authorHomeRelay = authorHomeRelay
     }
@@ -46,7 +48,7 @@ data class EventHintBundle<T : Event>(
     fun countMemory(): Long =
         2 * pointerSizeInBytes + // 2 fields, 4 bytes each reference (32bit)
             event.countMemory() +
-            (relay?.bytesUsedInMemory() ?: 0)
+            (relay?.url?.bytesUsedInMemory() ?: 0)
 
     fun toNEvent(): String = NEvent.create(event.id, event.pubKey, event.kind, relay)
 
@@ -60,5 +62,5 @@ data class EventHintBundle<T : Event>(
 
     fun toETagArray() = ETag.assemble(event.id, relay, event.pubKey)
 
-    fun toQTagArray() = ETag(event.id, relay, event.pubKey).toQTagArray()
+    fun toQTagArray() = QEventTag.assemble(event.id, relay, event.pubKey)
 }

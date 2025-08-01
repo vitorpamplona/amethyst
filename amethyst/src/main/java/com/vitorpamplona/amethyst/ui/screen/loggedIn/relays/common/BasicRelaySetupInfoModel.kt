@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 abstract class BasicRelaySetupInfoModel : ViewModel() {
+    lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
 
     private val _relays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
@@ -40,20 +43,24 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
 
     var hasModified = false
 
-    fun load(account: Account) {
-        this.account = account
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
+
+    fun load() {
         clear()
         loadRelayDocuments()
     }
 
-    abstract fun getRelayList(): List<String>?
+    abstract fun getRelayList(): List<NormalizedRelayUrl>?
 
-    abstract fun saveRelayList(urlList: List<String>)
+    abstract suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>)
 
     fun create() {
         if (hasModified) {
-            viewModelScope.launch(Dispatchers.IO) {
-                saveRelayList(_relays.value.map { it.url })
+            accountViewModel.runIOCatching {
+                saveRelayList(_relays.value.map { it.relay })
                 clear()
             }
         }
@@ -63,8 +70,10 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _relays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
-                    dirtyUrl = item.url,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
+                    relay = item.relay,
+                    okHttpClient = {
+                        Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay))
+                    },
                     onInfo = {
                         togglePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -75,20 +84,25 @@ abstract class BasicRelaySetupInfoModel : ViewModel() {
     }
 
     fun clear() {
-        var hasModified = false
         _relays.update {
             val relayList = getRelayList() ?: emptyList()
 
             relayList
-                .map { relaySetupInfoBuilder(it) }
-                .distinctBy { it.url }
+                .map {
+                    relaySetupInfoBuilder(
+                        normalized = it,
+                        forcesTor =
+                            account.torRelayState.flow.value
+                                .useTor(it),
+                    )
+                }.distinctBy { it.relay }
                 .sortedBy { it.relayStat.receivedBytes }
                 .reversed()
         }
     }
 
     fun addRelay(relay: BasicRelaySetupInfo) {
-        if (relays.value.any { it.url == relay.url }) return
+        if (relays.value.any { it.relay == relay.relay }) return
 
         _relays.update { it.plus(relay) }
         hasModified = true

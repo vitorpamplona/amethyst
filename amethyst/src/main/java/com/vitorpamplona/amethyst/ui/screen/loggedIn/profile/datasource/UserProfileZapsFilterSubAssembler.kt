@@ -21,10 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import kotlin.collections.flatten
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
 class UserProfileZapsFilterSubAssembler(
     client: NostrClient,
@@ -32,10 +31,10 @@ class UserProfileZapsFilterSubAssembler(
 ) : PerUserEoseManager<UserProfileQueryState>(client, allKeys) {
     override fun updateFilter(
         key: UserProfileQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? =
         listOfNotNull(
-            filterUserProfileZapsReceived(user(key).pubkeyHex, since),
+            filterUserProfileZapsReceived(user(key), since),
         ).flatten()
 
     override fun user(key: UserProfileQueryState) = key.user

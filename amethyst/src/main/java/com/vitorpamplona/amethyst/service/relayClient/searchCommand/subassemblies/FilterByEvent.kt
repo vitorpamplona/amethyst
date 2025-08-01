@@ -20,18 +20,38 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun filterByEvent(eventId: HexKey) =
-    listOf(
-        TypedFilter(
-            types = ALL_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    ids = listOfNotNull(eventId),
-                ),
-        ),
-    )
+fun filterByEvent(
+    eventId: HexKey,
+    default: Set<NormalizedRelayUrl>,
+): List<RelayBasedFilter> {
+    val note = LocalCache.checkGetOrCreateNote(eventId) ?: return emptyList()
+
+    val list =
+        mapOfSet {
+            if (note !is AddressableNote && note.event == null) {
+                potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                    add(relayUrl, note.idHex)
+                }
+            }
+
+            // loads threading that is event-based
+            note.replyTo?.forEach { parentNote ->
+                if (parentNote !is AddressableNote && note.event == null) {
+                    potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                        add(relayUrl, note.idHex)
+                    }
+                }
+            }
+        }
+
+    return filterMissingEvents(list)
+}

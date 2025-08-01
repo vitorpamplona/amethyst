@@ -20,29 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource
 
-import com.vitorpamplona.ammolite.relays.COMMON_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
-fun filterUserProfileZapsReceived(
-    key: HexKey,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> {
-    if (key.isEmpty()) return emptyList()
+val UserProfileZapReceiverKinds = listOf(LnZapEvent.KIND)
 
-    return listOf(
-        TypedFilter(
-            types = COMMON_FEED_TYPES,
+fun filterUserProfileZapsReceived(
+    user: User,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> =
+    user.inboxRelays().map { relay ->
+        RelayBasedFilter(
+            relay = relay,
             filter =
-                SincePerRelayFilter(
-                    kinds = listOf(LnZapEvent.KIND),
-                    tags = mapOf("p" to listOf(key)),
+                Filter(
+                    kinds = UserProfileZapReceiverKinds,
+                    tags = mapOf("p" to listOf(user.pubkeyHex)),
                     limit = 200,
-                    since = since,
+                    since = since?.get(relay)?.time,
                 ),
-        ),
-    )
-}
+        )
+    }

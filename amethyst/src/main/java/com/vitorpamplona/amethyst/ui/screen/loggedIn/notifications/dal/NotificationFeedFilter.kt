@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
@@ -28,6 +29,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.forks.forkFromVersion
 import com.vitorpamplona.quartz.experimental.forks.isForkFromAddressWithPubkey
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
@@ -38,8 +40,9 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
@@ -63,10 +66,8 @@ class NotificationFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            userHex = account.userProfile().pubkeyHex,
-            selectedListName = account.settings.defaultNotificationFollowList.value,
             followLists = account.liveNotificationFollowLists.value,
-            hiddenUsers = account.flowHiddenUsers.value,
+            hiddenUsers = account.hiddenUsers.flow.value,
         )
 
     override fun feed(): List<Note> {
@@ -74,8 +75,11 @@ class NotificationFeedFilter(
 
         val notifications =
             LocalCache.notes.filterIntoSet { _, note ->
-                acceptableEvent(note, filterParams)
-            }
+                note.event !is AddressableEvent && acceptableEvent(note, filterParams)
+            } +
+                LocalCache.addressables.filterIntoSet { _, note ->
+                    acceptableEvent(note, filterParams)
+                }
 
         return sort(notifications)
     }
@@ -100,7 +104,7 @@ class NotificationFeedFilter(
                 val zapRequest = noteEvent.zapRequest
                 if (zapRequest != null) {
                     if (noteEvent.zapRequest?.isPrivateZap() == true) {
-                        zapRequest.cachedPrivateZap()?.pubKey ?: zapRequest.pubKey
+                        account.privateZapsDecryptionCache.cachedPrivateZap(zapRequest)?.pubKey ?: zapRequest.pubKey
                     } else {
                         zapRequest.pubKey
                     }
@@ -108,7 +112,11 @@ class NotificationFeedFilter(
                     noteEvent.pubKey
                 }
             } else {
-                it.author?.pubkeyHex
+                if (it is AddressableNote) {
+                    it.address.pubKeyHex
+                } else {
+                    it.author?.pubkeyHex
+                }
             }
 
         return it.event !is ChannelCreateEvent &&
@@ -120,8 +128,9 @@ class NotificationFeedFilter(
             it.event !is NIP90StatusEvent &&
             it.event !is NIP90ContentDiscoveryRequestEvent &&
             it.event !is GiftWrapEvent &&
+            it.event !is PrivateTagArrayEvent &&
             (it.event is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (filterParams.isGlobal || filterParams.followLists?.authors?.contains(notifAuthor) == true) &&
+            (filterParams.isGlobal(it.relays) || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             it.event?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             tagsAnEventByUser(it, loggedInUserHex)

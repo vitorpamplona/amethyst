@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import org.junit.Test
 
 class BunkerRequestTest {
     @Test
     fun testBunkerRequestDeSerialization() {
         val requestJson = """{"id":"123","method":"sign_event","params":["{\"created_at\":1234,\"kind\":1,\"tags\":[],\"content\":\"This is an unsigned event.\"}"]}"""
-        val bunkerRequest = EventMapper.mapper.readValue(requestJson, BunkerRequest::class.java)
+        val bunkerRequest = JsonMapper.mapper.readValue(requestJson, BunkerRequest::class.java)
 
         assert(bunkerRequest is BunkerRequestSign)
         assert((bunkerRequest as BunkerRequestSign).event.kind == 1)

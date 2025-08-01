@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -31,7 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class Room(
     val roomId: RoomId,
 ) {
-    constructor(id: String, relayUrl: String) : this(RoomId(id, relayUrl))
+    constructor(id: String, relayUrl: NormalizedRelayUrl) : this(RoomId(id, relayUrl))
 
     val messages = LargeCache<HexKey, EphemeralChatEvent>()
 

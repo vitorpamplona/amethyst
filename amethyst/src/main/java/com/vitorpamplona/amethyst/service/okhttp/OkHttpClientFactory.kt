@@ -20,25 +20,49 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
 
 class OkHttpClientFactory(
-    val keyCache: EncryptionKeyCache,
+    keyCache: EncryptionKeyCache,
 ) {
     companion object {
-        // by picking a random proxy port, the connection will fail as it shouold.
+        // by picking a random proxy port, the connection will fail as it should.
         const val DEFAULT_SOCKS_PORT: Int = 9050
         const val DEFAULT_IS_MOBILE: Boolean = false
         const val DEFAULT_TIMEOUT_ON_WIFI_SECS: Int = 10
         const val DEFAULT_TIMEOUT_ON_MOBILE_SECS: Int = 30
     }
 
+    val logging = LoggingInterceptor()
+    val keyDecryptor = EncryptedBlobInterceptor(keyCache)
+
+    val myDispatcher =
+        Dispatcher().apply {
+            maxRequests = 512
+        }
+
+    /*
+    DEBUG OK HTTP connections here.
+    init {
+        if (isDebug) {
+            GlobalScope.launch(Dispatchers.IO) {
+                while (true) {
+                    Log.d("OkHttpClientFactory", "Active threads ${myDispatcher.runningCallsCount()}")
+                    delay(5000)
+                }
+            }
+        }
+    }
+     */
+
     private val rootClient =
         OkHttpClient
             .Builder()
+            .dispatcher(myDispatcher)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
@@ -57,8 +81,8 @@ class OkHttpClientFactory(
             .connectTimeout(duration)
             .writeTimeout(duration)
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
-            .addNetworkInterceptor(LoggingInterceptor())
-            .addNetworkInterceptor(EncryptedBlobInterceptor(keyCache))
+            .addNetworkInterceptor(logging)
+            .addNetworkInterceptor(keyDecryptor)
             .build()
     }
 

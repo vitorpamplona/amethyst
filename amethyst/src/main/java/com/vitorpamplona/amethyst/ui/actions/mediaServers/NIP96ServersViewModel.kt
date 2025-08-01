@@ -122,5 +122,5 @@ class NIP96ServersViewModel : ViewModel() {
         }
     }
 
-    private fun obtainFileServers(): List<String>? = account.getFileServersList()?.servers()
+    private fun obtainFileServers(): List<String>? = account.fileStorageServers.flow.value
 }

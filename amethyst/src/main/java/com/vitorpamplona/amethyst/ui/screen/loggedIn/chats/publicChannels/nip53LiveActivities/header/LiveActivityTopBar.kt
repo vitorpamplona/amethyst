@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.header
 
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LongLiveActivityChannelHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ShortLiveActivityChannelHeader
@@ -38,9 +38,9 @@ fun LiveActivityTopBar(
         title = {
             ShortLiveActivityChannelHeader(
                 baseChannel = baseChannel,
+                showFlag = true,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                showFlag = true,
             )
         },
         extendableRow = {

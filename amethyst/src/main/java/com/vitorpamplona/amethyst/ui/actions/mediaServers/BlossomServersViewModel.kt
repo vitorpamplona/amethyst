@@ -127,5 +127,5 @@ class BlossomServersViewModel : ViewModel() {
         }
     }
 
-    private fun obtainFileServers(): List<String>? = account.getBlossomServersList()?.servers()
+    private fun obtainFileServers(): List<String>? = account.blossomServers.flow.value
 }

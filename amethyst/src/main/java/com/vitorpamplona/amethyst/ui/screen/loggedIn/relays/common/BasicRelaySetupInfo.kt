@@ -21,24 +21,24 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
-import com.vitorpamplona.ammolite.relays.RelayStats
-import com.vitorpamplona.quartz.nip01Core.relay.RelayStat
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Immutable
 data class BasicRelaySetupInfo(
-    val url: String,
+    val relay: NormalizedRelayUrl,
     val relayStat: RelayStat,
     val paidRelay: Boolean = false,
-) {
-    val briefInfo: RelayBriefInfoCache.RelayBriefInfo = RelayBriefInfoCache.RelayBriefInfo(url)
-}
+    val forcesTor: Boolean = false,
+)
 
-fun relaySetupInfoBuilder(url: String): BasicRelaySetupInfo {
-    val normalized = RelayUrlFormatter.normalize(url)
-    return BasicRelaySetupInfo(
-        normalized,
-        RelayStats.get(normalized),
+fun relaySetupInfoBuilder(
+    normalized: NormalizedRelayUrl,
+    forcesTor: Boolean = false,
+): BasicRelaySetupInfo =
+    BasicRelaySetupInfo(
+        relay = normalized,
+        relayStat = RelayStats.get(normalized),
+        forcesTor = forcesTor,
     )
-}

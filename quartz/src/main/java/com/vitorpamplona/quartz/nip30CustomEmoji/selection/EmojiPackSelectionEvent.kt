@@ -46,6 +46,8 @@ class EmojiPackSelectionEvent(
     AddressHintProvider {
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
+
     fun emojiPacks() = tags.mapNotNull(ATag::parseAddress)
 
     fun emojiPackIds() = tags.mapNotNull(ATag::parseAddressId)

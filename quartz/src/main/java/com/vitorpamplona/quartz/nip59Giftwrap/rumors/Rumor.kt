@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.EventFactory
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 
 class Rumor(
@@ -49,9 +49,9 @@ class Rumor(
     }
 
     companion object {
-        fun fromJson(json: String): Rumor = EventMapper.mapper.readValue(json, Rumor::class.java)
+        fun fromJson(json: String): Rumor = JsonMapper.mapper.readValue(json, Rumor::class.java)
 
-        fun toJson(event: Rumor): String = EventMapper.mapper.writeValueAsString(event)
+        fun toJson(event: Rumor): String = JsonMapper.mapper.writeValueAsString(event)
 
         fun create(event: Event): Rumor = Rumor(event.id, event.pubKey, event.createdAt, event.kind, event.tags, event.content)
     }

@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 class CommunityFeedFilterSubAssembler(
@@ -32,16 +33,23 @@ class CommunityFeedFilterSubAssembler(
 ) : SingleSubEoseManager<CommunityQueryState>(client, allKeys) {
     override fun updateFilter(
         keys: List<CommunityQueryState>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? {
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> {
         if (keys.isEmpty()) return emptyList()
 
-        return keys.mapNotNull {
+        return keys.flatMap {
             val commEvent = it.community.event
             if (commEvent is CommunityDefinitionEvent) {
-                filterCommunityPosts(commEvent, since)
+                val relays =
+                    commEvent.relayUrls().ifEmpty { null }
+                        ?: LocalCache.relayHints.hintsForAddress(commEvent.addressTag()).ifEmpty { null }
+                        ?: it.community.relayUrls()
+
+                relays.toSet().map {
+                    filterCommunityPosts(it, commEvent, since?.get(it)?.time)
+                }
             } else {
-                null
+                emptyList()
             }
         }
     }

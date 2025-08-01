@@ -72,9 +72,11 @@ class CardFeedContentState(
     val scrollToTop = _scrollToTop.asStateFlow()
     var scrolltoTopPending = false
 
-    private var lastFeedKey: String? = null
+    private var lastFeedKey: Any? = null
 
     override val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
+
+    val lastNoteCreatedAtWhenFullyLoaded = MutableStateFlow<Long?>(null)
 
     fun sendToTop() {
         if (scrolltoTopPending) return
@@ -89,6 +91,8 @@ class CardFeedContentState(
 
     private var lastAccount: Account? = null
     private var lastNotes: Set<Note>? = null
+
+    fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.Default) { refreshSuspended() }
@@ -300,6 +304,13 @@ class CardFeedContentState(
     }
 
     private fun updateFeed(notes: ImmutableList<Card>) {
+        if (notes.size >= localFilter.limit()) {
+            val lastNomeTime = notes.lastOrNull()?.createdAt()
+            if (lastNomeTime != lastNoteCreatedAtWhenFullyLoaded.value) {
+                lastNoteCreatedAtWhenFullyLoaded.tryEmit(notes.lastOrNull()?.createdAt())
+            }
+        }
+
         val currentState = _feedContent.value
         if (notes.isEmpty()) {
             _feedContent.tryEmit(CardFeedState.Empty)

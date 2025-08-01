@@ -40,12 +40,10 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import junit.framework.TestCase.assertNotNull
-import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -60,77 +58,55 @@ class GiftWrapReceivingBenchmark {
     fun createWrap(
         sender: NostrSigner,
         receiver: NostrSigner,
-    ): GiftWrapEvent {
-        val countDownLatch = CountDownLatch(1)
-        var wrap: GiftWrapEvent? = null
-
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Hi there! This is a test message",
-                to =
-                    listOf(
-                        PTag(receiver.pubKey),
+    ): GiftWrapEvent =
+        runBlocking {
+            GiftWrapEvent.create(
+                event =
+                    SealedRumorEvent.create(
+                        event =
+                            sender.sign(
+                                ChatMessageEvent.build(
+                                    msg = "Hi there! This is a test message",
+                                    to = listOf(PTag(receiver.pubKey)),
+                                ) {
+                                    changeSubject("Party Tonight")
+                                    zapraiser(10000)
+                                    contentWarning("nsfw")
+                                },
+                            ),
+                        encryptTo = receiver.pubKey,
+                        signer = sender,
                     ),
-            ) {
-                changeSubject("Party Tonight")
-                zapraiser(10000)
-                contentWarning("nsfw")
-            },
-        ) {
-            SealedRumorEvent.create(
-                event = it,
-                encryptTo = receiver.pubKey,
-                signer = sender,
-            ) {
-                GiftWrapEvent.create(
-                    event = it,
-                    recipientPubKey = receiver.pubKey,
-                ) {
-                    wrap = it
-                    countDownLatch.countDown()
-                }
-            }
+                recipientPubKey = receiver.pubKey,
+            )
         }
-
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-        return wrap!!
-    }
 
     fun createSeal(
         sender: NostrSigner,
         receiver: NostrSigner,
-    ): SealedRumorEvent {
-        val countDownLatch = CountDownLatch(1)
-        var seal: SealedRumorEvent? = null
+    ): SealedRumorEvent =
+        runBlocking {
+            val msg =
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Hi there! This is a test message",
+                        to =
+                            listOf(
+                                PTag(receiver.pubKey),
+                            ),
+                    ) {
+                        changeSubject("Party Tonight")
+                        zapraiser(10000)
+                        contentWarning("nsfw")
+                    },
+                )
 
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Hi there! This is a test message",
-                to =
-                    listOf(
-                        PTag(receiver.pubKey),
-                    ),
-            ) {
-                changeSubject("Party Tonight")
-                zapraiser(10000)
-                contentWarning("nsfw")
-            },
-        ) {
             SealedRumorEvent.create(
-                event = it,
+                event = msg,
                 encryptTo = receiver.pubKey,
                 signer = sender,
-            ) {
-                seal = it
-                countDownLatch.countDown()
-            }
+            )
         }
-
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-        return seal!!
-    }
 
     @Test
     fun parseWrapFromString() {

@@ -52,9 +52,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Channel
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEdits
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -62,8 +62,8 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.GenericRepostLayout
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.ui.note.elements.BoostedMark
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayEditStatus
@@ -78,12 +78,17 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
+import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayPeopleList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayProxyRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayRelaySet
 import com.vitorpamplona.amethyst.ui.note.types.DisplaySearchRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
@@ -114,16 +119,18 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.RenderChannelHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.Font12SP
@@ -155,6 +162,7 @@ import com.vitorpamplona.quartz.experimental.forks.isAFork
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.isTaggedAddressableKind
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -181,10 +189,15 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
-import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -204,6 +217,7 @@ import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import kotlinx.coroutines.delay
 
 @Composable
@@ -268,17 +282,24 @@ fun AcceptableNote(
     nav: INav,
 ) {
     if (isQuotedNote || isBoostedNote) {
-        when (baseNote.event) {
-            is ChannelCreateEvent,
-            is ChannelMetadataEvent,
-            ->
-                RenderChannelHeader(
-                    channelNote = baseNote,
-                    showVideo = !makeItShort,
+        val noteEvent = baseNote.event
+        when (noteEvent) {
+            is ChannelCreateEvent ->
+                RenderPublicChatChannelHeader(
+                    channelId = noteEvent.id,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            is ChannelMetadataEvent ->
+                noteEvent.channelId()?.let {
+                    RenderPublicChatChannelHeader(
+                        channelId = it,
+                        sendToChannel = true,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             is CommunityDefinitionEvent ->
                 (baseNote as? AddressableNote)?.let {
                     RenderCommunity(
@@ -308,17 +329,23 @@ fun AcceptableNote(
                 }
         }
     } else {
-        when (baseNote.event) {
-            is ChannelCreateEvent,
-            is ChannelMetadataEvent,
-            ->
-                RenderChannelHeader(
-                    channelNote = baseNote,
-                    showVideo = !makeItShort,
+        when (val noteEvent = baseNote.event) {
+            is ChannelCreateEvent ->
+                RenderPublicChatChannelHeader(
+                    channelId = noteEvent.id,
                     sendToChannel = true,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
+            is ChannelMetadataEvent ->
+                noteEvent.channelId()?.let {
+                    RenderPublicChatChannelHeader(
+                        channelId = it,
+                        sendToChannel = true,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             is CommunityDefinitionEvent ->
                 (baseNote as? AddressableNote)?.let {
                     RenderCommunity(
@@ -457,7 +484,7 @@ fun ClickableNote(
                             } else {
                                 baseNote
                             }
-                        routeFor(redirectToNote, accountViewModel.userProfile())?.let { nav.nav(it) }
+                        routeFor(redirectToNote, accountViewModel.account)?.let { nav.nav(it) }
                     },
                     onLongClick = showPopup,
                 ).background(backgroundColor.value)
@@ -635,6 +662,11 @@ private fun RenderNoteRow(
         is ChatMessageRelayListEvent -> DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is AdvertisedRelayListEvent -> DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
         is SearchRelayListEvent -> DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is BlockedRelayListEvent -> DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is TrustedRelayListEvent -> DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is IndexerRelayListEvent -> DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is ProxyRelayListEvent -> DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is BroadcastRelayListEvent -> DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
         is PinListEvent -> RenderPinListEvent(baseNote, backgroundColor, accountViewModel, nav)
         is EmojiPackEvent -> RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
         is LiveActivitiesEvent -> RenderLiveActivityEvent(baseNote, accountViewModel, nav)
@@ -762,7 +794,7 @@ private fun RenderNoteRow(
         is VideoHorizontalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is VideoVerticalEvent -> VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         is PictureEvent -> PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
-
+        is BaseVoiceEvent -> RenderVoiceTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
         is FileStorageHeaderEvent -> FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         is CommunityPostApprovalEvent -> {
             RenderPostApproval(
@@ -837,7 +869,16 @@ private fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
-
+        is PublicMessageEvent ->
+            RenderPublicMessage(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
         else -> {
             RenderTextEvent(
                 baseNote,
@@ -977,7 +1018,7 @@ fun SecondUserInfoRow(
         val geo = remember(noteEvent) { noteEvent.geoHashOrScope() }
         if (geo != null) {
             Spacer(StdHorzSpacer)
-            DisplayLocation(geo, nav)
+            DisplayLocation(geo, accountViewModel, nav)
         }
 
         val baseReward = remember(noteEvent) { noteEvent.bountyBaseReward()?.let { Reward(it) } }
@@ -1166,7 +1207,8 @@ private fun RenderAuthorImages(
     nav: INav,
     accountViewModel: AccountViewModel,
 ) {
-    if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+    val noteEvent = baseNote.event
+    if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
             RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
@@ -1177,10 +1219,10 @@ private fun RenderAuthorImages(
         NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
     }
 
-    if (baseNote.event is ChannelMessageEvent) {
-        val baseChannelHex = remember(baseNote) { baseNote.channelHex() }
+    if (noteEvent is ChannelMessageEvent) {
+        val baseChannelHex = noteEvent.channelId()
         if (baseChannelHex != null) {
-            LoadChannel(baseChannelHex, accountViewModel) { channel ->
+            LoadPublicChatChannel(baseChannelHex, accountViewModel) { channel ->
                 ChannelNotePicture(
                     channel,
                     accountViewModel,
@@ -1192,7 +1234,7 @@ private fun RenderAuthorImages(
 
 @Composable
 private fun ChannelNotePicture(
-    baseChannel: Channel,
+    baseChannel: PublicChatChannel,
     accountViewModel: AccountViewModel,
 ) {
     val model by observeChannelPicture(baseChannel, accountViewModel)

@@ -81,7 +81,7 @@ fun PipVideo(controller: MediaControllerState) {
     DisposableEffect(controller) {
         BackgroundMedia.switchKeepPlaying(controller)
         onDispose {
-            BackgroundMedia.clearBackground()
+            BackgroundMedia.clearBackground(controller)
         }
     }
 

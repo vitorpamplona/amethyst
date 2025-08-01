@@ -32,12 +32,10 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
-import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /**
  * Benchmark, which will execute on an Android device.
@@ -55,25 +53,21 @@ class GiftWrapSigningBenchmark {
         val receiver = NostrSignerInternal(KeyPair())
 
         benchmarkRule.measureRepeated {
-            val countDownLatch = CountDownLatch(1)
-
-            sender.sign(
-                ChatMessageEvent.build(
-                    msg = "Hi there! This is a test message",
-                    to =
-                        listOf(
-                            PTag(receiver.pubKey),
-                        ),
-                ) {
-                    changeSubject("Party Tonight")
-                    zapraiser(10000)
-                    contentWarning("nsfw")
-                },
-            ) {
-                countDownLatch.countDown()
+            runBlocking {
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Hi there! This is a test message",
+                        to =
+                            listOf(
+                                PTag(receiver.pubKey),
+                            ),
+                    ) {
+                        changeSubject("Party Tonight")
+                        zapraiser(10000)
+                        contentWarning("nsfw")
+                    },
+                )
             }
-
-            assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
         }
     }
 
@@ -82,40 +76,31 @@ class GiftWrapSigningBenchmark {
         val sender = NostrSignerInternal(KeyPair())
         val receiver = NostrSignerInternal(KeyPair())
 
-        val countDownLatch = CountDownLatch(1)
-
-        var msg: ChatMessageEvent? = null
-
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Hi there! This is a test message",
-                to =
-                    listOf(
-                        PTag(receiver.pubKey),
-                    ),
-            ) {
-                changeSubject("Party Tonight")
-                zapraiser(10000)
-                contentWarning("nsfw")
-            },
-        ) {
-            msg = it
-            countDownLatch.countDown()
-        }
-
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
-
-        benchmarkRule.measureRepeated {
-            val countDownLatch2 = CountDownLatch(1)
-            SealedRumorEvent.create(
-                event = msg!!,
-                encryptTo = receiver.pubKey,
-                signer = sender,
-            ) {
-                countDownLatch2.countDown()
+        val msg =
+            runBlocking {
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Hi there! This is a test message",
+                        to =
+                            listOf(
+                                PTag(receiver.pubKey),
+                            ),
+                    ) {
+                        changeSubject("Party Tonight")
+                        zapraiser(10000)
+                        contentWarning("nsfw")
+                    },
+                )
             }
 
-            assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
+        benchmarkRule.measureRepeated {
+            runBlocking {
+                SealedRumorEvent.create(
+                    event = msg,
+                    encryptTo = receiver.pubKey,
+                    signer = sender,
+                )
+            }
         }
     }
 
@@ -124,44 +109,39 @@ class GiftWrapSigningBenchmark {
         val sender = NostrSignerInternal(KeyPair())
         val receiver = NostrSignerInternal(KeyPair())
 
-        val countDownLatch = CountDownLatch(1)
-
-        var seal: SealedRumorEvent? = null
-
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Hi there! This is a test message",
-                to =
-                    listOf(
-                        PTag(receiver.pubKey),
-                    ),
-            ) {
-                changeSubject("Party Tonight")
-                zapraiser(10000)
-                contentWarning("nsfw")
-            },
-        ) {
-            SealedRumorEvent.create(
-                event = it,
-                encryptTo = receiver.pubKey,
-                signer = sender,
-            ) {
-                seal = it
-                countDownLatch.countDown()
+        val msg =
+            runBlocking {
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Hi there! This is a test message",
+                        to =
+                            listOf(
+                                PTag(receiver.pubKey),
+                            ),
+                    ) {
+                        changeSubject("Party Tonight")
+                        zapraiser(10000)
+                        contentWarning("nsfw")
+                    },
+                )
             }
-        }
 
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        val seal =
+            runBlocking {
+                SealedRumorEvent.create(
+                    event = msg,
+                    encryptTo = receiver.pubKey,
+                    signer = sender,
+                )
+            }
 
         benchmarkRule.measureRepeated {
-            val countDownLatch2 = CountDownLatch(1)
-            GiftWrapEvent.create(
-                event = seal!!,
-                recipientPubKey = receiver.pubKey,
-            ) {
-                countDownLatch2.countDown()
+            runBlocking {
+                GiftWrapEvent.create(
+                    event = seal!!,
+                    recipientPubKey = receiver.pubKey,
+                )
             }
-            assertTrue(countDownLatch2.await(1, TimeUnit.SECONDS))
         }
     }
 
@@ -170,40 +150,40 @@ class GiftWrapSigningBenchmark {
         val sender = NostrSignerInternal(KeyPair())
         val receiver = NostrSignerInternal(KeyPair())
 
-        val countDownLatch = CountDownLatch(1)
-
-        var wrap: GiftWrapEvent? = null
-
-        sender.sign(
-            ChatMessageEvent.build(
-                msg = "Hi there! This is a test message",
-                to =
-                    listOf(
-                        PTag(receiver.pubKey),
-                    ),
-            ) {
-                changeSubject("Party Tonight")
-                zapraiser(10000)
-                contentWarning("nsfw")
-            },
-        ) {
-            SealedRumorEvent.create(
-                event = it,
-                encryptTo = receiver.pubKey,
-                signer = sender,
-            ) {
-                GiftWrapEvent.create(
-                    event = it,
-                    recipientPubKey = receiver.pubKey,
-                ) {
-                    wrap = it
-                    countDownLatch.countDown()
-                }
+        val msg =
+            runBlocking {
+                sender.sign(
+                    ChatMessageEvent.build(
+                        msg = "Hi there! This is a test message",
+                        to =
+                            listOf(
+                                PTag(receiver.pubKey),
+                            ),
+                    ) {
+                        changeSubject("Party Tonight")
+                        zapraiser(10000)
+                        contentWarning("nsfw")
+                    },
+                )
             }
-        }
 
-        assertTrue(countDownLatch.await(1, TimeUnit.SECONDS))
+        val seal =
+            runBlocking {
+                SealedRumorEvent.create(
+                    event = msg,
+                    encryptTo = receiver.pubKey,
+                    signer = sender,
+                )
+            }
 
-        benchmarkRule.measureRepeated { wrap!!.toJson() }
+        val wrap =
+            runBlocking {
+                GiftWrapEvent.create(
+                    event = seal,
+                    recipientPubKey = receiver.pubKey,
+                )
+            }
+
+        benchmarkRule.measureRepeated { wrap.toJson() }
     }
 }

@@ -22,9 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.dm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,11 +30,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -45,13 +40,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultDMRelayList
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
-import com.vitorpamplona.amethyst.ui.note.buttons.SaveButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 
@@ -64,7 +57,11 @@ fun AddDMRelayListDialog(
 ) {
     val postViewModel: DMRelayListViewModel = viewModel()
 
-    LaunchedEffect(Unit) { postViewModel.load(accountViewModel.account) }
+    postViewModel.init(accountViewModel)
+
+    LaunchedEffect(postViewModel, accountViewModel.account) {
+        postViewModel.load()
+    }
 
     Dialog(
         onDismissRequest = onClose,
@@ -73,39 +70,16 @@ fun AddDMRelayListDialog(
         SetDialogToEdgeToEdge()
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Spacer(modifier = StdHorzSpacer)
-
-                            Text(stringRes(R.string.dm_relays_title))
-
-                            SaveButton(
-                                onPost = {
-                                    postViewModel.create()
-                                    onClose()
-                                },
-                                true,
-                            )
-                        }
+                SavingTopBar(
+                    titleRes = R.string.dm_relays_title,
+                    onCancel = {
+                        postViewModel.clear()
+                        onClose()
                     },
-                    navigationIcon = {
-                        Spacer(modifier = StdHorzSpacer)
-                        CloseButton(
-                            onPress = {
-                                postViewModel.clear()
-                                onClose()
-                            },
-                        )
+                    onPost = {
+                        postViewModel.create()
+                        onClose()
                     },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
                 )
             },
         ) { pad ->

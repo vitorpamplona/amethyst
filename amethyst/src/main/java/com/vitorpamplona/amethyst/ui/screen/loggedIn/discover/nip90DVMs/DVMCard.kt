@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +34,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -44,19 +42,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.LeftPictureLayout
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LikeReaction
 import com.vitorpamplona.amethyst.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.observeAppDefinition
 import com.vitorpamplona.amethyst.ui.theme.HalfTopPadding
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing5dp
+import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
@@ -87,25 +85,28 @@ fun RenderContentDVMThumb(
         onImage = {
             card.cover?.let {
                 Box(contentAlignment = BottomStart) {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = null,
+                    MyAsyncImage(
+                        imageUrl = it,
+                        contentDescription = card.name,
                         contentScale = ContentScale.Crop,
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .clip(QuoteBorder),
+                        mainImageModifier = Modifier,
+                        loadedImageModifier = SimpleImageBorder,
+                        accountViewModel = accountViewModel,
+                        onLoadingBackground = {
+                            baseNote.author?.let { author ->
+                                BannerImage(author, SimpleImageBorder, accountViewModel)
+                            }
+                        },
+                        onError = {
+                            baseNote.author?.let { author ->
+                                BannerImage(author, SimpleImageBorder, accountViewModel)
+                            }
+                        },
                     )
                 }
             } ?: run {
-                baseNote.author?.let {
-                    BannerImage(
-                        it,
-                        Modifier
-                            .fillMaxSize()
-                            .clip(QuoteBorder),
-                        accountViewModel,
-                    )
+                baseNote.author?.let { author ->
+                    BannerImage(author, SimpleImageBorder, accountViewModel)
                 }
             }
         },

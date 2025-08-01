@@ -26,29 +26,31 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 @Stable
 class Nip11RelayInformation(
-    val id: String?,
-    val name: String?,
-    val description: String?,
-    val icon: String?,
-    val pubkey: String?,
-    val contact: String?,
-    val supported_nips: List<Int>?,
-    val supported_nip_extensions: List<String>?,
-    val software: String?,
-    val version: String?,
-    val limitation: RelayInformationLimitation?,
-    val relay_countries: List<String>?,
-    val language_tags: List<String>?,
-    val tags: List<String>?,
-    val posting_policy: String?,
-    val payments_url: String?,
-    val retention: List<RelayInformationRetentionData>?,
-    val fees: RelayInformationFees?,
-    val nip50: List<String>?,
+    val id: String? = null,
+    val name: String? = null,
+    val description: String? = null,
+    val icon: String? = null,
+    val pubkey: String? = null,
+    val contact: String? = null,
+    val supported_nips: List<Int>? = null,
+    val supported_nip_extensions: List<String>? = null,
+    val software: String? = null,
+    val version: String? = null,
+    val limitation: RelayInformationLimitation? = null,
+    val relay_countries: List<String>? = null,
+    val language_tags: List<String>? = null,
+    val tags: List<String>? = null,
+    val posting_policy: String? = null,
+    val payments_url: String? = null,
+    val retention: List<RelayInformationRetentionData>? = null,
+    val fees: RelayInformationFees? = null,
+    val nip50: List<String>? = null,
 ) {
     companion object {
         val mapper =
-            jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            jacksonObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
 
         fun fromJson(json: String): Nip11RelayInformation = mapper.readValue(json, Nip11RelayInformation::class.java)
     }
@@ -56,37 +58,37 @@ class Nip11RelayInformation(
 
 @Stable
 class RelayInformationFee(
-    val amount: Int?,
-    val unit: String?,
-    val period: Int?,
-    val kinds: List<Int>?,
+    val amount: Int? = null,
+    val unit: String? = null,
+    val period: Int? = null,
+    val kinds: List<Int>? = null,
 )
 
 class RelayInformationFees(
-    val admission: List<RelayInformationFee>?,
-    val subscription: List<RelayInformationFee>?,
-    val publication: List<RelayInformationFee>?,
+    val admission: List<RelayInformationFee>? = null,
+    val subscription: List<RelayInformationFee>? = null,
+    val publication: List<RelayInformationFee>? = null,
 )
 
 class RelayInformationLimitation(
-    val max_message_length: Int?,
-    val max_subscriptions: Int?,
-    val max_filters: Int?,
-    val max_limit: Int?,
-    val max_subid_length: Int?,
-    val min_prefix: Int?,
-    val max_event_tags: Int?,
-    val max_content_length: Int?,
-    val min_pow_difficulty: Int?,
-    val auth_required: Boolean?,
-    val payment_required: Boolean?,
-    val restricted_writes: Boolean?,
-    val created_at_lower_limit: Int?,
-    val created_at_upper_limit: Int?,
+    val max_message_length: Int? = null,
+    val max_subscriptions: Int? = null,
+    val max_filters: Int? = null,
+    val max_limit: Int? = null,
+    val max_subid_length: Int? = null,
+    val min_prefix: Int? = null,
+    val max_event_tags: Int? = null,
+    val max_content_length: Int? = null,
+    val min_pow_difficulty: Int? = null,
+    val auth_required: Boolean? = null,
+    val payment_required: Boolean? = null,
+    val restricted_writes: Boolean? = null,
+    val created_at_lower_limit: Int? = null,
+    val created_at_upper_limit: Int? = null,
 )
 
 class RelayInformationRetentionData(
-    val kinds: ArrayList<Int>?,
-    val tiem: Int?,
-    val count: Int?,
+    val kinds: ArrayList<Int>? = null,
+    val tiem: Int? = null,
+    val count: Int? = null,
 )

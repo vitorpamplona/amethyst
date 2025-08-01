@@ -37,29 +37,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.ui.components.ShowMoreButton
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.ui.note.RemoveRelayButton
 import com.vitorpamplona.amethyst.ui.note.getGradient
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.ammolite.relays.RelayBriefInfoCache
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
-import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 @Composable
@@ -74,7 +76,9 @@ fun DisplayRelaySet(
     val relays by
         remember(noteEvent) {
             mutableStateOf(
-                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                RelayListCard(
+                    noteEvent.relays().toImmutableList(),
+                ),
             )
         }
 
@@ -105,14 +109,18 @@ fun DisplayNIP65RelayList(
     val writeRelays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.writeRelays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                RelayListCard(
+                    noteEvent.writeRelaysNorm() ?: emptyList(),
+                ),
             )
         }
 
     val readRelays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.readRelays()?.map { RelayBriefInfoCache.RelayBriefInfo(it) }?.toImmutableList() ?: persistentListOf(),
+                RelayListCard(
+                    noteEvent.readRelaysNorm() ?: emptyList(),
+                ),
             )
         }
 
@@ -147,7 +155,9 @@ fun DisplayDMRelayList(
     val relays by
         remember(baseNote) {
             mutableStateOf(
-                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
+                RelayListCard(
+                    noteEvent.relays(),
+                ),
             )
         }
 
@@ -168,14 +178,9 @@ fun DisplaySearchRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? SearchRelayListEvent ?: return
-
-    val relays by
-        remember(baseNote) {
-            mutableStateOf(
-                noteEvent.relays().map { RelayBriefInfoCache.RelayBriefInfo(it) }.toImmutableList(),
-            )
-        }
+    val relays by accountViewModel.account.searchRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.searchRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
 
     DisplayRelaySet(
         relays,
@@ -188,8 +193,113 @@ fun DisplaySearchRelayList(
 }
 
 @Composable
+fun DisplayBlockedRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relays by accountViewModel.account.blockedRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.blockedRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.blocked_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayTrustedRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relays by accountViewModel.account.trustedRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.trustedRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.trusted_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayProxyRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relays by accountViewModel.account.proxyRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.proxyRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.proxy_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayIndexerRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relays by accountViewModel.account.indexerRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.indexerRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.indexer_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
+fun DisplayBroadcastRelayList(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val relays by accountViewModel.account.broadcastRelayListDecryptionCache.observeDecryptedRelayList(baseNote).collectAsStateWithLifecycle(
+        accountViewModel.account.broadcastRelayListDecryptionCache.fastStartValueForRelayList(baseNote),
+    )
+
+    DisplayRelaySet(
+        relays,
+        stringRes(id = R.string.broadcast_relays_title),
+        null,
+        backgroundColor,
+        accountViewModel,
+        nav,
+    )
+}
+
+@Composable
 fun DisplayRelaySet(
-    relays: ImmutableList<RelayBriefInfoCache.RelayBriefInfo>,
+    relay: RelayListCard,
     relayListName: String,
     relayDescription: String?,
     backgroundColor: MutableState<Color>,
@@ -200,9 +310,9 @@ fun DisplayRelaySet(
 
     val toMembersShow =
         if (expanded) {
-            relays
+            relay.relays
         } else {
-            relays.take(3)
+            relay.relays.take(3)
         }
 
     Text(
@@ -239,7 +349,7 @@ fun DisplayRelaySet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = relay.displayUrl,
+                        text = relay.displayUrl(),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -250,13 +360,13 @@ fun DisplayRelaySet(
                     )
 
                     Column(modifier = Modifier.padding(start = 10.dp)) {
-                        RelayOptionsAction(relay.url, accountViewModel, nav)
+                        RelayOptionsAction(relay, accountViewModel, nav)
                     }
                 }
             }
         }
 
-        if (relays.size > 3 && !expanded) {
+        if (relay.relays.size > 3 && !expanded) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -274,19 +384,21 @@ fun DisplayRelaySet(
 
 @Composable
 private fun RelayOptionsAction(
-    relay: String,
+    relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val isCurrentlyOnTheUsersList by observeUserRelayIntoList(accountViewModel.userProfile(), relay, accountViewModel)
+    val clipboardManager = LocalClipboardManager.current
 
     if (isCurrentlyOnTheUsersList) {
         AddRelayButton {
-            nav.nav(Route.EditRelays(relay))
+            clipboardManager.setText(AnnotatedString(relay.url))
+            nav.nav(Route.EditRelays)
         }
     } else {
         RemoveRelayButton {
-            nav.nav(Route.EditRelays(relay))
+            nav.nav(Route.EditRelays)
         }
     }
 }

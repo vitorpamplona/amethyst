@@ -37,8 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.buildLinkString
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.firstIsTaggedHashes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -50,7 +50,8 @@ fun DisplayFollowingHashtagsInPost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val userFollowState by accountViewModel.account.liveKind3Follows.collectAsStateWithLifecycle()
+    val userFollowState by accountViewModel.account.allFollows.flow
+        .collectAsStateWithLifecycle()
     var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = userFollowState) {
@@ -70,7 +71,7 @@ fun DisplayFollowingHashtagsInPost(
 
     firstTag?.let {
         Column(verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, nav) }
+            Row(verticalAlignment = Alignment.CenterVertically) { DisplayTagList(it, accountViewModel, nav) }
         }
     }
 }
@@ -78,6 +79,7 @@ fun DisplayFollowingHashtagsInPost(
 @Composable
 private fun DisplayTagList(
     firstTag: String,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Text(

@@ -20,21 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
-import com.vitorpamplona.ammolite.relays.ALL_FEED_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.filterFindUserMetadataForKey
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-fun filterByAuthor(pubKey: HexKey) =
-    listOf(
-        TypedFilter(
-            types = ALL_FEED_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(MetadataEvent.KIND),
-                    authors = listOfNotNull(pubKey),
-                    limit = 1,
-                ),
-        ),
-    )
+fun filterByAuthor(
+    pubKey: HexKey,
+    defaultRelays: Set<NormalizedRelayUrl>,
+) = filterFindUserMetadataForKey(pubKey, defaultRelays)

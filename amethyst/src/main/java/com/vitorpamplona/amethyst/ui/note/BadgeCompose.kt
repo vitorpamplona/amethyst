@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -84,7 +84,7 @@ fun BadgeCompose(
                         onClick = {
                             routeFor(
                                 note,
-                                accountViewModel.userProfile(),
+                                accountViewModel.account,
                             )?.let { nav.nav(it) }
                         },
                     ),

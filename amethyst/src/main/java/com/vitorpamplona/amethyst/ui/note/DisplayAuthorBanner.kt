@@ -20,26 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
 
 @Composable
 fun DisplayAuthorBanner(
     note: Note,
     accountViewModel: AccountViewModel,
+    modifier: Modifier = SimpleImageBorder,
 ) {
     WatchAuthor(note, accountViewModel) {
         BannerImage(
             it,
-            Modifier
-                .fillMaxSize()
-                .clip(QuoteBorder),
+            modifier,
             accountViewModel,
         )
     }

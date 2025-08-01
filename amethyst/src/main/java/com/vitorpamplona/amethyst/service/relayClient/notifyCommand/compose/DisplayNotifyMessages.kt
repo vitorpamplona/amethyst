@@ -21,14 +21,16 @@
 package com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip65RelayList.RelayUrlFormatter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun DisplayNotifyMessages(
@@ -42,14 +44,21 @@ fun DisplayNotifyMessages(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val openDialogMsg = requests.transientPaymentRequests.collectAsStateWithLifecycle(emptySet())
+    val flow =
+        remember(accountViewModel) {
+            requests.transientPaymentRequests.map {
+                it.filter { it.relayUrl in accountViewModel.account.trustedRelays.flow.value }
+            }
+        }
+
+    val openDialogMsg = flow.collectAsStateWithLifecycle(emptySet())
 
     openDialogMsg.value.firstOrNull()?.let { request ->
         NotifyRequestDialog(
             title =
                 stringRes(
                     id = R.string.payment_required_title,
-                    RelayUrlFormatter.displayUrl(request.relayUrl),
+                    request.relayUrl.displayUrl(),
                 ),
             textContent = request.description,
             accountViewModel = accountViewModel,

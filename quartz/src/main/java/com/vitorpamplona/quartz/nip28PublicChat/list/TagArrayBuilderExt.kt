@@ -22,9 +22,13 @@ package com.vitorpamplona.quartz.nip28PublicChat.list
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip28PublicChat.list.tags.ChannelTag
 
 fun TagArrayBuilder<ChannelListEvent>.followChat(
     eventId: HexKey,
-    relayUrl: String,
+    relayUrl: NormalizedRelayUrl,
 ) = addUnique(ETag.assemble(eventId, relayUrl, null))
+
+fun TagArrayBuilder<ChannelListEvent>.channels(rooms: List<ChannelTag>) = addAll(rooms.map { it.toTagArray() })

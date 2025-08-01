@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.ephemChat.list
 
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.tags.RoomIdTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 
@@ -27,3 +28,5 @@ fun TagArrayBuilder<EphemeralChatListEvent>.roomId(
     id: String,
     relayUrl: String,
 ) = addUnique(RoomIdTag.assemble(id, relayUrl))
+
+fun TagArrayBuilder<EphemeralChatListEvent>.rooms(rooms: List<RoomId>) = addAll(rooms.map { it.toTagArray() })

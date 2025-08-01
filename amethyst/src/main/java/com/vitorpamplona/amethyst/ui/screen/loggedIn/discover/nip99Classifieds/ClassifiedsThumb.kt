@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.showAmountInteger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -118,7 +118,7 @@ fun InnerRenderClassifiedsThumb(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        } ?: run { DisplayAuthorBanner(note, accountViewModel) }
+        } ?: run { DisplayAuthorBanner(note, accountViewModel, Modifier.fillMaxSize()) }
 
         Row(
             Modifier

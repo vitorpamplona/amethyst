@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.service.relays.EOSERelayList
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import kotlin.collections.distinctBy
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * This query type creates only ONE relay subscription. It filters duplicates
@@ -49,12 +50,12 @@ abstract class SingleSubEoseManager<T>(
     fun since() = latestEOSEs.since()
 
     open fun newEose(
-        relayUrl: String,
+        relay: NormalizedRelayUrl,
         time: Long,
-    ) = latestEOSEs.newEose(relayUrl, time)
+    ) = latestEOSEs.newEose(relay, time)
 
     val sub =
-        orchestrator.requestNewSubscription { time, relayUrl ->
+        requestNewSubscription { time, relayUrl ->
             newEose(relayUrl, time)
             if (invalidateAfterEose) {
                 invalidateFilters()
@@ -63,14 +64,15 @@ abstract class SingleSubEoseManager<T>(
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
+        val newFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
 
-        sub.typedFilters = updateFilter(uniqueSubscribedAccounts, since())?.ifEmpty { null }
+        sub.updateFilters(newFilters?.groupByRelay())
     }
 
     abstract fun updateFilter(
-        key: List<T>,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>?
+        keys: List<T>,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>?
 
     abstract fun distinct(key: T): Any
 }

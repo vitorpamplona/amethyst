@@ -28,8 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserRoomSubject
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserShortName
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -47,7 +47,11 @@ fun RoomNameOnlyDisplay(
     fontWeight: FontWeight = FontWeight.Bold,
     accountViewModel: AccountViewModel,
 ) {
-    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room, accountViewModel)
+    // Subscribe in the LocalCache for changes that arrive in the device
+    val roomSubject by accountViewModel.account.chatroomList
+        .getOrCreatePrivateChatroom(room)
+        .subject
+        .collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {
@@ -98,7 +102,10 @@ fun RoomNameDisplay(
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
-    val roomSubject by observeUserRoomSubject(accountViewModel.userProfile(), room, accountViewModel)
+    val roomSubject by accountViewModel.account.chatroomList
+        .getOrCreatePrivateChatroom(room)
+        .subject
+        .collectAsStateWithLifecycle()
 
     CrossfadeIfEnabled(targetState = roomSubject, modifier, accountViewModel = accountViewModel) {
         if (!it.isNullOrBlank()) {

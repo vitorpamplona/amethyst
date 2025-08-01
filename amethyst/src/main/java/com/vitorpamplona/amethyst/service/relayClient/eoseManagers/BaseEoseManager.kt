@@ -22,49 +22,53 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import android.util.Log
 import com.vitorpamplona.amethyst.isDebug
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.datasources.SubscriptionController
+import com.vitorpamplona.ammolite.relays.BundledUpdate
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.Dispatchers
 
 abstract class BaseEoseManager<T>(
     val client: NostrClient,
     val allKeys: () -> Set<T>,
 ) {
-    val orchestrator =
-        SubscriptionController(client) {
-            if (isDebug) Log.d("${this.javaClass.simpleName}", "Updating Subscriptions")
-            updateSubscriptions(allKeys())
-        }
+    protected val logTag: String = this.javaClass.simpleName
+
+    private val orchestrator = SubscriptionController(client)
 
     abstract fun updateSubscriptions(keys: Set<T>)
 
-    fun printStats() = orchestrator.printStats(this.javaClass.simpleName)
+    fun printStats() = orchestrator.printStats(logTag)
 
-    fun invalidateFilters() = orchestrator.invalidateFilters()
+    fun newSubscriptionId() = if (isDebug) logTag + newSubId() else newSubId()
 
-    fun start() {
-        orchestrator.start()
-        if (isDebug) {
-            Log.d("${this.javaClass.simpleName}", "Start")
+    fun getSubscription(subId: String) = orchestrator.getSub(subId)
+
+    fun requestNewSubscription(onEOSE: ((Long, NormalizedRelayUrl) -> Unit)? = null) = orchestrator.requestNewSubscription(newSubscriptionId(), onEOSE)
+
+    fun dismissSubscription(subId: String) = orchestrator.dismissSubscription(subId)
+
+    // Refreshes observers in batches.
+    private val bundler = BundledUpdate(300, Dispatchers.Default)
+
+    fun invalidateFilters() {
+        bundler.invalidate {
+            forceInvalidate()
         }
     }
 
-    fun stop() {
-        orchestrator.stop()
-        if (isDebug) {
-            Log.d("${this.javaClass.simpleName}", "Stop")
-        }
+    fun forceInvalidate() {
+        updateSubscriptions(allKeys())
+
+        orchestrator.updateRelays()
     }
 
     fun destroy() {
+        bundler.cancel()
         orchestrator.destroy()
         if (isDebug) {
-            Log.d("${this.javaClass.simpleName}", "Destroy, Unsubscribe")
-        }
-    }
-
-    fun init() {
-        if (isDebug) {
-            Log.d("${this.javaClass.simpleName}", "Init, Subscribe")
+            Log.d(logTag, "Destroy, Unsubscribe")
         }
     }
 }

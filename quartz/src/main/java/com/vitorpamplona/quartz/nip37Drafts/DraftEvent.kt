@@ -20,14 +20,23 @@
  */
 package com.vitorpamplona.quartz.nip37Drafts
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
+import com.fasterxml.jackson.core.JsonParseException
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -35,7 +44,6 @@ import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
 
 @Immutable
 class DraftEvent(
@@ -45,77 +53,39 @@ class DraftEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    @Transient private var cachedInnerEvent: Map<HexKey, Event?> = mapOf()
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
+    AddressHintProvider,
+    PubKeyHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
-    override fun countMemory(): Long =
-        super.countMemory() +
-            32 + (cachedInnerEvent.values.sumOf { pointerSizeInBytes + (it?.countMemory() ?: 0) })
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     override fun isContentEncoded() = true
 
     fun isDeleted() = content == ""
 
-    fun preCachedDraft(signer: NostrSigner): Event? = cachedInnerEvent[signer.pubKey]
+    fun canDecrypt(signer: NostrSigner) = signer.pubKey == pubKey
 
-    fun preCachedDraft(pubKey: HexKey): Event? = cachedInnerEvent[pubKey]
+    suspend fun createDeletedEvent(signer: NostrSigner): DraftEvent = signer.sign(createdAt, KIND, tags, "")
 
-    fun allCache() = cachedInnerEvent.values
+    suspend fun decryptInnerEvent(signer: NostrSigner): Event {
+        if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
 
-    fun addToCache(
-        pubKey: HexKey,
-        innerEvent: Event,
-    ) {
-        cachedInnerEvent = cachedInnerEvent + Pair(pubKey, innerEvent)
-    }
-
-    fun cachedDraft(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) {
-        cachedInnerEvent[signer.pubKey]?.let {
-            onReady(it)
-            return
-        }
-        decrypt(signer) { draft ->
-            addToCache(signer.pubKey, draft)
-
-            onReady(draft)
-        }
-    }
-
-    private fun decrypt(
-        signer: NostrSigner,
-        onReady: (Event) -> Unit,
-    ) {
-        try {
-            plainContent(signer) {
-                try {
-                    onReady(fromJson(it))
-                } catch (e: Exception) {
-                    // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
-                }
-            }
-        } catch (e: Exception) {
-            // Log.e("UnwrapError", "Couldn't Decrypt the content", e)
-        }
-    }
-
-    private fun plainContent(
-        signer: NostrSigner,
-        onReady: (String) -> Unit,
-    ) {
-        if (content.isEmpty()) return
-
-        signer.nip44Decrypt(content, pubKey, onReady)
-    }
-
-    fun createDeletedEvent(
-        signer: NostrSigner,
-        onReady: (DraftEvent) -> Unit,
-    ) {
-        signer.sign<DraftEvent>(createdAt, KIND, tags, "") {
-            onReady(it)
+        val json = signer.nip44Decrypt(content, pubKey)
+        return try {
+            fromJson(json)
+        } catch (e: JsonParseException) {
+            Log.w("DraftEvent", "Unable to parse inner event of a draft: $json")
+            throw e
         }
     }
 
@@ -128,123 +98,116 @@ class DraftEvent(
             dTag: String,
         ): String = Address.assemble(KIND, pubKey, dTag)
 
-        fun create(
+        @Suppress("DEPRECATION")
+        suspend fun create(
             dTag: String,
             originalNote: TorrentCommentEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tagsWithMarkers =
                 originalNote.tags.filter {
                     it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
                 }
 
-            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+            return create(dTag, originalNote, tagsWithMarkers, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             originalNote: InteractiveStoryBaseEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tags = mutableListOf<Array<String>>()
-            create(dTag, originalNote, tags, signer, createdAt, onReady)
+            return create(dTag, originalNote, tags, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             originalNote: LiveActivitiesChatMessageEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tags = mutableListOf<Array<String>>()
             originalNote.activity()?.let { tags.add(arrayOf("a", it.toTag(), "", "root")) }
             originalNote.replyingTo()?.let { tags.add(arrayOf("e", it, "", "reply")) }
 
-            create(dTag, originalNote, tags, signer, createdAt, onReady)
+            return create(dTag, originalNote, tags, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             originalNote: ChannelMessageEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tags = mutableListOf<Array<String>>()
             originalNote.channelId()?.let { tags.add(arrayOf("e", it)) }
 
-            create(dTag, originalNote, tags, signer, createdAt, onReady)
+            return create(dTag, originalNote, tags, signer, createdAt)
         }
 
-        fun create(
+        @Suppress("DEPRECATION")
+        suspend fun create(
             dTag: String,
             originalNote: GitReplyEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tags = mutableListOf<Array<String>>()
             originalNote.repository()?.let { tags.add(arrayOf("a", it.toTag())) }
             originalNote.replyingTo()?.let { tags.add(arrayOf("e", it)) }
 
-            create(dTag, originalNote, tags, signer, createdAt, onReady)
+            return create(dTag, originalNote, tags, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             originalNote: PollNoteEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tagsWithMarkers =
                 originalNote.tags.filter {
                     it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
                 }
 
-            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+            return create(dTag, originalNote, tagsWithMarkers, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             originalNote: CommentEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tagsWithMarkers = originalNote.rootScopes() + originalNote.directReplies()
 
-            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+            return create(dTag, originalNote, tagsWithMarkers, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             originalNote: TextNoteEvent,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tagsWithMarkers =
                 originalNote.tags.filter {
                     it.size > 3 && (it[0] == "e" || it[0] == "a") && (it[3] == "root" || it[3] == "reply")
                 }
 
-            create(dTag, originalNote, tagsWithMarkers, signer, createdAt, onReady)
+            return create(dTag, originalNote, tagsWithMarkers, signer, createdAt)
         }
 
-        fun create(
+        suspend fun create(
             dTag: String,
             innerEvent: Event,
             anchorTagArray: List<Array<String>> = emptyList(),
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-            onReady: (DraftEvent) -> Unit,
-        ) {
+        ): DraftEvent {
             val tags = mutableListOf<Array<String>>()
             tags.add(arrayOf("d", dTag))
             tags.add(arrayOf("k", "${innerEvent.kind}"))
@@ -253,12 +216,15 @@ class DraftEvent(
                 tags.addAll(anchorTagArray)
             }
 
-            signer.nip44Encrypt(innerEvent.toJson(), signer.pubKey) { encryptedContent ->
-                signer.sign<DraftEvent>(createdAt, KIND, tags.toTypedArray(), encryptedContent) {
-                    it.addToCache(signer.pubKey, innerEvent)
-                    onReady(it)
-                }
-            }
+            val draft =
+                signer.sign<DraftEvent>(
+                    createdAt = createdAt,
+                    kind = KIND,
+                    tags = tags.toTypedArray(),
+                    content = signer.nip44Encrypt(innerEvent.toJson(), signer.pubKey),
+                )
+
+            return draft
         }
     }
 }

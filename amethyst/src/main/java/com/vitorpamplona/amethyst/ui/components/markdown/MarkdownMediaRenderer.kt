@@ -43,7 +43,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.LoadedBechLink
 import com.vitorpamplona.amethyst.ui.theme.Font17SP
@@ -171,7 +171,7 @@ class MarkdownMediaRenderer(
             when (val entity = loadedLink.nip19.entity) {
                 is NPub -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
                 is NProfile -> renderObservableUser(entity.hex, loadedLink.nip19.nip19raw, richTextStringBuilder)
-                is com.vitorpamplona.quartz.nip19Bech32.entities.Note -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
+                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEvent -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NEmbed -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)
                 is NAddress -> renderObservableShortNoteUri(loadedLink, uri, richTextStringBuilder)

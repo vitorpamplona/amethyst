@@ -27,9 +27,11 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.service.replace
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
+import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +40,7 @@ import kotlinx.coroutines.launch
 
 @Stable
 class Nip65RelayListViewModel : ViewModel() {
+    private lateinit var accountViewModel: AccountViewModel
     private lateinit var account: Account
 
     private val _homeRelays = MutableStateFlow<List<BasicRelaySetupInfo>>(emptyList())
@@ -48,17 +51,21 @@ class Nip65RelayListViewModel : ViewModel() {
 
     var hasModified = false
 
-    fun load(account: Account) {
-        this.account = account
+    fun init(accountViewModel: AccountViewModel) {
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+    }
+
+    fun load() {
         clear()
         loadRelayDocuments()
     }
 
     fun create() {
         if (hasModified) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val writes = _homeRelays.value.map { it.url }.toSet()
-                val reads = _notificationRelays.value.map { it.url }.toSet()
+            accountViewModel.runIOCatching {
+                val writes = _homeRelays.value.map { it.relay }.toSet()
+                val reads = _notificationRelays.value.map { it.relay }.toSet()
 
                 val urls = writes.union(reads)
 
@@ -66,13 +73,14 @@ class Nip65RelayListViewModel : ViewModel() {
                     urls.map {
                         val type =
                             if (writes.contains(it) && reads.contains(it)) {
-                                AdvertisedRelayListEvent.AdvertisedRelayType.BOTH
+                                AdvertisedRelayType.BOTH
                             } else if (writes.contains(it)) {
-                                AdvertisedRelayListEvent.AdvertisedRelayType.WRITE
+                                AdvertisedRelayType.WRITE
                             } else {
-                                AdvertisedRelayListEvent.AdvertisedRelayType.READ
+                                AdvertisedRelayType.READ
                             }
-                        AdvertisedRelayListEvent.AdvertisedRelayInfo(it, type)
+
+                        AdvertisedRelayInfo(it, type)
                     },
                 )
                 clear()
@@ -84,8 +92,8 @@ class Nip65RelayListViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _homeRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
-                    dirtyUrl = item.url,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
+                    relay = item.relay,
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay)) },
                     onInfo = {
                         toggleHomePaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -95,8 +103,8 @@ class Nip65RelayListViewModel : ViewModel() {
 
             _notificationRelays.value.forEach { item ->
                 Nip11CachedRetriever.loadRelayInfo(
-                    dirtyUrl = item.url,
-                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.shouldUseTorForDirty(item.url)) },
+                    relay = item.relay,
+                    okHttpClient = { Amethyst.instance.okHttpClients.getHttpClient(account.torRelayState.shouldUseTorForClean(item.relay)) },
                     onInfo = {
                         toggleNotifPaidRelay(item, it.limitation?.payment_required ?: false)
                     },
@@ -109,28 +117,28 @@ class Nip65RelayListViewModel : ViewModel() {
     fun clear() {
         hasModified = false
         _homeRelays.update {
-            val relayList = account.getNIP65RelayList()?.writeRelays() ?: emptyList()
+            val relayList = account.nip65RelayList.getNIP65RelayList()?.writeRelaysNorm() ?: emptyList()
 
             relayList
                 .map { relaySetupInfoBuilder(it) }
-                .distinctBy { it.url }
+                .distinctBy { it.relay }
                 .sortedBy { it.relayStat.receivedBytes }
                 .reversed()
         }
 
         _notificationRelays.update {
-            val relayList = account.getNIP65RelayList()?.readRelays() ?: emptyList()
+            val relayList = account.nip65RelayList.getNIP65RelayList()?.readRelaysNorm() ?: emptyList()
 
             relayList
                 .map { relaySetupInfoBuilder(it) }
-                .distinctBy { it.url }
+                .distinctBy { it.relay }
                 .sortedBy { it.relayStat.receivedBytes }
                 .reversed()
         }
     }
 
     fun addHomeRelay(relay: BasicRelaySetupInfo) {
-        if (_homeRelays.value.any { it.url == relay.url }) return
+        if (_homeRelays.value.any { it.relay == relay.relay }) return
 
         _homeRelays.update { it.plus(relay) }
         hasModified = true
@@ -154,7 +162,7 @@ class Nip65RelayListViewModel : ViewModel() {
     }
 
     fun addNotifRelay(relay: BasicRelaySetupInfo) {
-        if (_notificationRelays.value.any { it.url == relay.url }) return
+        if (_notificationRelays.value.any { it.relay == relay.relay }) return
 
         _notificationRelays.update { it.plus(relay) }
         hasModified = true

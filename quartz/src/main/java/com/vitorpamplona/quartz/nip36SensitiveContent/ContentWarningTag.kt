@@ -20,26 +20,30 @@
  */
 package com.vitorpamplona.quartz.nip36SensitiveContent
 
-import com.vitorpamplona.quartz.utils.bytesUsedInMemory
-import com.vitorpamplona.quartz.utils.pointerSizeInBytes
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.arrayOfNotNull
 
 class ContentWarningTag(
-    val reason: String,
+    val reason: String? = null,
 ) {
-    fun countMemory(): Long = 1 * pointerSizeInBytes + reason.bytesUsedInMemory()
-
     fun toTagArray() = assemble(reason)
 
     companion object {
         const val TAG_NAME = "content-warning"
 
         @JvmStatic
+        fun isTag(tag: Array<String>) = tag.has(0) && tag[0] == TAG_NAME
+
+        @JvmStatic
         fun parse(tags: Array<String>): ContentWarningTag {
             require(tags[0] == TAG_NAME)
-            return ContentWarningTag(tags[1])
+            return ContentWarningTag(tags.getOrNull(1))
         }
 
         @JvmStatic
-        fun assemble(reason: String) = arrayOf(TAG_NAME, reason)
+        fun assemble() = arrayOfNotNull(TAG_NAME)
+
+        @JvmStatic
+        fun assemble(reason: String?) = arrayOfNotNull(TAG_NAME, reason)
     }
 }

@@ -21,8 +21,9 @@
 package com.vitorpamplona.quartz.nip01Core.tags.people
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 interface PubKeyReferenceTag {
     val pubKey: HexKey
-    val relayHint: String?
+    val relayHint: NormalizedRelayUrl?
 }

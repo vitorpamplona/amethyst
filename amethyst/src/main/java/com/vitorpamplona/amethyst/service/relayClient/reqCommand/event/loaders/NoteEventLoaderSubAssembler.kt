@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 class NoteEventLoaderSubAssembler(
     client: NostrClient,

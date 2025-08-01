@@ -26,13 +26,12 @@ import java.util.UUID
 class BunkerResponseEvent(
     id: String = UUID.randomUUID().toString(),
     val event: Event,
-) : com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse(id, event.toJson(), null) {
+) : BunkerResponse(id, event.toJson(), null) {
     companion object {
         fun parse(
             id: String,
             result: String,
             error: String? = null,
-        ) = com.vitorpamplona.quartz.nip46RemoteSigner
-            .BunkerResponseEvent(id, Event.fromJson(result))
+        ) = BunkerResponseEvent(id, Event.fromJson(result))
     }
 }

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.isTaggedGeoHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 
 class GeoHashFeedFilter(
     val tag: String,
+    val relays: Set<NormalizedRelayUrl>,
     val account: Account,
     val cache: LocalCache,
 ) : AdditiveFeedFilter<Note>() {
@@ -62,7 +64,7 @@ class GeoHashFeedFilter(
         geoTag: String,
     ): Boolean =
         (acceptableViaHashtag(it.event, geoTag) || acceptableViaScope(it.event, geoTag)) &&
-            !it.isHiddenFor(account.flowHiddenUsers.value) &&
+            !it.isHiddenFor(account.hiddenUsers.flow.value) &&
             account.isAcceptable(it)
 
     fun acceptableViaHashtag(
@@ -78,7 +80,7 @@ class GeoHashFeedFilter(
                 event is PollNoteEvent ||
                 event is AudioHeaderEvent
         ) &&
-            event.isTaggedGeoHash(geohash) == true
+            event.isTaggedGeoHash(geohash)
 
     fun acceptableViaScope(
         event: Event?,

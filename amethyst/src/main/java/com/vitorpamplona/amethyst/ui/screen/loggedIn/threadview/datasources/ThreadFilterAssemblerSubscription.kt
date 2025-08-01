@@ -22,19 +22,32 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.KeyDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 @Composable
 fun ThreadFilterAssemblerSubscription(
     eventId: HexKey,
+    accountViewModel: AccountViewModel,
+) = ThreadFilterAssemblerSubscription(
+    eventId,
+    accountViewModel.account,
+    accountViewModel.dataSources().thread,
+)
+
+@Composable
+fun ThreadFilterAssemblerSubscription(
+    eventId: HexKey,
+    account: Account,
     filterAssembler: ThreadFilterAssembler,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
         remember(eventId) {
-            ThreadQueryState(eventId)
+            ThreadQueryState(eventId, account)
         }
 
     KeyDataSourceSubscription(state, filterAssembler)

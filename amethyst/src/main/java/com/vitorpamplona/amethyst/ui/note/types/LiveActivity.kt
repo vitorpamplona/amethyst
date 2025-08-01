@@ -52,13 +52,14 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
-import com.vitorpamplona.amethyst.ui.navigation.EmptyNav
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.DisplayAuthorBanner
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveFlag
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.ScheduledFlag
@@ -162,19 +163,22 @@ fun RenderLiveActivityEventInner(
 
         CrossfadeIfEnabled(targetState = status, label = "RenderLiveActivityEventInner", accountViewModel = accountViewModel) {
             when (it) {
-                StatusTag.STATUS.LIVE.code -> {
+                StatusTag.STATUS.LIVE -> {
                     media?.let { CrossfadeCheckIfVideoIsOnline(it, accountViewModel) { LiveFlag() } }
                 }
 
-                StatusTag.STATUS.PLANNED.code -> {
+                StatusTag.STATUS.PLANNED -> {
                     ScheduledFlag(starts)
                 }
+
+                StatusTag.STATUS.ENDED -> {}
+                null -> {}
             }
         }
     }
 
     media?.let { media ->
-        if (status == StatusTag.STATUS.LIVE.code) {
+        if (status == StatusTag.STATUS.LIVE) {
             CheckIfVideoIsOnline(media, accountViewModel) { isOnline ->
                 if (isOnline) {
                     Row(
@@ -209,7 +213,7 @@ fun RenderLiveActivityEventInner(
                 }
             }
         } else {
-            if (status == StatusTag.STATUS.ENDED.code || (status == StatusTag.STATUS.PLANNED.code && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
+            if (status == StatusTag.STATUS.ENDED || (status == StatusTag.STATUS.PLANNED && (starts ?: 0) < TimeUtils.eightHoursAgo())) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -232,10 +236,11 @@ fun RenderLiveActivityEventInner(
                                 mainImageModifier = Modifier.fillMaxWidth(),
                                 loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
                                 accountViewModel = accountViewModel,
+                                onLoadingBackground = { DefaultImageHeaderBackground(baseNote, accountViewModel) },
                                 onError = { DefaultImageHeader(baseNote, accountViewModel) },
                             )
                         }
-                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel) }
+                    } ?: run { DisplayAuthorBanner(baseNote, accountViewModel, MaterialTheme.colorScheme.imageModifier) }
 
                     Text(
                         text = stringRes(id = R.string.live_stream_has_ended),

@@ -28,9 +28,6 @@ import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip17Dm.files.encryption.AESGCM
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class ChatFileUploader(
     val account: Account,
@@ -39,100 +36,90 @@ class ChatFileUploader(
     // NIP 17
     // ------
 
-    fun justUploadNIP17(
+    suspend fun justUploadNIP17(
         viewState: ChatFileUploadState,
-        scope: CoroutineScope,
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: (List<SuccessfulUploads>) -> Unit,
+        onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
+        viewState.isUploadingImage = true
 
-        scope.launch(Dispatchers.Default) {
-            viewState.isUploadingImage = true
+        val cipher = AESGCM()
 
-            val cipher = AESGCM()
+        val results =
+            orchestrator.uploadEncrypted(
+                viewState.caption,
+                viewState.contentWarningReason,
+                MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                cipher,
+                viewState.selectedServer,
+                account,
+                context,
+            )
 
-            val results =
-                orchestrator.uploadEncrypted(
-                    scope,
-                    viewState.caption,
-                    viewState.contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
-                    cipher,
-                    viewState.selectedServer,
-                    account,
-                    context,
-                )
-
-            if (results.allGood) {
-                val list =
-                    results.successful.mapNotNull { state ->
-                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, cipher)
-                        } else {
-                            null
-                        }
+        if (results.allGood) {
+            val list =
+                results.successful.mapNotNull { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, cipher)
+                    } else {
+                        null
                     }
+                }
 
-                onceUploaded(list)
-                viewState.reset()
-            } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+            onceUploaded(list)
+            viewState.reset()
+        } else {
+            val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            viewState.isUploadingImage = false
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
+
+        viewState.isUploadingImage = false
     }
 
     // ------
     // NIP 04
     // ------
 
-    fun justUploadNIP04(
+    suspend fun justUploadNIP04(
         viewState: ChatFileUploadState,
-        scope: CoroutineScope,
         onError: (title: String, message: String) -> Unit,
         context: Context,
-        onceUploaded: (List<SuccessfulUploads>) -> Unit,
+        onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
+        viewState.isUploadingImage = true
 
-        scope.launch(Dispatchers.Default) {
-            viewState.isUploadingImage = true
+        val results =
+            orchestrator.upload(
+                viewState.caption,
+                viewState.contentWarningReason,
+                MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
+                viewState.selectedServer,
+                account,
+                context,
+            )
 
-            val results =
-                orchestrator.upload(
-                    scope,
-                    viewState.caption,
-                    viewState.contentWarningReason,
-                    MediaCompressor.intToCompressorQuality(viewState.mediaQualitySlider),
-                    viewState.selectedServer,
-                    account,
-                    context,
-                )
-
-            if (results.allGood) {
-                val list =
-                    results.successful.mapNotNull { state ->
-                        if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, null)
-                        } else {
-                            null
-                        }
+        if (results.allGood) {
+            val list =
+                results.successful.mapNotNull { state ->
+                    if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(state.result, viewState.caption, viewState.contentWarningReason, null)
+                    } else {
+                        null
                     }
+                }
 
-                onceUploaded(list)
-                viewState.reset()
-            } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+            onceUploaded(list)
+            viewState.reset()
+        } else {
+            val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
-            }
-
-            viewState.isUploadingImage = false
+            onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
         }
+
+        viewState.isUploadingImage = false
     }
 }

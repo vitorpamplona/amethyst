@@ -31,6 +31,6 @@ class HiddenWordsFeedFilter(
     override fun showHiddenKey(): Boolean = true
 
     override fun feed(): List<String> =
-        account.flowHiddenUsers.value.hiddenWords
+        account.hiddenUsers.flow.value.hiddenWords
             .toList()
 }

@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.ClickableNote
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
@@ -35,7 +35,7 @@ import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.RenderLongFormThumb
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderChannelThumb
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderPublicChatChannelThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.RenderFollowSetThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.RenderLiveActivityThumb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.RenderCommunitiesThumb
@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip51Lists.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -203,7 +203,7 @@ private fun RenderNoteRow(
     when (baseNote.event) {
         is LiveActivitiesEvent -> RenderLiveActivityThumb(baseNote, accountViewModel, nav)
         is CommunityDefinitionEvent -> RenderCommunitiesThumb(baseNote, accountViewModel, nav)
-        is ChannelCreateEvent -> RenderChannelThumb(baseNote, accountViewModel, nav)
+        is ChannelCreateEvent -> RenderPublicChatChannelThumb(baseNote, accountViewModel, nav)
         is AppDefinitionEvent -> RenderContentDVMThumb(baseNote, accountViewModel, nav)
         is FollowListEvent -> RenderFollowSetThumb(baseNote, accountViewModel, nav)
         is LongTextNoteEvent -> RenderLongFormThumb(baseNote, accountViewModel, nav)

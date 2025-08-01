@@ -21,18 +21,19 @@
 package com.vitorpamplona.quartz.nip89AppHandlers.recommendation
 
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.tags.RecommendationTag
 
 fun TagArrayBuilder<AppRecommendationEvent>.recommend(
     addressId: String,
-    relay: String?,
+    relay: NormalizedRelayUrl?,
     platform: String?,
 ) = add(RecommendationTag.assemble(addressId, relay, platform))
 
 fun TagArrayBuilder<AppRecommendationEvent>.recommend(
     address: Address,
-    relay: String?,
+    relay: NormalizedRelayUrl?,
     platform: String?,
 ) = add(RecommendationTag.assemble(address, relay, platform))
 

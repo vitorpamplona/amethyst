@@ -67,7 +67,7 @@ class EventManualSerializer {
             sig: String,
         ): String {
             val obj = assemble(id, pubKey, createdAt, kind, tags, content, sig)
-            return EventMapper.mapper.writeValueAsString(obj)
+            return JsonMapper.mapper.writeValueAsString(obj)
         }
     }
 }

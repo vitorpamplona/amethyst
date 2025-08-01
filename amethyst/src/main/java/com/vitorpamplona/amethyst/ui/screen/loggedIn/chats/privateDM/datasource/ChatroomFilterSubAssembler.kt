@@ -21,23 +21,17 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 
 class ChatroomFilterSubAssembler(
     client: NostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
-) : PerUserAndFollowListEoseManager<ChatroomQueryState>(client, allKeys) {
+) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: ChatroomQueryState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
-        filterNip04DMs(
-            key.room.users,
-            key.account.userProfile().pubkeyHex,
-            since,
-        )
+        since: SincePerRelayMap?,
+    ) = filterNip04DMs(key.room.users, key.account, since)
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 

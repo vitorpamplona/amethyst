@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 
 class ToClientParser {
     fun parse(newMessage: String): Message? {
-        val msgArray = EventMapper.mapper.readTree(newMessage)
+        val msgArray = JsonMapper.mapper.readTree(newMessage)
         val type = msgArray.get(0).asText()
         return when (type) {
             EventMessage.LABEL -> EventMessage.parse(msgArray)

@@ -22,10 +22,18 @@ package com.vitorpamplona.quartz.nip01Core.hints.types
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 data class EventIdHint(
     val eventId: HexKey,
-    var relay: String? = null,
+    val relay: NormalizedRelayUrl,
+) : Hint {
+    override fun id() = eventId.hexToByteArray()
+}
+
+data class EventIdHintOptional(
+    val eventId: HexKey,
+    val relay: NormalizedRelayUrl? = null,
 ) : Hint {
     override fun id() = eventId.hexToByteArray()
 }

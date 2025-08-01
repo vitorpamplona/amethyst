@@ -367,11 +367,11 @@ class RichTextParser {
 
         private fun removeQueryParamsForExtensionComparison(fullUrl: String): String =
             if (fullUrl.contains("?")) {
-                fullUrl.split("?")[0].lowercase()
+                fullUrl.split("?")[0]
             } else if (fullUrl.contains("#")) {
-                fullUrl.split("#")[0].lowercase()
+                fullUrl.split("#")[0]
             } else {
-                fullUrl.lowercase()
+                fullUrl
             }
 
         fun isImageOrVideoUrl(url: String): Boolean {

@@ -28,4 +28,10 @@ object RandomInstance {
     fun int(bound: Int = Int.MAX_VALUE) = randomizer.nextInt(bound)
 
     fun bytes(size: Int) = ByteArray(size).also { randomizer.nextBytes(it) }
+
+    val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+
+    fun randomChar() = charPool[randomizer.nextInt(charPool.size)]
+
+    fun randomChars(size: Int = 16) = String(CharArray(size) { randomChar() })
 }

@@ -21,12 +21,11 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -39,54 +38,85 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
+
+val RepliesAndReactionsKinds =
+    listOf(
+        TextNoteEvent.KIND,
+        ReactionEvent.KIND,
+        RepostEvent.KIND,
+        GenericRepostEvent.KIND,
+        ReportEvent.KIND,
+        LnZapEvent.KIND,
+        PollNoteEvent.KIND,
+        OtsEvent.KIND,
+        TextNoteModificationEvent.KIND,
+        GitReplyEvent.KIND,
+    )
+
+val RepliesAndReactionsKinds2 =
+    listOf(
+        DeletionEvent.KIND,
+        NIP90ContentDiscoveryResponseEvent.KIND,
+        NIP90StatusEvent.KIND,
+        TorrentCommentEvent.KIND,
+    )
 
 fun filterRepliesAndReactionsToNotes(
     events: List<Note>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter>? {
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter>? {
     if (events.isEmpty()) return null
 
-    val eventIds = events.mapTo(mutableSetOf<String>()) { it.idHex }.sorted()
+    val perRelayEventIds =
+        mapOfSet {
+            events.forEach { note ->
+                note.relayUrlsForReactions().forEach { relay ->
+                    add(relay, note.idHex)
+                }
+            }
+        }
 
-    return listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            TextNoteEvent.KIND,
-                            ReactionEvent.KIND,
-                            RepostEvent.KIND,
-                            GenericRepostEvent.KIND,
-                            ReportEvent.KIND,
-                            LnZapEvent.KIND,
-                            PollNoteEvent.KIND,
-                            OtsEvent.KIND,
-                            TextNoteModificationEvent.KIND,
-                            GitReplyEvent.KIND,
+    return perRelayEventIds.flatMap {
+        val since = since?.get(it.key)?.time
+        val sortedList = it.value.sorted()
+        val relay = it.key
+        if (sortedList.isNotEmpty()) {
+            listOf(
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = RepliesAndReactionsKinds,
+                            tags = mapOf("e" to sortedList),
+                            since = since,
+                            // Max amount of "replies" to download on a specific event.
+                            limit = 1000,
                         ),
-                    tags = mapOf("e" to eventIds),
-                    since = since,
-                    // Max amount of "replies" to download on a specific event.
-                    limit = 1000,
                 ),
-        ),
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            DeletionEvent.KIND,
-                            NIP90ContentDiscoveryResponseEvent.KIND,
-                            NIP90StatusEvent.KIND,
-                            TorrentCommentEvent.KIND,
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = RepliesAndReactionsKinds2,
+                            tags = mapOf("e" to sortedList),
+                            since = since,
+                            limit = 100,
                         ),
-                    tags = mapOf("e" to eventIds),
-                    since = since,
-                    limit = 100,
                 ),
-        ),
-    )
+                RelayBasedFilter(
+                    relay = relay,
+                    filter =
+                        Filter(
+                            kinds = listOf(TextNoteEvent.KIND),
+                            tags = mapOf("q" to sortedList),
+                            since = since,
+                            limit = 1000,
+                        ),
+                ),
+            )
+        } else {
+            emptyList()
+        }
+    }
 }

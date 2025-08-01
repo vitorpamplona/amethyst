@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Downloading
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -41,11 +43,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -56,14 +60,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNip05
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.ui.note.NIP05CheckingIcon
-import com.vitorpamplona.amethyst.ui.note.NIP05FailedVerification
-import com.vitorpamplona.amethyst.ui.note.NIP05VerifiedIcon
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
@@ -324,7 +327,7 @@ fun DisplayStatusInner(
                     onClick = {
                         routeFor(
                             note,
-                            accountViewModel.userProfile(),
+                            accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
                 ) {
@@ -346,7 +349,7 @@ fun DisplayStatusInner(
                     onClick = {
                         routeFor(
                             it,
-                            accountViewModel.userProfile(),
+                            accountViewModel.account,
                         )?.let { nav.nav(it) }
                     },
                 ) {
@@ -389,7 +392,7 @@ fun DisplayNIP05(
         )
     }
 
-    NIP05VerifiedSymbol(nip05Verified, NIP05IconSize, accountViewModel)
+    NIP05VerifiedSymbol(nip05Verified, 1, NIP05IconSize, accountViewModel)
 
     ClickableTextPrimary(
         text = domain,
@@ -404,14 +407,33 @@ fun DisplayNIP05(
 @Composable
 private fun NIP05VerifiedSymbol(
     nip05Verified: MutableState<Boolean?>,
+    compositionSizeReference: Int,
     modifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     CrossfadeIfEnabled(targetState = nip05Verified.value, accountViewModel = accountViewModel) {
         when (it) {
-            null -> NIP05CheckingIcon(modifier = modifier)
-            true -> NIP05VerifiedIcon(modifier = modifier)
-            false -> NIP05FailedVerification(modifier = modifier)
+            null ->
+                Icon(
+                    imageVector = Icons.Default.Downloading,
+                    contentDescription = stringRes(id = R.string.nip05_checking),
+                    modifier = modifier,
+                    tint = Color.Yellow,
+                )
+            true ->
+                Icon(
+                    painter = painterRes(R.drawable.nip_05, compositionSizeReference),
+                    contentDescription = stringRes(id = R.string.nip05_verified),
+                    modifier = modifier,
+                    tint = Color.Unspecified,
+                )
+            false ->
+                Icon(
+                    imageVector = Icons.Default.Report,
+                    contentDescription = stringRes(id = R.string.nip05_failed),
+                    modifier = modifier,
+                    tint = Color.Red,
+                )
         }
     }
 }
@@ -427,7 +449,7 @@ fun DisplayNip05ProfileStatus(
         if (nip05.split("@").size <= 2) {
             val nip05Verified = nip05VerificationAsAState(user.info!!, user.pubkeyHex, accountViewModel)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NIP05VerifiedSymbol(nip05Verified, Size16Modifier, accountViewModel)
+                NIP05VerifiedSymbol(nip05Verified, 2, Size16Modifier, accountViewModel)
                 var domainPadStart = 5.dp
 
                 val (user, domain) =

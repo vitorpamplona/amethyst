@@ -45,6 +45,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -56,8 +57,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AROUND_ME
-import com.vitorpamplona.amethyst.model.EphemeralChatChannel
 import com.vitorpamplona.amethyst.service.OnlineChecker
+import com.vitorpamplona.amethyst.service.OnlineChecker.isOnline
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
@@ -72,9 +73,9 @@ import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.AppBottomBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.NewGeoPostButton
@@ -91,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import kotlin.collections.forEachIndexed
 
 @Composable
 fun HomeScreen(
@@ -228,10 +230,13 @@ fun HomeScreenFloatingButton(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val list = accountViewModel.account.settings.defaultHomeFollowList.collectAsStateWithLifecycle()
+    val list =
+        accountViewModel.account.settings.defaultHomeFollowList
+            .collectAsStateWithLifecycle()
 
     if (list.value == AROUND_ME) {
-        val location by Amethyst.instance.locationManager.geohashStateFlow.collectAsStateWithLifecycle()
+        val location by Amethyst.instance.locationManager.geohashStateFlow
+            .collectAsStateWithLifecycle()
 
         when (val myLocation = location) {
             is LocationState.LocationResult.Success -> NewGeoPostButton(myLocation.geoHash.toString(), accountViewModel, nav)
@@ -340,10 +345,8 @@ fun DisplayLiveBubbles(
     val feed by liveFeed.feed.collectAsStateWithLifecycle()
 
     LazyRow(HorzPadding, horizontalArrangement = spacedBy(Size5dp)) {
-        itemsIndexed(feed.list, key = { _, item -> item.idHex }) { _, item ->
-            when (item) {
-                is EphemeralChatChannel -> RenderEphemeralBubble(item, accountViewModel, nav)
-            }
+        itemsIndexed(feed.list, key = { _, item -> item.roomId.toKey() }) { _, item ->
+            RenderEphemeralBubble(item, accountViewModel, nav)
         }
     }
 }
@@ -375,17 +378,13 @@ fun CheckIfVideoIsOnline(
     accountViewModel: AccountViewModel,
     whenOnline: @Composable (Boolean) -> Unit,
 ) {
-    var online by remember {
-        mutableStateOf(
-            OnlineChecker.isOnlineCached(url),
-        )
-    }
-
-    LaunchedEffect(key1 = url) {
-        accountViewModel.checkVideoIsOnline(url) { isOnline ->
-            if (online != isOnline) {
-                online = isOnline
-            }
+    val online by produceState(
+        initialValue = OnlineChecker.isOnlineCached(url),
+        key1 = url,
+    ) {
+        val isOnline = accountViewModel.checkVideoIsOnline(url)
+        if (value != isOnline) {
+            value = isOnline
         }
     }
 
@@ -398,17 +397,13 @@ fun CrossfadeCheckIfVideoIsOnline(
     accountViewModel: AccountViewModel,
     whenOnline: @Composable () -> Unit,
 ) {
-    var online by remember {
-        mutableStateOf(
-            OnlineChecker.isOnlineCached(url),
-        )
-    }
-
-    LaunchedEffect(key1 = url) {
-        accountViewModel.checkVideoIsOnline(url) { isOnline ->
-            if (online != isOnline) {
-                online = isOnline
-            }
+    val online by produceState(
+        initialValue = OnlineChecker.isOnlineCached(url),
+        key1 = url,
+    ) {
+        val isOnline = accountViewModel.checkVideoIsOnline(url)
+        if (value != isOnline) {
+            value = isOnline
         }
     }
 

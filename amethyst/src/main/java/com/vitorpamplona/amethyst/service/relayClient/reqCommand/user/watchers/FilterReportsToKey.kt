@@ -20,25 +20,36 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
-fun filterReportsToKeys(
-    authors: Set<HexKey>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> =
-    listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
-            filter =
-                SincePerRelayFilter(
-                    kinds = listOf(ReportEvent.KIND),
-                    tags = mapOf("p" to authors.toList()),
-                    since = since,
-                ),
-        ),
-    )
+val ReportKindList = listOf(ReportEvent.KIND)
+
+fun filterReportsToKeysFromTrusted(
+    targets: Set<HexKey>,
+    trustedAccounts: Map<NormalizedRelayUrl, Set<HexKey>>,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    if (targets.isEmpty() || trustedAccounts.isEmpty()) return emptyList()
+    val sortedTargets = mapOf("p" to targets.sorted())
+    return trustedAccounts.mapNotNull {
+        if (it.value.isNotEmpty()) {
+            RelayBasedFilter(
+                relay = it.key,
+                filter =
+                    Filter(
+                        kinds = ReportKindList,
+                        authors = it.value.sorted(),
+                        tags = sortedTargets,
+                        since = since?.get(it.key)?.time,
+                    ),
+            )
+        } else {
+            null
+        }
+    }
+}

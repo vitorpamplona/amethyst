@@ -70,8 +70,8 @@ import com.vitorpamplona.amethyst.model.parseWarningType
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenWord
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
 import com.vitorpamplona.amethyst.ui.screen.RefreshingFeedUserFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -264,7 +264,7 @@ private fun HeaderOptions(accountViewModel: AccountViewModel) {
                 placeholder = selectedItens[parseWarningType(sensitive).screenCode].title,
                 options = selectedItens,
                 onSelect = {
-                    accountViewModel.updateContentWarnings(parseWarningType(it))
+                    accountViewModel.updateShowSensitiveContent(parseWarningType(it).prefCode)
                 },
             )
         }
@@ -335,8 +335,10 @@ fun WatchAccountAndBlockList(
     accountViewModel: AccountViewModel,
     invalidate: () -> Unit,
 ) {
-    val transientSpammers by accountViewModel.account.transientHiddenUsers.collectAsStateWithLifecycle()
-    val blockListState by accountViewModel.account.flowHiddenUsers.collectAsStateWithLifecycle()
+    val transientSpammers by accountViewModel.account.hiddenUsers.transientHiddenUsers
+        .collectAsStateWithLifecycle()
+    val blockListState by accountViewModel.account.hiddenUsers.flow
+        .collectAsStateWithLifecycle()
 
     LaunchedEffect(accountViewModel, transientSpammers, blockListState) {
         invalidate()

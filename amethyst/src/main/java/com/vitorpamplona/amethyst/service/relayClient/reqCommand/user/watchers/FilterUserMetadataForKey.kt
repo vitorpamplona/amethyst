@@ -20,36 +20,51 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
-import com.vitorpamplona.ammolite.relays.EVENT_FINDER_TYPES
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
-import com.vitorpamplona.ammolite.relays.filters.SincePerRelayFilter
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.relationshipStatus.RelationshipStatusEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
+val UserMetadataForKeyKinds =
+    listOf(
+        MetadataEvent.KIND,
+        StatusEvent.KIND,
+        RelationshipStatusEvent.KIND,
+        AdvertisedRelayListEvent.KIND,
+        ChatMessageRelayListEvent.KIND,
+    )
+
 fun filterUserMetadataForKey(
     authors: Set<HexKey>,
-    since: Map<String, EOSETime>?,
-): List<TypedFilter> =
-    listOf(
-        TypedFilter(
-            types = EVENT_FINDER_TYPES,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    val relays =
+        authors
+            .map {
+                val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
+                val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
+
+                authorHomeRelayEvent?.writeRelaysNorm()?.ifEmpty { null }
+                    ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                    ?: listOfNotNull(LocalCache.getUserIfExists(it)?.latestMetadataRelay)
+            }.flatten()
+            .toSet()
+
+    return relays.map {
+        RelayBasedFilter(
+            relay = it,
             filter =
-                SincePerRelayFilter(
-                    kinds =
-                        listOf(
-                            MetadataEvent.KIND,
-                            StatusEvent.KIND,
-                            RelationshipStatusEvent.KIND,
-                            AdvertisedRelayListEvent.KIND,
-                            ChatMessageRelayListEvent.KIND,
-                        ),
+                Filter(
+                    kinds = UserMetadataForKeyKinds,
                     authors = authors.toList(),
-                    since = since,
+                    since = since?.get(it)?.time,
                 ),
-        ),
-    )
+        )
+    }
+}

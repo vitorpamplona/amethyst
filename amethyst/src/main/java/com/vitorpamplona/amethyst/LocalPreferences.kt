@@ -27,33 +27,37 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.model.ALL_FOLLOWS
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.GLOBAL_FOLLOWS
-import com.vitorpamplona.amethyst.model.KIND3_FOLLOWS
 import com.vitorpamplona.amethyst.model.Settings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.tor.TorSettings
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.ammolite.relays.RelaySetupInfo
-import com.vitorpamplona.quartz.experimental.edits.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
+import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +86,6 @@ private object PrefKeys {
     const val SAVED_ACCOUNTS = "all_saved_accounts"
     const val NOSTR_PRIVKEY = "nostr_privkey"
     const val NOSTR_PUBKEY = "nostr_pubkey"
-    const val RELAYS = "relays"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
@@ -95,10 +98,15 @@ private object PrefKeys {
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
     const val LATEST_NIP65_RELAY_LIST = "latestNIP65RelayList"
     const val LATEST_SEARCH_RELAY_LIST = "latestSearchRelayList"
+    const val LATEST_BLOCKED_RELAY_LIST = "latestBlockedRelayList"
+    const val LATEST_TRUSTED_RELAY_LIST = "latestTrustedRelayList"
     const val LATEST_MUTE_LIST = "latestMuteList"
     const val LATEST_PRIVATE_HOME_RELAY_LIST = "latestPrivateHomeRelayList"
     const val LATEST_APP_SPECIFIC_DATA = "latestAppSpecificData"
     const val LATEST_CHANNEL_LIST = "latestChannelList"
+    const val LATEST_COMMUNITY_LIST = "latestCommunityList"
+    const val LATEST_HASHTAG_LIST = "latestHashtagList"
+    const val LATEST_GEOHASH_LIST = "latestGeohashList"
     const val LATEST_EPHEMERAL_LIST = "latestEphemeralChatList"
     const val HIDE_DELETE_REQUEST_DIALOG = "hide_delete_request_dialog"
     const val HIDE_BLOCK_ALERT_DIALOG = "hide_block_alert_dialog"
@@ -120,8 +128,8 @@ object LocalPreferences {
     private const val COMMA = ","
 
     private var currentAccount: String? = null
-    private var savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
-    private var cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
+    private val savedAccounts: MutableStateFlow<List<AccountInfo>?> = MutableStateFlow(null)
+    private val cachedAccounts: MutableMap<String, AccountSettings?> = mutableMapOf()
 
     suspend fun currentAccount(): String? {
         if (currentAccount == null) {
@@ -155,7 +163,7 @@ object LocalPreferences {
                 with(encryptedPreferences()) {
                     val newSystemOfAccounts =
                         getString(PrefKeys.ALL_ACCOUNT_INFO, "[]")?.let {
-                            EventMapper.mapper.readValue<List<AccountInfo>>(it)
+                            JsonMapper.mapper.readValue<List<AccountInfo>>(it)
                         }
 
                     if (!newSystemOfAccounts.isNullOrEmpty()) {
@@ -175,7 +183,7 @@ object LocalPreferences {
 
                         savedAccounts.emit(migrated)
 
-                        edit { putString(PrefKeys.ALL_ACCOUNT_INFO, EventMapper.mapper.writeValueAsString(savedAccounts.value)) }
+                        edit { putString(PrefKeys.ALL_ACCOUNT_INFO, JsonMapper.mapper.writeValueAsString(savedAccounts.value)) }
                     }
                 }
             }
@@ -195,7 +203,7 @@ object LocalPreferences {
                     .edit {
                         putString(
                             PrefKeys.ALL_ACCOUNT_INFO,
-                            EventMapper.mapper.writeValueAsString(accounts.filter { !it.isTransient }),
+                            JsonMapper.mapper.writeValueAsString(accounts.filter { !it.isTransient }),
                         )
                     }
             }
@@ -249,7 +257,7 @@ object LocalPreferences {
                 if (npub == null) DEBUG_PREFERENCES_NAME else "${DEBUG_PREFERENCES_NAME}_$npub"
             Amethyst.instance.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
         } else {
-            return Amethyst.instance.encryptedStorage(npub)
+            Amethyst.instance.encryptedStorage(npub)
         }
     }
 
@@ -262,7 +270,7 @@ object LocalPreferences {
      * deleted
      */
     @SuppressLint("ApplySharedPref")
-    suspend fun updatePrefsForLogout(accountInfo: AccountInfo) {
+    suspend fun deleteAccount(accountInfo: AccountInfo) {
         Log.d("LocalPreferences", "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}")
         withContext(Dispatchers.IO) {
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
@@ -277,7 +285,7 @@ object LocalPreferences {
         }
     }
 
-    suspend fun updatePrefsForLogin(accountSettings: AccountSettings) {
+    suspend fun setDefaultAccount(accountSettings: AccountSettings) {
         setCurrentAccount(accountSettings)
         saveToEncryptedStorage(accountSettings)
     }
@@ -299,11 +307,10 @@ object LocalPreferences {
                         settings.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
                     }
                     settings.keyPair.pubKey.let { putString(PrefKeys.NOSTR_PUBKEY, it.toHexKey()) }
-                    putString(PrefKeys.RELAYS, EventMapper.mapper.writeValueAsString(settings.localRelays))
 
                     putString(
                         PrefKeys.DEFAULT_FILE_SERVER,
-                        EventMapper.mapper.writeValueAsString(settings.defaultFileServer),
+                        JsonMapper.mapper.writeValueAsString(settings.defaultFileServer),
                     )
                     putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, settings.defaultHomeFollowList.value)
                     putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, settings.defaultStoriesFollowList.value)
@@ -317,12 +324,12 @@ object LocalPreferences {
                     )
                     putString(
                         PrefKeys.ZAP_PAYMENT_REQUEST_SERVER,
-                        EventMapper.mapper.writeValueAsString(settings.zapPaymentRequest),
+                        JsonMapper.mapper.writeValueAsString(settings.zapPaymentRequest.value?.denormalize()),
                     )
                     if (settings.backupContactList != null) {
                         putString(
                             PrefKeys.LATEST_CONTACT_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupContactList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupContactList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_CONTACT_LIST)
@@ -331,7 +338,7 @@ object LocalPreferences {
                     if (settings.backupUserMetadata != null) {
                         putString(
                             PrefKeys.LATEST_USER_METADATA,
-                            EventMapper.mapper.writeValueAsString(settings.backupUserMetadata),
+                            JsonMapper.mapper.writeValueAsString(settings.backupUserMetadata),
                         )
                     } else {
                         remove(PrefKeys.LATEST_USER_METADATA)
@@ -340,7 +347,7 @@ object LocalPreferences {
                     if (settings.backupDMRelayList != null) {
                         putString(
                             PrefKeys.LATEST_DM_RELAY_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupDMRelayList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupDMRelayList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_DM_RELAY_LIST)
@@ -349,7 +356,7 @@ object LocalPreferences {
                     if (settings.backupNIP65RelayList != null) {
                         putString(
                             PrefKeys.LATEST_NIP65_RELAY_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupNIP65RelayList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupNIP65RelayList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_NIP65_RELAY_LIST)
@@ -358,14 +365,32 @@ object LocalPreferences {
                     if (settings.backupSearchRelayList != null) {
                         putString(
                             PrefKeys.LATEST_SEARCH_RELAY_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupSearchRelayList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupSearchRelayList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_SEARCH_RELAY_LIST)
                     }
 
-                    if (settings.localRelayServers.isNotEmpty()) {
-                        putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers)
+                    if (settings.backupBlockedRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_BLOCKED_RELAY_LIST,
+                            JsonMapper.mapper.writeValueAsString(settings.backupBlockedRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
+                    }
+
+                    if (settings.backupTrustedRelayList != null) {
+                        putString(
+                            PrefKeys.LATEST_TRUSTED_RELAY_LIST,
+                            JsonMapper.mapper.writeValueAsString(settings.backupTrustedRelayList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
+                    }
+
+                    if (settings.localRelayServers.value.isNotEmpty()) {
+                        putStringSet(PrefKeys.LOCAL_RELAY_SERVERS, settings.localRelayServers.value)
                     } else {
                         remove(PrefKeys.LOCAL_RELAY_SERVERS)
                     }
@@ -373,7 +398,7 @@ object LocalPreferences {
                     if (settings.backupMuteList != null) {
                         putString(
                             PrefKeys.LATEST_MUTE_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupMuteList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupMuteList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_MUTE_LIST)
@@ -382,7 +407,7 @@ object LocalPreferences {
                     if (settings.backupPrivateHomeRelayList != null) {
                         putString(
                             PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupPrivateHomeRelayList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupPrivateHomeRelayList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
@@ -391,7 +416,7 @@ object LocalPreferences {
                     if (settings.backupAppSpecificData != null) {
                         putString(
                             PrefKeys.LATEST_APP_SPECIFIC_DATA,
-                            EventMapper.mapper.writeValueAsString(settings.backupAppSpecificData),
+                            JsonMapper.mapper.writeValueAsString(settings.backupAppSpecificData),
                         )
                     } else {
                         remove(PrefKeys.LATEST_APP_SPECIFIC_DATA)
@@ -400,16 +425,43 @@ object LocalPreferences {
                     if (settings.backupChannelList != null) {
                         putString(
                             PrefKeys.LATEST_CHANNEL_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupChannelList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupChannelList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_CHANNEL_LIST)
                     }
 
+                    if (settings.backupCommunityList != null) {
+                        putString(
+                            PrefKeys.LATEST_COMMUNITY_LIST,
+                            JsonMapper.mapper.writeValueAsString(settings.backupCommunityList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_COMMUNITY_LIST)
+                    }
+
+                    if (settings.backupHashtagList != null) {
+                        putString(
+                            PrefKeys.LATEST_HASHTAG_LIST,
+                            JsonMapper.mapper.writeValueAsString(settings.backupHashtagList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_HASHTAG_LIST)
+                    }
+
+                    if (settings.backupGeohashList != null) {
+                        putString(
+                            PrefKeys.LATEST_HASHTAG_LIST,
+                            JsonMapper.mapper.writeValueAsString(settings.backupGeohashList),
+                        )
+                    } else {
+                        remove(PrefKeys.LATEST_HASHTAG_LIST)
+                    }
+
                     if (settings.backupEphemeralChatList != null) {
                         putString(
                             PrefKeys.LATEST_EPHEMERAL_LIST,
-                            EventMapper.mapper.writeValueAsString(settings.backupEphemeralChatList),
+                            JsonMapper.mapper.writeValueAsString(settings.backupEphemeralChatList),
                         )
                     } else {
                         remove(PrefKeys.LATEST_EPHEMERAL_LIST)
@@ -423,7 +475,7 @@ object LocalPreferences {
                     remove(PrefKeys.USE_PROXY)
                     remove(PrefKeys.PROXY_PORT)
 
-                    putString(PrefKeys.TOR_SETTINGS, EventMapper.mapper.writeValueAsString(settings.torSettings.toSettings()))
+                    putString(PrefKeys.TOR_SETTINGS, JsonMapper.mapper.writeValueAsString(settings.torSettings.toSettings()))
 
                     val regularMap =
                         settings.lastReadPerRoute.value.mapValues {
@@ -432,13 +484,13 @@ object LocalPreferences {
 
                     putString(
                         PrefKeys.LAST_READ_PER_ROUTE,
-                        EventMapper.mapper.writeValueAsString(regularMap),
+                        JsonMapper.mapper.writeValueAsString(regularMap),
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
 
                     putString(
                         PrefKeys.PENDING_ATTESTATIONS,
-                        EventMapper.mapper.writeValueAsString(settings.pendingAttestations.value),
+                        JsonMapper.mapper.writeValueAsString(settings.pendingAttestations.value),
                     )
                 }
             }
@@ -453,9 +505,8 @@ object LocalPreferences {
         prefs: SharedPreferences = encryptedPreferences(),
     ) {
         Log.d("LocalPreferences", "Saving to shared settings")
-        with(prefs.edit()) {
-            putString(PrefKeys.SHARED_SETTINGS, EventMapper.mapper.writeValueAsString(sharedSettings))
-            apply()
+        prefs.edit {
+            putString(PrefKeys.SHARED_SETTINGS, JsonMapper.mapper.writeValueAsString(sharedSettings))
         }
     }
 
@@ -463,7 +514,7 @@ object LocalPreferences {
         Log.d("LocalPreferences", "Load shared settings")
         with(prefs) {
             return try {
-                getString(PrefKeys.SHARED_SETTINGS, "{}")?.let { EventMapper.mapper.readValue<Settings>(it) }
+                getString(PrefKeys.SHARED_SETTINGS, "{}")?.let { JsonMapper.mapper.readValue<Settings>(it) }
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 Log.w(
@@ -471,7 +522,6 @@ object LocalPreferences {
                     "Unable to decode shared preferences: ${getString(PrefKeys.SHARED_SETTINGS, null)}",
                     e,
                 )
-                e.printStackTrace()
                 null
             }
         }
@@ -514,15 +564,13 @@ object LocalPreferences {
                             ?: if (getBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, false)) "com.greenart7c3.nostrsigner" else null
 
                     val defaultHomeFollowList =
-                        getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: KIND3_FOLLOWS
+                        getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null) ?: ALL_FOLLOWS
                     val defaultStoriesFollowList =
                         getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
                     val defaultNotificationFollowList =
                         getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
                     val defaultDiscoveryFollowList =
                         getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null) ?: GLOBAL_FOLLOWS
-
-                    val localRelays = parseOrNull<Set<RelaySetupInfo>>(PrefKeys.RELAYS) ?: emptySet()
 
                     val zapPaymentRequestServer = parseOrNull<Nip47WalletConnect.Nip47URI>(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
                     val defaultFileServer = parseOrNull<ServerName>(PrefKeys.DEFAULT_FILE_SERVER) ?: DEFAULT_MEDIA_SERVERS[0]
@@ -535,11 +583,16 @@ object LocalPreferences {
                     val latestDmRelayList = parseEventOrNull<ChatMessageRelayListEvent>(PrefKeys.LATEST_DM_RELAY_LIST)
                     val latestNip65RelayList = parseEventOrNull<AdvertisedRelayListEvent>(PrefKeys.LATEST_NIP65_RELAY_LIST)
                     val latestSearchRelayList = parseEventOrNull<SearchRelayListEvent>(PrefKeys.LATEST_SEARCH_RELAY_LIST)
+                    val latestBlockedRelayList = parseEventOrNull<BlockedRelayListEvent>(PrefKeys.LATEST_BLOCKED_RELAY_LIST)
+                    val latestTrustedRelayList = parseEventOrNull<TrustedRelayListEvent>(PrefKeys.LATEST_TRUSTED_RELAY_LIST)
                     val latestMuteList = parseEventOrNull<MuteListEvent>(PrefKeys.LATEST_MUTE_LIST)
                     val latestPrivateHomeRelayList = parseEventOrNull<PrivateOutboxRelayListEvent>(PrefKeys.LATEST_PRIVATE_HOME_RELAY_LIST)
                     val latestAppSpecificData = parseEventOrNull<AppSpecificDataEvent>(PrefKeys.LATEST_APP_SPECIFIC_DATA)
-                    val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
                     val latestChannelList = parseEventOrNull<ChannelListEvent>(PrefKeys.LATEST_CHANNEL_LIST)
+                    val latestCommunityList = parseEventOrNull<CommunityListEvent>(PrefKeys.LATEST_COMMUNITY_LIST)
+                    val latestHashtagList = parseEventOrNull<HashtagListEvent>(PrefKeys.LATEST_HASHTAG_LIST)
+                    val latestGeohashList = parseEventOrNull<GeohashListEvent>(PrefKeys.LATEST_GEOHASH_LIST)
+                    val latestEphemeralList = parseEventOrNull<EphemeralChatListEvent>(PrefKeys.LATEST_EPHEMERAL_LIST)
 
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
@@ -559,14 +612,13 @@ object LocalPreferences {
                         keyPair = keyPair,
                         transientAccount = false,
                         externalSignerPackageName = externalSignerPackageName,
-                        localRelays = localRelays,
-                        localRelayServers = localRelayServers,
+                        localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServer,
                         defaultHomeFollowList = MutableStateFlow(defaultHomeFollowList),
                         defaultStoriesFollowList = MutableStateFlow(defaultStoriesFollowList),
                         defaultNotificationFollowList = MutableStateFlow(defaultNotificationFollowList),
                         defaultDiscoveryFollowList = MutableStateFlow(defaultDiscoveryFollowList),
-                        zapPaymentRequest = zapPaymentRequestServer,
+                        zapPaymentRequest = MutableStateFlow(zapPaymentRequestServer?.normalize()),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
@@ -575,10 +627,15 @@ object LocalPreferences {
                         backupNIP65RelayList = latestNip65RelayList,
                         backupDMRelayList = latestDmRelayList,
                         backupSearchRelayList = latestSearchRelayList,
+                        backupBlockedRelayList = latestBlockedRelayList,
+                        backupTrustedRelayList = latestTrustedRelayList,
                         backupPrivateHomeRelayList = latestPrivateHomeRelayList,
                         backupMuteList = latestMuteList,
                         backupAppSpecificData = latestAppSpecificData,
                         backupChannelList = latestChannelList,
+                        backupCommunityList = latestCommunityList,
+                        backupHashtagList = latestHashtagList,
+                        backupGeohashList = latestGeohashList,
                         backupEphemeralChatList = latestEphemeralList,
                         torSettings = TorSettingsFlow.build(torSettings),
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute),
@@ -600,12 +657,11 @@ object LocalPreferences {
             if (T::class.java.isInstance(Event::class.java)) {
                 Event.fromJson(value) as T?
             } else {
-                EventMapper.mapper.readValue<T?>(value)
+                JsonMapper.mapper.readValue<T?>(value)
             }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
-            e.printStackTrace()
             null
         }
     }
@@ -620,7 +676,6 @@ object LocalPreferences {
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.w("LocalPreferences", "Error Decoding $key from Preferences with value $value", e)
-            e.printStackTrace()
             null
         }
     }

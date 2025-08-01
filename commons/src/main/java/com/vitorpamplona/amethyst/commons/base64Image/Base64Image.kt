@@ -29,7 +29,7 @@ import java.util.regex.Pattern
 
 class Base64Image {
     companion object {
-        val pattern = Pattern.compile("data:image/(${RichTextParser.Companion.imageExtensions.joinToString(separator = "|") { it } });base64,([a-zA-Z0-9+/]+={0,2})")
+        val pattern = Pattern.compile("data:image/(${RichTextParser.imageExtensions.joinToString(separator = "|") { it } });base64,([a-zA-Z0-9+/]+={0,2})")
 
         fun isBase64(content: String): Boolean {
             val matcher = pattern.matcher(content)

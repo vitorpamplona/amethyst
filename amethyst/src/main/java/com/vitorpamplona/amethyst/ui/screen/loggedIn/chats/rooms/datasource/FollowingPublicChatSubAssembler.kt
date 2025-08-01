@@ -22,17 +22,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.ammolite.relays.NostrClient
-import com.vitorpamplona.ammolite.relays.TypedFilter
-import com.vitorpamplona.ammolite.relays.datasources.Subscription
-import com.vitorpamplona.ammolite.relays.filters.EOSETime
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-import kotlin.collections.forEach
 
 class FollowingPublicChatSubAssembler(
     client: NostrClient,
@@ -40,11 +39,11 @@ class FollowingPublicChatSubAssembler(
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
     override fun updateFilter(
         key: ChatroomListState,
-        since: Map<String, EOSETime>?,
-    ): List<TypedFilter>? =
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? =
         listOfNotNull(
-            filterLastMessageFollowingPublicChats(key.account.publicChatList.livePublicChatEventIdSet.value, since),
-            filterFollowingPublicChats(key.account.publicChatList.livePublicChatEventIdSet.value, since),
+            filterLastMessageFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
+            filterFollowingPublicChats(key.account.publicChatList.flowSet.value, since),
         ).flatten()
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
@@ -57,7 +56,7 @@ class FollowingPublicChatSubAssembler(
         userJobMap[key.account.userProfile()] =
             listOf(
                 key.account.scope.launch(Dispatchers.Default) {
-                    key.account.publicChatList.livePublicChatEventIdSet.sample(5000).collectLatest {
+                    key.account.publicChatList.flowSet.sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },
@@ -70,7 +69,7 @@ class FollowingPublicChatSubAssembler(
         key: User,
         subId: String,
     ) {
-        return super.endSub(key, subId)
+        super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
     }
 }

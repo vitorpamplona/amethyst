@@ -48,9 +48,15 @@ class GitPatchEvent(
     AddressHintProvider {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
+    override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
+
     override fun eventHints() = tags.mapNotNull(MarkedETag::parseAsHint)
 
+    override fun linkedEventIds() = tags.mapNotNull(MarkedETag::parseId)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     private fun innerRepository() =
         tags.firstOrNull { it.size > 3 && it[0] == "a" && it[3] == "root" }
@@ -101,12 +107,11 @@ class GitPatchEvent(
         const val KIND = 1617
         const val ALT = "A Git Patch"
 
-        fun create(
+        suspend fun create(
             patch: String,
             createdAt: Long = TimeUtils.now(),
             signer: NostrSigner,
-            onReady: (GitPatchEvent) -> Unit,
-        ) {
+        ): GitPatchEvent {
             val content = patch
             val tags =
                 mutableListOf(
@@ -115,7 +120,7 @@ class GitPatchEvent(
 
             tags.add(AltTag.assemble(ALT))
 
-            signer.sign(createdAt, KIND, tags.toTypedArray(), content, onReady)
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), content)
         }
     }
 }

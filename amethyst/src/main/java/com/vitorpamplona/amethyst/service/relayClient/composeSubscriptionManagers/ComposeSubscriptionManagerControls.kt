@@ -21,10 +21,6 @@
 package com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers
 
 interface ComposeSubscriptionManagerControls {
-    fun start()
-
-    fun stop()
-
     fun invalidateKeys()
 
     fun invalidateFilters()

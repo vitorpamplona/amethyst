@@ -35,29 +35,29 @@ object EncryptionKeyCache {
         deriveFromPubKey: HexKey,
         nonce: HexKey,
         privKey: ByteArray,
-    ) = sharedNonceKeyCache.put(idx(deriveFromPubKey, nonce), privKey)
+    ): ByteArray? = sharedNonceKeyCache.put(idx(deriveFromPubKey, nonce), privKey)
 
     fun get(
         deriveFromPubKey: HexKey,
         nonce: HexKey,
-    ) = sharedNonceKeyCache.get(idx(deriveFromPubKey, nonce))
+    ): ByteArray? = sharedNonceKeyCache.get(idx(deriveFromPubKey, nonce))
 
     inline fun getOrLoad(
         deriveFromPubKey: HexKey,
         nonce: HexKey,
-        load: (onLoaded: (privKey: ByteArray) -> Unit) -> Unit,
-        crossinline whenReady: (privKey: ByteArray) -> Unit,
-    ) {
+        load: () -> ByteArray?,
+    ): ByteArray? {
         val cachedPrivKey = get(deriveFromPubKey, nonce)
         if (cachedPrivKey != null) {
-            whenReady(cachedPrivKey)
-            return
+            return cachedPrivKey
         }
 
-        load { newPrivKey ->
+        val newPrivKey = load()
+        newPrivKey?.let {
             put(deriveFromPubKey, nonce, newPrivKey)
-            whenReady(newPrivKey)
+            newPrivKey
         }
+        return newPrivKey
     }
 }
 

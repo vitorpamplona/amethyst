@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.vitorpamplona.quartz.nip01Core.jackson.EventMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterDeserializer
 import com.vitorpamplona.quartz.utils.joinToStringLimited
@@ -54,7 +54,7 @@ class ReqCmd(
             val filters = mutableListOf<Filter>()
 
             for (i in 2 until msgArray.size()) {
-                val json = EventMapper.mapper.readTree(msgArray.get(i).asText())
+                val json = JsonMapper.mapper.readTree(msgArray.get(i).asText())
                 if (json is ObjectNode) {
                     filters.add(FilterDeserializer.fromJson(json))
                 }

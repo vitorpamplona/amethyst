@@ -34,7 +34,10 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.unifiedpush.android.connector.FailedReason
 import org.unifiedpush.android.connector.MessagingReceiver
+import org.unifiedpush.android.connector.data.PushEndpoint
+import org.unifiedpush.android.connector.data.PushMessage
 
 class PushMessageReceiver : MessagingReceiver() {
     companion object {
@@ -48,10 +51,10 @@ class PushMessageReceiver : MessagingReceiver() {
 
     override fun onMessage(
         context: Context,
-        message: ByteArray,
+        message: PushMessage,
         instance: String,
     ) {
-        val messageStr = message.decodeToString()
+        val messageStr = message.content.decodeToString()
         Log.d(TAG, "New message $messageStr for Instance: $instance")
         scope.launch {
             try {
@@ -81,10 +84,10 @@ class PushMessageReceiver : MessagingReceiver() {
 
     override fun onNewEndpoint(
         context: Context,
-        endpoint: String,
+        endpoint: PushEndpoint,
         instance: String,
     ) {
-        val sanitizedEndpoint = if (endpoint.endsWith("?up=1")) endpoint.dropLast(5) else endpoint
+        val sanitizedEndpoint = if (endpoint.url.endsWith("?up=1")) endpoint.url.dropLast(5) else endpoint.url
         if (sanitizedEndpoint != pushHandler.getSavedEndpoint()) {
             Log.d(TAG, "New endpoint provided:- $endpoint for Instance: $instance ${pushHandler.getSavedEndpoint()} $sanitizedEndpoint")
             pushHandler.setEndpoint(sanitizedEndpoint)
@@ -102,6 +105,7 @@ class PushMessageReceiver : MessagingReceiver() {
 
     override fun onRegistrationFailed(
         context: Context,
+        reason: FailedReason,
         instance: String,
     ) {
         Log.d(TAG, "Registration failed for Instance: $instance")

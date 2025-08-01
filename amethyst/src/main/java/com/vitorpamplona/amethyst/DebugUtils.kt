@@ -30,12 +30,13 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 
+@Suppress("SENSELESS_COMPARISON")
 val isDebug = BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark"
 
 fun debugState(context: Context) {
-    Amethyst.instance.client
-        .allSubscriptions()
-        .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.joinToString { it.filter.toDebugJson() }}") }
+    // Amethyst.instance.client
+    //    .allSubscriptions()
+    //    .forEach { Log.d("STATE DUMP", "${it.key} ${it.value.filters.joinToString { it.filter.toJson() }}") }
 
     val totalMemoryMb = Runtime.getRuntime().totalMemory() / (1024 * 1024)
     val freeMemoryMb = Runtime.getRuntime().freeMemory() / (1024 * 1024)
@@ -58,7 +59,16 @@ fun debugState(context: Context) {
         Log.d("STATE DUMP", "Memory Class $memClass MB (largeHeap $isLargeHeap)")
     }
 
-    Log.d("STATE DUMP", "Connected Relays: " + Amethyst.instance.client.connectedRelays())
+    Log.d(
+        "STATE DUMP",
+        "Connected Relays: " +
+            Amethyst.instance.client
+                .relayStatusFlow()
+                .value.connected.size + "/" +
+            Amethyst.instance.client
+                .relayStatusFlow()
+                .value.available.size,
+    )
 
     Log.d(
         "STATE DUMP",
@@ -112,7 +122,7 @@ fun debugState(context: Context) {
     Log.d(
         "STATE DUMP",
         "Spam: " +
-            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentMessages.size(),
+            LocalCache.antiSpam.spamMessages.size() + " / " + LocalCache.antiSpam.recentEventIds.size() + " / " + LocalCache.antiSpam.recentAddressables.size(),
     )
 
     Log.d(
@@ -132,21 +142,24 @@ fun debugState(context: Context) {
         LocalCache.addressables
             .sumByGroup(groupMap = { _, it -> it.event?.kind }, sumOf = { _, it -> it.event?.countMemory() ?: 0L })
 
-    qttNotes.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
-        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes.get(kind)?.div((1024 * 1024))}MB ")
+    qttNotes.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
+        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesNotes[kind]?.div((1024 * 1024))}MB ")
     }
-    qttAddressables.toList().sortedByDescending { bytesNotes.get(it.first) }.forEach { (kind, qtt) ->
-        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables.get(kind)?.div((1024 * 1024))}MB ")
+    qttAddressables.toList().sortedByDescending { bytesNotes[it.first] }.forEach { (kind, qtt) ->
+        Log.d("STATE DUMP", "Kind ${kind.toString().padStart(5,' ')}:\t${qtt.toString().padStart(6,' ')} elements\t${bytesAddressables[kind]?.div((1024 * 1024))}MB ")
     }
 }
 
 inline fun <T> logTime(
     debugMessage: String,
+    minToReportMs: Int = 1,
     block: () -> T,
 ): T =
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
-        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+        if (elapsed.inWholeMilliseconds > minToReportMs) {
+            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: $debugMessage")
+        }
         result
     } else {
         block()
@@ -154,11 +167,14 @@ inline fun <T> logTime(
 
 inline fun <T> logTime(
     debugMessage: (T) -> String,
+    minToReportMs: Int = 1,
     block: () -> T,
 ): T =
     if (isDebug) {
         val (result, elapsed) = measureTimedValue(block)
-        Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
+        if (elapsed.inWholeMilliseconds > minToReportMs) {
+            Log.d("DEBUG-TIME", "${elapsed.toString(DurationUnit.MILLISECONDS, 3).padStart(12)}: ${debugMessage(result)}")
+        }
         result
     } else {
         block()

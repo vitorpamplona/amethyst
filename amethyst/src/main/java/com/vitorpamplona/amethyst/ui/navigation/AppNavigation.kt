@@ -26,12 +26,6 @@ import android.os.Parcelable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,8 +42,15 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
+import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
+import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountStateViewModel
 import com.vitorpamplona.amethyst.ui.screen.SharedPreferencesViewModel
@@ -59,10 +60,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarks.BookmarkListScree
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomByAuthorScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.NewGroupDMScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ChannelScreen
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.EphemeralChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.metadata.NewEphemeralChatScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
@@ -76,10 +78,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.AllRelayListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.search.SearchScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.NIP47SetupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SecurityFiltersScreen
@@ -90,6 +94,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -126,18 +132,27 @@ fun AppNavigation(
             composableFromEnd<Route.Settings> { SettingsScreen(sharedPreferencesViewModel, accountViewModel, nav) }
             composableFromEnd<Route.UserSettings> { UserSettingsScreen(accountViewModel, nav) }
             composableFromBottomArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
-            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(it.toAdd, accountViewModel, nav) }
+            composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+            composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
 
             composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
             composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Community> { CommunityScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.Room> { ChatroomScreen(it.id.toString(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
+            composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
+            composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
+            composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
+            composableFromEndArgs<Route.Community> { CommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+
+            composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, accountViewModel, nav) }
             composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
-            composableFromEndArgs<Route.Channel> { ChannelScreen(it.id, accountViewModel, nav) }
-            composableFromEndArgs<Route.EphemeralChat> { EphemeralChatScreen(RoomId(it.id, it.relayUrl), accountViewModel, nav) }
+
+            composableFromEndArgs<Route.PublicChatChannel> { PublicChatChannelScreen(it.id, accountViewModel, nav) }
+            composableFromEndArgs<Route.LiveActivityChannel> { LiveActivityChannelScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
+            composableFromEndArgs<Route.EphemeralChat> {
+                RelayUrlNormalizer.normalizeOrNull(it.relayUrl)?.let { relay ->
+                    EphemeralChatScreen(RoomId(it.id, relay), accountViewModel, nav)
+                }
+            }
 
             composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
             composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
@@ -153,6 +168,14 @@ fun AppNavigation(
                     reply = it.replyTo?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     quote = it.quote?.let { hex -> accountViewModel.getNoteIfExists(hex) },
                     draft = it.draft?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            composableFromBottomArgs<Route.NewPublicMessage> {
+                NewPublicMessageScreen(
+                    to = it.toKey(),
                     accountViewModel,
                     nav,
                 )
@@ -267,15 +290,15 @@ private fun NavigateIfIntentRequested(
 
         currentIntentNextPage?.let { intentNextPage ->
             var actionableNextPage by remember {
-                mutableStateOf(uriToRoute(intentNextPage))
+                mutableStateOf(uriToRoute(intentNextPage, accountViewModel.account))
             }
 
             LaunchedEffect(intentNextPage) {
                 if (actionableNextPage != null) {
                     actionableNextPage?.let { nextRoute ->
                         val npub = runCatching { URI(intentNextPage.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                        if (npub != null && accountStateViewModel.currentAccount() != npub) {
-                            accountStateViewModel.switchUserSync(npub, nextRoute)
+                        if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
+                            accountStateViewModel.checkAndSwitchUserSync(npub, nextRoute)
                         } else {
                             val currentRoute = getRouteWithArguments(nav.controller)
                             if (!isSameRoute(currentRoute, nextRoute)) {
@@ -325,13 +348,13 @@ private fun NavigateIfIntentRequested(
 
                         if (!uri.isNullOrBlank()) {
                             // navigation functions
-                            val newPage = uriToRoute(uri)
+                            val newPage = uriToRoute(uri, accountViewModel.account)
 
                             if (newPage != null) {
                                 scope.launch {
                                     val npub = runCatching { URI(uri.removePrefix("nostr:")).findParameterValue("account") }.getOrNull()
-                                    if (npub != null && accountStateViewModel.currentAccount() != npub) {
-                                        accountStateViewModel.switchUserSync(npub, newPage)
+                                    if (npub != null && accountStateViewModel.currentAccountNPub() != npub) {
+                                        accountStateViewModel.checkAndSwitchUserSync(npub, newPage)
                                     } else {
                                         val currentRoute = getRouteWithArguments(nav.controller)
                                         if (!isSameRoute(currentRoute, newPage)) {
@@ -366,36 +389,6 @@ private fun NavigateIfIntentRequested(
         }
     }
 }
-
-private fun isSameRoute(
-    currentRoute: Route?,
-    newRoute: Route,
-): Boolean {
-    if (currentRoute == null) return false
-
-    if (currentRoute == newRoute) {
-        return true
-    }
-
-    if (newRoute is Route.EventRedirect) {
-        return when (currentRoute) {
-            is Route.Note -> newRoute.id == currentRoute.id
-            is Route.Channel -> newRoute.id == currentRoute.id
-            else -> false
-        }
-    }
-
-    return false
-}
-
-val slideInVerticallyFromBottom = slideInVertically(animationSpec = tween(), initialOffsetY = { it })
-val slideOutVerticallyToBottom = slideOutVertically(animationSpec = tween(), targetOffsetY = { it })
-
-val slideInHorizontallyFromEnd = slideInHorizontally(animationSpec = tween(), initialOffsetX = { it })
-val slideOutHorizontallyToEnd = slideOutHorizontally(animationSpec = tween(), targetOffsetX = { it })
-
-val scaleIn = scaleIn(animationSpec = tween(), initialScale = 0.9f)
-val scaleOut = scaleOut(animationSpec = tween(), targetScale = 0.9f)
 
 fun URI.findParameterValue(parameterName: String): String? =
     rawQuery

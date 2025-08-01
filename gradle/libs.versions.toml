@@ -2,56 +2,57 @@
 accompanistAdaptive = "0.37.3"
 activityCompose = "1.10.1"
 agp = "8.11.1"
-android-compileSdk = "35"
+android-compileSdk = "36"
 android-minSdk = "26"
-android-targetSdk = "35"
+android-targetSdk = "36"
 androidKotlinGeohash = "b481c6a64e"
 androidxJunit = "1.2.1"
-appcompat = "1.7.0"
-audiowaveform = "1.1.1"
+appcompat = "1.7.1"
+audiowaveform = "1.1.2"
 benchmark = "1.3.4"
 benchmarkJunit4 = "1.3.4"
 biometricKtx = "1.2.0-alpha05"
-coil = "3.2.0"
-composeBom = "2025.05.00"
+coil = "3.3.0"
+composeBom = "2025.07.00"
 coreKtx = "1.16.0"
+datastore = "1.1.7"
 espressoCore = "3.6.1"
-firebaseBom = "33.13.0"
-fragmentKtx = "1.8.6"
-gms = "4.4.2"
-jacksonModuleKotlin = "2.19.0"
+firebaseBom = "34.0.0"
+fragmentKtx = "1.8.8"
+gms = "4.4.3"
+jacksonModuleKotlin = "2.19.2"
 jna = "5.17.0"
 jtorctl = "0.4.5.7"
 junit = "4.13.2"
-kotlin = "2.1.0"
+kotlin = "2.2.0"
 kotlinxCollectionsImmutable = "0.4.0"
-kotlinxSerialization = "1.8.1"
-kotlinxSerializationPlugin = "2.0.0"
+kotlinxSerialization = "1.9.0"
+kotlinxSerializationPlugin = "2.2.0"
 languageId = "17.0.6"
-lazysodiumAndroid = "5.1.0"
-lifecycleRuntimeKtx = "2.9.0"
-lightcompressor = "1.3.2"
+lazysodiumAndroid = "5.2.0"
+lifecycleRuntimeKtx = "2.9.2"
+lightcompressor = "1.3.3"
 markdown = "e1151c8"
 media3 = "1.7.1"
-mockk = "1.14.2"
+mockk = "1.14.5"
 kotlinx-coroutines-test = "1.10.2"
-navigationCompose = "2.9.0"
-okhttp = "5.0.0-alpha.14"
+navigationCompose = "2.9.2"
+okhttp = "5.1.0"
 runner = "1.6.2"
 rfc3986 = "0.1.2"
-secp256k1KmpJniAndroid = "0.17.3"
-securityCryptoKtx = "1.1.0-alpha07"
-spotless = "6.25.0"
-torAndroid = "0.4.8.12"
+secp256k1KmpJniAndroid = "0.18.0"
+securityCryptoKtx = "1.1.0-beta01"
+spotless = "7.2.1"
+torAndroid = "0.4.8.17"
 translate = "17.0.3"
-unifiedpush = "2.3.1"
+unifiedpush = "3.0.10"
 urlDetector = "0.1.23"
-vico-charts = "2.1.2"
+vico-charts = "2.1.3"
 zelory = "3.0.1"
-zoomable = "2.7.0"
+zoomable = "2.8.1"
 zxing = "3.5.3"
 zxingAndroidEmbedded = "4.3.0"
-windowCoreAndroid = "1.3.0"
+windowCoreAndroid = "1.4.0"
 androidxCamera = "1.4.2"
 
 [libraries]
@@ -69,6 +70,7 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "androidxCamera" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
@@ -101,7 +103,7 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 drfonfon-geohash = { group = "com.github.drfonfon", name = "android-kotlin-geohash", version.ref = "androidKotlinGeohash" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
@@ -109,6 +111,7 @@ jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 jtorctl = { module = "info.guardianproject:jtorctl", version.ref = "jtorctl" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
 lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodiumAndroid" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
@@ -117,6 +120,7 @@ markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", n
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
 rfc3986-normalizer = { group = "org.czeal", name = "rfc3986", version.ref = "rfc3986" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }

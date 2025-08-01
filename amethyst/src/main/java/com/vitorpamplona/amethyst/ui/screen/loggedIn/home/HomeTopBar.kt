@@ -23,21 +23,25 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.ui.navigation.FollowListWithRoutes
-import com.vitorpamplona.amethyst.ui.navigation.GenericMainTopBar
-import com.vitorpamplona.amethyst.ui.navigation.INav
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
+import com.vitorpamplona.amethyst.ui.screen.FollowListState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable
 fun HomeTopBar(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    GenericMainTopBar(accountViewModel, nav) {
+    UserDrawerSearchTopBar(accountViewModel, nav) {
         val list by accountViewModel.account.settings.defaultHomeFollowList
             .collectAsStateWithLifecycle()
 
-        FollowListWithRoutes(
+        FollowList(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
@@ -49,4 +53,22 @@ fun HomeTopBar(
             }
         }
     }
+}
+
+@Composable
+private fun FollowList(
+    followListsModel: FollowListState,
+    listName: String,
+    accountViewModel: AccountViewModel,
+    onChange: (FeedDefinition) -> Unit,
+) {
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+
+    FeedFilterSpinner(
+        placeholderCode = listName,
+        explainer = stringRes(R.string.select_list_to_filter),
+        options = allLists,
+        onSelect = { onChange(allLists.getOrNull(it) ?: followListsModel.kind3Follow) },
+        accountViewModel = accountViewModel,
+    )
 }

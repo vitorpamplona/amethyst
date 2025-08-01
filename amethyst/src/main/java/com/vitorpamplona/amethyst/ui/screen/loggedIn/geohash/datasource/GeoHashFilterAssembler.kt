@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.ammolite.relays.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 // This allows multiple screen to be listening to tags, even the same tag
 class GeohashQueryState(
     val geohash: String,
+    val relays: Set<NormalizedRelayUrl>,
 ) {
     val lowercaseGeohash = geohash.lowercase()
 }
@@ -43,15 +45,11 @@ class GeoHashFilterAssembler(
             GeoHashFeedFilterSubAssembler(client, ::allKeys),
         )
 
-    override fun start() = group.forEach { it.start() }
-
-    override fun stop() = group.forEach { it.stop() }
-
     override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    override fun destroy() = group.forEach { it.start() }
+    override fun destroy() = group.forEach { it.destroy() }
 
     override fun printStats() = group.forEach { it.printStats() }
 }

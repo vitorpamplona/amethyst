@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 
 class UserProfileNewThreadFeedFilter(
     val user: User,
@@ -79,6 +80,7 @@ class UserProfileNewThreadFeedFilter(
                     it.event is InteractiveStoryPrologueEvent ||
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent ||
+                    it.event is VoiceEvent ||
                     it.event is TorrentEvent
             ) &&
             it.isNewThread() &&

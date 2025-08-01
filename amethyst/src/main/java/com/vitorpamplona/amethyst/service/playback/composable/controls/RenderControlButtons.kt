@@ -20,19 +20,16 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
-import android.content.Context
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
-import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.components.ShareImageAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -70,7 +67,7 @@ fun RenderControlButtons(
 
     if (!isLiveStreaming(mediaData.videoUri)) {
         AnimatedSaveButton(controllerVisible, buttonPositionModifier.padding(end = Size110dp)) { context ->
-            saveMediaToGalleryInner(mediaData.videoUri, mediaData.mimeType, context, accountViewModel)
+            accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
         }
 
         AnimatedShareButton(controllerVisible, buttonPositionModifier.padding(end = Size165dp)) { popupExpanded, toggle ->
@@ -81,24 +78,4 @@ fun RenderControlButtons(
             ShareImageAction(accountViewModel = accountViewModel, popupExpanded, mediaData.videoUri, mediaData.callbackUri, null, null, null, mediaData.mimeType, toggle)
         }
     }
-}
-
-private fun saveMediaToGalleryInner(
-    videoUri: String?,
-    mimeType: String?,
-    localContext: Context,
-    accountViewModel: AccountViewModel,
-) {
-    MediaSaverToDisk.saveDownloadingIfNeeded(
-        videoUri = videoUri,
-        okHttpClient = accountViewModel::okHttpClientForVideo,
-        mimeType = mimeType,
-        localContext = localContext,
-        onSuccess = {
-            accountViewModel.toastManager.toast(R.string.video_saved_to_the_gallery, R.string.video_saved_to_the_gallery)
-        },
-        onError = {
-            accountViewModel.toastManager.toast(R.string.failed_to_save_the_video, null, it)
-        },
-    )
 }

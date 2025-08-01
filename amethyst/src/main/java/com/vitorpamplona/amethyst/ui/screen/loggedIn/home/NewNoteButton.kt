@@ -20,20 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.INav
-import com.vitorpamplona.amethyst.ui.navigation.Route
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 
 @Composable
@@ -47,9 +45,9 @@ fun NewNoteButton(nav: INav) {
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            painter = painterRes(R.drawable.ic_compose),
+            painter = painterRes(R.drawable.ic_compose, 4),
             contentDescription = stringRes(R.string.new_post),
-            modifier = Modifier.size(26.dp),
+            modifier = Size26Modifier,
             tint = Color.White,
         )
     }

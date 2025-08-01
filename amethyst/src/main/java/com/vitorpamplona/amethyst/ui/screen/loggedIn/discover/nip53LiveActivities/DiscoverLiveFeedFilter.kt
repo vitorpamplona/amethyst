@@ -24,10 +24,17 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ParticipantListBuilder
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
-import com.vitorpamplona.quartz.nip51Lists.MuteListEvent
-import com.vitorpamplona.quartz.nip51Lists.PeopleListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 
@@ -38,13 +45,15 @@ open class DiscoverLiveFeedFilter(
 
     open fun followList(): String = account.settings.defaultDiscoveryFollowList.value
 
+    override fun limit() = 50
+
     override fun showHiddenKey(): Boolean =
         followList() == PeopleListEvent.Companion.blockListFor(account.userProfile().pubkeyHex) ||
             followList() == MuteListEvent.Companion.blockListFor(account.userProfile().pubkeyHex)
 
     override fun feed(): List<Note> {
-        val allChannelNotes = LocalCache.channels.mapNotNull { _, channel -> LocalCache.getNoteIfExists(channel.idHex) }
-        val allMessageNotes = LocalCache.channels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
+        val allChannelNotes = LocalCache.liveChatChannels.mapNotNull { _, channel -> LocalCache.getAddressableNoteIfExists(channel.address) }
+        val allMessageNotes = LocalCache.liveChatChannels.map { _, channel -> channel.notes.filter { key, it -> it.event is LiveActivitiesEvent } }.flatten()
 
         val notes = innerApplyFilter(allChannelNotes + allMessageNotes)
 
@@ -55,11 +64,9 @@ open class DiscoverLiveFeedFilter(
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams =
-            FilterByListParams.Companion.create(
-                userHex = account.userProfile().pubkeyHex,
-                selectedListName = account.settings.defaultDiscoveryFollowList.value,
+            FilterByListParams.create(
                 followLists = account.liveDiscoveryFollowLists.value,
-                hiddenUsers = account.flowHiddenUsers.value,
+                hiddenUsers = account.hiddenUsers.flow.value,
             )
 
         return collection.filterTo(HashSet()) {
@@ -69,8 +76,21 @@ open class DiscoverLiveFeedFilter(
     }
 
     override fun sort(collection: Set<Note>): List<Note> {
+        val topFilter = account.liveDiscoveryFollowLists.value
+        val discoveryTopFilterAuthors =
+            when (topFilter) {
+                is AuthorsByOutboxTopNavFilter -> topFilter.authors
+                is MutedAuthorsByOutboxTopNavFilter -> topFilter.authors
+                is AllFollowsByOutboxTopNavFilter -> topFilter.authors
+                is SingleCommunityTopNavFilter -> topFilter.authors
+                is AuthorsByProxyTopNavFilter -> topFilter.authors
+                is MutedAuthorsByProxyTopNavFilter -> topFilter.authors
+                is AllFollowsByProxyTopNavFilter -> topFilter.authors
+                else -> null
+            }
+
         val followingKeySet =
-            account.liveDiscoveryFollowLists.value?.authors ?: account.liveKind3Follows.value.authors
+            discoveryTopFilterAuthors ?: account.kind3FollowList.flow.value.authors
 
         val counter = ParticipantListBuilder()
         val participantCounts =
@@ -91,11 +111,11 @@ open class DiscoverLiveFeedFilter(
             ).reversed()
     }
 
-    fun convertStatusToOrder(status: String?): Int =
+    fun convertStatusToOrder(status: StatusTag.STATUS?): Int =
         when (status) {
-            StatusTag.STATUS.LIVE.code -> 2
-            StatusTag.STATUS.PLANNED.code -> 1
-            StatusTag.STATUS.ENDED.code -> 0
+            StatusTag.STATUS.LIVE -> 2
+            StatusTag.STATUS.PLANNED -> 1
+            StatusTag.STATUS.ENDED -> 0
             else -> 0
         }
 }
