@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Shapes
@@ -344,3 +345,5 @@ val SimpleImage35Modifier = Modifier.size(Size34dp).clip(shape = CircleShape)
 val SimpleImageBorder = Modifier.fillMaxSize().clip(QuoteBorder)
 
 val SimpleHeaderImage = Modifier.fillMaxWidth().heightIn(max = 200.dp)
+
+val BadgePictureModifier = Modifier.size(35.dp).clip(shape = CutCornerShape(20))

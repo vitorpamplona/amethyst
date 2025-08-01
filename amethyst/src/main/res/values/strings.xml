@@ -311,6 +311,7 @@
     <string name="biometric_error">Error</string>
     <string name="badge_created_by">"Created by %1$s"</string>
     <string name="badge_award_image_for">"Badge award image for %1$s"</string>
+    <string name="badge_award_image">"Badge award image</string>
     <string name="new_badge_award_notif">You Received a new Badge Award</string>
     <string name="award_granted_to">Badge award granted to</string>
     <string name="copied_note_text_to_clipboard">Copied note text to clipboard</string>

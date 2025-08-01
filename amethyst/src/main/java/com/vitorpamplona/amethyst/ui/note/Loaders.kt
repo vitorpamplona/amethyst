@@ -27,6 +27,7 @@ import androidx.compose.runtime.ProduceStateScope
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,9 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 @Composable
@@ -94,20 +93,13 @@ fun LoadAddressableNote(
     accountViewModel: AccountViewModel,
     content: @Composable (AddressableNote?) -> Unit,
 ) {
-    var note by
-        remember(address) {
-            mutableStateOf(accountViewModel.getAddressableNoteIfExists(address))
-        }
-
-    if (note == null) {
-        LaunchedEffect(key1 = address) {
-            val newNote =
-                withContext(Dispatchers.IO) {
-                    accountViewModel.getOrCreateAddressableNote(address)
-                }
-            if (note != newNote) {
-                note = newNote
-            }
+    val note by produceState(
+        accountViewModel.getAddressableNoteIfExists(address),
+        address,
+    ) {
+        val newNote = accountViewModel.getOrCreateAddressableNote(address)
+        if (newNote != value) {
+            value = newNote
         }
     }
 
