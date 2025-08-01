@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.replace
@@ -130,6 +131,8 @@ open class Note(
     var event: Event? = null
     var author: User? = null
     var replyTo: List<Note>? = null
+    var inChannel: Channel? = null
+    var inChatroom: Chatroom? = null
 
     // These fields are updated every time an event related to this note is received.
     var replies = listOf<Note>()

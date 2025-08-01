@@ -29,7 +29,6 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -92,10 +91,9 @@ class DecryptAndIndexProcessor(
                 // Avoid decrypting over and over again if the event already exist.
                 if (event.pubKey == account.signer.pubKey) {
                     if (!event.isDeleted()) {
-                        if (account.draftsDecryptionCache.preCachedDraft(event) == null) {
-                            account.draftsDecryptionCache.cachedDraft(event)?.let { rumor ->
-                                indexDraftAsRealEvent(eventNote, rumor)
-                            }
+                        val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event)
+                        if (rumor != null) {
+                            indexDraftAsRealEvent(eventNote, rumor)
                         }
                     }
                 }
@@ -200,14 +198,7 @@ class DecryptAndIndexProcessor(
             is DraftEvent -> {
                 // Avoid decrypting over and over again if the event already exist.
                 if (event.pubKey == account.signer.pubKey) {
-                    if (!event.isDeleted()) {
-                        if (account.draftsDecryptionCache.preCachedDraft(event) == null) {
-                            account.draftsDecryptionCache.cachedDraft(event)?.let {
-                                deindexDraftAsRealEvent(eventNote, it)
-                            }
-                            account.draftsDecryptionCache.delete(event)
-                        }
-                    }
+                    deindexDraftAsRealEvent(eventNote)
                 }
             }
 
@@ -257,90 +248,67 @@ class DecryptAndIndexProcessor(
         draftEventWrap: Note,
         rumor: Event,
     ) {
+        draftEventWrap.replyTo = cache.computeReplyTo(rumor)
+        draftEventWrap.replyTo?.forEach { it.addReply(draftEventWrap) }
+
         when (rumor) {
             is PrivateDmEvent -> {
                 if (rumor.canDecrypt(account.signer)) {
                     val talkingWith = rumor.chatroomKey(account.signer.pubKey)
-                    account.chatroomList.addMessage(talkingWith, draftEventWrap)
+                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(talkingWith)
+                    if (chatroom.addMessageSync(draftEventWrap)) {
+                        draftEventWrap.inChatroom = chatroom
+                    }
                 }
             }
             is ChatMessageEvent -> {
                 if (rumor.isIncluded(account.signer.pubKey)) {
                     val key = rumor.chatroomKey(account.signer.pubKey)
-                    account.chatroomList.addMessage(key, draftEventWrap)
+                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(key)
+                    if (chatroom.addMessageSync(draftEventWrap)) {
+                        draftEventWrap.inChatroom = chatroom
+                    }
                 }
             }
             is ChatMessageEncryptedFileHeaderEvent -> {
                 if (rumor.isIncluded(account.signer.pubKey)) {
                     val key = rumor.chatroomKey(account.signer.pubKey)
-                    account.chatroomList.addMessage(key, draftEventWrap)
+                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(key)
+                    if (chatroom.addMessageSync(draftEventWrap)) {
+                        draftEventWrap.inChatroom = chatroom
+                    }
                 }
             }
             is EphemeralChatEvent -> {
                 rumor.roomId()?.let {
-                    cache.getOrCreateEphemeralChannel(it).addNote(draftEventWrap, null)
+                    val channel = cache.getOrCreateEphemeralChannel(it)
+                    channel.addNote(draftEventWrap, null)
+                    draftEventWrap.inChannel = channel
                 }
             }
             is ChannelMessageEvent -> {
                 rumor.channelId()?.let { channelId ->
-                    cache.checkGetOrCreatePublicChatChannel(channelId)?.addNote(draftEventWrap, null)
+                    val channel = cache.checkGetOrCreatePublicChatChannel(channelId)
+                    channel?.addNote(draftEventWrap, null)
+                    draftEventWrap.inChannel = channel
                 }
             }
             is LiveActivitiesChatMessageEvent -> {
                 rumor.activityAddress()?.let { channelId ->
-                    cache.getOrCreateLiveChannel(channelId).addNote(draftEventWrap, null)
+                    val channel = cache.getOrCreateLiveChannel(channelId)
+                    channel.addNote(draftEventWrap, null)
+                    draftEventWrap.inChannel = channel
                 }
-            }
-            is TextNoteEvent -> {
-                val replyTo = cache.computeReplyTo(rumor)
-                replyTo.forEach { it.addReply(draftEventWrap) }
             }
         }
     }
 
-    fun deindexDraftAsRealEvent(
-        draftEventWrap: Note,
-        rumor: Event,
-    ) {
-        when (rumor) {
-            is PrivateDmEvent -> {
-                if (rumor.canDecrypt(account.signer.pubKey)) {
-                    val talkingWith = rumor.chatroomKey(account.signer.pubKey)
-                    account.chatroomList.addMessage(talkingWith, draftEventWrap)
-                }
-            }
-            is ChatMessageEvent -> {
-                if (rumor.isIncluded(account.signer.pubKey)) {
-                    val key = rumor.chatroomKey(account.signer.pubKey)
-                    account.chatroomList.removeMessage(key, draftEventWrap)
-                }
-            }
-            is ChatMessageEncryptedFileHeaderEvent -> {
-                if (rumor.isIncluded(account.signer.pubKey)) {
-                    val key = rumor.chatroomKey(account.signer.pubKey)
-                    account.chatroomList.removeMessage(key, draftEventWrap)
-                }
-            }
-            is ChannelMessageEvent -> {
-                rumor.channelId()?.let { channelId ->
-                    cache.getPublicChatChannelIfExists(channelId)?.removeNote(draftEventWrap)
-                }
-            }
-            is EphemeralChatEvent -> {
-                rumor.roomId()?.let {
-                    cache.getEphemeralChatChannelIfExists(it)?.removeNote(draftEventWrap)
-                }
-            }
-            is LiveActivitiesChatMessageEvent -> {
-                rumor.activityAddress()?.let { channelId ->
-                    cache.getLiveActivityChannelIfExists(channelId)?.removeNote(draftEventWrap)
-                }
-            }
-            is TextNoteEvent -> {
-                val replyTo = cache.computeReplyTo(rumor)
-                replyTo.forEach { it.removeReply(draftEventWrap) }
-            }
-        }
+    fun deindexDraftAsRealEvent(draftEventWrap: Note) {
+        draftEventWrap.replyTo?.forEach { it.removeReply(draftEventWrap) }
+        draftEventWrap.replyTo = null
+
+        draftEventWrap.inChatroom?.removeMessageSync(draftEventWrap)
+        draftEventWrap.inChannel?.removeNote(draftEventWrap)
     }
 
     suspend fun runNew(newNotes: Set<Note>) {

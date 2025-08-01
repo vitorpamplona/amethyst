@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.model.privateChats
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -41,7 +40,7 @@ class Chatroom {
     var lastMessage: Note? = null
 
     @Synchronized
-    fun addMessageSync(msg: Note) {
+    fun addMessageSync(msg: Note): Boolean {
         if (msg !in messages) {
             messages = messages + msg
 
@@ -62,13 +61,13 @@ class Chatroom {
                 subject.tryEmit(newSubject)
                 subjectCreatedAt = msg.createdAt()
             }
+            return true
         }
+        return false
     }
 
     @Synchronized
-    fun removeMessageSync(msg: Note) {
-        checkNotInMainThread()
-
+    fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {
             messages = messages - msg
 
@@ -80,7 +79,9 @@ class Chatroom {
                     subject.tryEmit(it.event?.subject())
                     subjectCreatedAt = it.createdAt()
                 }
+            return true
         }
+        return false
     }
 
     fun senderIntersects(keySet: Set<HexKey>): Boolean = activeSenders.any { it.pubkeyHex in keySet }
