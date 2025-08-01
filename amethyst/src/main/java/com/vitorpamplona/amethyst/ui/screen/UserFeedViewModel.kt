@@ -106,6 +106,13 @@ open class UserFeedViewModel(
                 invalidateData()
             }
         }
+
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Delete from feeds: ${this@UserFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                invalidateData()
+            }
+        }
     }
 
     override fun onCleared() {

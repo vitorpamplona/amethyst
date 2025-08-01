@@ -77,7 +77,9 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
@@ -142,9 +144,19 @@ private fun SearchBar(
     TextSearchDataSourceSubscription(searchBarViewModel, accountViewModel)
 
     LaunchedEffect(Unit) {
-        LocalCache.live.newEventBundles.collect {
-            if (searchBarViewModel.isSearchingFun()) {
-                searchBarViewModel.invalidateData()
+        launch(Dispatchers.Default) {
+            LocalCache.live.newEventBundles.collect {
+                if (searchBarViewModel.isSearchingFun()) {
+                    searchBarViewModel.invalidateData()
+                }
+            }
+        }
+
+        launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect {
+                if (searchBarViewModel.isSearchingFun()) {
+                    searchBarViewModel.invalidateData()
+                }
             }
         }
     }

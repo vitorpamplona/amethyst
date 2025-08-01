@@ -87,11 +87,12 @@ open class LnZapFeedViewModel(
     init {
         Log.d("Init", "${this.javaClass.simpleName}")
         viewModelScope.launch(Dispatchers.IO) {
-            checkNotInMainThread()
-
             LocalCache.live.newEventBundles.collect { newNotes ->
-                checkNotInMainThread()
-
+                invalidateData()
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
                 invalidateData()
             }
         }

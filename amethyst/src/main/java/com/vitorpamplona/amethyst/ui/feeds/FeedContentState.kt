@@ -126,6 +126,13 @@ class FeedContentState(
         }
     }
 
+    fun deleteFromFeed(deletedNotes: Set<Note>) {
+        val feed = _feedContent.value
+        if (feed is FeedState.Loaded) {
+            updateFeed((feed.feed.value.list - deletedNotes).toImmutableList())
+        }
+    }
+
     fun refreshFromOldState(newItems: Set<Note>) {
         val oldNotesState = _feedContent.value
         if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {

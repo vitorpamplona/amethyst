@@ -200,9 +200,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 interface ILocalCache {
@@ -520,12 +517,6 @@ object LocalCache : ILocalCache {
         wasVerified: Boolean,
     ) = consumeBaseReplaceable(event, relay, wasVerified)
 
-    fun formattedDateTime(timestamp: Long): String =
-        Instant
-            .ofEpochSecond(timestamp)
-            .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("uuuu MMM d hh:mm a"))
-
     fun consume(
         event: TextNoteEvent,
         relay: NormalizedRelayUrl? = null,
@@ -831,7 +822,7 @@ object LocalCache : ILocalCache {
                 event.mapTaggedEventId { checkGetOrCreateNote(it) } + event.mapTaggedAddress { checkGetOrCreateAddressableNote(it) }
             }
 
-            else -> emptyList<Note>()
+            else -> emptyList()
         }
 
     fun consume(
@@ -1339,6 +1330,9 @@ object LocalCache : ILocalCache {
             masterNote.removeReport(deleteNote)
         }
 
+        deleteNote.inChatroom?.removeMessageSync(deleteNote)
+        deleteNote.inChannel?.removeNote(deleteNote)
+
         getAnyChannel(deleteNote)?.removeNote(deleteNote)
 
         (deletedEvent as? TorrentCommentEvent)?.torrentIds()?.let {
@@ -1357,18 +1351,18 @@ object LocalCache : ILocalCache {
     }
 
     fun deleteWraps(event: WrappedEvent) {
-        event.host?.let {
+        event.host?.let { hostStub ->
             // seal
-            getNoteIfExists(it.id)?.let {
-                val noteEvent = it.event
+            getNoteIfExists(hostStub.id)?.let { hostNote ->
+                val noteEvent = hostNote.event
                 if (noteEvent is WrappedEvent) {
                     deleteWraps(noteEvent)
                 }
-                it.clearFlow()
-                refreshDeletedNoteObservers(it)
+                hostNote.clearFlow()
+                refreshDeletedNoteObservers(hostNote)
             }
 
-            notes.remove(it.id)
+            notes.remove(hostStub.id)
         }
     }
 
@@ -1590,7 +1584,7 @@ object LocalCache : ILocalCache {
                     oldChannel.updateChannelInfo(author, event)
                     true
                 } else {
-                    wasVerified
+                    false
                 }
             } else {
                 wasVerified
@@ -2055,11 +2049,7 @@ object LocalCache : ILocalCache {
             if (note.event?.tags?.tagValueContains(text, true) == true ||
                 note.idHex.startsWith(text, true)
             ) {
-                if (!note.isHiddenFor(hiddenUsers.flow.value)) {
-                    return@filter true
-                } else {
-                    return@filter false
-                }
+                return@filter !note.isHiddenFor(hiddenUsers.flow.value)
             }
 
             if (note.event?.isContentEncoded() == false) {
@@ -2080,11 +2070,7 @@ object LocalCache : ILocalCache {
                 if (addressable.event?.tags?.tagValueContains(text, true) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
-                    if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
-                        return@filter true
-                    } else {
-                        return@filter false
-                    }
+                    return@filter !addressable.isHiddenFor(hiddenUsers.flow.value)
                 }
 
                 if (addressable.event?.isContentEncoded() == false) {
@@ -2187,7 +2173,7 @@ object LocalCache : ILocalCache {
     suspend fun findLatestModificationForNote(note: Note): List<Note> {
         checkNotInMainThread()
 
-        val originalAuthor = note.author?.pubkeyHex ?: return emptyList()
+        val noteAuthor = note.author ?: return emptyList()
 
         modificationCache[note.idHex]?.let {
             return it
@@ -2200,7 +2186,7 @@ object LocalCache : ILocalCache {
                 .filter { _, item ->
                     val noteEvent = item.event
 
-                    noteEvent is TextNoteModificationEvent && note.author == item.author && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
+                    noteEvent is TextNoteModificationEvent && noteAuthor == item.author && noteEvent.isTaggedEvent(note.idHex) && !noteEvent.isExpirationBefore(time)
                 }.sortedWith(compareBy({ it.createdAt() }, { it.idHex }))
 
         modificationCache.put(note.idHex, newNotes)
@@ -2315,8 +2301,7 @@ object LocalCache : ILocalCache {
                 val childrenToBeRemoved = mutableListOf<Note>()
 
                 toBeRemoved.forEach {
-                    // TODO: NEED TO TEST IF WRAPS COME BACK WHEN NEEDED BEFORE ACTIVATING
-                    // childrenToBeRemoved.addAll(removeIfWrap(it))
+                    childrenToBeRemoved.addAll(removeIfWrap(it))
                     removeFromCache(it)
 
                     childrenToBeRemoved.addAll(it.removeAllChildNotes())
@@ -2427,6 +2412,9 @@ object LocalCache : ILocalCache {
             masterNote.removeZap(note)
             masterNote.removeReport(note)
         }
+
+        note.inChatroom?.removeMessageSync(note)
+        note.inChannel?.removeNote(note)
 
         val noteEvent = note.event
 
@@ -2896,6 +2884,9 @@ class LocalCacheFlow {
     // Refreshes observers in batches.
     private val bundler = BundledInsert<Note>(1000, Dispatchers.Default)
 
+    // Refreshes observers in batches.
+    private val bundler2 = BundledInsert<Note>(1000, Dispatchers.Default)
+
     fun newNote(newNote: Note) {
         bundler.invalidateList(newNote) { bundledNewNotes ->
             _newEventBundles.emit(bundledNewNotes)
@@ -2903,7 +2894,7 @@ class LocalCacheFlow {
     }
 
     fun removedNote(newNote: Note) {
-        bundler.invalidateList(newNote) { bundledNewNotes ->
+        bundler2.invalidateList(newNote) { bundledNewNotes ->
             _deletedEventBundles.emit(bundledNewNotes)
         }
     }

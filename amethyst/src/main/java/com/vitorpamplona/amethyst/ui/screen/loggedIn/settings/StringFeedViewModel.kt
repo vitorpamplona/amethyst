@@ -105,6 +105,12 @@ open class StringFeedViewModel(
                 invalidateData()
             }
         }
+        viewModelScope.launch(Dispatchers.Default) {
+            LocalCache.live.deletedEventBundles.collect { newNotes ->
+                Log.d("Rendering Metrics", "Update feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                invalidateData()
+            }
+        }
     }
 
     override fun onCleared() {

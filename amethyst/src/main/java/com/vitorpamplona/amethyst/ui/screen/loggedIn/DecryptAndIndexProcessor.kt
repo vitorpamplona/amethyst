@@ -198,7 +198,8 @@ class DecryptAndIndexProcessor(
             is DraftEvent -> {
                 // Avoid decrypting over and over again if the event already exist.
                 if (event.pubKey == account.signer.pubKey) {
-                    deindexDraftAsRealEvent(eventNote)
+                    // already deindexed by LocalCache
+                    // deindexDraftAsRealEvent(eventNote)
                 }
             }
 
@@ -301,14 +302,6 @@ class DecryptAndIndexProcessor(
                 }
             }
         }
-    }
-
-    fun deindexDraftAsRealEvent(draftEventWrap: Note) {
-        draftEventWrap.replyTo?.forEach { it.removeReply(draftEventWrap) }
-        draftEventWrap.replyTo = null
-
-        draftEventWrap.inChatroom?.removeMessageSync(draftEventWrap)
-        draftEventWrap.inChannel?.removeNote(draftEventWrap)
     }
 
     suspend fun runNew(newNotes: Set<Note>) {
