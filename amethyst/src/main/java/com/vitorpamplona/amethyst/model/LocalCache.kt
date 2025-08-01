@@ -347,8 +347,6 @@ object LocalCache : ILocalCache {
         }
 
     fun checkGetOrCreateNote(etag: ETag): Note? {
-        checkNotInMainThread()
-
         if (isValidHex(etag.eventId)) {
             return getOrCreateNote(etag)
         }
@@ -356,8 +354,6 @@ object LocalCache : ILocalCache {
     }
 
     fun checkGetOrCreateNote(key: String): Note? {
-        checkNotInMainThread()
-
         if (ATag.isATag(key)) {
             return checkGetOrCreateAddressableNote(key)
         }
@@ -1322,16 +1318,10 @@ object LocalCache : ILocalCache {
 
         // Counts the replies
         deleteNote.replyTo?.forEach { masterNote ->
-            masterNote.removeReply(deleteNote)
-            masterNote.removeBoost(deleteNote)
-            masterNote.removeReaction(deleteNote)
-            masterNote.removeZap(deleteNote)
-            masterNote.removeZapPayment(deleteNote)
-            masterNote.removeReport(deleteNote)
+            masterNote.removeNote(deleteNote)
         }
 
-        deleteNote.inChatroom?.removeMessageSync(deleteNote)
-        deleteNote.inChannel?.removeNote(deleteNote)
+        deleteNote.inGatherers?.forEach { it.removeNote(deleteNote) }
 
         getAnyChannel(deleteNote)?.removeNote(deleteNote)
 
@@ -2406,15 +2396,10 @@ object LocalCache : ILocalCache {
 
     private fun removeFromCache(note: Note) {
         note.replyTo?.forEach { masterNote ->
-            masterNote.removeReply(note)
-            masterNote.removeBoost(note)
-            masterNote.removeReaction(note)
-            masterNote.removeZap(note)
-            masterNote.removeReport(note)
+            masterNote.removeNote(note)
         }
 
-        note.inChatroom?.removeMessageSync(note)
-        note.inChannel?.removeNote(note)
+        note.inGatherers?.forEach { it.removeNote(note) }
 
         val noteEvent = note.event
 

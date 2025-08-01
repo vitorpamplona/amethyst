@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.privateChats
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NotesGatherer
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -31,7 +32,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
-class Chatroom {
+class Chatroom : NotesGatherer {
     var activeSenders: Set<User> = setOf()
     var messages: Set<Note> = setOf()
     var subject = MutableStateFlow<String?>(null)
@@ -39,10 +40,15 @@ class Chatroom {
     var ownerSentMessage: Boolean = false
     var lastMessage: Note? = null
 
+    override fun removeNote(note: Note) {
+        removeMessageSync(note)
+    }
+
     @Synchronized
     fun addMessageSync(msg: Note): Boolean {
         if (msg !in messages) {
             messages = messages + msg
+            msg.addGatherer(this)
 
             msg.author?.let { author ->
                 if (author !in activeSenders) {
@@ -70,6 +76,7 @@ class Chatroom {
     fun removeMessageSync(msg: Note): Boolean {
         if (msg in messages) {
             messages = messages - msg
+            msg.removeGatherer(this)
 
             messages
                 .filter { it.event?.subject() != null }

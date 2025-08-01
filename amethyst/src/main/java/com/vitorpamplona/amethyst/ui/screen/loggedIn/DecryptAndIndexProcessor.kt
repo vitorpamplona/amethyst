@@ -256,49 +256,37 @@ class DecryptAndIndexProcessor(
             is PrivateDmEvent -> {
                 if (rumor.canDecrypt(account.signer)) {
                     val talkingWith = rumor.chatroomKey(account.signer.pubKey)
-                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(talkingWith)
-                    if (chatroom.addMessageSync(draftEventWrap)) {
-                        draftEventWrap.inChatroom = chatroom
-                    }
+                    account.chatroomList.addMessage(talkingWith, draftEventWrap)
                 }
             }
             is ChatMessageEvent -> {
                 if (rumor.isIncluded(account.signer.pubKey)) {
                     val key = rumor.chatroomKey(account.signer.pubKey)
-                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(key)
-                    if (chatroom.addMessageSync(draftEventWrap)) {
-                        draftEventWrap.inChatroom = chatroom
-                    }
+                    account.chatroomList.addMessage(key, draftEventWrap)
                 }
             }
             is ChatMessageEncryptedFileHeaderEvent -> {
                 if (rumor.isIncluded(account.signer.pubKey)) {
                     val key = rumor.chatroomKey(account.signer.pubKey)
-                    val chatroom = account.chatroomList.getOrCreatePrivateChatroom(key)
-                    if (chatroom.addMessageSync(draftEventWrap)) {
-                        draftEventWrap.inChatroom = chatroom
-                    }
+                    account.chatroomList.addMessage(key, draftEventWrap)
                 }
             }
             is EphemeralChatEvent -> {
                 rumor.roomId()?.let {
                     val channel = cache.getOrCreateEphemeralChannel(it)
                     channel.addNote(draftEventWrap, null)
-                    draftEventWrap.inChannel = channel
                 }
             }
             is ChannelMessageEvent -> {
                 rumor.channelId()?.let { channelId ->
                     val channel = cache.checkGetOrCreatePublicChatChannel(channelId)
                     channel?.addNote(draftEventWrap, null)
-                    draftEventWrap.inChannel = channel
                 }
             }
             is LiveActivitiesChatMessageEvent -> {
                 rumor.activityAddress()?.let { channelId ->
                     val channel = cache.getOrCreateLiveChannel(channelId)
                     channel.addNote(draftEventWrap, null)
-                    draftEventWrap.inChannel = channel
                 }
             }
         }

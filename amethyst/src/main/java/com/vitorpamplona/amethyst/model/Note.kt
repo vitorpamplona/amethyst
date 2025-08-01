@@ -24,7 +24,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.service.replace
@@ -78,6 +77,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import java.math.BigDecimal
 
+interface NotesGatherer {
+    fun removeNote(note: Note)
+}
+
 @Stable
 class AddressableNote(
     val address: Address,
@@ -125,14 +128,33 @@ class AddressableNote(
 @Stable
 open class Note(
     val idHex: String,
-) {
+) : NotesGatherer {
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: Event? = null
     var author: User? = null
     var replyTo: List<Note>? = null
-    var inChannel: Channel? = null
-    var inChatroom: Chatroom? = null
+
+    var inGatherers: List<NotesGatherer>? = null
+
+    fun inGatherers() = inGatherers ?: listOf<NotesGatherer>().also { inGatherers = it }
+
+    fun addGatherer(gatherer: NotesGatherer) {
+        inGatherers = inGatherers() + gatherer
+    }
+
+    fun removeGatherer(gatherer: NotesGatherer) {
+        inGatherers = inGatherers() - gatherer
+    }
+
+    override fun removeNote(note: Note) {
+        removeReply(note)
+        removeBoost(note)
+        removeReaction(note)
+        removeZap(note)
+        removeZapPayment(note)
+        removeReport(note)
+    }
 
     // These fields are updated every time an event related to this note is received.
     var replies = listOf<Note>()

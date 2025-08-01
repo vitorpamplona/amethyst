@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Stable
-abstract class Channel {
+abstract class Channel : NotesGatherer {
     val notes = LargeCache<HexKey, Note>()
     var lastNote: Note? = null
 
@@ -68,21 +68,33 @@ abstract class Channel {
         note: Note,
         relay: NormalizedRelayUrl? = null,
     ) {
-        notes.put(note.idHex, note)
+        if (!notes.containsKey(note.idHex)) {
+            notes.put(note.idHex, note)
+            note.addGatherer(this)
 
-        if ((note.createdAt() ?: 0) > (lastNote?.createdAt() ?: 0)) {
-            lastNote = note
+            if ((note.createdAt() ?: 0) > (lastNote?.createdAt() ?: 0)) {
+                lastNote = note
+            }
+
+            if (relay != null) {
+                addRelay(relay)
+            }
+
+            flowSet?.notes?.invalidateData()
         }
-
-        if (relay != null) {
-            addRelay(relay)
-        }
-
-        flowSet?.notes?.invalidateData()
     }
 
-    fun removeNote(note: Note) {
-        notes.remove(note.idHex)
+    override fun removeNote(note: Note) {
+        if (notes.containsKey(note.idHex)) {
+            notes.remove(note.idHex)
+            note.removeGatherer(this)
+
+            if (note == lastNote) {
+                lastNote = notes.values().sortedWith(DefaultFeedOrder).firstOrNull()
+            }
+
+            flowSet?.notes?.invalidateData()
+        }
     }
 
     fun pruneOldMessages(): Set<Note> {
