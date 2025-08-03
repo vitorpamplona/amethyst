@@ -173,7 +173,7 @@ class AccountViewModel(
             scope = viewModelScope,
         )
 
-    val newNotesPreProcessor = EventProcessor(account, account.cache)
+    val newNotesPreProcessor = EventProcessor(account, LocalCache)
 
     var firstRoute: Route? = null
 
