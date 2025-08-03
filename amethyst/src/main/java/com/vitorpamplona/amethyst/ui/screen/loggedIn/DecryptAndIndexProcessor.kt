@@ -46,7 +46,7 @@ class EventProcessor(
     private val account: Account,
     private val cache: LocalCache,
 ) {
-    private val decryptionService = DecryptionService(account, cache)
+    private val decryptionService = DecryptionService(account)
     private val indexingService = IndexingService(account, cache)
     private val chatroomService = ChatroomService(account)
     private val eventHandlers = createEventHandlers()
@@ -132,10 +132,8 @@ class EventProcessor(
     }
 }
 
-// Service classes following Single Responsibility Principle
 class DecryptionService(
     val account: Account,
-    private val cache: LocalCache,
 ) {
     suspend fun unwrapGiftWrap(event: GiftWrapEvent): Event? = event.unwrapOrNull(account.signer)
 
@@ -251,7 +249,6 @@ class ChatroomService(
     }
 }
 
-// Event handler interface and implementations following Strategy Pattern
 interface EventHandler {
     suspend fun process(
         event: Event,
