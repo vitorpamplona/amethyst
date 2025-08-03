@@ -33,6 +33,7 @@
     <string name="report_impersonation">ছদ্মবেশ ধারণের অভিযোগ করুন</string>
     <string name="report_explicit_content">খোলামেলা আধেয় হিসেবে অভিযোগ করুন</string>
     <string name="report_illegal_behaviour">বেআইনী আচরণের অভিযোগ করুন</string>
+    <string name="mod">মোড</string>
     <string name="login_with_a_private_key_to_be_able_to_reply">প্রতিউত্তর দিতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">পোস্টগুলি বুস্ট করতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
     <string name="login_with_a_private_key_to_like_posts">পোস্টগুলি লাইক করতে ব্যক্তিগত চাবি দিয়ে লগ ইন করুন</string>
@@ -59,6 +60,8 @@
     <string name="payment_successful">সফলভাবে মূল্য পরিশোধিত হয়েছে</string>
     <string name="following">" অনুসরণ"</string>
     <string name="followers">" অনুসারী"</string>
+    <string name="number_following">"%1$s অনুসরণ"</string>
+    <string name="number_followers">""</string>
     <string name="profile">প্রোফাইল</string>
     <string name="security_filters">নিরাপত্তা-ফিল্টার</string>
     <string name="log_out">লগ আউট</string>
@@ -71,6 +74,7 @@
     <string name="amount_in_sats">স্যাটে মোট পরিমাণ</string>
     <string name="send_sats">স্যাট পাঠান</string>
     <string name="secret_emoji_maker">সিক্রেট ইমোজি মেকার</string>
+    <string name="secret_visible_text_placeholder">😎</string>
     <string name="error_parsing_preview_for">"এই দুইয়ের পূর্বরূপ দেখানো যাচ্ছে না %1$s : %2$s"</string>
     <string name="preview_card_image_for">"%1$s এর জন্য কার্ড ইমেজের পূর্বরূপ দেখুন"</string>
     <string name="new_channel">নতুন চ্যানেল</string>
