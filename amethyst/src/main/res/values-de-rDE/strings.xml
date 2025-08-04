@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um nicht mehr zu folgen</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Sie verwenden einen öffentlichen Schlüssel, und öffentliche Schlüssel sind nur lesbar. Melden Sie sich mit einem privaten Schlüssel an, um ein Wort oder einen Satz auszublenden</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Sie verwenden einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um ein Wort oder einen Satz anzeigen zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um Einstellungen ändern zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um hochladen zu können</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Du verwendest einen öffentlichen Schlüssel, der nur lesbar ist. Melde dich mit einem privaten Schlüssel an, um Ereignisse zu signieren</string>
+    <string name="unauthorized_exception">Unbefugte Entschlüsselung</string>
+    <string name="unauthorized_exception_description">Der Signierer hat die erforderliche Entschlüsselung nicht autorisiert. Aktiviere NIP-44-Entschlüsselung in deiner Signierer-App und versuche es erneut</string>
+    <string name="signer_not_found_exception">Signierer nicht gefunden</string>
+    <string name="signer_not_found_exception_description">Wurde die Signierer-App deinstalliert? Überprüfe, ob sie installiert ist und dieses Konto enthält. Melde dich ab und wieder an, falls sich die App geändert hat.</string>
     <string name="zaps">Zaps</string>
     <string name="view_count">Aufrufe</string>
     <string name="boost">Boost</string>
@@ -98,6 +105,7 @@
     <string name="my_awesome_group">Meine tolle Gruppe</string>
     <string name="picture_url">Bild-URL</string>
     <string name="description">Beschreibung</string>
+    <string name="no_description">Keine Beschreibung gefunden</string>
     <string name="about_us">"Über uns…"</string>
     <string name="what_s_on_your_mind">Was beschäftigt dich?</string>
     <string name="write_a_message">Eine Nachricht schreiben…</string>
@@ -141,6 +149,10 @@ erie gespeichert</string>
     <string name="video_saved_to_the_gallery">Video in der Videogalerie des Telefons gespeichert</string>
     <string name="failed_to_save_the_video">Video konnte nicht gespeichert werden</string>
     <string name="upload_image">Bild hochladen</string>
+    <string name="take_a_picture">Ein Foto aufnehmen</string>
+    <string name="record_a_message">Eine Nachricht aufnehmen</string>
+    <string name="record_a_message_title">Eine Nachricht aufnehmen</string>
+    <string name="record_a_message_description">Zum Aufnehmen einer Nachricht gedrückt halten</string>
     <string name="uploading">Hochladen…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Der Benutzer hat keine Lightning-Adresse eingerichtet, um Sats zu empfangen</string>
     <string name="reply_here">"Hier antworten…"</string>
@@ -235,6 +247,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="public_chat_relays_title">Relais</string>
     <string name="public_chat_relays_explainer">Fügen Sie zwischen 1–3 Relais ein, die diese Gruppe beherbergen.
         Nostr Clients verwenden diese Einstellung, um zu wissen, woher sie Nachrichten herunterladen und an welche gesendet werden sollen.</string>
+    <string name="paid_relay">Bezahltes Relay</string>
+    <string name="tor_relay">Tor-Verbindung erzwingen</string>
     <string name="posts_received">empfangene Beiträge</string>
     <string name="remove">Entfernen</string>
     <string name="translations_auto">Automatisch</string>
@@ -277,6 +291,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="biometric_error">Fehler</string>
     <string name="badge_created_by">"Erstellt von %1$s"</string>
     <string name="badge_award_image_for">"Auszeichnungsbild für %1$s"</string>
+    <string name="badge_award_image">Auszeichnungsbild</string>
     <string name="new_badge_award_notif">Sie haben eine neue Auszeichnung erhalten</string>
     <string name="award_granted_to">Auszeichnung verliehen an</string>
     <string name="copied_note_text_to_clipboard">Notiztext in die Zwischenablage kopiert</string>
@@ -426,6 +441,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="no">Nein</string>
     <string name="follow_list_selection">Folgen-Liste</string>
     <string name="follow_list_kind3follows">Alle Folgen</string>
+    <string name="follow_list_kind3follows_proxy">Folgt über Proxy</string>
     <string name="follow_list_aroundme">In der Nähe</string>
     <string name="follow_list_global">Weltweit</string>
     <string name="follow_list_mute_list">Stummliste</string>
@@ -696,6 +712,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="wallet_number">Brieftasche %1$s</string>
     <string name="error_opening_external_signer">Fehler beim Öffnen der Signatur-App</string>
     <string name="error_opening_external_signer_description">Die Unterzeichner-App konnte nicht gefunden werden. Prüfen Sie, ob die App nicht deinstalliert wurde</string>
+    <string name="sign_request_rejected2">Signaturanfrage abgelehnt</string>
     <string name="sign_request_rejected">Signaturanfrage abgelehnt</string>
     <string name="sign_request_rejected_description">Stellen Sie sicher, dass die Unterzeichner-Anwendung diese Transaktion autorisiert hat</string>
     <string name="no_wallet_found_with_error">Keine Wallets gefunden, um eine Lightning-Rechnung zu bezahlen (Fehler: %1$s). Installieren Sie eine Lightning-Wallet, um Zaps zu verwenden</string>
@@ -879,12 +896,29 @@ anz der Bedingungen ist erforderlich</string>
     <string name="private_outbox_section_explainer">Fügen Sie zwischen 1–3 Relais ein, um Ereignisse zu speichern, die niemand anders sehen kann, wie Ihre Entwürfe und/oder App-Einstellungen. Idealerweise sind diese Relais entweder lokal oder erfordern eine Authentifizierung, bevor Sie die Inhalte eines jeden Benutzers herunterladen.</string>
     <string name="kind_3_section">Allgemeine Relais</string>
     <string name="kind_3_section_description">Amethyst verwendet diese Relais, um Beiträge für Sie herunterzuladen.</string>
+    <string name="connected_section">Verbundene Relays</string>
+    <string name="connected_section_description">Aktuelle Liste der verwendeten Relays</string>
     <string name="kind_3_recommended_section">Empfohlene Relais</string>
     <string name="kind_3_recommended_section_description">Fügen Sie die folgenden Relais zu Ihrer Liste hinzu, um Beiträge von den aufgelisteten Benutzern zu erhalten.</string>
     <string name="search_section">Suchrelais</string>
     <string name="search_section_explainer">Liste der Relais, die für die Suche und das Taggen von Benutzern verwendet werden. Das Taggen und die Suche funktionieren nicht, wenn keine Optionen verfügbar sind.</string>
     <string name="local_section">Lokale Relais</string>
     <string name="local_section_explainer">Liste der Relays, die auf diesem Gerät laufen.</string>
+    <string name="trusted_relays_title">Vertrauenswürdige Relays</string>
+    <string name="trusted_section">Vertrauenswürdige Relays</string>
+    <string name="trusted_section_explainer">Relays, denen du vertraust und für die keine Tor-Verbindung erforderlich ist</string>
+    <string name="proxy_relays_title">Proxy-Relays</string>
+    <string name="proxy_section">Proxy-Relays</string>
+    <string name="proxy_section_explainer">Aggregator-Relays wie filter.nostr.wine, von denen die App deine Feeds herunterlädt</string>
+    <string name="broadcast_relays_title">Broadcast-Relays</string>
+    <string name="broadcast_section">Broadcast-Relays</string>
+    <string name="broadcast_section_explainer">Relays, die deine Beiträge an andere Relays weiterleiten, z.B. sendit.nosflare.com. Amethyst fügt diesen Relay zu allen neuen Ereignissen hinzu</string>
+    <string name="indexer_relays_title">Indexer-Relays</string>
+    <string name="indexer_section">Indexer-Relays</string>
+    <string name="indexer_section_explainer">Relays, die Metadaten und Relay-Listen hosten, z.B. purplepag.es. Amethyst verwendet sie, um Benutzer zu finden, die nicht in deinen Listen sind.</string>
+    <string name="blocked_relays_title">Blockierte Relays</string>
+    <string name="blocked_section">Blockierte Relays</string>
+    <string name="blocked_section_explainer">Amethyst wird sich niemals mit diesen Relays verbinden</string>
     <string name="zap_the_devs_title">Zap die Entwickler!</string>
     <string name="zap_the_devs_description">Deine Spende hilft uns, einen Unterschied zu machen. Jeder Sat zählt!</string>
     <string name="donate_now">Jetzt spenden</string>
@@ -974,6 +1008,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="select_list_to_filter">Liste zum Filtern des Feeds auswählen</string>
     <string name="temporary_account">Beim Sperren des Geräts abmelden</string>
     <string name="private_message">Private Nachricht</string>
+    <string name="public_message">Öffentliche Nachricht</string>
     <string name="group_relay">Chat-Relais</string>
     <string name="group_relay_explanation">Das Relais, mit dem sich alle Benutzer dieses Chats verbinden</string>
     <string name="share_image">Bild teilen…</string>

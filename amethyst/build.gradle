@@ -8,6 +8,34 @@ plugins {
     alias(libs.plugins.serialization)
 }
 
+def getCurrentBranch() {
+    try {
+        def branch = 'git rev-parse --abbrev-ref HEAD'.execute().text.trim()
+        return branch
+    } catch (Exception e) {
+        println "Could not determine git branch: ${e.message}"
+        return "unknown"
+    }
+}
+
+def generateVersionName(String baseVersion) {
+    def currentBranch = getCurrentBranch()
+
+    if (currentBranch == "main" || currentBranch == "master") {
+        return baseVersion
+    } else {
+        // Clean branch name for version (replace special characters)
+        def cleanBranch = currentBranch.replaceAll(/[^a-zA-Z0-9\-_]/, "-")
+
+        // Limit branch name to maximum 20 characters
+        if (cleanBranch.length() > 20) {
+            cleanBranch = cleanBranch.substring(0, 20)
+        }
+
+        return "${baseVersion}-${cleanBranch}"
+    }
+}
+
 android {
     namespace = 'com.vitorpamplona.amethyst'
     compileSdk = libs.versions.android.compileSdk.get().toInteger()
@@ -17,7 +45,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
         versionCode = 418
-        versionName = "0.94.3"
+        versionName = generateVersionName("0.94.3")
         buildConfigField "String", "RELEASE_NOTES_ID", "\"fd42b23b9ef792059b1c1a89555443abbb11578f4b3c8430b452559eec7325f3\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -333,4 +361,3 @@ dependencies {
     implementation libs.androidx.camera.view
     implementation libs.androidx.camera.extensions
 }
-

@@ -51,6 +51,13 @@
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy ki tudja követni az embereket, akiket követ</string>
     <string name="login_with_a_private_key_to_be_able_to_hide_word">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy egy szót vagy mondat el tudjon rejteni</string>
     <string name="login_with_a_private_key_to_be_able_to_show_word">Ön nyilvános kulcsot használ, és a nyilvános kulccsal csak olvashatóak a bejegyzések. Jelentkezzen be a privát kulcsával, hogy egy szót vagy mondat meg tudjon jeleníteni</string>
+    <string name="login_with_a_private_key_to_be_able_to_change_settings">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. A beállítások módosításához jelentkezzen be egy privát kulccsal</string>
+    <string name="login_with_a_private_key_to_be_able_to_upload">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be egy privát kulccsal, hogy tudjon tartalmakat feltölteni</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Ön nyilvános kulcsot használ, és a nyilvános kulcsok csak olvashatóak. Jelentkezzen be egy privát kulccsal, hogy aláírhassa az eseményeket</string>
+    <string name="unauthorized_exception">Jogosulatlan visszafejtés</string>
+    <string name="unauthorized_exception_description">Az aláíró nem engedélyezte a művelet végrehajtásához szükséges visszafejtést. Aktiválja az NIP-44 visszafejtést az aláíró alkalmazásban, és próbálja meg újra</string>
+    <string name="signer_not_found_exception">Nem található az aláíró</string>
+    <string name="signer_not_found_exception_description">Az aláíró alkalmazás el lett távolítva? Ellenőrizze, hogy az aláíró telepítve van-e és rendelkezik-e ezzel a fiókkal. Jelentkezzen ki és jelentkezzen be újra, ha az aláíró alkalmazás megváltozott.</string>
     <string name="zaps">Zap</string>
     <string name="view_count">Megtekintések száma</string>
     <string name="boost">Megtolás</string>
@@ -98,6 +105,7 @@
     <string name="my_awesome_group">A nagyszerű csoportom</string>
     <string name="picture_url">Kép webcíme</string>
     <string name="description">Leírás</string>
+    <string name="no_description">Nem található leírás</string>
     <string name="about_us">"Névjegy… "</string>
     <string name="what_s_on_your_mind">Mi jár a fejében?</string>
     <string name="write_a_message">Üzenet írása…</string>
@@ -139,6 +147,10 @@
     <string name="video_saved_to_the_gallery">Videó elmentve a videógalériába</string>
     <string name="failed_to_save_the_video">Nem sikerült elmenteni a videót</string>
     <string name="upload_image">Kép feltöltése</string>
+    <string name="take_a_picture">Kép készítése</string>
+    <string name="record_a_message">Hangüzenet rögzítése</string>
+    <string name="record_a_message_title">Hangüzenet rögzítése</string>
+    <string name="record_a_message_description">Hangüzenet rögzítéséhez kattintson és tartsa lenyomva a gombot</string>
     <string name="uploading">Feltöltés…</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">A felhasználó nem rendelkezik a satoshik fogadásához beállított lightning-címmel</string>
     <string name="reply_here">"Válasz írása… "</string>
@@ -231,6 +243,8 @@
     <string name="public_chat_relays_title">Átjátszók</string>
     <string name="public_chat_relays_explainer">Adjon hozzá 1–3 olyan átjátszót, amelyek kiszolgálják ezt a csoportot.
         A Nostr-kliensek ezt a beállítást használják arra, hogy tudják, honnan töltsék le az üzeneteket, és hová küldjék az üzeneteket.</string>
+    <string name="paid_relay">Fizetős átjátszó</string>
+    <string name="tor_relay">Tor kényszerítése kapcsolódáskor</string>
     <string name="posts_received">fogadott bejegyzések</string>
     <string name="remove">Eltávolítás</string>
     <string name="translations_auto">Automatikus</string>
@@ -275,6 +289,7 @@
     <string name="biometric_error">Hiba</string>
     <string name="badge_created_by">"Létrehozta: %1$s"</string>
     <string name="badge_award_image_for">"Kitűző %1$s számára"</string>
+    <string name="badge_award_image">Kitűző képe</string>
     <string name="new_badge_award_notif">Ön egy új kitűzőt kapott</string>
     <string name="award_granted_to">Kitűzőben részesült</string>
     <string name="copied_note_text_to_clipboard">Bejegyzés szövege a vágólapra másolva</string>
@@ -422,6 +437,7 @@
     <string name="no">Nem</string>
     <string name="follow_list_selection">Követési lista</string>
     <string name="follow_list_kind3follows">Követettek bejegyzései</string>
+    <string name="follow_list_kind3follows_proxy">Követés proxyn keresztül</string>
     <string name="follow_list_aroundme">Közelben lévők bejegyzései</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_mute_list">Némítottak bejegyzései</string>
@@ -693,6 +709,7 @@
     <string name="wallet_number">Pénztárca: %1$s</string>
     <string name="error_opening_external_signer">Hiba az aláíró-alkalmazás megnyitásakor</string>
     <string name="error_opening_external_signer_description">Az aláíró alkalmazás nem található. Ellenőrizze, hogy az alkalmazás nincs-e eltávolítva</string>
+    <string name="sign_request_rejected2">Aláírási kérés elutasítva</string>
     <string name="sign_request_rejected">Aláíró-alkalmazás elutasítva</string>
     <string name="sign_request_rejected_description">Győződjön meg arról, hogy ezt a tranzakciót az aláíró-alkalmazás hitelesítette-e</string>
     <string name="no_wallet_found_with_error">Nem található pénztárca a Lighning-számla kifizetéséhez (Hiba: %1$s). A Zap-ek használatához telepítsen egy Lightning-pénztárcát</string>
@@ -876,12 +893,29 @@
     <string name="private_outbox_section_explainer">Adjon hozzá 1–3 átjátszót, hogy olyan eseményeket tároljanak, amelyeket senki más nem láthat, például a piszkozatait és/vagy az alkalmazásbeállításait. Ideális esetben ezek az átjátszók vagy helyi szintűek, vagy hitelesítést igényelnek az egyes felhasználói tartalmak letöltése előtt.</string>
     <string name="kind_3_section">Általános átjátszók</string>
     <string name="kind_3_section_description">Az Amethyst ezeket az átjátszókat a bejegyzések letöltésére használja.</string>
+    <string name="connected_section">Kapcsolódott átjátszók</string>
+    <string name="connected_section_description">Jelenlegi használatban lévő átjátszók listája</string>
     <string name="kind_3_recommended_section">Ajánlott átjátszók</string>
     <string name="kind_3_recommended_section_description">Adja hozzá a következő átjátszókat az általános átjátszók listájához, hogy megkapja a felsorolt felhasználók hozzászólásait.</string>
     <string name="search_section">Keresési átjátszók</string>
     <string name="search_section_explainer">A tartalom vagy felhasználók keresésekor használandó átjátszók listája. A címkézés és a keresés nem fog működni, ha nem áll rendelkezésre semmilyen beállítás. Győződjön meg arról, hogy alkalmazzák a NIP-50-et.</string>
     <string name="local_section">Helyi átjátszók</string>
     <string name="local_section_explainer">A készüléken futó átjátszók listája.</string>
+    <string name="trusted_relays_title">Megbízható átjátszók</string>
+    <string name="trusted_section">Megbízható átjátszók</string>
+    <string name="trusted_section_explainer">Az átjátszóknak, amelyekben megbízik, nincs szükségük Tor kapcsolatra a következőhöz:</string>
+    <string name="proxy_relays_title">Proxyzott átjátszók</string>
+    <string name="proxy_section">Proxyzott átjátszók</string>
+    <string name="proxy_section_explainer">Összesítő átjátszók, amelyeket az alkalmazásnak használnia kell a hírfolyamok letöltéséhez, például filter.nostr.wine. Ez helyettesíti a kimeneti modellt, és az alkalmazás csak a listákban szereplő átjátszókhoz fog csatlakozni.</string>
+    <string name="broadcast_relays_title">Műsorszóró átjátszók</string>
+    <string name="broadcast_section">Műsorszóró átjátszók</string>
+    <string name="broadcast_section_explainer">Olyan átjátszók, amelyek arra specializálódtak, hogy továbbítsák a bejegyzéseket az összes többi átjátszónak, mint például a sendit.nosflare.com. Az Amethyst hozzáadja ezt az átjátszót az összes új eseményhez, amelyet Ön készített</string>
+    <string name="indexer_relays_title">Indexelő átjátszók</string>
+    <string name="indexer_section">Indexelő átjátszók</string>
+    <string name="indexer_section_explainer">Olyan átjátszók, amelyek mindenki metaadatainak és átjátszólistáinak tárolására specializálódtak, mint például a purplepag.es. Az Amethyst ezeket az átjátszókat használja arra, hogy megtalálja azokat a felhasználókat, akik nem szerepelnek az Ön listáin.</string>
+    <string name="blocked_relays_title">Letiltott átjátszók</string>
+    <string name="blocked_section">Letiltott átjátszók</string>
+    <string name="blocked_section_explainer">Az Amethyst soha nem fog csatlakozni ezekhez az átjátszókhoz</string>
     <string name="zap_the_devs_title">Zap a fejlesztőknek!</string>
     <string name="zap_the_devs_description">Az Ön adománya segít nekünk abban, hogy változtassunk a dolgokon. Minden satoshi számít!</string>
     <string name="donate_now">Adományozás most</string>
@@ -971,6 +1005,7 @@
     <string name="select_list_to_filter">Lista kiválasztása a hírfolyam szűréséhez</string>
     <string name="temporary_account">Kijelentkeztetés az eszköz zárolása esetén</string>
     <string name="private_message">Privát üzenet</string>
+    <string name="public_message">Nyílvános üzenet</string>
     <string name="group_relay">Csevegési átjátszó</string>
     <string name="group_relay_explanation">Az átjátszó, amelyhez a csevegés összes felhasználója csatlakozik</string>
     <string name="share_image">Kép megosztása…</string>
