@@ -24,9 +24,18 @@ import android.util.Log
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
 import org.czeal.rfc3986.URIReference
+import java.lang.IllegalArgumentException
 import kotlin.contracts.ExperimentalContracts
 
-val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
+sealed interface NormalizationResult {
+    class Sucess(
+        val url: NormalizedRelayUrl,
+    ) : NormalizationResult
+
+    object Error : NormalizationResult
+}
+
+val normalizedUrls = LruCache<String, NormalizationResult>(5000)
 
 class RelayUrlNormalizer {
     companion object {
@@ -141,12 +150,17 @@ class RelayUrlNormalizer {
         }
 
         fun normalize(url: String): NormalizedRelayUrl {
-            normalizedUrls[url]?.let { return it }
+            normalizedUrls[url]?.let {
+                return when (it) {
+                    is NormalizationResult.Sucess -> it.url
+                    else -> throw IllegalArgumentException("Invalid Url: $url")
+                }
+            }
 
             return try {
                 val fixed = fix(url) ?: return NormalizedRelayUrl(url)
                 val normalized = norm(fixed)
-                normalizedUrls.put(url, normalized)
+                normalizedUrls.put(url, NormalizationResult.Sucess(normalized))
                 normalized
             } catch (e: Exception) {
                 NormalizedRelayUrl(url)
@@ -155,16 +169,22 @@ class RelayUrlNormalizer {
 
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
             if (url.isEmpty()) return null
-            normalizedUrls[url]?.let { return it }
+            normalizedUrls[url]?.let {
+                return when (it) {
+                    is NormalizationResult.Sucess -> it.url
+                    else -> null
+                }
+            }
 
             return try {
                 val fixed = fix(url)
                 if (fixed != null) {
                     val normalized = norm(fixed)
-                    normalizedUrls.put(url, normalized)
+                    normalizedUrls.put(url, NormalizationResult.Sucess(normalized))
                     return normalized
                 } else {
                     Log.w("NormalizedRelayUrl", "Rejected Error $url")
+                    normalizedUrls.put(url, NormalizationResult.Error)
                     null
                 }
             } catch (e: Exception) {
