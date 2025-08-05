@@ -971,7 +971,7 @@ fun getGradient(backgroundColor: MutableState<Color>): Brush =
         colors =
             listOf(
                 backgroundColor.value.copy(alpha = 0f),
-                backgroundColor.value,
+                backgroundColor.value.copy(alpha = 1f),
             ),
     )
 
