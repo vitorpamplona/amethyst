@@ -68,13 +68,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.Address
-import com.vitorpamplona.quartz.nip01Core.tags.addressables.mapTaggedAddress
 import com.vitorpamplona.quartz.nip01Core.tags.addressables.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.forEachTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
-import com.vitorpamplona.quartz.nip01Core.tags.events.mapTaggedEventId
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip01Core.verify
@@ -814,10 +812,6 @@ object LocalCache : ILocalCache {
             is TorrentCommentEvent ->
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
 
-            is DraftEvent -> {
-                event.mapTaggedEventId { checkGetOrCreateNote(it) } + event.mapTaggedAddress { checkGetOrCreateAddressableNote(it) }
-            }
-
             else -> emptyList()
         }
 
@@ -1187,6 +1181,11 @@ object LocalCache : ILocalCache {
         if (replaceableNote.event?.id == event.id) return isVerified
 
         if (event.createdAt > (replaceableNote.createdAt() ?: 0) && (isVerified || justVerify(event))) {
+            // clear index from previous tags
+            replaceableNote.replyTo?.forEach {
+                it.removeNote(replaceableNote)
+            }
+
             replaceableNote.loadEvent(event, author, computeReplyTo(event))
 
             refreshNewNoteObservers(replaceableNote)
