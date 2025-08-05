@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.ammolite.relays
 
+import android.util.Log
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.ammolite.service.checkNotInMainThread
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -40,7 +42,13 @@ class BundledUpdate(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
-    val scope = CoroutineScope(dispatcher + SupervisorJob())
+    // Exists to avoid exceptions stopping the coroutine
+    val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            Log.e("BundledUpdate", "Caught exception: ${throwable.message}", throwable)
+        }
+
+    val scope = CoroutineScope(dispatcher + SupervisorJob() + exceptionHandler)
 
     private var onlyOneInBlock = AtomicBoolean()
     private var invalidatesAgain = false
@@ -83,7 +91,13 @@ class BundledInsert<T>(
     val delay: Long,
     val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
-    val scope = CoroutineScope(dispatcher + SupervisorJob())
+    // Exists to avoid exceptions stopping the coroutine
+    val exceptionHandler =
+        CoroutineExceptionHandler { _, throwable ->
+            Log.e("BundledInsert", "Caught exception: ${throwable.message}", throwable)
+        }
+
+    val scope = CoroutineScope(dispatcher + SupervisorJob() + exceptionHandler)
 
     private var onlyOneInBlock = AtomicBoolean()
     private var queue = LinkedBlockingQueue<T>()
