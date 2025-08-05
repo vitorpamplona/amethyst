@@ -40,7 +40,9 @@ class AuthCoordinator(
     val receiver =
         RelayAuthenticator(client, scope) { challenge, relay ->
             authWithAccounts.distinct().forEach {
-                it.sendAuthEvent(relay, challenge)
+                if (it.isWriteable()) {
+                    it.sendAuthEvent(relay, challenge)
+                }
             }
         }
 

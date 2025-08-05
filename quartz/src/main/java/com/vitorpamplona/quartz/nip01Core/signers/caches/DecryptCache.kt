@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 abstract class DecryptCache<I : Any, T : Any>(
     val signer: NostrSigner,
 ) {
+    val dontTryAgain = CacheResults.DontTryAgain<T>()
     var cache: CacheResults<T> = CacheResults.CanTryAgain(0)
 
     fun preload(result: T) {
@@ -45,14 +46,18 @@ abstract class DecryptCache<I : Any, T : Any>(
             val response = decryptAndParse(input, signer)
             cache = CacheResults.Success(response)
             return response
+        } catch (e: SignerExceptions.ReadOnlyException) {
+            // Log.w("DecryptCache", "Read only user", e)
+            // ciphertext is blank. Cancels everything.
+            cache = dontTryAgain
         } catch (e: SignerExceptions.NothingToDecrypt) {
             Log.w("DecryptCache", "Nothing to decrypt", e)
             // ciphertext is blank. Cancels everything.
-            cache = CacheResults.DontTryAgain()
+            cache = dontTryAgain
         } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
             Log.w("DecryptCache", "NothAutomaticallyUnauthorizedException", e)
             // User has rejected this permission. Don't try again.
-            cache = CacheResults.DontTryAgain<T>()
+            cache = dontTryAgain
         } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
             Log.w("DecryptCache", "ManuallyUnauthorizedException", e)
             // User has rejected this permission. Don't try again.
@@ -64,11 +69,11 @@ abstract class DecryptCache<I : Any, T : Any>(
         } catch (e: SignerExceptions.CouldNotPerformException) {
             // Log.w("DecryptCache", "CouldNotPerformException", e)
             // Decryption failed. This key might not be able to decrypt anything. Don't try again.
-            cache = CacheResults.DontTryAgain<T>()
+            cache = dontTryAgain
         } catch (e: SignerExceptions.SignerNotFoundException) {
             Log.w("DecryptCache", "SignerNotFoundException", e)
             // Signer app was deleted. Not sure what to to. It should probably log off.
-            cache = CacheResults.DontTryAgain<T>()
+            cache = dontTryAgain
         } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
             Log.w("DecryptCache", "RunningOnBackgroundWithoutAutomaticPermissionException", e)
             // App received a notifications, asked the signer to decrypt but the permission was not automatic.
@@ -77,13 +82,13 @@ abstract class DecryptCache<I : Any, T : Any>(
         } catch (e: com.fasterxml.jackson.core.JsonParseException) {
             Log.w("DecryptCache", "JsonParseException", e)
             // Decryption failed. This key might not be able to decrypt anything. Don't try again.
-            cache = CacheResults.DontTryAgain()
+            cache = dontTryAgain
         } catch (e: IllegalStateException) {
             Log.w("DecryptCache", "IllegalStateException", e)
-            cache = CacheResults.DontTryAgain()
+            cache = dontTryAgain
         } catch (e: IllegalArgumentException) {
             Log.w("DecryptCache", "IllegalArgumentException", e)
-            cache = CacheResults.DontTryAgain()
+            cache = dontTryAgain
         }
         return null
     }
