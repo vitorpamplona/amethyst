@@ -173,7 +173,7 @@ class AccountViewModel(
             scope = viewModelScope,
         )
 
-    val newNotesPreProcessor = DecryptAndIndexProcessor(account, LocalCache)
+    val newNotesPreProcessor = EventProcessor(account, LocalCache)
 
     var firstRoute: Route? = null
 
@@ -949,7 +949,7 @@ class AccountViewModel(
         }
     }
 
-    suspend fun loadReactionTo(note: Note?): String? {
+    fun loadReactionTo(note: Note?): String? {
         if (note == null) return null
 
         return note.getReactionBy(userProfile())
@@ -1027,7 +1027,7 @@ class AccountViewModel(
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
-    private suspend fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
+    private fun checkGetOrCreateNote(key: HexKey): Note? = LocalCache.checkGetOrCreateNote(key)
 
     override suspend fun getOrCreateNote(key: HexKey): Note = LocalCache.getOrCreateNote(key)
 
@@ -1102,11 +1102,11 @@ class AccountViewModel(
         )
     }
 
-    suspend fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel? = LocalCache.getOrCreatePublicChatChannel(key)
+    fun checkGetOrCreatePublicChatChannel(key: HexKey): PublicChatChannel? = LocalCache.getOrCreatePublicChatChannel(key)
 
-    suspend fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel? = LocalCache.getOrCreateLiveChannel(key)
+    fun checkGetOrCreateLiveActivityChannel(key: Address): LiveActivitiesChannel? = LocalCache.getOrCreateLiveChannel(key)
 
-    suspend fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel? = LocalCache.getOrCreateEphemeralChannel(key)
+    fun checkGetOrCreateEphemeralChatChannel(key: RoomId): EphemeralChatChannel? = LocalCache.getOrCreateEphemeralChannel(key)
 
     fun checkGetOrCreateChannel(
         key: HexKey,
@@ -1660,7 +1660,7 @@ class AccountViewModel(
         }
     }
 
-    suspend fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
+    fun findUsersStartingWithSync(prefix: String) = LocalCache.findUsersStartingWith(prefix, account)
 
     fun relayStatusFlow() = app.client.relayStatusFlow()
 
