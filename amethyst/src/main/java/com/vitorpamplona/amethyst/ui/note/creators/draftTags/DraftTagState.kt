@@ -44,6 +44,7 @@ class DraftTagState {
 
     fun rotate() {
         set(newTag())
+        _versions.update { 0 }
     }
 
     fun set(existingTag: String) {

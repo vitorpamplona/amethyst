@@ -346,9 +346,10 @@ class ChatNewMessageViewModel :
     }
 
     suspend fun sendPostSync() {
+        val version = draftTag.current
         innerSendPost(null)
-        accountViewModel.deleteDraft(draftTag.current)
         cancel()
+        accountViewModel.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {
@@ -495,6 +496,8 @@ class ChatNewMessageViewModel :
     }
 
     fun cancel() {
+        draftTag.rotate()
+
         message = TextFieldValue("")
         subject = TextFieldValue("")
 
@@ -522,8 +525,6 @@ class ChatNewMessageViewModel :
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
-
-        draftTag.rotate()
     }
 
     fun addToMessage(it: String) {

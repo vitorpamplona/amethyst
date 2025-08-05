@@ -431,6 +431,8 @@ open class NewProductViewModel :
     }
 
     open fun cancel() {
+        draftTag.rotate()
+
         message = TextFieldValue("")
 
         multiOrchestrator = null
@@ -465,8 +467,6 @@ open class NewProductViewModel :
         emojiSuggestions?.reset()
 
         reloadRelaySet()
-
-        draftTag.rotate()
     }
 
     fun reloadRelaySet() {

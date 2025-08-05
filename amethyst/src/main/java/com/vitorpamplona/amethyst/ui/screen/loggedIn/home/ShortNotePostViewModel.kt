@@ -475,11 +475,11 @@ open class ShortNotePostViewModel :
             }
         }
 
-        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-
-        accountViewModel.deleteDraft(draftTag.current)
-
+        val version = draftTag.current
         cancel()
+
+        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        accountViewModel.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {
@@ -586,7 +586,7 @@ open class ShortNotePostViewModel :
         context: Context,
     ) = try {
         uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, context)
-    } catch (e: SignerExceptions.ReadOnlyException) {
+    } catch (_: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
             stringRes(context, R.string.login_with_a_private_key_to_be_able_to_sign_events),
@@ -664,6 +664,8 @@ open class ShortNotePostViewModel :
     }
 
     open fun cancel() {
+        draftTag.rotate()
+
         message = TextFieldValue("")
 
         forkedFromNote = null
@@ -701,8 +703,6 @@ open class ShortNotePostViewModel :
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
-
-        draftTag.rotate()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {

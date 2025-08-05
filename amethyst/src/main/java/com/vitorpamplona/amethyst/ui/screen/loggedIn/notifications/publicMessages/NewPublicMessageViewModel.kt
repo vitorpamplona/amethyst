@@ -309,10 +309,11 @@ class NewPublicMessageViewModel :
             }
         }
 
-        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
-        accountViewModel.deleteDraft(draftTag.current)
-
+        val version = draftTag.current
         cancel()
+
+        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        accountViewModel.deleteDraft(version)
     }
 
     suspend fun sendDraftSync() {
@@ -467,6 +468,8 @@ class NewPublicMessageViewModel :
     }
 
     fun cancel() {
+        draftTag.rotate()
+
         toUsers = TextFieldValue("")
         message = TextFieldValue("")
         multiOrchestrator = null
@@ -491,8 +494,6 @@ class NewPublicMessageViewModel :
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
-
-        draftTag.rotate()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
