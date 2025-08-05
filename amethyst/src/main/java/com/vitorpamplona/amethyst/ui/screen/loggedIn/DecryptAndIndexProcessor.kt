@@ -45,12 +45,10 @@ class EventProcessor(
     private val account: Account,
     private val cache: LocalCache,
 ) {
-    private val indexingService = IndexingService(account, cache)
-
     private val chatHandler = ChatHandler(account.chatroomList)
     private val otsHandler = OtsEventHandler(account)
 
-    private val draftHandler = DraftEventHandler(account, indexingService)
+    private val draftHandler = DraftEventHandler(account, cache)
 
     private val giftWrapHandler = GiftWrapEventHandler(account, cache, this)
     private val sealHandler = SealedRumorEventHandler(account, cache, this)
@@ -148,41 +146,6 @@ class EventProcessor(
     }
 }
 
-class IndexingService(
-    private val account: Account,
-    private val cache: LocalCache,
-) {
-    fun indexDraftAsRealEvent(
-        draftEventWrap: Note,
-        rumor: Event,
-    ) {
-        draftEventWrap.replyTo = cache.computeReplyTo(rumor)
-        draftEventWrap.replyTo?.forEach { it.addReply(draftEventWrap) }
-
-        when (rumor) {
-            is ChatroomKeyable -> account.chatroomList.add(rumor, draftEventWrap)
-            is EphemeralChatEvent -> {
-                rumor.roomId()?.let { roomId ->
-                    val channel = cache.getOrCreateEphemeralChannel(roomId)
-                    channel.addNote(draftEventWrap, null)
-                }
-            }
-            is ChannelMessageEvent -> {
-                rumor.channelId()?.let { channelId ->
-                    val channel = cache.checkGetOrCreatePublicChatChannel(channelId)
-                    channel?.addNote(draftEventWrap, null)
-                }
-            }
-            is LiveActivitiesChatMessageEvent -> {
-                rumor.activityAddress()?.let { channelId ->
-                    val channel = cache.getOrCreateLiveChannel(channelId)
-                    channel.addNote(draftEventWrap, null)
-                }
-            }
-        }
-    }
-}
-
 interface EventHandler<T : IEvent> {
     suspend fun add(
         event: T,
@@ -229,7 +192,7 @@ class OtsEventHandler(
 
 class DraftEventHandler(
     private val account: Account,
-    private val indexingService: IndexingService,
+    private val cache: LocalCache,
 ) : EventHandler<DraftEvent> {
     override suspend fun add(
         event: DraftEvent,
@@ -238,7 +201,37 @@ class DraftEventHandler(
     ) {
         if (event.pubKey == account.signer.pubKey && !event.isDeleted()) {
             val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event)
-            rumor?.let { indexingService.indexDraftAsRealEvent(eventNote, it) }
+            rumor?.let { indexDraftAsRealEvent(eventNote, it) }
+        }
+    }
+
+    fun indexDraftAsRealEvent(
+        draftEventWrap: Note,
+        rumor: Event,
+    ) {
+        draftEventWrap.replyTo = cache.computeReplyTo(rumor)
+        draftEventWrap.replyTo?.forEach { it.addReply(draftEventWrap) }
+
+        when (rumor) {
+            is ChatroomKeyable -> account.chatroomList.add(rumor, draftEventWrap)
+            is EphemeralChatEvent -> {
+                rumor.roomId()?.let { roomId ->
+                    val channel = cache.getOrCreateEphemeralChannel(roomId)
+                    channel.addNote(draftEventWrap, null)
+                }
+            }
+            is ChannelMessageEvent -> {
+                rumor.channelId()?.let { channelId ->
+                    val channel = cache.checkGetOrCreatePublicChatChannel(channelId)
+                    channel?.addNote(draftEventWrap, null)
+                }
+            }
+            is LiveActivitiesChatMessageEvent -> {
+                rumor.activityAddress()?.let { channelId ->
+                    val channel = cache.getOrCreateLiveChannel(channelId)
+                    channel.addNote(draftEventWrap, null)
+                }
+            }
         }
     }
 }
