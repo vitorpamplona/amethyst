@@ -451,11 +451,11 @@ object LocalPreferences {
 
                     if (settings.backupGeohashList != null) {
                         putString(
-                            PrefKeys.LATEST_HASHTAG_LIST,
+                            PrefKeys.LATEST_GEOHASH_LIST,
                             JsonMapper.mapper.writeValueAsString(settings.backupGeohashList),
                         )
                     } else {
-                        remove(PrefKeys.LATEST_HASHTAG_LIST)
+                        remove(PrefKeys.LATEST_GEOHASH_LIST)
                     }
 
                     if (settings.backupEphemeralChatList != null) {
