@@ -21,7 +21,10 @@
 package com.vitorpamplona.quartz.nip17Dm.base
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.IEvent
 
-interface ChatroomKeyable {
+interface ChatroomKeyable : IEvent {
+    fun isIncluded(user: HexKey): Boolean
+
     fun chatroomKey(toRemove: HexKey): ChatroomKey
 }

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.utils.LargeCache
 import kotlinx.collections.immutable.persistentSetOf
 
@@ -42,6 +43,26 @@ class ChatroomList(
 
     fun getOrCreatePrivateChatroom(key: ChatroomKey): Chatroom = getOrCreatePrivateChatroomSync(key)
 
+    fun add(
+        event: ChatroomKeyable,
+        msg: Note,
+    ) {
+        if (event.isIncluded(ownerPubKey)) {
+            val key = event.chatroomKey(ownerPubKey)
+            addMessage(key, msg)
+        }
+    }
+
+    fun delete(
+        event: ChatroomKeyable,
+        msg: Note,
+    ) {
+        if (event.isIncluded(ownerPubKey)) {
+            val key = event.chatroomKey(ownerPubKey)
+            removeMessage(key, msg)
+        }
+    }
+
     fun addMessage(
         room: ChatroomKey,
         msg: Note,
@@ -49,6 +70,9 @@ class ChatroomList(
         val privateChatroom = getOrCreatePrivateChatroom(room)
         if (msg !in privateChatroom.messages) {
             privateChatroom.addMessageSync(msg)
+            if (msg.author?.pubkeyHex == ownerPubKey) {
+                privateChatroom.ownerSentMessage = true
+            }
         }
     }
 

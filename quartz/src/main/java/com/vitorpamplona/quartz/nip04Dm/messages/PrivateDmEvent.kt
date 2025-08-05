@@ -58,12 +58,12 @@ class PrivateDmEvent(
 
     override fun isContentEncoded() = true
 
-    fun canDecrypt(signer: NostrSigner) = canDecrypt(signer.pubKey)
+    fun isIncluded(signer: NostrSigner) = isIncluded(signer.pubKey)
 
-    fun canDecrypt(signerPubKey: HexKey) = pubKey == signerPubKey || recipientPubKey() == signerPubKey
+    override fun isIncluded(user: HexKey) = pubKey == user || recipientPubKey() == user
 
     suspend fun decryptContent(signer: NostrSigner): String {
-        if (!canDecrypt(signer.pubKey)) throw SignerExceptions.UnauthorizedDecryptionException()
+        if (!isIncluded(signer.pubKey)) throw SignerExceptions.UnauthorizedDecryptionException()
 
         val retVal = signer.decrypt(content, talkingWith(signer.pubKey))
         return if (retVal.startsWith(NIP_18_ADVERTISEMENT)) {

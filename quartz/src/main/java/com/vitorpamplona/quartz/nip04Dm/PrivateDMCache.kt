@@ -31,7 +31,7 @@ class PrivateDMCache(
     private val decryptionCache =
         object : LruCache<PrivateDmEvent, PrivateDMDecryptCache>(10000) {
             override fun create(key: PrivateDmEvent): PrivateDMDecryptCache? {
-                val canDecrypt = key.canDecrypt(signer.pubKey)
+                val canDecrypt = key.isIncluded(signer.pubKey)
                 return if (key.content.isNotBlank() && canDecrypt) {
                     PrivateDMDecryptCache(signer)
                 } else {
