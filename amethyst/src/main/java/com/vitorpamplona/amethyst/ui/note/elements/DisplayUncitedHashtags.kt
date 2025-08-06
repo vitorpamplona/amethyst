@@ -29,6 +29,7 @@ import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
 import com.vitorpamplona.amethyst.ui.components.ClickableTextColor
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -37,8 +38,6 @@ import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip02FollowList.toImmutableListOfLists
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun DisplayUncitedHashtags(
@@ -59,37 +58,34 @@ fun DisplayUncitedHashtags(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    @Suppress("ProduceStateDoesNotAssignValue")
     val unusedHashtags by
         produceState(initialValue = emptyList<String>()) {
             val tagsInEvent = event.hashtags()
             if (tagsInEvent.isNotEmpty()) {
-                launch(Dispatchers.Default) {
-                    val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists(), callbackUri)
+                val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists(), callbackUri)
 
-                    val tagsInContent =
-                        state
-                            .paragraphs
-                            .map {
-                                it.words.mapNotNull {
-                                    if (it is HashTagSegment) {
-                                        it.hashtag
-                                    } else {
-                                        null
-                                    }
+                val tagsInContent =
+                    state
+                        .paragraphs
+                        .map {
+                            it.words.mapNotNull {
+                                if (it is HashTagSegment) {
+                                    it.hashtag
+                                } else {
+                                    null
                                 }
-                            }.flatten()
-
-                    val unusedHashtags =
-                        tagsInEvent.filterNot { eventTag ->
-                            tagsInContent.any { contentTag ->
-                                eventTag.equals(contentTag, true)
                             }
-                        }
+                        }.flatten()
 
-                    if (unusedHashtags.isNotEmpty()) {
-                        value = unusedHashtags
+                val unusedHashtags =
+                    tagsInEvent.filterNot { eventTag ->
+                        tagsInContent.any { contentTag ->
+                            eventTag.equals(contentTag, true)
+                        }
                     }
+
+                if (unusedHashtags.isNotEmpty()) {
+                    value = unusedHashtags
                 }
             }
         }
