@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.publicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.PollNoteEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
@@ -80,6 +81,7 @@ class UserProfileMutualFeedFilter(
                     it.event is InteractiveStoryPrologueEvent ||
                     it.event is AudioTrackEvent ||
                     it.event is AudioHeaderEvent ||
+                    it.event is PublicMessageEvent ||
                     it.event is TorrentEvent
             ) &&
             it.event?.isTaggedUser(user.pubkeyHex) == true
