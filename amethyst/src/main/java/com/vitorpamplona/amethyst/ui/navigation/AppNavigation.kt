@@ -176,8 +176,9 @@ fun AppNavigation(
             composableFromBottomArgs<Route.NewPublicMessage> {
                 NewPublicMessageScreen(
                     to = it.toKey(),
-                    accountViewModel,
-                    nav,
+                    reply = it.replyId?.let { hex -> accountViewModel.getNoteIfExists(hex) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 

@@ -140,9 +140,11 @@ sealed class Route {
 
     @Serializable data class NewPublicMessage(
         val to: String,
+        val replyId: HexKey? = null,
     ) : Route() {
-        constructor(users: Set<HexKey>) : this(
+        constructor(users: Set<HexKey>, parentId: HexKey) : this(
             to = users.joinToString(","),
+            replyId = parentId,
         )
 
         fun toKey(): Set<HexKey> = to.split(",").toSet()

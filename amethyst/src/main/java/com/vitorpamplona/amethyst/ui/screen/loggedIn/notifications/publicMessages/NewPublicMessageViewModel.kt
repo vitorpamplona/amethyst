@@ -133,6 +133,8 @@ class NewPublicMessageViewModel :
         }
     }
 
+    var replyingTo: Note? by mutableStateOf(null)
+
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
@@ -201,6 +203,10 @@ class NewPublicMessageViewModel :
             TextFieldValue(
                 userSet.mapNotNull { runCatching { Hex.decode(it).toNpub() }.getOrNull() }.joinToString(", ") { "@$it" },
             )
+    }
+
+    fun reply(post: Note) {
+        this.replyingTo = post
     }
 
     fun quote(quote: Note) {
@@ -332,7 +338,7 @@ class NewPublicMessageViewModel :
         }
     }
 
-    private suspend fun createTemplate(): EventTemplate<out Event>? {
+    private suspend fun createTemplate(): EventTemplate<PublicMessageEvent>? {
         val toUsersTagger = NewMessageTagger(this@NewPublicMessageViewModel.toUsers.text, null, null, accountViewModel)
         toUsersTagger.run()
 

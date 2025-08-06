@@ -201,7 +201,11 @@ fun routeReplyTo(
 ): Route? {
     val noteEvent = note.event
     return when (noteEvent) {
-        is PublicMessageEvent -> Route.NewPublicMessage(noteEvent.groupKeySet() - account.userProfile().pubkeyHex)
+        is PublicMessageEvent ->
+            Route.NewPublicMessage(
+                users = noteEvent.groupKeySet() - account.userProfile().pubkeyHex,
+                parentId = noteEvent.id,
+            )
         is TextNoteEvent -> Route.NewPost(baseReplyTo = note.idHex)
         is PrivateDmEvent ->
             routeToMessage(

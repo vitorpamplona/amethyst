@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.ShowEmojiSuggestionList
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +104,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun NewPublicMessageScreen(
     to: Set<HexKey>? = null,
+    reply: Note? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -111,6 +115,9 @@ fun NewPublicMessageScreen(
         withContext(Dispatchers.IO) {
             to?.let {
                 postViewModel.load(it)
+            }
+            reply?.let {
+                postViewModel.reply(it)
             }
         }
     }
@@ -171,7 +178,24 @@ fun PublicMessageScreenContent(
                 Modifier.fillMaxWidth().verticalScroll(scrollState),
                 verticalArrangement = spacedBy(Size10dp),
             ) {
-                SendDirectMessageTo(postViewModel, accountViewModel)
+                val replyTo = postViewModel.replyingTo
+
+                if (replyTo == null) {
+                    SendDirectMessageTo(postViewModel, accountViewModel)
+                } else {
+                    Row {
+                        NoteCompose(
+                            baseNote = replyTo,
+                            modifier = MaterialTheme.colorScheme.imageModifier,
+                            isQuotedNote = true,
+                            unPackReply = false,
+                            makeItShort = true,
+                            quotesLeft = 1,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
+                }
 
                 MessageFieldRow(postViewModel, accountViewModel, postViewModel.toUsers.text.isNotBlank())
 

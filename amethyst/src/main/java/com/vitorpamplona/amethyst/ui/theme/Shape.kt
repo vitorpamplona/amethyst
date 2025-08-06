@@ -120,6 +120,7 @@ val HalfStartPadding = Modifier.padding(start = 5.dp)
 val StdStartPadding = Modifier.padding(start = 10.dp)
 val StdTopPadding = Modifier.padding(top = 10.dp)
 val HalfTopPadding = Modifier.padding(top = 5.dp)
+val HalfHalfTopPadding = Modifier.padding(top = 3.dp)
 
 val HalfHalfVertPadding = Modifier.padding(vertical = 3.dp)
 val HalfHalfHorzModifier = Modifier.padding(horizontal = 3.dp)
