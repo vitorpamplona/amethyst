@@ -107,7 +107,7 @@ open class StringFeedViewModel(
         }
         viewModelScope.launch(Dispatchers.Default) {
             LocalCache.live.deletedEventBundles.collect { newNotes ->
-                Log.d("Rendering Metrics", "Update feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
+                Log.d("Rendering Metrics", "Delete feeds: ${this@StringFeedViewModel.javaClass.simpleName} with ${newNotes.size}")
                 invalidateData()
             }
         }
