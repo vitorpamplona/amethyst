@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import org.apache.commons.lang3.StringUtils.startsWith
 
 @Composable
 fun RenderTextEvent(
@@ -118,7 +119,7 @@ fun RenderTextEvent(
             }
 
         val eventContent =
-            if (!subject.isNullOrBlank() && !newBody.split("\n")[0].startsWith(subject)) {
+            if (!subject.isNullOrBlank() && !newBody.startsWith(subject)) {
                 "### $subject\n$newBody"
             } else {
                 newBody
