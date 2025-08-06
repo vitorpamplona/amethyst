@@ -46,7 +46,7 @@ class CommunityFeedFilter(
         return sort(result)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val myPubKey = account.userProfile().pubkeyHex
@@ -79,5 +79,5 @@ class CommunityFeedFilter(
             null
         }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

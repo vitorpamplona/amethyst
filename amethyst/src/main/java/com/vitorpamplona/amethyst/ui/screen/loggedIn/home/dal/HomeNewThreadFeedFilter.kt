@@ -75,7 +75,7 @@ class HomeNewThreadFeedFilter(
         return sort(notes + longFormNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
@@ -110,8 +110,8 @@ class HomeNewThreadFeedFilter(
             it.isNewThread()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> =
-        collection
+    override fun sort(items: Set<Note>): List<Note> =
+        items
             .distinctBy {
                 if (it.event is RepostEvent || it.event is GenericRepostEvent) {
                     it.replyTo?.lastOrNull()?.idHex ?: it.idHex // only the most recent repost per feed.

@@ -61,7 +61,7 @@ open class DiscoverChatFeedFilter(
         return sort(allChannelNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
@@ -102,13 +102,13 @@ open class DiscoverChatFeedFilter(
         }
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
+    override fun sort(items: Set<Note>): List<Note> {
         val lastNote =
-            collection.associateWith { note ->
+            items.associateWith { note ->
                 LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0
             }
 
-        return collection
+        return items
             .sortedWith(
                 compareBy(
                     { lastNote[it] },

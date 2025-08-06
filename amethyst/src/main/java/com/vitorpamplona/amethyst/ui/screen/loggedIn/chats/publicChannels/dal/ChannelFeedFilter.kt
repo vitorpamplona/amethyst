@@ -40,10 +40,10 @@ class ChannelFeedFilter(
             },
         )
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> =
-        collection
+    override fun applyFilter(newItems: Set<Note>): Set<Note> =
+        newItems
             .filter { channel.notes.containsKey(it.idHex) && account.isAcceptable(it) }
             .toSet()
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }
