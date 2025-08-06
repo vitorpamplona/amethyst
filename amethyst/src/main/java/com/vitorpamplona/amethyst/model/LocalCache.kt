@@ -1375,7 +1375,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addBoost(note) }
 
             event.containedPost()?.let {
-                justConsumeAndUpdateIndexes(it, relay, false)
+                checkDeletionAndConsume(it, relay, false)
             }
 
             refreshNewNoteObservers(note)
@@ -1405,7 +1405,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addBoost(note) }
 
             event.containedPost()?.let {
-                justConsumeAndUpdateIndexes(it, relay, false)
+                checkDeletionAndConsume(it, relay, false)
             }
 
             refreshNewNoteObservers(note)
@@ -1440,7 +1440,7 @@ object LocalCache : ILocalCache {
             repliesTo.forEach { it.addBoost(note) }
 
             event.containedPost()?.let {
-                justConsumeAndUpdateIndexes(it, relay, false)
+                checkDeletionAndConsume(it, relay, false)
             }
 
             refreshNewNoteObservers(note)
@@ -1683,7 +1683,7 @@ object LocalCache : ILocalCache {
             if (existingZapRequest == null || existingZapRequest.event == null) {
                 // tries to add it
                 event.zapRequest?.let {
-                    justConsumeAndUpdateIndexes(it, relay, false)
+                    checkDeletionAndConsume(it, relay, false)
                 }
             }
 
@@ -2633,6 +2633,17 @@ object LocalCache : ILocalCache {
 
         return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
     }
+
+    private fun checkDeletionAndConsume(
+        event: Event,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        if (!deletionIndex.hasBeenDeleted(event)) {
+            justConsumeAndUpdateIndexes(event, relay, wasVerified)
+        } else {
+            false
+        }
 
     private fun justConsumeAndUpdateIndexes(
         event: Event,
