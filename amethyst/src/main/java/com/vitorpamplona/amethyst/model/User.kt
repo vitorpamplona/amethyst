@@ -56,7 +56,6 @@ class User(
     var latestMetadata: MetadataEvent? = null
     var latestMetadataRelay: NormalizedRelayUrl? = null
     var latestContactList: ContactListEvent? = null
-    var latestBookmarkList: BookmarkListEvent? = null
     var followSetNotes: Set<AddressableNote> = setOf()
         private set
 
@@ -355,55 +354,6 @@ class UserFlowSet(
     val followSets = UserBundledRefresherFlow(u)
 
     fun isInUse(): Boolean =
-        metadata.stateFlow.subscriptionCount.value > 0 ||
-            relays.stateFlow.subscriptionCount.value > 0 ||
-            follows.stateFlow.subscriptionCount.value > 0 ||
-            followSets.stateFlow.subscriptionCount.value > 0
-
-    fun destroy() {
-        metadata.destroy()
-        relays.destroy()
-        follows.destroy()
-        followSets.destroy()
-    }
-}
-
-@Stable
-class UserLiveSet(
-    u: User,
-) {
-    val innerMetadata = UserBundledRefresherLiveData(u)
-
-    // UI Observers line up here.
-    val innerFollows = UserBundledRefresherLiveData(u)
-    val innerFollowers = UserBundledRefresherLiveData(u)
-    val innerReports = UserBundledRefresherLiveData(u)
-    val innerMessages = UserBundledRefresherLiveData(u)
-    val innerRelays = UserBundledRefresherLiveData(u)
-    val innerRelayInfo = UserBundledRefresherLiveData(u)
-    val innerZaps = UserBundledRefresherLiveData(u)
-    val innerBookmarks = UserBundledRefresherLiveData(u)
-    val innerStatuses = UserBundledRefresherLiveData(u)
-
-    // UI Observers line up here.
-    val metadata = innerMetadata.map { it }
-    val follows = innerFollows.map { it }
-    val followers = innerFollowers.map { it }
-    val reports = innerReports.map { it }
-    val messages = innerMessages.map { it }
-    val relays = innerRelays.map { it }
-    val relayInfo = innerRelayInfo.map { it }
-    val zaps = innerZaps.map { it }
-    val bookmarks = innerBookmarks.map { it }
-    val statuses = innerStatuses.map { it }
-
-    val profilePictureChanges = innerMetadata.map { it.user.profilePicture() }.distinctUntilChanged()
-
-    val nip05Changes = innerMetadata.map { it.user.nip05() }.distinctUntilChanged()
-
-    val userMetadataInfo = innerMetadata.map { it.user.info }.distinctUntilChanged()
-
-    fun isInUse(): Boolean =
         metadata.hasObservers() ||
             relays.hasObservers() ||
             follows.hasObservers() ||
@@ -411,7 +361,8 @@ class UserLiveSet(
             reports.hasObservers() ||
             relayInfo.hasObservers() ||
             zaps.hasObservers() ||
-            statuses.hasObservers()
+            statuses.hasObservers() ||
+            followSets.hasObservers()
 }
 
 @Immutable

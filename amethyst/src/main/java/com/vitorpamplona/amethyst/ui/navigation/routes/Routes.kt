@@ -52,12 +52,7 @@ sealed class Route {
 
     @Serializable object UserSettings : Route()
 
-    object Lists :
-        Route(
-            route = "Lists",
-            icon = R.drawable.format_list_bulleted_type,
-            contentDescriptor = R.string.my_lists,
-        )
+    @Serializable object Lists : Route()
 
     @Serializable object EditProfile : Route()
 

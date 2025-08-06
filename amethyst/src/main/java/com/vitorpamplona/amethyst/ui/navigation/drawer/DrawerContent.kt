@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -437,7 +438,7 @@ fun ListContent(
 
         NavigationRow(
             title = R.string.my_lists,
-            icon = R.drawable.format_list_bulleted_type,
+            icon = ImageVector.vectorResource(R.drawable.format_list_bulleted_type),
             tint = MaterialTheme.colorScheme.onBackground,
             nav = nav,
             route = Route.Lists,
