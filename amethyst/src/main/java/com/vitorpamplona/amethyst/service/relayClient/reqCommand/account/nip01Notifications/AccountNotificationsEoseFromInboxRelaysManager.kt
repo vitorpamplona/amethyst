@@ -59,7 +59,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             filterNotificationsToPubkey(
                 relay = it,
                 pubkey = user(key).pubkeyHex,
-                since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled(),
+                since = since?.get(it)?.time ?: key.feedContentStates.notifications.lastNoteCreatedAtIfFilled() ?: TimeUtils.oneWeekAgo(),
             )
         }
 
