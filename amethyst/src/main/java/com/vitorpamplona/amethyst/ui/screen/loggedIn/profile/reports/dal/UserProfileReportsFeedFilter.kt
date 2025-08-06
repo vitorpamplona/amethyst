@@ -34,14 +34,14 @@ class UserProfileReportsFeedFilter(
 
     override fun feed(): List<Note> = sort(innerApplyFilter(user.reports.values.flatten()))
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> =
         collection
             .filter { it.event is ReportEvent && it.event?.isTaggedUser(user.pubkeyHex) == true }
             .toSet()
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 
     override fun limit() = 400
 }

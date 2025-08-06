@@ -116,7 +116,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 50,
+                    limit = 500,
                     since = since,
                 ),
         ),
@@ -126,7 +126,7 @@ fun filterNotificationsToPubkey(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 100,
+                    limit = 500,
                     since = since,
                 ),
         ),
@@ -147,7 +147,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
                 Filter(
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 10,
+                    limit = 500,
                     since = since,
                 ),
         ),
@@ -157,7 +157,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
                 Filter(
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 5,
+                    limit = 500,
                     since = since,
                 ),
         ),
@@ -167,7 +167,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
                 Filter(
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
-                    limit = 5,
+                    limit = 500,
                     since = since,
                 ),
         ),

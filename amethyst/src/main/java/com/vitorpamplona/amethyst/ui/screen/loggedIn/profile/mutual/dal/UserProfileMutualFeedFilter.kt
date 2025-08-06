@@ -62,7 +62,7 @@ class UserProfileMutualFeedFilter(
         return sort(notes + longFormNotes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.filterTo(HashSet()) { acceptableEvent(it) }
 
@@ -84,7 +84,7 @@ class UserProfileMutualFeedFilter(
             ) &&
             it.event?.isTaggedUser(user.pubkeyHex) == true
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 
     override fun limit() = 200
 }

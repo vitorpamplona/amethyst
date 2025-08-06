@@ -111,12 +111,10 @@ class NotificationSummaryState(
                         takenIntoAccount.add(noteEvent.id)
                     }
                 } else if (noteEvent is LnZapEvent) {
-                    if (
-                        noteEvent.isTaggedUser(currentUser)
-                    ) { // the user might be sending his own receipts noteEvent.pubKey != currentUser
+                    // the user might be sending his own receipts noteEvent.pubKey != currentUser
+                    if (noteEvent.isTaggedUser(currentUser)) {
                         val netDate = formatDate(noteEvent.createdAt)
-                        zaps[netDate] =
-                            (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                        zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                         takenIntoAccount.add(noteEvent.id)
                     }
                 } else if (noteEvent is BaseThreadedEvent) {
@@ -178,12 +176,10 @@ class NotificationSummaryState(
                             hasNewElements = true
                         }
                     } else if (noteEvent is LnZapEvent) {
-                        if (
-                            noteEvent.isTaggedUser(currentUser)
-                        ) { //  && noteEvent.pubKey != currentUser User might be sending his own receipts
+                        if (noteEvent.isTaggedUser(currentUser)) {
+                            //  && noteEvent.pubKey != currentUser User might be sending his own receipts
                             val netDate = formatDate(noteEvent.createdAt)
-                            zaps[netDate] =
-                                (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
+                            zaps[netDate] = (zaps[netDate] ?: BigDecimal.ZERO) + (noteEvent.amount ?: BigDecimal.ZERO)
                             takenIntoAccount.add(noteEvent.id)
                             hasNewElements = true
                         }

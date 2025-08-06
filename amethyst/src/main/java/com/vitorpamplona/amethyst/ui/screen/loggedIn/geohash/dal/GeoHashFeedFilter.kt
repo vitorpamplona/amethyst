@@ -55,7 +55,7 @@ class GeoHashFeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.filterTo(HashSet<Note>()) { acceptableEvent(it, tag) }
 
@@ -87,5 +87,5 @@ class GeoHashFeedFilter(
         geohash: String,
     ): Boolean = event is CommentEvent && event.isTaggedScope(geohash, GeohashId::match)
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

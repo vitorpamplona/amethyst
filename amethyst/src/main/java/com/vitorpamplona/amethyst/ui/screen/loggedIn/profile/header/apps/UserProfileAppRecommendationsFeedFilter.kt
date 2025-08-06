@@ -41,7 +41,7 @@ class UserProfileAppRecommendationsFeedFilter(
         return sort(recommendations)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.mapNotNull { filterMap(it) }.flatten().toSet()
 
@@ -56,5 +56,5 @@ class UserProfileAppRecommendationsFeedFilter(
         return null
     }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

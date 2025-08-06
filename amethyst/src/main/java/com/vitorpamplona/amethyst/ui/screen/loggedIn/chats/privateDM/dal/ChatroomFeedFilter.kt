@@ -42,11 +42,11 @@ class ChatroomFeedFilter(
             .reversed()
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> {
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
         val chatroom = account.chatroomList.getOrCreatePrivateChatroom(withUser)
 
-        return collection.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
+        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

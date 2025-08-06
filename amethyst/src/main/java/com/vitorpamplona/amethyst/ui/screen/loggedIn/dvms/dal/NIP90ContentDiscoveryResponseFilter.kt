@@ -69,7 +69,7 @@ open class NIP90ContentDiscoveryResponseFilter(
         }
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
@@ -95,7 +95,7 @@ open class NIP90ContentDiscoveryResponseFilter(
             }.toSet()
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
-        return collection.toList() // collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+    override fun sort(items: Set<Note>): List<Note> {
+        return items.toList() // collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
     }
 }

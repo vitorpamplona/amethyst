@@ -84,7 +84,7 @@ class NotificationFeedFilter(
         return sort(notifications)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
@@ -136,7 +136,7 @@ class NotificationFeedFilter(
             tagsAnEventByUser(it, loggedInUserHex)
     }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 
     fun tagsAnEventByUser(
         note: Note,

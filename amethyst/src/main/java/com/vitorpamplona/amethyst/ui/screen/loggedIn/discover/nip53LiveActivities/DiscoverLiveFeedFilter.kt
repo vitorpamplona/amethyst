@@ -60,7 +60,7 @@ open class DiscoverLiveFeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams =
@@ -75,7 +75,7 @@ open class DiscoverLiveFeedFilter(
         }
     }
 
-    override fun sort(collection: Set<Note>): List<Note> {
+    override fun sort(items: Set<Note>): List<Note> {
         val topFilter = account.liveDiscoveryFollowLists.value
         val discoveryTopFilterAuthors =
             when (topFilter) {
@@ -94,12 +94,12 @@ open class DiscoverLiveFeedFilter(
 
         val counter = ParticipantListBuilder()
         val participantCounts =
-            collection.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
+            items.associate { it to counter.countFollowsThatParticipateOn(it, followingKeySet) }
 
         val allParticipants =
-            collection.associate { it to counter.countFollowsThatParticipateOn(it, null) }
+            items.associate { it to counter.countFollowsThatParticipateOn(it, null) }
 
-        return collection
+        return items
             .sortedWith(
                 compareBy(
                     { convertStatusToOrder((it.event as? LiveActivitiesEvent)?.status()) },

@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.dal
 import com.vitorpamplona.amethyst.logTime
 
 abstract class AdditiveFeedFilter<T> : FeedFilter<T>() {
-    abstract fun applyFilter(collection: Set<T>): Set<T>
+    abstract fun applyFilter(newItems: Set<T>): Set<T>
 
-    abstract fun sort(collection: Set<T>): List<T>
+    abstract fun sort(items: Set<T>): List<T>
 
     open fun updateListWith(
         oldList: List<T>,

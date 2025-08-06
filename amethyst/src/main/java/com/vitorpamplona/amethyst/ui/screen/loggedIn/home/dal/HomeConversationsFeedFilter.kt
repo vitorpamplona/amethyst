@@ -55,7 +55,7 @@ class HomeConversationsFeedFilter(
         )
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
@@ -90,5 +90,5 @@ class HomeConversationsFeedFilter(
         filterParams: FilterByListParams,
     ): Boolean = acceptableEvent(note.event, filterParams) && !note.isNewThread()
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

@@ -77,6 +77,10 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
                     potentialRelaysToFindEvent(key.note).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, key.note.idHex)
                     }
+
+                    key.account.searchRelayList.flow.value.forEach { relayUrl ->
+                        add(relayUrl, key.note.idHex)
+                    }
                 }
 
                 // loads threading that is event-based

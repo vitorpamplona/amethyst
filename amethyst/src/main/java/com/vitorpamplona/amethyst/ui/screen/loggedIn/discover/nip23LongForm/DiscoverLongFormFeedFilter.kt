@@ -55,7 +55,7 @@ open class DiscoverLongFormFeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
@@ -72,5 +72,5 @@ open class DiscoverLongFormFeedFilter(
         }
     }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

@@ -55,7 +55,7 @@ open class DiscoverNIP89FeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
@@ -85,5 +85,5 @@ open class DiscoverNIP89FeedFilter(
             acceptDVM(it)
         }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(compareBy({ it.createdAt() }, { it.idHex })).reversed()
 }

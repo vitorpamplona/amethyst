@@ -39,7 +39,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     client: NostrClient,
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(query: AccountQueryState) = query.account.userProfile()
+    override fun user(key: AccountQueryState) = key.account.userProfile()
 
     /**
      * Downloads most notifications from the user's own inbox relays.
@@ -51,7 +51,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
-            val since = since?.get(it)?.time ?: TimeUtils.oneDayAgo()
+            val since = since?.get(it)?.time ?: TimeUtils.oneWeekAgo()
             filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
         }
 

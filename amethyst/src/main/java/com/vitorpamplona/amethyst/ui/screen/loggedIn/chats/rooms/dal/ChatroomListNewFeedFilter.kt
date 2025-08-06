@@ -133,5 +133,5 @@ class ChatroomListNewFeedFilter(
         return newRelevantPrivateMessages
     }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

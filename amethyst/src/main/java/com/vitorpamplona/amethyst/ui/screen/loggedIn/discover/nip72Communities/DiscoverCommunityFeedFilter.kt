@@ -69,7 +69,7 @@ open class DiscoverCommunityFeedFilter(
         return sort(notes)
     }
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> = innerApplyFilter(collection)
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
     protected open fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         // here, we need to look for CommunityDefinition in new collection AND new CommunityDefinition from Post Approvals
@@ -111,13 +111,13 @@ open class DiscoverCommunityFeedFilter(
         comingFrom: List<NormalizedRelayUrl> = emptyList(),
     ) = aTag != null && aTag.kind == CommunityDefinitionEvent.KIND && params.match(aTag, comingFrom)
 
-    override fun sort(collection: Set<Note>): List<Note> {
+    override fun sort(items: Set<Note>): List<Note> {
         val lastNote =
-            collection.associateWith { note ->
+            items.associateWith { note ->
                 note.boosts.maxOfOrNull { it.createdAt() ?: 0 } ?: 0
             }
 
-        return collection
+        return items
             .sortedWith(
                 compareBy(
                     { lastNote[it] },

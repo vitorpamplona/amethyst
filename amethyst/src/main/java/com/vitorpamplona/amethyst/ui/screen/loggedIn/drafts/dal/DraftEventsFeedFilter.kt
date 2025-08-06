@@ -32,8 +32,8 @@ class DraftEventsFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex
 
-    override fun applyFilter(collection: Set<Note>): Set<Note> =
-        collection.filterTo(HashSet()) {
+    override fun applyFilter(newItems: Set<Note>): Set<Note> =
+        newItems.filterTo(HashSet()) {
             acceptableEvent(it)
         }
 
@@ -51,5 +51,5 @@ class DraftEventsFeedFilter(
         return noteEvent is DraftEvent && noteEvent.pubKey == account.userProfile().pubkeyHex
     }
 
-    override fun sort(collection: Set<Note>): List<Note> = collection.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }
