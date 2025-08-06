@@ -48,8 +48,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-// TODO: Investigate the addition of feed filters, for bookmark sets and general ones.
-class NostrListFeedViewModel(
+// TODO Update: Rename this to be used only for follow sets, and create separate VMs for bookmark sets, etc.
+class NostrUserListFeedViewModel(
     val dataSource: FeedFilter<FollowSet>,
 ) : ViewModel(),
     InvalidatableContent {
@@ -105,7 +105,7 @@ class NostrListFeedViewModel(
             }
         } catch (e: Exception) {
             Log.e(
-                "NostrListFeedViewModel",
+                "NostrUserListFeedViewModel",
                 "refreshSuspended: Error loading or refreshing feed -> ${e.message}",
             )
             _feedContent.update { FollowSetState.FeedError(e.message.toString()) }
@@ -264,6 +264,6 @@ class NostrListFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = NostrListFeedViewModel(FollowSetFeedFilter(account)) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = NostrUserListFeedViewModel(FollowSetFeedFilter(account)) as T
     }
 }

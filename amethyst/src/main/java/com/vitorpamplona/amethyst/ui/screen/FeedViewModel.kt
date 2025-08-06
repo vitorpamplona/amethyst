@@ -23,29 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen
 import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
-import com.vitorpamplona.amethyst.ui.dal.FollowSetFeedFilter
 import com.vitorpamplona.amethyst.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.InvalidatableContent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.NostrListFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-@Stable
-class NostrUserListFeedViewModel(
-    val account: Account,
-) : NostrListFeedViewModel(FollowSetFeedFilter(account)) {
-    class Factory(
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        override fun <NostrUserFollowSetFeedViewModel : ViewModel> create(modelClass: Class<NostrUserFollowSetFeedViewModel>): NostrUserFollowSetFeedViewModel = NostrUserListFeedViewModel(account) as NostrUserFollowSetFeedViewModel
-    }
-}
 
 @Stable
 abstract class FeedViewModel(

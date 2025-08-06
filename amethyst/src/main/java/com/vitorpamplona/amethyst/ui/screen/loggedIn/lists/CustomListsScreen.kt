@@ -77,10 +77,10 @@ fun ListsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val followSetsViewModel: NostrListFeedViewModel =
+    val followSetsViewModel: NostrUserListFeedViewModel =
         viewModel(
             key = "NostrUserListFeedViewModel",
-            factory = NostrListFeedViewModel.Factory(accountViewModel.account),
+            factory = NostrUserListFeedViewModel.Factory(accountViewModel.account),
         )
 
     val currentCoroutineScope = rememberCoroutineScope()
